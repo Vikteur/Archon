@@ -18,11 +18,14 @@ interface RecentRunRowProps {
   pr?: RunPr;
 }
 
-/** Row grid: status | workflow | request | (project) | PR | id | duration | cost | CLI. */
+/**
+ * Row grid from md up: status | workflow | request | (project) | PR | id | duration | cost | CLI.
+ * Below md a row wraps as a card: status, workflow, PR, cost / request / project, id, duration.
+ */
 export function recentRunGridCols(showProject: boolean): string {
   return showProject
-    ? 'grid-cols-[220px_auto_minmax(0,1fr)_140px_56px_84px_70px_minmax(64px,auto)_auto]'
-    : 'grid-cols-[220px_auto_minmax(0,1fr)_56px_84px_70px_minmax(64px,auto)_auto]';
+    ? 'md:grid-cols-[220px_auto_minmax(0,1fr)_140px_56px_84px_70px_minmax(64px,auto)_auto]'
+    : 'md:grid-cols-[220px_auto_minmax(0,1fr)_56px_84px_70px_minmax(64px,auto)_auto]';
 }
 
 const STATUS_GLYPH: Record<string, string> = {
@@ -74,11 +77,11 @@ export function RecentRunRow({
   };
 
   const gridCols = inTable
-    ? 'col-span-full grid-cols-subgrid'
-    : `gap-[18px] ${recentRunGridCols(showProject)}`;
+    ? 'md:col-span-full md:grid-cols-subgrid'
+    : `md:gap-[18px] ${recentRunGridCols(showProject)}`;
 
   const renderStatus = (): ReactElement => (
-    <span className="flex items-center gap-[9px]">
+    <span className="order-1 flex items-center gap-[9px] md:order-none">
       {run.status === 'failed' ? (
         <span aria-hidden className={`text-[12px] leading-none ${statusTextClass.failed}`}>
           {glyph}
@@ -104,7 +107,7 @@ export function RecentRunRow({
 
   const renderRunSummary = (): ReactElement => (
     <>
-      <span className="flex min-w-0 items-baseline gap-2.5">
+      <span className="order-2 flex min-w-0 grow items-baseline gap-2.5 md:order-none">
         <span className="shrink-0 truncate font-mono text-[13px] font-bold text-text-primary">
           {run.workflow}
         </span>
@@ -120,17 +123,19 @@ export function RecentRunRow({
 
       {/* Its own column, so it starts under the table's Request filter. */}
       <span
-        className="min-w-0 truncate font-mono text-[13px] font-bold text-text-primary"
+        className="order-5 min-w-0 basis-full truncate font-mono text-[13px] font-bold text-text-primary md:order-none md:basis-auto"
         title={run.userMessage !== '' ? run.userMessage : undefined}
       >
         {run.userMessage}
       </span>
 
       {showProject ? (
-        <span className="truncate text-[12px] text-text-secondary">{run.projectName ?? ''}</span>
+        <span className="order-6 truncate text-[12px] text-text-secondary md:order-none">
+          {run.projectName ?? ''}
+        </span>
       ) : null}
 
-      <span className="font-mono text-[12px]">
+      <span className="order-3 font-mono text-[12px] md:order-none">
         {pr !== undefined ? (
           <a
             href={pr.url}
@@ -150,14 +155,14 @@ export function RecentRunRow({
         ) : null}
       </span>
 
-      <span className="text-right font-mono text-[12px] text-text-tertiary">
+      <span className="order-7 font-mono text-[12px] text-text-tertiary md:order-none md:text-right">
         {shortRunId(run.id)}
       </span>
-      <span className="text-right font-mono text-[12px] tabular-nums text-text-secondary">
+      <span className="order-8 font-mono text-[12px] tabular-nums text-text-secondary md:order-none md:text-right">
         {elapsed}
       </span>
       <span
-        className="text-right font-mono text-[12px] tabular-nums text-text-primary"
+        className="order-4 font-mono text-[12px] tabular-nums text-text-primary md:order-none md:text-right"
         title={typeof run.costUsd === 'number' ? 'Reported agent cost; may be partial' : undefined}
       >
         {typeof run.costUsd === 'number' ? formatCost(run.costUsd) : ''}
@@ -184,7 +189,7 @@ export function RecentRunRow({
             }
           : undefined
       }
-      className={`group grid items-center border-b border-border/40 px-[18px] py-[13px] transition-colors last:border-b-0 hover:bg-surface-hover ${gridCols} ${
+      className={`group flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b md:grid md:gap-y-0 border-border/40 px-[18px] py-[13px] transition-colors last:border-b-0 hover:bg-surface-hover ${gridCols} ${
         selected ? 'bg-surface-hover ring-2 ring-inset ring-accent-bright/40' : ''
       } ${canOpen ? 'cursor-pointer' : ''}`}
     >
@@ -192,8 +197,8 @@ export function RecentRunRow({
 
       {renderRunSummary()}
 
-      {/* trailing: origin + hover actions + CLI */}
-      <span className="flex items-center justify-end gap-1.5">
+      {/* trailing: origin + hover actions + CLI (from md up; a phone has no hover) */}
+      <span className="hidden items-center justify-end gap-1.5 md:flex">
         {/* Origin + quick actions reveal on hover; the resting row matches the
             design (status · body · id · duration · cost · CLI). */}
         <span className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">

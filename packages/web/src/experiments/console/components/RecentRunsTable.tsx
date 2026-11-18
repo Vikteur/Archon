@@ -61,7 +61,7 @@ const PR_LOOKUPS = 50;
 const HEAD_TEXT =
   'font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-text-tertiary';
 // -ml-[7px] (its border and padding) starts a control's text at its column's edge, where the rows' values start.
-const CONTROL = `${HEAD_TEXT} -ml-[7px] rounded-[6px] border bg-surface-elevated px-1.5 py-[3px] outline-none focus:border-accent-bright/60`;
+const CONTROL = `${HEAD_TEXT} md:-ml-[7px] rounded-[6px] border bg-surface-elevated px-1.5 py-[3px] outline-none focus:border-accent-bright/60`;
 const CONTROL_STYLE = { borderColor: 'var(--border)' };
 
 interface HeadSelectProps {
@@ -178,11 +178,11 @@ export function RecentRunsTable({
     <>
       {renderHeader(shown.length, runs.length)}
       <div
-        className={`grid gap-x-[18px] overflow-hidden rounded-[12px] border border-border bg-surface ${recentRunGridCols(showProject)}`}
+        className={`flex flex-col overflow-hidden rounded-[12px] md:grid md:gap-x-[18px] border border-border bg-surface ${recentRunGridCols(showProject)}`}
       >
         <div
           role="row"
-          className="col-span-full grid grid-cols-subgrid items-center border-b border-border/60 bg-surface-elevated/40 px-[18px] py-[9px]"
+          className="flex flex-wrap items-center gap-2 border-b md:col-span-full md:grid md:grid-cols-subgrid md:gap-x-[18px] md:gap-y-0 border-border/60 bg-surface-elevated/40 px-[18px] py-[9px]"
         >
           <HeadSelect
             label="Status"
@@ -200,7 +200,7 @@ export function RecentRunsTable({
             label="Request"
             value={filters.request}
             onChange={set('request')}
-            className="w-full max-w-[320px]"
+            className="basis-full md:w-full md:max-w-[320px] md:basis-auto"
           />
           {showProject ? (
             <HeadSelect
@@ -210,13 +210,18 @@ export function RecentRunsTable({
               onChange={set('project')}
             />
           ) : null}
-          <span className={HEAD_TEXT} title="The pull request the run opened">
+          <span className={`${HEAD_TEXT} hidden md:block`} title="The pull request the run opened">
             PR
           </span>
-          <HeadInput label="Run id" value={filters.id} onChange={set('id')} className="w-full" />
+          <HeadInput
+            label="Run id"
+            value={filters.id}
+            onChange={set('id')}
+            className="w-24 md:w-full"
+          />
           {sortButton('duration', 'Duration')}
           {sortButton('cost', 'Cost', 'Reported agent cost; may be partial. Click to sort.')}
-          <span className="flex justify-end">
+          <span className="ml-auto flex justify-end md:ml-0">
             {filtered ? (
               <button
                 type="button"
