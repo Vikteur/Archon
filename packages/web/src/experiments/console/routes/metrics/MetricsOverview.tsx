@@ -6,6 +6,7 @@ import {
   buildCard,
   calibrationSentence,
   cardMetric,
+  formatFigure,
   formatNumber,
   formatShare,
   formatUsd,
@@ -155,7 +156,7 @@ function CountBody({
   if (card.state === 'not_recorded') return NOT_RECORDED;
   return (
     <>
-      <Figure>{formatNumber(card.value)}</Figure>
+      <Figure>{formatFigure(card.value, card.unit)}</Figure>
       {card.breakdown.length > 0 ? (
         <Line>
           {card.breakdown

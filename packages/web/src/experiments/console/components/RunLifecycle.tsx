@@ -21,7 +21,7 @@ export function RunStartedLine({ run }: { run: Run }): ReactElement {
         <div className="h-px flex-1 bg-border/50" aria-hidden />
       </div>
       {run.userMessage !== '' ? (
-        <div className="ml-[7px] border-l-2 border-border/60 pl-3 text-[11px] text-text-tertiary">
+        <div className="ml-[7px] max-h-16 overflow-y-auto border-l-2 border-border/60 pl-3 text-[11px] text-text-tertiary">
           {run.userMessage}
         </div>
       ) : null}

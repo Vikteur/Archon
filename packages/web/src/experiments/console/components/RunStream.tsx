@@ -1,4 +1,4 @@
-import { useMemo, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { MessageItem } from './MessageItem';
 import { ToolCallItem } from './ToolCallItem';
 import { HookEventItem } from './HookEventItem';
@@ -18,6 +18,7 @@ import type {
 } from '../primitives/event';
 import type { ProviderEvent, ProviderEventRecord, RunProviderEvents } from '../lib/provider-events';
 import { StreamCard } from './StreamCard';
+import { scriptCallOf } from '../lib/script-run';
 
 interface RunStreamProps {
   messages: Message[];
@@ -28,6 +29,11 @@ interface RunStreamProps {
   providerEvents: RunProviderEvents;
   showToolCalls: boolean;
   showSystem: boolean;
+  /**
+   * Show only the tool calls that ran a script, under their node's divider; overrides
+   * `showToolCalls` and `showSystem`. The node filter still applies.
+   */
+  scriptsOnly?: boolean;
   /** `'all'` shows every node; otherwise restrict the stream to one node's entries. */
   selectedNodeId: string;
 }
@@ -156,16 +162,29 @@ function completedToolCall(
 export function runToolCalls(
   messages: readonly Message[],
   providerEvents: RunProviderEvents
-): { fromProviderEvents: PairedToolCall[]; showInline: boolean; count: number } {
+): {
+  fromProviderEvents: PairedToolCall[];
+  showInline: boolean;
+  count: number;
+  /** How many of the shown calls ran a script. */
+  scriptCount: number;
+} {
   const fromProviderEvents = pairProviderToolCalls(providerEvents);
   const showInline = fromProviderEvents.length === 0;
+  const calls = showInline
+    ? messages.flatMap(m => m.toolCalls)
+    : fromProviderEvents.map(t => t.call);
   return {
     fromProviderEvents,
     showInline,
-    count: showInline
-      ? messages.reduce((acc, m) => acc + m.toolCalls.length, 0)
-      : fromProviderEvents.length,
+    count: calls.length,
+    scriptCount: calls.filter(isScriptCall).length,
   };
+}
+
+/** Whether a tool call is a shell command that runs a script (lib/script-run.ts). */
+export function isScriptCall(call: InlineToolCall): boolean {
+  return scriptCallOf(call.input) !== null;
 }
 
 function messageEntries(messages: readonly Message[], showInline: boolean): TimelineEntry[] {
@@ -297,6 +316,7 @@ export function RunStream({
   providerEvents,
   showToolCalls,
   showSystem,
+  scriptsOnly = false,
   selectedNodeId,
 }: RunStreamProps): ReactElement {
   // Single source for the folded nodes — consumed by both the timeline (one
@@ -306,6 +326,20 @@ export function RunStream({
     () => runToolCalls(messages, providerEvents),
     [messages, providerEvents]
   );
+
+  // Node sections start open; this holds the ones the reader closed.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleNode = useCallback((nodeId: string): void => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  }, []);
+  const setAllNodes = useCallback((nodeIds: readonly string[] | null): void => {
+    setCollapsed(new Set(nodeIds ?? []));
+  }, []);
 
   const timeline = useMemo<TimelineEntry[]>(() => {
     const entries: TimelineEntry[] = [
@@ -343,22 +377,41 @@ export function RunStream({
     return { start, end: next !== undefined ? new Date(next.startedAt).getTime() : Infinity };
   }, [nodeRuns, selectedNodeId]);
 
-  const visible = timeline.filter(e => {
-    if (e.kind === 'tool' && !showToolCalls) return false;
-    if (e.kind === 'system' && !showSystem) return false;
-    if (e.kind === 'system_row' && !showSystem) return false;
-    // Node filter: isolate one node. Node markers, hooks and tools from provider events
-    // match by identity; every node-blind entry (prose, artifacts, system rows,
-    // legacy message-inline tools) falls back to the node's time window so a
-    // node's whole slice of the timeline stays visible.
-    if (selectedNodeId !== 'all') {
-      if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
-      if (e.kind === 'hook') return e.nodeId === selectedNodeId;
-      if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
-      return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
-    }
-    return true;
-  });
+  const inSelectedNode = (e: TimelineEntry): boolean => {
+    if (selectedNodeId === 'all') return true;
+    if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
+    if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+    return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
+  };
+
+  const visible = scriptsOnly
+    ? scriptEntries(timeline, inSelectedNode)
+    : timeline.filter(e => {
+        if (e.kind === 'tool' && !showToolCalls) return false;
+        if (e.kind === 'system' && !showSystem) return false;
+        if (e.kind === 'system_row' && !showSystem) return false;
+        // Node filter: isolate one node. Node markers, hooks and tools from provider events
+        // match by identity; every node-blind entry (prose, artifacts, system rows,
+        // legacy message-inline tools) falls back to the node's time window so a
+        // node's whole slice of the timeline stays visible.
+        if (selectedNodeId !== 'all') {
+          if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
+          if (e.kind === 'hook') return e.nodeId === selectedNodeId;
+          if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+          return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
+        }
+        return true;
+      });
+
+  if (visible.length === 0 && scriptsOnly) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-center">
+        <p className="text-sm text-text-tertiary">
+          No script runs{selectedNodeId !== 'all' ? ' in this node' : ''} yet.
+        </p>
+      </div>
+    );
+  }
 
   if (visible.length === 0) {
     return (
@@ -371,7 +424,145 @@ export function RunStream({
     );
   }
 
-  return <div className="flex flex-col">{visible.map(renderTimelineEntry)}</div>;
+  return (
+    <NodeSections
+      groups={groupByNode(visible)}
+      collapsed={collapsed}
+      onToggle={toggleNode}
+      onSetAll={setAllNodes}
+    />
+  );
+}
+
+type NodeEntry = Extract<TimelineEntry, { kind: 'node' }>;
+
+/** A node's heading and the log entries under it. */
+interface NodeGroup {
+  node: NodeEntry;
+  entries: TimelineEntry[];
+}
+
+/** The log split into the entries before any node started and one group per node. */
+interface GroupedTimeline {
+  preamble: TimelineEntry[];
+  groups: NodeGroup[];
+}
+
+/**
+ * Put every entry under the node it belongs to. Tools and hooks from provider events
+ * name their node; a node-blind entry (prose, artifacts, system rows, message-inline
+ * tools) goes to the node that started last before it, the same rule the node filter
+ * uses. An entry whose node has no heading in view also falls back to that rule.
+ */
+export function groupByNode(visible: readonly TimelineEntry[]): GroupedTimeline {
+  const preamble: TimelineEntry[] = [];
+  const groups: NodeGroup[] = [];
+  const byId = new Map<string, NodeGroup>();
+  for (const e of visible) {
+    if (e.kind !== 'node') continue;
+    const group = { node: e, entries: [] };
+    groups.push(group);
+    byId.set(e.node.nodeId, group);
+  }
+  let current: NodeGroup | undefined;
+  for (const e of visible) {
+    if (e.kind === 'node') {
+      current = byId.get(e.node.nodeId);
+      continue;
+    }
+    const owner =
+      (e.kind === 'tool' && e.nodeId !== null) || e.kind === 'hook'
+        ? (byId.get(e.nodeId ?? '') ?? current)
+        : current;
+    if (owner === undefined) preamble.push(e);
+    else owner.entries.push(e);
+  }
+  return { preamble, groups };
+}
+
+function NodeSections({
+  groups: { preamble, groups },
+  collapsed,
+  onToggle,
+  onSetAll,
+}: {
+  groups: GroupedTimeline;
+  collapsed: ReadonlySet<string>;
+  onToggle: (nodeId: string) => void;
+  onSetAll: (nodeIds: readonly string[] | null) => void;
+}): ReactElement {
+  const ids = groups.map(g => g.node.node.nodeId);
+  const openCount = ids.filter(id => !collapsed.has(id)).length;
+  return (
+    <div className="flex flex-col">
+      {groups.length > 1 ? (
+        <div className="sticky top-[var(--stream-toolbar-h,0px)] z-[9] -mx-6 flex justify-end gap-3 bg-surface px-6 py-1 font-mono text-[11px] text-text-tertiary">
+          <button
+            type="button"
+            disabled={openCount === 0}
+            onClick={() => {
+              onSetAll(ids);
+            }}
+            className="transition-colors hover:text-text-primary disabled:opacity-40"
+          >
+            Collapse all
+          </button>
+          <button
+            type="button"
+            disabled={openCount === ids.length}
+            onClick={() => {
+              onSetAll(null);
+            }}
+            className="transition-colors hover:text-text-primary disabled:opacity-40"
+          >
+            Expand all
+          </button>
+        </div>
+      ) : null}
+      {preamble.map(renderTimelineEntry)}
+      {groups.map(({ node, entries }) => {
+        const id = node.node.nodeId;
+        const open = !collapsed.has(id);
+        return (
+          <section key={node.key} aria-label={node.node.nodeName}>
+            {renderNodeDivider(node, {
+              open,
+              count: entries.length,
+              onToggle: () => {
+                onToggle(id);
+              },
+            })}
+            {open && entries.length > 0 ? (
+              <div
+                className="ml-[7px] flex flex-col border-l pl-3"
+                style={{ borderColor: 'color-mix(in oklch, var(--border), transparent 20%)' }}
+              >
+                {entries.map(renderTimelineEntry)}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The script calls of a timeline, each node's under its divider. A node with no script
+ * call keeps no divider, so the list reads as one script run after another.
+ */
+function scriptEntries(
+  timeline: readonly TimelineEntry[],
+  keep: (e: TimelineEntry) => boolean
+): TimelineEntry[] {
+  const scripts = timeline.filter(e => e.kind === 'tool' && isScriptCall(e.call) && keep(e));
+  const nodesWithScripts = new Set(
+    scripts.flatMap(e => (e.kind === 'tool' && e.nodeId !== null ? [e.nodeId] : []))
+  );
+  const scriptSet = new Set(scripts);
+  return timeline.filter(
+    e => (e.kind === 'node' && nodesWithScripts.has(e.node.nodeId) && keep(e)) || scriptSet.has(e)
+  );
 }
 
 function runEventEntries(events: RunEvent[]): TimelineEntry[] {
@@ -397,6 +588,33 @@ function ContentEventItem({ event }: { event: TextEvent | ArtifactEvent }): Reac
   );
 }
 
+function renderNodeDivider(
+  entry: NodeEntry,
+  section?: { open: boolean; count: number; onToggle: () => void }
+): ReactElement {
+  return (
+    <NodeDivider
+      key={entry.key}
+      nodeId={entry.node.nodeId}
+      nodeName={entry.node.nodeName}
+      status={entry.node.status}
+      durationMs={entry.node.durationMs}
+      timestamp={entry.node.startedAt}
+      costUsd={entry.node.costUsd}
+      costPartial={entry.node.costPartial}
+      costScope={entry.node.costScope}
+      numTurns={entry.node.numTurns}
+      tokens={entry.node.tokens}
+      stopReason={entry.node.stopReason}
+      skipReason={entry.node.skipReason}
+      skipExpr={entry.node.skipExpr}
+      fanOutOutcome={entry.node.fanOutOutcome}
+      showDetail={entry.showDetail}
+      section={section}
+    />
+  );
+}
+
 function renderTimelineEntry(entry: TimelineEntry): ReactElement {
   switch (entry.kind) {
     case 'message': {
@@ -413,26 +631,7 @@ function renderTimelineEntry(entry: TimelineEntry): ReactElement {
       return <HookEventItem key={entry.key} event={entry.event} timestamp={entry.timestamp} />;
     }
     case 'node': {
-      return (
-        <NodeDivider
-          key={entry.key}
-          nodeId={entry.node.nodeId}
-          nodeName={entry.node.nodeName}
-          status={entry.node.status}
-          durationMs={entry.node.durationMs}
-          timestamp={entry.node.startedAt}
-          costUsd={entry.node.costUsd}
-          costPartial={entry.node.costPartial}
-          costScope={entry.node.costScope}
-          numTurns={entry.node.numTurns}
-          tokens={entry.node.tokens}
-          stopReason={entry.node.stopReason}
-          skipReason={entry.node.skipReason}
-          skipExpr={entry.node.skipExpr}
-          fanOutOutcome={entry.node.fanOutOutcome}
-          showDetail={entry.showDetail}
-        />
-      );
+      return renderNodeDivider(entry);
     }
     case 'system': {
       const ev = entry.event;

@@ -2,6 +2,8 @@ import { useState, type ReactElement } from 'react';
 import { formatRelativeToBaseline, formatClock } from '../lib/format';
 import { useStreamContext } from '../lib/stream-context';
 import type { InlineToolCall } from '../primitives/message';
+import { scriptCallOf } from '../lib/script-run';
+import { ScriptRunItem } from './ScriptRunItem';
 
 interface ToolCallItemProps {
   call: InlineToolCall;
@@ -31,6 +33,21 @@ function argsSummary(input: InlineToolCall['input']): string {
  * row is a button that toggles the args/result detail below it.
  */
 export function ToolCallItem({ call, timestamp }: ToolCallItemProps): ReactElement {
+  const script = scriptCallOf(call.input);
+  if (script !== null) {
+    return (
+      <ScriptRunItem
+        call={call}
+        command={script.command}
+        runs={script.runs}
+        timestamp={timestamp}
+      />
+    );
+  }
+  return <PlainToolCallItem call={call} timestamp={timestamp} />;
+}
+
+function PlainToolCallItem({ call, timestamp }: ToolCallItemProps): ReactElement {
   const [expanded, setExpanded] = useState(false);
   const { runStartedAt } = useStreamContext();
   const displayed = formatRelativeToBaseline(timestamp, runStartedAt);

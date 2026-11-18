@@ -15,6 +15,10 @@ interface StreamToolbarProps {
   showSystem: boolean;
   onToggleSystem: (next: boolean) => void;
   toolCallCount: number;
+  /** Tool calls that ran a script; the "Scripts only" switch shows only those. */
+  scriptCount: number;
+  scriptsOnly: boolean;
+  onToggleScriptsOnly: (next: boolean) => void;
   messageCount: number;
   artifactCount: number | null;
   /** Distinct nodes in the run; empty hides the node filter. */
@@ -76,6 +80,43 @@ function Checkbox({ label, checked, onChange }: CheckboxProps): ReactElement {
   );
 }
 
+/** The amber "Scripts only" switch, styled like the script rows it filters to. */
+function ScriptsOnlyToggle({
+  on,
+  count,
+  onChange,
+}: {
+  on: boolean;
+  count: number;
+  onChange: (next: boolean) => void;
+}): ReactElement {
+  const accent = 'var(--warning)';
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      title="Show only the tool calls that ran a script (x)"
+      onClick={() => {
+        onChange(!on);
+      }}
+      className="flex items-center gap-1.5 rounded-full border px-2.5 py-[2px] font-mono text-[11.5px] font-semibold transition-colors"
+      style={{
+        color: on ? accent : 'var(--text-secondary)',
+        borderColor: `color-mix(in oklch, ${accent}, transparent ${on ? '40%' : '75%'})`,
+        background: on ? `color-mix(in oklch, ${accent}, transparent 82%)` : 'transparent',
+      }}
+    >
+      <span
+        aria-hidden
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ background: on ? accent : `color-mix(in oklch, ${accent}, transparent 50%)` }}
+      />
+      Scripts only
+      <span className="tabular-nums opacity-80">{count.toString()}</span>
+    </button>
+  );
+}
+
 interface TabProps {
   label: string;
   active: boolean;
@@ -115,6 +156,9 @@ export function StreamToolbar({
   showSystem,
   onToggleSystem,
   toolCallCount,
+  scriptCount,
+  scriptsOnly,
+  onToggleScriptsOnly,
   messageCount,
   artifactCount,
   nodeOptions,
@@ -151,7 +195,8 @@ export function StreamToolbar({
 
       {isLog ? (
         <span className="ml-3 font-mono text-[12px] text-text-tertiary">
-          {messageCount.toString()} messages · {toolCallCount.toString()} tool calls
+          {messageCount.toString()} messages · {toolCallCount.toString()} tool calls ·{' '}
+          {scriptCount.toString()} {scriptCount === 1 ? 'script' : 'scripts'}
         </span>
       ) : null}
 
@@ -179,8 +224,13 @@ export function StreamToolbar({
               </SelectShell>
             </label>
           ) : null}
-          <Checkbox label="Tool calls" checked={showToolCalls} onChange={onToggleToolCalls} />
-          <Checkbox label="System" checked={showSystem} onChange={onToggleSystem} />
+          <ScriptsOnlyToggle on={scriptsOnly} count={scriptCount} onChange={onToggleScriptsOnly} />
+          {scriptsOnly ? null : (
+            <>
+              <Checkbox label="Tool calls" checked={showToolCalls} onChange={onToggleToolCalls} />
+              <Checkbox label="System" checked={showSystem} onChange={onToggleSystem} />
+            </>
+          )}
         </div>
       ) : null}
     </div>

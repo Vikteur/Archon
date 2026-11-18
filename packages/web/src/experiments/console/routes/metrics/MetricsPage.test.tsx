@@ -6,6 +6,8 @@ import {
   calibrationSentence,
   costPerCard,
   countCard,
+  formatFigure,
+  formatValue,
   metricsRequests,
   parseWindow,
   ratioCard,
@@ -219,10 +221,23 @@ describe('cards', () => {
       title: 'Shipped',
       state: 'value',
       value: 12,
+      unit: 'items',
       breakdown: [{ metric: 'demo.none', label: 'lost', value: null }],
     });
     const missing = countCard({ shape: 'count', title: 'Shipped', metric: 'demo.none' }, report());
     expect(missing.state).toBe('not_recorded');
+  });
+
+  test('a count in usd reads as a cost floor, on the card and in Details', () => {
+    const spend = metric('demo.spend', [instrument(629.95, NONE)], { unit: 'usd' });
+    const card = countCard(
+      { shape: 'count', title: 'Spend', metric: spend.name },
+      report({ metrics: [spend] })
+    );
+    expect(card).toMatchObject({ state: 'value', value: 629.95, unit: 'usd' });
+    expect(formatFigure(629.95, 'usd')).toBe('≥ $629.95');
+    expect(formatValue(629.95, 'usd')).toBe('≥ $629.95');
+    expect(formatValue(2, 'prs')).toBe('2 PRs');
   });
 
   test('a ratio whose denominator was counted only by another instrument is not recorded', () => {
@@ -430,38 +445,8 @@ describe('details', () => {
     expect(html).not.toContain('$0.00<');
   });
 
-  test('the sparkline breaks at days without records', () => {
-    const polylines = (...days: string[]): string[] => {
-      const [base] = shipped.instruments;
-      if (base === undefined) throw new Error('fixture');
-      const series = days.map(day => ({ day, value: 4, n: 4 }));
-      const html = details({
-        report: report({ metrics: [metric(shipped.name, [{ ...base, series }])] }),
-      });
-      return [...html.matchAll(/<polyline points="([^"]*)"/g)].map(match => match[1] ?? '');
-    };
-    // 30 days wide, 160 px: one day is 5.333 px; every value is the series max, at y = 2.
-    expect(polylines('2026-10-20', '2026-10-21', '2026-10-25')).toEqual([
-      '90.7,2.0 96.0,2.0',
-      '117.3,2.0',
-    ]);
-    expect(polylines('2026-10-20', '2026-10-21', '2026-10-22')).toEqual([
-      '90.7,2.0 96.0,2.0 101.3,2.0',
-    ]);
-  });
-
-  test("the sparkline keeps a record from the window's first, partial day inside the chart", () => {
-    const [base] = shipped.instruments;
-    if (base === undefined) throw new Error('fixture');
-    const html = details({
-      report: report({
-        window: { since: '2026-10-03T15:00:00.000Z', until: '2026-11-02T15:00:00.000Z' },
-        metrics: [
-          metric(shipped.name, [{ ...base, series: [{ day: '2026-10-03', value: 4, n: 4 }] }]),
-        ],
-      }),
-    });
-    expect(html).toContain('<circle cx="0"');
+  test('a row draws no sparkline', () => {
+    expect(details({ report: report({ metrics: [shipped] }) })).not.toContain('<svg');
   });
 
   test('a calibration shows in its box at the exact identity, not as its own row', () => {

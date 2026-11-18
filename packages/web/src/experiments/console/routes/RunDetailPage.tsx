@@ -51,6 +51,7 @@ type RunDetailView = Awaited<ReturnType<typeof skill.getRun>>;
 const TOGGLE_KEYS = {
   toolCalls: 'archon.console.showToolCalls',
   system: 'archon.console.showSystem',
+  scriptsOnly: 'archon.console.scriptsOnly',
   view: 'archon.console.detailView',
   node: 'archon.console.runNodeFilter',
 } as const;
@@ -130,6 +131,7 @@ interface RunDetailKeymap {
   setViewPersist: (next: DetailView) => void;
   toggleToolCalls: () => void;
   toggleSystem: () => void;
+  toggleScriptsOnly: () => void;
 }
 
 function useRunDetailKeymap({
@@ -138,6 +140,7 @@ function useRunDetailKeymap({
   setViewPersist,
   toggleToolCalls,
   toggleSystem,
+  toggleScriptsOnly,
 }: RunDetailKeymap): void {
   const bindings = useMemo<readonly Binding[]>(
     () => [
@@ -164,6 +167,7 @@ function useRunDetailKeymap({
       },
       { keys: ['t'], label: 'Toggle tool calls', run: toggleToolCalls },
       { keys: ['s'], label: 'Toggle system', run: toggleSystem },
+      { keys: ['x'], label: 'Toggle scripts only', run: toggleScriptsOnly },
       {
         keys: ['a'],
         label: 'Approve',
@@ -179,7 +183,7 @@ function useRunDetailKeymap({
       { keys: ['Escape'], label: 'Back to runs', run: goBack },
       { keys: ['h'], label: 'Back to runs', run: goBack },
     ],
-    [isPaused, goBack, setViewPersist, toggleToolCalls, toggleSystem]
+    [isPaused, goBack, setViewPersist, toggleToolCalls, toggleSystem, toggleScriptsOnly]
   );
   useKeymap({ bindings });
 }
@@ -348,6 +352,9 @@ export function RunDetailPage(): ReactElement {
   const [showSystem, setShowSystem] = useState<boolean>(() =>
     readToggle(TOGGLE_KEYS.system, false)
   );
+  const [scriptsOnly, setScriptsOnly] = useState<boolean>(() =>
+    readToggle(TOGGLE_KEYS.scriptsOnly, false)
+  );
   const [view, setView] = useState<DetailView>(() => readView());
   const [selectedNodeId, setSelectedNodeId] = useState<string>(() => readNodeFilter());
 
@@ -420,6 +427,20 @@ export function RunDetailPage(): ReactElement {
     pendingNodeIdRef.current = null;
     lastBottomRef.current = false;
     setAtBottom(false);
+  }, []);
+
+  // The log's sticky header (toolbar and the run's started line) publishes its height, so bars
+  // that stick below it (the node sections' Collapse all / Expand all) sit under it, not behind it.
+  const toolbarRef = useCallback((node: HTMLDivElement | null): (() => void) | undefined => {
+    const host = node?.parentElement;
+    if (node === null || host === null || host === undefined) return undefined;
+    const observer = new ResizeObserver(() => {
+      host.style.setProperty('--stream-toolbar-h', `${node.offsetHeight.toString()}px`);
+    });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
   // Bind the observer to the conditional content node so it survives loading and
@@ -504,12 +525,20 @@ export function RunDetailPage(): ReactElement {
       return next;
     });
   }, []);
+  const toggleScriptsOnly = useCallback((): void => {
+    setScriptsOnly(v => {
+      const next = !v;
+      writeToggle(TOGGLE_KEYS.scriptsOnly, next);
+      return next;
+    });
+  }, []);
   useRunDetailKeymap({
     isPaused,
     goBack,
     setViewPersist,
     toggleToolCalls,
     toggleSystem,
+    toggleScriptsOnly,
   });
 
   if (runId === undefined) {
@@ -539,7 +568,7 @@ export function RunDetailPage(): ReactElement {
 
   const { run, events, nodes } = detail;
   const messageList = messages ?? [];
-  const toolCallCount = runToolCalls(messageList, providerEvents).count;
+  const { count: toolCallCount, scriptCount } = runToolCalls(messageList, providerEvents);
 
   const toolbar = (
     <StreamToolbar
@@ -556,6 +585,12 @@ export function RunDetailPage(): ReactElement {
         writeToggle(TOGGLE_KEYS.system, next);
       }}
       toolCallCount={toolCallCount}
+      scriptCount={scriptCount}
+      scriptsOnly={scriptsOnly}
+      onToggleScriptsOnly={next => {
+        setScriptsOnly(next);
+        writeToggle(TOGGLE_KEYS.scriptsOnly, next);
+      }}
       messageCount={messageList.length}
       artifactCount={artifactFiles?.length ?? null}
       nodeOptions={nodeOptions}
@@ -586,12 +621,15 @@ export function RunDetailPage(): ReactElement {
                 className="h-full overflow-y-auto"
               >
                 <div ref={contentRef} className="w-full px-6">
-                  <div className="sticky top-0 z-10 -mx-6 bg-surface px-6">{toolbar}</div>
+                  <div ref={toolbarRef} className="sticky top-0 z-10 -mx-6 bg-surface px-6">
+                    {toolbar}
+                    <div className="pt-4 pb-2">
+                      <RunStartedLine run={run} />
+                    </div>
+                  </div>
 
-                  <div className="py-4">
-                    <RunStartedLine run={run} />
-
-                    <div className="mt-2">
+                  <div className="pb-4">
+                    <div>
                       <RunStream
                         messages={messageList}
                         events={events}
@@ -599,6 +637,7 @@ export function RunDetailPage(): ReactElement {
                         providerEvents={providerEvents}
                         showToolCalls={showToolCalls}
                         showSystem={showSystem}
+                        scriptsOnly={scriptsOnly}
                         selectedNodeId={selectedNodeId}
                       />
                     </div>
