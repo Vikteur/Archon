@@ -15,11 +15,11 @@ interface RecentRunRowProps {
   inTable?: boolean;
 }
 
-/** Row grid: status | body | (project) | id | duration | cost | CLI. */
+/** Row grid: status | workflow | request | (project) | id | duration | cost | CLI. */
 export function recentRunGridCols(showProject: boolean): string {
   return showProject
-    ? 'grid-cols-[220px_minmax(0,1fr)_140px_84px_70px_minmax(64px,auto)_auto]'
-    : 'grid-cols-[220px_minmax(0,1fr)_84px_70px_minmax(64px,auto)_auto]';
+    ? 'grid-cols-[220px_auto_minmax(0,1fr)_140px_84px_70px_minmax(64px,auto)_auto]'
+    : 'grid-cols-[220px_auto_minmax(0,1fr)_84px_70px_minmax(64px,auto)_auto]';
 }
 
 const STATUS_GLYPH: Record<string, string> = {
@@ -100,7 +100,7 @@ export function RecentRunRow({
 
   const renderRunSummary = (): ReactElement => (
     <>
-      <span className="flex min-w-0 items-baseline gap-5">
+      <span className="flex min-w-0 items-baseline gap-2.5">
         <span className="shrink-0 truncate font-mono text-[13px] font-bold text-text-primary">
           {run.workflow}
         </span>
@@ -112,14 +112,14 @@ export function RecentRunRow({
             ↳ child
           </span>
         ) : null}
-        {run.userMessage !== '' ? (
-          <span
-            className="min-w-0 truncate font-mono text-[12px] text-text-secondary"
-            title={run.userMessage}
-          >
-            {run.userMessage}
-          </span>
-        ) : null}
+      </span>
+
+      {/* Its own column, so it starts under the table's Request filter. */}
+      <span
+        className="min-w-0 truncate font-mono text-[13px] font-bold text-text-primary"
+        title={run.userMessage !== '' ? run.userMessage : undefined}
+      >
+        {run.userMessage}
       </span>
 
       {showProject ? (
