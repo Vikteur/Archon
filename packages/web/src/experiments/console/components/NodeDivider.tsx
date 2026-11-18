@@ -65,7 +65,7 @@ function FanOutQualifier({ outcome }: { outcome: NodeRun['fanOutOutcome'] }): Re
     .slice(0, FAN_OUT_SLOT_DISPLAY_LIMIT);
   const more = unfinished - shown.length;
   return (
-    <details className="ml-[68px] font-mono text-[11px] text-warning">
+    <details className="md:ml-[68px] font-mono text-[11px] text-warning">
       <summary className="cursor-pointer">
         {`${String(unfinished)} of ${String(tally.total)} children did not complete (${counts.join(', ')})`}
       </summary>
@@ -185,7 +185,7 @@ export function NodeDivider({
       id={`node-transition-${nodeId}`}
       className="flex flex-col gap-1 border-b border-border/60 py-[11px]"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 md:flex-nowrap">
         <time
           dateTime={timestamp}
           title={wallClock}
@@ -218,14 +218,17 @@ export function NodeDivider({
         )}
         {/* Dashed leader line (design v3 .log-line). */}
         <div
-          className="h-px flex-1"
+          className="hidden h-px flex-1 md:block"
           style={{
             background:
               'repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 8px)',
           }}
           aria-hidden
         />
-        <span className={`font-mono text-[11.5px] ${STATUS_COLOR[status]}`}>
+        {/* Below md the status line goes under the node name. */}
+        <span
+          className={`basis-full font-mono text-[11.5px] md:basis-auto ${STATUS_COLOR[status]}`}
+        >
           {STATUS_LABEL[status]}
           {dur}
           {cost}
@@ -240,13 +243,13 @@ export function NodeDivider({
         </span>
       </div>
       {hasStopDetail ? (
-        <div className="ml-[68px] flex flex-wrap items-baseline gap-x-2 font-mono text-[10px] text-text-tertiary">
+        <div className="md:ml-[68px] flex flex-wrap items-baseline gap-x-2 font-mono text-[10px] text-text-tertiary">
           <span>stop</span>
           <span className="text-text-secondary">{stopReason}</span>
         </div>
       ) : null}
       {hasSkipDetail ? (
-        <div className="ml-[68px] flex flex-wrap items-baseline gap-x-2 font-mono text-[10px] text-text-tertiary">
+        <div className="md:ml-[68px] flex flex-wrap items-baseline gap-x-2 font-mono text-[10px] text-text-tertiary">
           <span>reason</span>
           <span className="text-text-secondary">{skipReason}</span>
           {skipExpr !== null && skipExpr !== undefined && skipExpr.length > 0 ? (

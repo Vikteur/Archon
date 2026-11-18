@@ -620,8 +620,11 @@ export function RunDetailPage(): ReactElement {
                 onScrollEnd={handleScrollEnd}
                 className="h-full overflow-y-auto"
               >
-                <div ref={contentRef} className="w-full px-6">
-                  <div ref={toolbarRef} className="sticky top-0 z-10 -mx-6 bg-surface px-6">
+                <div ref={contentRef} className="w-full px-4 md:px-6">
+                  <div
+                    ref={toolbarRef}
+                    className="sticky top-0 z-10 -mx-4 bg-surface px-4 md:-mx-6 md:px-6"
+                  >
                     {toolbar}
                     <div className="pt-4 pb-2">
                       <RunStartedLine run={run} />
@@ -652,7 +655,7 @@ export function RunDetailPage(): ReactElement {
             </div>
           ) : view === 'graph' ? (
             <>
-              <div className="px-6">{toolbar}</div>
+              <div className="px-4 md:px-6">{toolbar}</div>
               <RunGraphView
                 run={run}
                 nodes={nodes}
@@ -667,7 +670,7 @@ export function RunDetailPage(): ReactElement {
             </>
           ) : (
             <>
-              <div className="px-6">{toolbar}</div>
+              <div className="px-4 md:px-6">{toolbar}</div>
               <ArtifactPanel runId={runId} />
             </>
           )}

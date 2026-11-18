@@ -77,7 +77,7 @@ function PlainToolCallItem({ call, timestamp }: ToolCallItemProps): ReactElement
       >
         Tool
       </span>
-      <span className="flex min-w-0 flex-1 items-baseline gap-2.5">
+      <span className="order-last flex min-w-0 basis-full items-baseline gap-2.5 md:order-none md:flex-1 md:basis-auto">
         <span className="shrink-0 font-mono text-[12.5px] font-bold text-text-primary">
           {call.name}
         </span>
@@ -124,12 +124,12 @@ function PlainToolCallItem({ call, timestamp }: ToolCallItemProps): ReactElement
           onClick={() => {
             setExpanded(v => !v);
           }}
-          className="flex w-full items-center gap-4 text-left transition-colors hover:bg-surface-hover/50"
+          className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 text-left md:flex-nowrap transition-colors hover:bg-surface-hover/50"
         >
           {row}
         </button>
       ) : (
-        <div className="flex items-center gap-4">{row}</div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 md:flex-nowrap">{row}</div>
       )}
       {expanded && hasDetails ? <ToolCallDetails call={call} hasInput={hasInput} /> : null}
     </div>
@@ -143,7 +143,7 @@ function ToolCallDetails({
   hasInput: boolean;
 }): ReactElement {
   return (
-    <div className="ml-[72px] mt-2 space-y-1.5">
+    <div className="mt-2 space-y-1.5 md:ml-[72px]">
       {hasInput ? (
         <pre className="max-h-[320px] overflow-auto rounded border border-border bg-surface-inset p-2 font-mono text-[11px] leading-relaxed text-text-secondary">
           {JSON.stringify(call.input, null, 2)}

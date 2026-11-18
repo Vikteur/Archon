@@ -50,7 +50,7 @@ export function RunDetailHeader({
   };
 
   return (
-    <header className="relative sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 bg-surface px-6 py-3">
+    <header className="relative sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 bg-surface px-4 py-3 md:px-6">
       {/* Brand thread along the bottom edge — anchors the detail view. */}
       <span
         aria-hidden

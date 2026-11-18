@@ -167,7 +167,7 @@ export function StreamToolbar({
 }: StreamToolbarProps): ReactElement {
   const isLog = view === 'log';
   return (
-    <div className="flex items-center gap-3 border-b border-border/60 bg-surface py-2 text-[11px]">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b md:flex-nowrap border-border/60 bg-surface py-2 text-[11px]">
       <div className="flex items-center gap-1">
         <Tab
           label="Log"
@@ -194,14 +194,14 @@ export function StreamToolbar({
       </div>
 
       {isLog ? (
-        <span className="ml-3 font-mono text-[12px] text-text-tertiary">
+        <span className="font-mono text-[12px] text-text-tertiary md:ml-3">
           {messageCount.toString()} messages · {toolCallCount.toString()} tool calls ·{' '}
           {scriptCount.toString()} {scriptCount === 1 ? 'script' : 'scripts'}
         </span>
       ) : null}
 
       {isLog ? (
-        <div className="ml-auto flex items-center gap-[18px] font-mono text-[12px]">
+        <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2 font-mono text-[12px] md:ml-auto md:flex-nowrap">
           {nodeOptions.length > 0 ? (
             <label className="flex items-center gap-1.5 text-text-secondary">
               <span className="text-text-tertiary">Node</span>
