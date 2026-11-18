@@ -429,8 +429,8 @@ export function RunDetailPage(): ReactElement {
     setAtBottom(false);
   }, []);
 
-  // The log's sticky toolbar publishes its height, so bars that stick below it (the node
-  // sections' Collapse all / Expand all) sit under it instead of behind it.
+  // The log's sticky header (toolbar and the run's started line) publishes its height, so bars
+  // that stick below it (the node sections' Collapse all / Expand all) sit under it, not behind it.
   const toolbarRef = useCallback((node: HTMLDivElement | null): (() => void) | undefined => {
     const host = node?.parentElement;
     if (node === null || host === null || host === undefined) return undefined;
@@ -623,12 +623,13 @@ export function RunDetailPage(): ReactElement {
                 <div ref={contentRef} className="w-full px-6">
                   <div ref={toolbarRef} className="sticky top-0 z-10 -mx-6 bg-surface px-6">
                     {toolbar}
+                    <div className="pt-4 pb-2">
+                      <RunStartedLine run={run} />
+                    </div>
                   </div>
 
-                  <div className="py-4">
-                    <RunStartedLine run={run} />
-
-                    <div className="mt-2">
+                  <div className="pb-4">
+                    <div>
                       <RunStream
                         messages={messageList}
                         events={events}
