@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { toRun, type Run } from '../primitives/run';
 import { detailFixture } from '../primitives/run.test-fixtures';
 import { filterRecentRuns, NO_FILTERS, RecentRunsTable } from './RecentRunsTable';
+import { RecentRunRow } from './RecentRunRow';
 
 function run(over: Partial<Run>): Run {
   return { ...toRun(detailFixture.run), ...over };
@@ -119,5 +120,21 @@ describe('RecentRunsTable', () => {
     expect(out).toContain('>$11.44<');
     expect(out).not.toContain('Reported cost');
     expect(out).toContain('grid-cols-subgrid');
+  });
+
+  test('the PR column links the pull request the run opened, in a new tab', () => {
+    expect(html(false)).toContain('>PR<');
+    const row = renderToStaticMarkup(
+      <MemoryRouter>
+        <RecentRunRow
+          run={runs[0] as Run}
+          inTable
+          pr={{ url: 'https://github.com/o/r/pull/242', number: 242 }}
+        />
+      </MemoryRouter>
+    );
+    expect(row).toContain('href="https://github.com/o/r/pull/242"');
+    expect(row).toContain('target="_blank"');
+    expect(row).toContain('>#242</a>');
   });
 });
