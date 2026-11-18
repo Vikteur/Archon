@@ -57,7 +57,8 @@ function distinct(values: string[]): string[] {
 
 const HEAD_TEXT =
   'font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-text-tertiary';
-const CONTROL = `${HEAD_TEXT} rounded-[6px] border bg-surface-elevated px-1.5 py-[3px] outline-none focus:border-accent-bright/60`;
+// -ml-[7px] (its border and padding) starts a control's text at its column's edge, where the rows' values start.
+const CONTROL = `${HEAD_TEXT} -ml-[7px] rounded-[6px] border bg-surface-elevated px-1.5 py-[3px] outline-none focus:border-accent-bright/60`;
 const CONTROL_STYLE = { borderColor: 'var(--border)' };
 
 interface HeadSelectProps {
@@ -184,20 +185,18 @@ export function RecentRunsTable({
             options={statuses}
             onChange={set('status')}
           />
-          <span className="flex min-w-0 items-center gap-2">
-            <HeadSelect
-              label="Workflow"
-              value={filters.workflow}
-              options={workflows}
-              onChange={set('workflow')}
-            />
-            <HeadInput
-              label="Request"
-              value={filters.request}
-              onChange={set('request')}
-              className="w-full max-w-[280px]"
-            />
-          </span>
+          <HeadSelect
+            label="Workflow"
+            value={filters.workflow}
+            options={workflows}
+            onChange={set('workflow')}
+          />
+          <HeadInput
+            label="Request"
+            value={filters.request}
+            onChange={set('request')}
+            className="w-full max-w-[320px]"
+          />
           {showProject ? (
             <HeadSelect
               label="Project"
