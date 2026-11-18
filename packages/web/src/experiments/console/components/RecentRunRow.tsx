@@ -100,7 +100,7 @@ export function RecentRunRow({
 
   const renderRunSummary = (): ReactElement => (
     <>
-      <span className="flex min-w-0 items-baseline gap-2.5">
+      <span className="flex min-w-0 items-baseline gap-5">
         <span className="shrink-0 truncate font-mono text-[13px] font-bold text-text-primary">
           {run.workflow}
         </span>
@@ -114,7 +114,7 @@ export function RecentRunRow({
         ) : null}
         {run.userMessage !== '' ? (
           <span
-            className="min-w-0 truncate text-[12.5px] text-text-tertiary"
+            className="min-w-0 truncate font-mono text-[12px] text-text-secondary"
             title={run.userMessage}
           >
             {run.userMessage}
