@@ -86,7 +86,7 @@ export function ScriptRunItem({
           onClick={() => {
             setExpanded(v => !v);
           }}
-          className="flex w-full items-start gap-4 px-3 py-[9px] text-left transition-colors hover:bg-surface-hover/50"
+          className="flex w-full flex-wrap items-start gap-x-4 gap-y-1 px-3 py-[9px] text-left md:flex-nowrap transition-colors hover:bg-surface-hover/50"
         >
           <time
             dateTime={timestamp}
@@ -105,7 +105,8 @@ export function ScriptRunItem({
           >
             {runs.length > 1 ? `Script ×${runs.length.toString()}` : 'Script'}
           </span>
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          {/* Below md the script names take their own line under the badge. */}
+          <span className="order-last flex min-w-0 basis-full flex-col gap-0.5 md:order-none md:flex-1 md:basis-auto">
             {runs.map((run, index) => (
               <RunHeadline key={`${index.toString()}:${run.script}`} run={run} />
             ))}
@@ -113,7 +114,7 @@ export function ScriptRunItem({
               <span className="truncate text-[12px] text-text-tertiary">{description}</span>
             ) : null}
           </span>
-          <span className="mt-[1px] flex shrink-0 items-center gap-3">
+          <span className="mt-[1px] ml-auto flex shrink-0 items-center gap-3 md:ml-0">
             {problems.errors > 0 ? (
               <span className="font-mono text-[11px] font-semibold text-error">
                 {problems.errors.toString()} err
@@ -160,7 +161,7 @@ function RunHeadline({ run }: { run: ScriptRun }): ReactElement {
   return (
     <span className="flex min-w-0 items-baseline gap-2.5">
       <span
-        className="shrink-0 font-mono text-[13px] font-bold"
+        className="min-w-0 truncate font-mono text-[13px] font-bold md:shrink-0"
         style={{ color: ACCENT }}
         title={expandVars(run.script, run.vars)}
       >

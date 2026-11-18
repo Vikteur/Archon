@@ -68,3 +68,14 @@ describe('script rows in the run stream', () => {
     expect(html).toContain('1 warn');
   });
 });
+
+describe('script rows on a phone', () => {
+  test('below md the row wraps: the script name takes its own line and truncates', () => {
+    const command = 'bash .archon/scripts/local-ci-run.sh 248 --head 733601ce';
+    const html = render({ name: command, input: { command }, status: 'failed', exitCode: 2 });
+    expect(html).toContain('flex-wrap');
+    expect(html).toContain('md:flex-nowrap');
+    expect(html).toContain('order-last flex min-w-0 basis-full flex-col');
+    expect(html).toContain('min-w-0 truncate font-mono text-[13px] font-bold md:shrink-0');
+  });
+});
