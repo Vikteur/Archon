@@ -45,7 +45,12 @@ for (const display of displays) {
       expect(html).not.toContain('Reported cost');
       expect(html).not.toContain('$');
     } else {
-      expect(html).toContain(`Reported cost ${amount} (may be partial)`);
+      // The recent row shows the bare amount; its title (and the table's Cost header) carries the caveat.
+      expect(html).toContain(
+        display.name === 'recent row'
+          ? `title="Reported agent cost; may be partial">${amount}<`
+          : `Reported cost ${amount} (may be partial)`
+      );
     }
     expect(html).not.toContain('Total agent cost');
   });

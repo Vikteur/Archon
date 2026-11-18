@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactElement, type RefObject
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { EmptyState } from '../components/EmptyState';
 import { ActiveRunCard } from '../components/ActiveRunCard';
-import { RecentRunRow } from '../components/RecentRunRow';
+import { RecentRunsTable } from '../components/RecentRunsTable';
 import { FilterChips, type Filter } from '../components/FilterChips';
 import { ProjectViewTabs } from '../components/ProjectViewTabs';
 import { DraftRunCard } from '../components/DraftRunCard';
@@ -190,9 +190,11 @@ function filterRuns(runs: Run[], filter: Filter, query: string): Run[] {
 interface SectionHeaderProps {
   label: string;
   count: number;
+  /** When filters hide some: the count before them, shown as `count / total`. */
+  total?: number;
 }
 
-function SectionHeader({ label, count }: SectionHeaderProps): ReactElement {
+function SectionHeader({ label, count, total }: SectionHeaderProps): ReactElement {
   return (
     <div className="mb-3 flex items-center gap-2.5 px-0.5">
       <span className="font-mono text-[11px] font-bold uppercase tracking-[0.13em] text-text-tertiary">
@@ -202,7 +204,9 @@ function SectionHeader({ label, count }: SectionHeaderProps): ReactElement {
         className="rounded-full border bg-surface-elevated px-2 py-px font-mono text-[10.5px] tabular-nums text-text-secondary"
         style={{ borderColor: 'var(--border)' }}
       >
-        {count}
+        {total !== undefined && total !== count
+          ? `${count.toString()} / ${total.toString()}`
+          : count}
       </span>
     </div>
   );
@@ -265,17 +269,14 @@ function RunsFeed({
 
       {recent.length > 0 ? (
         <section>
-          <SectionHeader label="Recent" count={recent.length} />
-          <div className="flex flex-col overflow-hidden rounded-[12px] border border-border bg-surface">
-            {recent.map(run => (
-              <RecentRunRow
-                key={run.id}
-                run={run}
-                showProject={showProject}
-                selected={run.id === selectedRunId}
-              />
-            ))}
-          </div>
+          <RecentRunsTable
+            runs={recent}
+            showProject={showProject}
+            selectedRunId={selectedRunId}
+            renderHeader={(shown, total) => (
+              <SectionHeader label="Recent" count={shown} total={total} />
+            )}
+          />
         </section>
       ) : null}
     </div>

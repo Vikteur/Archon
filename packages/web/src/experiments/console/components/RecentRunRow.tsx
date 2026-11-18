@@ -11,6 +11,15 @@ interface RecentRunRowProps {
   run: Run;
   showProject?: boolean;
   selected?: boolean;
+  /** In RecentRunsTable: the row takes the table's columns (subgrid) so it lines up with the header. */
+  inTable?: boolean;
+}
+
+/** Row grid: status | body | (project) | id | duration | cost | CLI. */
+export function recentRunGridCols(showProject: boolean): string {
+  return showProject
+    ? 'grid-cols-[220px_minmax(0,1fr)_140px_84px_70px_minmax(64px,auto)_auto]'
+    : 'grid-cols-[220px_minmax(0,1fr)_84px_70px_minmax(64px,auto)_auto]';
 }
 
 const STATUS_GLYPH: Record<string, string> = {
@@ -30,6 +39,7 @@ export function RecentRunRow({
   run,
   showProject = false,
   selected = false,
+  inTable = false,
 }: RecentRunRowProps): ReactElement {
   const navigate = useNavigate();
   const isDocker = useIsDocker();
@@ -59,10 +69,9 @@ export function RecentRunRow({
     navigate(`/console/p/${run.projectId}?${params.toString()}`);
   };
 
-  // Design v2 row grid: status | body | (project) | id | duration | cost | CLI.
-  const gridCols = showProject
-    ? 'grid-cols-[220px_minmax(0,1fr)_140px_84px_70px_auto_auto]'
-    : 'grid-cols-[220px_minmax(0,1fr)_84px_70px_auto_auto]';
+  const gridCols = inTable
+    ? 'col-span-full grid-cols-subgrid'
+    : `gap-[18px] ${recentRunGridCols(showProject)}`;
 
   const renderStatus = (): ReactElement => (
     <span className="flex items-center gap-[9px]">
@@ -127,9 +136,7 @@ export function RecentRunRow({
         className="text-right font-mono text-[12px] tabular-nums text-text-primary"
         title={typeof run.costUsd === 'number' ? 'Reported agent cost; may be partial' : undefined}
       >
-        {typeof run.costUsd === 'number'
-          ? `Reported cost ${formatCost(run.costUsd)} (may be partial)`
-          : ''}
+        {typeof run.costUsd === 'number' ? formatCost(run.costUsd) : ''}
       </span>
     </>
   );
@@ -153,7 +160,7 @@ export function RecentRunRow({
             }
           : undefined
       }
-      className={`group grid items-center gap-[18px] border-b border-border/40 px-[18px] py-[13px] transition-colors last:border-b-0 hover:bg-surface-hover ${gridCols} ${
+      className={`group grid items-center border-b border-border/40 px-[18px] py-[13px] transition-colors last:border-b-0 hover:bg-surface-hover ${gridCols} ${
         selected ? 'bg-surface-hover ring-2 ring-inset ring-accent-bright/40' : ''
       } ${canOpen ? 'cursor-pointer' : ''}`}
     >
