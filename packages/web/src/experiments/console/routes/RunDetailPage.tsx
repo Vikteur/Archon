@@ -429,6 +429,20 @@ export function RunDetailPage(): ReactElement {
     setAtBottom(false);
   }, []);
 
+  // The log's sticky toolbar publishes its height, so bars that stick below it (the node
+  // sections' Collapse all / Expand all) sit under it instead of behind it.
+  const toolbarRef = useCallback((node: HTMLDivElement | null): (() => void) | undefined => {
+    const host = node?.parentElement;
+    if (node === null || host === null || host === undefined) return undefined;
+    const observer = new ResizeObserver(() => {
+      host.style.setProperty('--stream-toolbar-h', `${node.offsetHeight.toString()}px`);
+    });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   // Bind the observer to the conditional content node so it survives loading and
   // Log remounts. A Graph-selected node takes precedence over the mount's normal
   // tail position and keeps follow disabled until its reveal settles.
@@ -607,7 +621,9 @@ export function RunDetailPage(): ReactElement {
                 className="h-full overflow-y-auto"
               >
                 <div ref={contentRef} className="w-full px-6">
-                  <div className="sticky top-0 z-10 -mx-6 bg-surface px-6">{toolbar}</div>
+                  <div ref={toolbarRef} className="sticky top-0 z-10 -mx-6 bg-surface px-6">
+                    {toolbar}
+                  </div>
 
                   <div className="py-4">
                     <RunStartedLine run={run} />

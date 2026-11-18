@@ -496,7 +496,7 @@ function NodeSections({
   return (
     <div className="flex flex-col">
       {groups.length > 1 ? (
-        <div className="flex justify-end gap-3 pt-1 font-mono text-[11px] text-text-tertiary">
+        <div className="sticky top-[var(--stream-toolbar-h,0px)] z-[9] -mx-6 flex justify-end gap-3 bg-surface px-6 py-1 font-mono text-[11px] text-text-tertiary">
           <button
             type="button"
             disabled={openCount === 0}
