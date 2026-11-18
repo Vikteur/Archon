@@ -113,6 +113,8 @@ export type CountCard = { shape: 'count'; title: string } & (
   | {
       state: 'value';
       value: number;
+      /** The metric's unit, so a `usd` count reads as money. */
+      unit: string;
       /** `value` is `null` when `metric` has no records at the main figure's identity. */
       breakdown: { metric: string; label: string; value: number | null }[];
     }
@@ -185,7 +187,14 @@ export function countCard(view: ViewOf<'count'>, report: MetricsReport): CountCa
     label,
     value: instrumentAt(findCount(report, name), main)?.value ?? null,
   }));
-  return { shape: 'count', title: view.title, state: 'value', value: main.value, breakdown };
+  return {
+    shape: 'count',
+    title: view.title,
+    state: 'value',
+    value: main.value,
+    unit: metric?.unit ?? '',
+    breakdown,
+  };
 }
 
 export function ratioCard(
@@ -334,16 +343,19 @@ export function plainNames(views: MetricViews): ReadonlyMap<string, string> {
 export const formatShare = (share: number): string =>
   share.toLocaleString('en-US', { style: 'percent', maximumSignificantDigits: 2 });
 
-/** A value in its unit's terms: a `ratio` is a percentage, anything else a plain number. */
+/**
+ * A value in its unit's terms: a `ratio` is a percentage, `usd` a cost floor (runs that recorded
+ * no cost add nothing), anything else a plain number.
+ */
 export const formatFigure = (value: number, unit: string): string =>
-  unit === 'ratio' ? formatShare(value) : formatNumber(value);
+  unit === 'ratio' ? formatShare(value) : unit === 'usd' ? formatUsd(value) : formatNumber(value);
 
 /** `prs` is the guide's own example unit; other units read with their underscores as spaces. */
 const UNIT_WORDS: Readonly<Record<string, string>> = { prs: 'PRs' };
 
 /** A value with its unit in words: "99%", "2 PRs", "14 pull requests". */
 export function formatValue(value: number, unit: string): string {
-  if (unit === 'ratio') return formatShare(value);
+  if (unit === 'ratio' || unit === 'usd') return formatFigure(value, unit);
   return `${formatNumber(value)} ${UNIT_WORDS[unit] ?? unit.replaceAll('_', ' ')}`;
 }
 

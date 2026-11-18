@@ -88,7 +88,6 @@ export function MetricsDetails({
       ) : (
         <MetricsTable
           rows={rows}
-          report={report}
           days={days}
           nameOf={nameOf}
           target={decodeURIComponent(hash.slice(1))}
@@ -160,13 +159,11 @@ const HEADER_CELL =
 
 function MetricsTable({
   rows,
-  report,
   days,
   nameOf,
   target,
 }: {
   rows: Row[];
-  report: MetricsReport;
   days: WindowDays;
   nameOf: (metric: string) => string;
   /** The row id the URL's hash names, highlighted when a card linked here. */
@@ -190,7 +187,6 @@ function MetricsTable({
               <MetricRow
                 key={row.name}
                 row={row}
-                window={report.window}
                 name={nameOf(row.name)}
                 targeted={target === metricAnchor(row.name)}
               />
@@ -210,12 +206,10 @@ const SMALL = 'text-[11px] text-text-tertiary';
 
 function MetricRow({
   row,
-  window,
   name,
   targeted,
 }: {
   row: Row;
-  window: MetricsReport['window'];
   name: string;
   targeted: boolean;
 }): ReactElement {
@@ -267,7 +261,6 @@ function MetricRow({
             {formatFigure(headline.interval.high, metric.unit)}
           </div>
         )}
-        <Sparkline series={headline.series} window={window} />
       </td>
       <td className="whitespace-nowrap px-3 py-2 tabular-nums">
         {headline.n.toString()} record{headline.n === 1 ? '' : 's'}
@@ -356,64 +349,6 @@ function MeasuredBox({
         <p className={SMALL}>Hidden older versions: {hidden.map(identityLabel).join('; ')}</p>
       ) : null}
     </section>
-  );
-}
-
-const SPARK_WIDTH = 160;
-const SPARK_HEIGHT = 32;
-const DAY_MS = 86_400_000;
-
-/** Daily values placed by date across the window; the line breaks at days without records. */
-function Sparkline({
-  series,
-  window,
-}: {
-  series: InstrumentReport['series'];
-  window: MetricsReport['window'];
-}): ReactElement {
-  // Series days are UTC-midnight buckets; the window starts at any time of day.
-  const start = Date.parse(window.since.slice(0, 10));
-  const span = Math.max(Date.parse(window.until) - start, 1);
-  const values = series.map(point => point.value);
-  const low = Math.min(0, ...values);
-  const range = Math.max(...values, low + 1) - low;
-  const points = series.map(point => ({
-    time: Date.parse(point.day),
-    x: ((Date.parse(point.day) - start) / span) * SPARK_WIDTH,
-    y: SPARK_HEIGHT - 2 - ((point.value - low) / range) * (SPARK_HEIGHT - 4),
-  }));
-  const runs: (typeof points)[] = [];
-  for (const point of points) {
-    const run = runs.at(-1);
-    const previous = run?.at(-1);
-    if (run !== undefined && previous !== undefined && point.time - previous.time === DAY_MS) {
-      run.push(point);
-    } else {
-      runs.push([point]);
-    }
-  }
-  return (
-    <svg
-      role="img"
-      aria-label={`${series.length.toString()} days with records`}
-      width={SPARK_WIDTH}
-      height={SPARK_HEIGHT}
-      viewBox={`0 0 ${SPARK_WIDTH.toString()} ${SPARK_HEIGHT.toString()}`}
-      className="mt-1 text-accent-bright"
-    >
-      {runs.map(run => (
-        <polyline
-          key={run[0]?.time}
-          points={run.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        />
-      ))}
-      {points.map(({ x, y }, i) => (
-        <circle key={series[i]?.day} cx={x} cy={y} r={1.5} fill="currentColor" />
-      ))}
-    </svg>
   );
 }
 
