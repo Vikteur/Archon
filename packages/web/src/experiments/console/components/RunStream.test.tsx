@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { RunStream, pairProviderToolCalls } from './RunStream';
+import { RunStream, pairProviderToolCalls, runToolCalls } from './RunStream';
 import type { ProviderEventRecord, RunProviderEvents } from '../lib/provider-events';
 import { mergeProviderEventRecords } from '../lib/provider-events';
 import type { Message } from '../primitives/message';
@@ -547,3 +547,99 @@ test.each(
     expect(html).toContain(`· ${scope === 'total' ? 'total ' : ''}at least $${formatted}`);
   }
 );
+
+describe('RunStream scripts only', () => {
+  const started = (nodeId: string, timestamp: string): NodeTransitionEvent => ({
+    id: `n:${nodeId}`,
+    runId: 'r1',
+    kind: 'node_transition',
+    timestamp,
+    nodeId,
+    nodeName: nodeId,
+    transition: 'started',
+    durationMs: null,
+    skipReason: null,
+    skipExpr: null,
+    costUsd: null,
+    costPartial: false,
+    costScope: null,
+    stopReason: null,
+    numTurns: null,
+    tokens: null,
+  });
+  const message: Message = {
+    id: 'm1',
+    role: 'assistant',
+    content: 'thinking out loud',
+    timestamp: '2026-10-02T10:00:00.500Z',
+    toolCalls: [],
+    error: null,
+    category: null,
+    dispatch: null,
+    workflowResult: null,
+  };
+  const bash = (step: string, seq: number, at: string, id: string, command: string) =>
+    record(step, 'a1', seq, at, {
+      type: 'tool_call',
+      toolCallId: id,
+      name: 'Bash',
+      rawInput: { command },
+    });
+  const providerEvents: RunProviderEvents = new Map([
+    ['plan', [bash('plan', 0, '2026-10-02T10:00:00.100Z', 'p1', 'git status')]],
+    [
+      'implement',
+      [
+        bash('implement', 0, '2026-10-02T10:00:02.100Z', 'i1', 'scripts/scaffold.sh domain/x'),
+        bash('implement', 1, '2026-10-02T10:00:02.200Z', 'i2', 'cat README.md'),
+      ],
+    ],
+  ]);
+  const events = [
+    started('plan', '2026-10-02T10:00:00.000Z'),
+    started('implement', '2026-10-02T10:00:02.000Z'),
+  ];
+
+  const render = (scriptsOnly: boolean, selectedNodeId = 'all'): string =>
+    renderToStaticMarkup(
+      <StreamContextProvider value={{ runStartedAt: '2026-10-02T09:59:00.000Z' }}>
+        <RunStream
+          messages={[message]}
+          events={events}
+          nodes={[
+            { node_id: 'plan', state: 'completed' },
+            { node_id: 'implement', state: 'running' },
+          ]}
+          providerEvents={providerEvents}
+          showToolCalls={false}
+          showSystem={false}
+          scriptsOnly={scriptsOnly}
+          selectedNodeId={selectedNodeId}
+        />
+      </StreamContextProvider>
+    );
+
+  test('shows only script calls, under the divider of a node that ran one', () => {
+    const html = render(true);
+    expect(html).toContain('scaffold.sh');
+    expect(html).not.toContain('git status');
+    expect(html).not.toContain('README.md');
+    expect(html).not.toContain('thinking out loud');
+    expect(html).toContain('implement');
+    expect(html).not.toContain('>plan<');
+  });
+
+  test('off, the usual filters apply', () => {
+    const html = render(false);
+    expect(html).toContain('thinking out loud');
+    expect(html).not.toContain('scaffold.sh');
+  });
+
+  test('with the node filter on a node without scripts it says so', () => {
+    expect(render(true, 'plan')).toContain('No script runs in this node yet.');
+  });
+
+  test('runToolCalls counts the script calls', () => {
+    expect(runToolCalls([message], providerEvents)).toMatchObject({ count: 3, scriptCount: 1 });
+  });
+});

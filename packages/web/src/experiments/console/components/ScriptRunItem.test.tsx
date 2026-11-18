@@ -43,4 +43,28 @@ describe('script rows in the run stream', () => {
     expect(html).toContain('>Tool<');
     expect(html).not.toContain('>Script<');
   });
+
+  test('the row resolves shell variables and shortens paths and JSON', () => {
+    const command = `D=identity-domain/src/test/java/app/x; scripts/scaffold.sh domain/value-object-test '{"package":"app.x","Name":"Hash"}' $D/HashTest.java`;
+    const html = render({ name: command, input: { command }, status: 'completed' });
+    expect(html).toContain('domain/value-object-test {Name: Hash, package: app.x} HashTest.java');
+    expect(html).not.toContain('$D');
+  });
+
+  test('the row shows the call description and counts problems in the output', () => {
+    const command = 'bash scripts/build.sh';
+    const html = render({
+      name: command,
+      input: { command, description: 'Build the domain module' },
+      status: 'failed',
+      exitCode: 1,
+      output: JSON.stringify({
+        stdout: 'Foo.java:3: error: cannot find symbol\nWARN slow\nBUILD FAILED\n',
+        stderr: '',
+      }),
+    });
+    expect(html).toContain('Build the domain module');
+    expect(html).toContain('2 err');
+    expect(html).toContain('1 warn');
+  });
 });

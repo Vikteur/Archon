@@ -18,6 +18,7 @@ import type {
 } from '../primitives/event';
 import type { ProviderEvent, ProviderEventRecord, RunProviderEvents } from '../lib/provider-events';
 import { StreamCard } from './StreamCard';
+import { scriptCallOf } from '../lib/script-run';
 
 interface RunStreamProps {
   messages: Message[];
@@ -28,6 +29,11 @@ interface RunStreamProps {
   providerEvents: RunProviderEvents;
   showToolCalls: boolean;
   showSystem: boolean;
+  /**
+   * Show only the tool calls that ran a script, under their node's divider; overrides
+   * `showToolCalls` and `showSystem`. The node filter still applies.
+   */
+  scriptsOnly?: boolean;
   /** `'all'` shows every node; otherwise restrict the stream to one node's entries. */
   selectedNodeId: string;
 }
@@ -156,16 +162,29 @@ function completedToolCall(
 export function runToolCalls(
   messages: readonly Message[],
   providerEvents: RunProviderEvents
-): { fromProviderEvents: PairedToolCall[]; showInline: boolean; count: number } {
+): {
+  fromProviderEvents: PairedToolCall[];
+  showInline: boolean;
+  count: number;
+  /** How many of the shown calls ran a script. */
+  scriptCount: number;
+} {
   const fromProviderEvents = pairProviderToolCalls(providerEvents);
   const showInline = fromProviderEvents.length === 0;
+  const calls = showInline
+    ? messages.flatMap(m => m.toolCalls)
+    : fromProviderEvents.map(t => t.call);
   return {
     fromProviderEvents,
     showInline,
-    count: showInline
-      ? messages.reduce((acc, m) => acc + m.toolCalls.length, 0)
-      : fromProviderEvents.length,
+    count: calls.length,
+    scriptCount: calls.filter(isScriptCall).length,
   };
+}
+
+/** Whether a tool call is a shell command that runs a script (lib/script-run.ts). */
+export function isScriptCall(call: InlineToolCall): boolean {
+  return scriptCallOf(call.input) !== null;
 }
 
 function messageEntries(messages: readonly Message[], showInline: boolean): TimelineEntry[] {
@@ -297,6 +316,7 @@ export function RunStream({
   providerEvents,
   showToolCalls,
   showSystem,
+  scriptsOnly = false,
   selectedNodeId,
 }: RunStreamProps): ReactElement {
   // Single source for the folded nodes — consumed by both the timeline (one
@@ -343,22 +363,41 @@ export function RunStream({
     return { start, end: next !== undefined ? new Date(next.startedAt).getTime() : Infinity };
   }, [nodeRuns, selectedNodeId]);
 
-  const visible = timeline.filter(e => {
-    if (e.kind === 'tool' && !showToolCalls) return false;
-    if (e.kind === 'system' && !showSystem) return false;
-    if (e.kind === 'system_row' && !showSystem) return false;
-    // Node filter: isolate one node. Node markers, hooks and tools from provider events
-    // match by identity; every node-blind entry (prose, artifacts, system rows,
-    // legacy message-inline tools) falls back to the node's time window so a
-    // node's whole slice of the timeline stays visible.
-    if (selectedNodeId !== 'all') {
-      if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
-      if (e.kind === 'hook') return e.nodeId === selectedNodeId;
-      if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
-      return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
-    }
-    return true;
-  });
+  const inSelectedNode = (e: TimelineEntry): boolean => {
+    if (selectedNodeId === 'all') return true;
+    if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
+    if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+    return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
+  };
+
+  const visible = scriptsOnly
+    ? scriptEntries(timeline, inSelectedNode)
+    : timeline.filter(e => {
+        if (e.kind === 'tool' && !showToolCalls) return false;
+        if (e.kind === 'system' && !showSystem) return false;
+        if (e.kind === 'system_row' && !showSystem) return false;
+        // Node filter: isolate one node. Node markers, hooks and tools from provider events
+        // match by identity; every node-blind entry (prose, artifacts, system rows,
+        // legacy message-inline tools) falls back to the node's time window so a
+        // node's whole slice of the timeline stays visible.
+        if (selectedNodeId !== 'all') {
+          if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
+          if (e.kind === 'hook') return e.nodeId === selectedNodeId;
+          if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+          return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
+        }
+        return true;
+      });
+
+  if (visible.length === 0 && scriptsOnly) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-center">
+        <p className="text-sm text-text-tertiary">
+          No script runs{selectedNodeId !== 'all' ? ' in this node' : ''} yet.
+        </p>
+      </div>
+    );
+  }
 
   if (visible.length === 0) {
     return (
@@ -372,6 +411,24 @@ export function RunStream({
   }
 
   return <div className="flex flex-col">{visible.map(renderTimelineEntry)}</div>;
+}
+
+/**
+ * The script calls of a timeline, each node's under its divider. A node with no script
+ * call keeps no divider, so the list reads as one script run after another.
+ */
+function scriptEntries(
+  timeline: readonly TimelineEntry[],
+  keep: (e: TimelineEntry) => boolean
+): TimelineEntry[] {
+  const scripts = timeline.filter(e => e.kind === 'tool' && isScriptCall(e.call) && keep(e));
+  const nodesWithScripts = new Set(
+    scripts.flatMap(e => (e.kind === 'tool' && e.nodeId !== null ? [e.nodeId] : []))
+  );
+  const scriptSet = new Set(scripts);
+  return timeline.filter(
+    e => (e.kind === 'node' && nodesWithScripts.has(e.node.nodeId) && keep(e)) || scriptSet.has(e)
+  );
 }
 
 function runEventEntries(events: RunEvent[]): TimelineEntry[] {
