@@ -119,7 +119,7 @@ describe('RecentRunsTable', () => {
     const out = html(false);
     expect(out).toContain('>$11.44<');
     expect(out).not.toContain('Reported cost');
-    expect(out).toContain('grid-cols-subgrid');
+    expect(out).toContain('md:grid-cols-subgrid');
   });
 
   test('the PR column links the pull request the run opened, in a new tab', () => {
@@ -136,5 +136,13 @@ describe('RecentRunsTable', () => {
     expect(row).toContain('href="https://github.com/o/r/pull/242"');
     expect(row).toContain('target="_blank"');
     expect(row).toContain('>#242</a>');
+  });
+
+  test('below md a row wraps as a card and the table becomes a grid from md up', () => {
+    const out = html(false);
+    expect(out).toContain('flex flex-col overflow-hidden rounded-[12px] md:grid');
+    expect(out).toContain('group flex flex-wrap');
+    expect(out).toContain('order-5 min-w-0 basis-full');
+    expect(out).toContain('hidden items-center justify-end gap-1.5 md:flex');
   });
 });
