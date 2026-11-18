@@ -29,6 +29,11 @@ interface NodeDividerProps {
   fanOutOutcome?: NodeRun['fanOutOutcome'];
   /** When true, surface skip reason / stop reason inline. */
   showDetail?: boolean;
+  /**
+   * Makes the divider the header of its node's section in the log: the name toggles
+   * the section, and `count` says how many log entries it holds.
+   */
+  section?: { open: boolean; count: number; onToggle: () => void };
 }
 
 type FanOutOutcome = NonNullable<NodeRun['fanOutOutcome']>;
@@ -146,6 +151,7 @@ export function NodeDivider({
   skipExpr,
   fanOutOutcome,
   showDetail = false,
+  section,
 }: NodeDividerProps): ReactElement {
   const { runStartedAt } = useStreamContext();
   const displayed = formatRelativeToBaseline(timestamp, runStartedAt);
@@ -187,7 +193,29 @@ export function NodeDivider({
         >
           {displayed}
         </time>
-        <span className="font-mono text-[13px] font-semibold text-text-primary">{nodeName}</span>
+        {section === undefined ? (
+          <span className="font-mono text-[13px] font-semibold text-text-primary">{nodeName}</span>
+        ) : (
+          <button
+            type="button"
+            aria-expanded={section.open}
+            aria-label={`${section.open ? 'Collapse' : 'Expand'} ${nodeName}`}
+            onClick={section.onToggle}
+            className="-mx-1.5 flex items-center gap-2 rounded px-1.5 py-0.5 font-mono text-[13px] font-semibold text-text-primary transition-colors hover:bg-surface-hover"
+          >
+            <span
+              aria-hidden
+              className="inline-block w-3 text-[11px] text-text-tertiary transition-transform"
+              style={{ transform: section.open ? 'rotate(90deg)' : 'rotate(0deg)' }}
+            >
+              ▸
+            </span>
+            {nodeName}
+            <span className="rounded-full bg-surface-hover px-1.5 text-[10.5px] font-medium tabular-nums text-text-tertiary">
+              {section.count.toString()}
+            </span>
+          </button>
+        )}
         {/* Dashed leader line (design v3 .log-line). */}
         <div
           className="h-px flex-1"

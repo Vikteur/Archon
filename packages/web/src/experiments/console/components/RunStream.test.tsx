@@ -643,3 +643,81 @@ describe('RunStream scripts only', () => {
     expect(runToolCalls([message], providerEvents)).toMatchObject({ count: 3, scriptCount: 1 });
   });
 });
+
+describe('RunStream node sections', () => {
+  const started = (nodeId: string, timestamp: string): NodeTransitionEvent => ({
+    id: `n:${nodeId}`,
+    runId: 'r1',
+    kind: 'node_transition',
+    timestamp,
+    nodeId,
+    nodeName: nodeId,
+    transition: 'started',
+    durationMs: null,
+    skipReason: null,
+    skipExpr: null,
+    costUsd: null,
+    costPartial: false,
+    costScope: null,
+    stopReason: null,
+    numTurns: null,
+    tokens: null,
+  });
+  const message: Message = {
+    id: 'm1',
+    role: 'assistant',
+    content: 'planning prose',
+    timestamp: '2026-10-02T10:00:00.500Z',
+    toolCalls: [],
+    error: null,
+    category: null,
+    dispatch: null,
+    workflowResult: null,
+  };
+  const bash = (step: string, seq: number, at: string, id: string, command: string) =>
+    record(step, 'a1', seq, at, {
+      type: 'tool_call',
+      toolCallId: id,
+      name: 'Bash',
+      rawInput: { command },
+    });
+  // The two nodes overlap in time: write's call lands after build started.
+  const providerEvents: RunProviderEvents = new Map([
+    ['write', [bash('write', 0, '2026-10-02T10:00:03.000Z', 'w1', 'echo from-write')]],
+    ['build', [bash('build', 0, '2026-10-02T10:00:02.500Z', 'b1', 'echo from-build')]],
+  ]);
+
+  const html = (): string =>
+    renderToStaticMarkup(
+      <StreamContextProvider value={{ runStartedAt: '2026-10-02T09:59:00.000Z' }}>
+        <RunStream
+          messages={[message]}
+          events={[
+            started('write', '2026-10-02T10:00:00.000Z'),
+            started('build', '2026-10-02T10:00:02.000Z'),
+          ]}
+          nodes={[
+            { node_id: 'write', state: 'running' },
+            { node_id: 'build', state: 'running' },
+          ]}
+          providerEvents={providerEvents}
+          showToolCalls
+          showSystem={false}
+          selectedNodeId="all"
+        />
+      </StreamContextProvider>
+    );
+
+  test('each node heads a section holding its own entries, open by default', () => {
+    const out = html();
+    const write = out.slice(out.indexOf('aria-label="write"'), out.indexOf('aria-label="build"'));
+    const build = out.slice(out.indexOf('aria-label="build"'));
+    expect(write).toContain('planning prose');
+    expect(write).toContain('from-write');
+    expect(write).not.toContain('from-build');
+    expect(build).toContain('from-build');
+    expect(build).not.toContain('from-write');
+    expect(out).toContain('aria-expanded="true"');
+    expect(out).toContain('Collapse all');
+  });
+});

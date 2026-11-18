@@ -1,4 +1,4 @@
-import { useMemo, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 import { MessageItem } from './MessageItem';
 import { ToolCallItem } from './ToolCallItem';
 import { HookEventItem } from './HookEventItem';
@@ -327,6 +327,20 @@ export function RunStream({
     [messages, providerEvents]
   );
 
+  // Node sections start open; this holds the ones the reader closed.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleNode = useCallback((nodeId: string): void => {
+    setCollapsed(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  }, []);
+  const setAllNodes = useCallback((nodeIds: readonly string[] | null): void => {
+    setCollapsed(new Set(nodeIds ?? []));
+  }, []);
+
   const timeline = useMemo<TimelineEntry[]>(() => {
     const entries: TimelineEntry[] = [
       ...messageEntries(messages, toolCalls.showInline),
@@ -410,7 +424,127 @@ export function RunStream({
     );
   }
 
-  return <div className="flex flex-col">{visible.map(renderTimelineEntry)}</div>;
+  return (
+    <NodeSections
+      groups={groupByNode(visible)}
+      collapsed={collapsed}
+      onToggle={toggleNode}
+      onSetAll={setAllNodes}
+    />
+  );
+}
+
+type NodeEntry = Extract<TimelineEntry, { kind: 'node' }>;
+
+/** A node's heading and the log entries under it. */
+interface NodeGroup {
+  node: NodeEntry;
+  entries: TimelineEntry[];
+}
+
+/** The log split into the entries before any node started and one group per node. */
+interface GroupedTimeline {
+  preamble: TimelineEntry[];
+  groups: NodeGroup[];
+}
+
+/**
+ * Put every entry under the node it belongs to. Tools and hooks from provider events
+ * name their node; a node-blind entry (prose, artifacts, system rows, message-inline
+ * tools) goes to the node that started last before it, the same rule the node filter
+ * uses. An entry whose node has no heading in view also falls back to that rule.
+ */
+export function groupByNode(visible: readonly TimelineEntry[]): GroupedTimeline {
+  const preamble: TimelineEntry[] = [];
+  const groups: NodeGroup[] = [];
+  const byId = new Map<string, NodeGroup>();
+  for (const e of visible) {
+    if (e.kind !== 'node') continue;
+    const group = { node: e, entries: [] };
+    groups.push(group);
+    byId.set(e.node.nodeId, group);
+  }
+  let current: NodeGroup | undefined;
+  for (const e of visible) {
+    if (e.kind === 'node') {
+      current = byId.get(e.node.nodeId);
+      continue;
+    }
+    const owner =
+      (e.kind === 'tool' && e.nodeId !== null) || e.kind === 'hook'
+        ? (byId.get(e.nodeId ?? '') ?? current)
+        : current;
+    if (owner === undefined) preamble.push(e);
+    else owner.entries.push(e);
+  }
+  return { preamble, groups };
+}
+
+function NodeSections({
+  groups: { preamble, groups },
+  collapsed,
+  onToggle,
+  onSetAll,
+}: {
+  groups: GroupedTimeline;
+  collapsed: ReadonlySet<string>;
+  onToggle: (nodeId: string) => void;
+  onSetAll: (nodeIds: readonly string[] | null) => void;
+}): ReactElement {
+  const ids = groups.map(g => g.node.node.nodeId);
+  const openCount = ids.filter(id => !collapsed.has(id)).length;
+  return (
+    <div className="flex flex-col">
+      {groups.length > 1 ? (
+        <div className="flex justify-end gap-3 pt-1 font-mono text-[11px] text-text-tertiary">
+          <button
+            type="button"
+            disabled={openCount === 0}
+            onClick={() => {
+              onSetAll(ids);
+            }}
+            className="transition-colors hover:text-text-primary disabled:opacity-40"
+          >
+            Collapse all
+          </button>
+          <button
+            type="button"
+            disabled={openCount === ids.length}
+            onClick={() => {
+              onSetAll(null);
+            }}
+            className="transition-colors hover:text-text-primary disabled:opacity-40"
+          >
+            Expand all
+          </button>
+        </div>
+      ) : null}
+      {preamble.map(renderTimelineEntry)}
+      {groups.map(({ node, entries }) => {
+        const id = node.node.nodeId;
+        const open = !collapsed.has(id);
+        return (
+          <section key={node.key} aria-label={node.node.nodeName}>
+            {renderNodeDivider(node, {
+              open,
+              count: entries.length,
+              onToggle: () => {
+                onToggle(id);
+              },
+            })}
+            {open && entries.length > 0 ? (
+              <div
+                className="ml-[7px] flex flex-col border-l pl-3"
+                style={{ borderColor: 'color-mix(in oklch, var(--border), transparent 20%)' }}
+              >
+                {entries.map(renderTimelineEntry)}
+              </div>
+            ) : null}
+          </section>
+        );
+      })}
+    </div>
+  );
 }
 
 /**
@@ -454,6 +588,33 @@ function ContentEventItem({ event }: { event: TextEvent | ArtifactEvent }): Reac
   );
 }
 
+function renderNodeDivider(
+  entry: NodeEntry,
+  section?: { open: boolean; count: number; onToggle: () => void }
+): ReactElement {
+  return (
+    <NodeDivider
+      key={entry.key}
+      nodeId={entry.node.nodeId}
+      nodeName={entry.node.nodeName}
+      status={entry.node.status}
+      durationMs={entry.node.durationMs}
+      timestamp={entry.node.startedAt}
+      costUsd={entry.node.costUsd}
+      costPartial={entry.node.costPartial}
+      costScope={entry.node.costScope}
+      numTurns={entry.node.numTurns}
+      tokens={entry.node.tokens}
+      stopReason={entry.node.stopReason}
+      skipReason={entry.node.skipReason}
+      skipExpr={entry.node.skipExpr}
+      fanOutOutcome={entry.node.fanOutOutcome}
+      showDetail={entry.showDetail}
+      section={section}
+    />
+  );
+}
+
 function renderTimelineEntry(entry: TimelineEntry): ReactElement {
   switch (entry.kind) {
     case 'message': {
@@ -470,26 +631,7 @@ function renderTimelineEntry(entry: TimelineEntry): ReactElement {
       return <HookEventItem key={entry.key} event={entry.event} timestamp={entry.timestamp} />;
     }
     case 'node': {
-      return (
-        <NodeDivider
-          key={entry.key}
-          nodeId={entry.node.nodeId}
-          nodeName={entry.node.nodeName}
-          status={entry.node.status}
-          durationMs={entry.node.durationMs}
-          timestamp={entry.node.startedAt}
-          costUsd={entry.node.costUsd}
-          costPartial={entry.node.costPartial}
-          costScope={entry.node.costScope}
-          numTurns={entry.node.numTurns}
-          tokens={entry.node.tokens}
-          stopReason={entry.node.stopReason}
-          skipReason={entry.node.skipReason}
-          skipExpr={entry.node.skipExpr}
-          fanOutOutcome={entry.node.fanOutOutcome}
-          showDetail={entry.showDetail}
-        />
-      );
+      return renderNodeDivider(entry);
     }
     case 'system': {
       const ev = entry.event;
