@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import { RecentRunRow, recentRunGridCols } from './RecentRunRow';
 import type { Run } from '../primitives/run';
 import { elapsedSince } from '../lib/format';
+import { useRunPrs } from '../lib/run-pr';
 
 type SortKey = 'duration' | 'cost';
 type SortDir = 'desc' | 'asc';
@@ -54,6 +55,8 @@ export function filterRecentRuns(
 function distinct(values: string[]): string[] {
   return [...new Set(values.filter(v => v !== ''))].sort((a, b) => a.localeCompare(b));
 }
+
+const PR_LOOKUPS = 50;
 
 const HEAD_TEXT =
   'font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-text-tertiary';
@@ -136,6 +139,8 @@ export function RecentRunsTable({
   const shown = useMemo(() => filterRecentRuns(runs, filters, sort), [runs, filters, sort]);
   const statuses = useMemo(() => distinct(runs.map(r => r.status)), [runs]);
   const workflows = useMemo(() => distinct(runs.map(r => r.workflow)), [runs]);
+  // Only the first rows shown: each lookup reads a whole run's events.
+  const prs = useRunPrs(useMemo(() => shown.slice(0, PR_LOOKUPS), [shown]));
   const projects = useMemo(() => distinct(runs.map(r => r.projectName ?? '')), [runs]);
   const filtered =
     sort !== null ||
@@ -205,6 +210,9 @@ export function RecentRunsTable({
               onChange={set('project')}
             />
           ) : null}
+          <span className={HEAD_TEXT} title="The pull request the run opened">
+            PR
+          </span>
           <HeadInput label="Run id" value={filters.id} onChange={set('id')} className="w-full" />
           {sortButton('duration', 'Duration')}
           {sortButton('cost', 'Cost', 'Reported agent cost; may be partial. Click to sort.')}
@@ -230,6 +238,7 @@ export function RecentRunsTable({
             showProject={showProject}
             selected={run.id === selectedRunId}
             inTable
+            pr={prs.get(run.id)}
           />
         ))}
         {shown.length === 0 ? (

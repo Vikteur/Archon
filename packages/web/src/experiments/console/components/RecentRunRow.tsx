@@ -6,6 +6,7 @@ import { shortRunId, formatElapsed, elapsedSince, formatCost } from '../lib/form
 import { useIsDocker, useIdeEnv, openInIde } from '../lib/health';
 import { statusTextClass } from '../lib/run-status';
 import { RunOutcomeBadge } from './RunOutcomeBadge';
+import type { RunPr } from '../lib/run-pr';
 
 interface RecentRunRowProps {
   run: Run;
@@ -13,13 +14,15 @@ interface RecentRunRowProps {
   selected?: boolean;
   /** In RecentRunsTable: the row takes the table's columns (subgrid) so it lines up with the header. */
   inTable?: boolean;
+  /** The pull request the run opened, linked in the PR column. */
+  pr?: RunPr;
 }
 
-/** Row grid: status | workflow | request | (project) | id | duration | cost | CLI. */
+/** Row grid: status | workflow | request | (project) | PR | id | duration | cost | CLI. */
 export function recentRunGridCols(showProject: boolean): string {
   return showProject
-    ? 'grid-cols-[220px_auto_minmax(0,1fr)_140px_84px_70px_minmax(64px,auto)_auto]'
-    : 'grid-cols-[220px_auto_minmax(0,1fr)_84px_70px_minmax(64px,auto)_auto]';
+    ? 'grid-cols-[220px_auto_minmax(0,1fr)_140px_56px_84px_70px_minmax(64px,auto)_auto]'
+    : 'grid-cols-[220px_auto_minmax(0,1fr)_56px_84px_70px_minmax(64px,auto)_auto]';
 }
 
 const STATUS_GLYPH: Record<string, string> = {
@@ -40,6 +43,7 @@ export function RecentRunRow({
   showProject = false,
   selected = false,
   inTable = false,
+  pr,
 }: RecentRunRowProps): ReactElement {
   const navigate = useNavigate();
   const isDocker = useIsDocker();
@@ -125,6 +129,26 @@ export function RecentRunRow({
       {showProject ? (
         <span className="truncate text-[12px] text-text-secondary">{run.projectName ?? ''}</span>
       ) : null}
+
+      <span className="font-mono text-[12px]">
+        {pr !== undefined ? (
+          <a
+            href={pr.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open pull request #${pr.number.toString()} on GitHub`}
+            onClick={e => {
+              e.stopPropagation();
+            }}
+            onKeyDown={e => {
+              e.stopPropagation();
+            }}
+            className="font-semibold text-accent-bright hover:underline"
+          >
+            #{pr.number}
+          </a>
+        ) : null}
+      </span>
 
       <span className="text-right font-mono text-[12px] text-text-tertiary">
         {shortRunId(run.id)}
