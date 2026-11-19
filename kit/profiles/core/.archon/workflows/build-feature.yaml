@@ -188,7 +188,9 @@ nodes:
         | architecture rule                 | archunit-fitness                         |                                                                  |
       `none` on a line only when that agent writes nothing for the step (scripts, workflows, docs; a pin-only or
       verify-only step has `Build skills: none`).
-      The templates under docs/scaffold-templates/ and the docs/code-maps leaves of those skills are the conventions.
+      The templates the `## Scaffold` tables of those skills' docs/code-maps leaves link, and those leaves, are the
+      conventions: a repo's own templates live in docs/scaffold-templates/project/; the kit's, one level up, are worked
+      examples that no leaf links.
       Never write a step that only runs tests, checks or gates: affected-check, tdd-check, the mutation gate, review and
       CI run them all later in this workflow. An acceptance criterion a check proves goes under a `## Checks for review`
       section (the check and the criterion), not in a step. A step that adds no behaviour and only updates docs, or
