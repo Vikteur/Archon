@@ -483,6 +483,37 @@ output=$(run_provider_install --providers "") || fail "install with kit doctor f
 assert_equals "kit doctor" "$(kit_calls_made)" "kit doctor runs when there is no kit tools"
 rm -f "$provider_mock_dir/kit-mode" "$kit_calls"
 
+# Kit setup: on a terminal (ARCHON_TTY) and when the CLI has it, it replaces the kit tools step.
+tty_file="$tmp_dir/kit-tty"
+: >"$tty_file"
+echo "tools setup" >"$provider_mock_dir/kit-mode"
+output=$(run_provider_install --providers "") || fail "install without a terminal failed: $output"
+assert_equals "kit tools" "$(kit_calls_made)" "no terminal runs kit tools, not kit setup"
+
+rm -f "$kit_calls"
+output=$(ARCHON_TTY="$tty_file" run_provider_install --providers "") || fail "install with kit setup failed: $output"
+assert_equals "kit setup" "$(kit_calls_made)" "a terminal starts kit setup instead of kit tools"
+
+rm -f "$kit_calls"
+output=$(ARCHON_TTY="$tty_file" run_provider_install --providers "" --no-kit-tools) \
+  || fail "kit setup with --no-kit-tools failed: $output"
+assert_equals "kit setup --no-tools" "$(kit_calls_made)" "--no-kit-tools passes --no-tools to kit setup"
+
+rm -f "$kit_calls"
+output=$(ARCHON_TTY="$tty_file" run_provider_install --providers "" --no-setup) || fail "--no-setup install failed: $output"
+assert_equals "kit tools" "$(kit_calls_made)" "--no-setup runs kit tools instead"
+
+rm -f "$kit_calls"
+output=$(ARCHON_TTY="$tty_file" ARCHON_NO_SETUP=1 run_provider_install --providers "") \
+  || fail "ARCHON_NO_SETUP install failed: $output"
+assert_equals "kit tools" "$(kit_calls_made)" "ARCHON_NO_SETUP=1 runs kit tools instead"
+
+rm -f "$kit_calls"
+echo tools >"$provider_mock_dir/kit-mode"
+output=$(ARCHON_TTY="$tty_file" run_provider_install --providers "") || fail "install on an older CLI failed: $output"
+assert_equals "kit tools" "$(kit_calls_made)" "a CLI without kit setup runs kit tools"
+rm -f "$provider_mock_dir/kit-mode" "$kit_calls"
+
 # The same selection cases for install.ps1, where PowerShell is installed (the Linux CI
 # runner has it). The driver shadows the Invoke-WebRequest cmdlet with a function, so the
 # installer it invokes "downloads" the shell-script stub and leaves a marker.
