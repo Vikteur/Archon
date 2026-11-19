@@ -323,7 +323,13 @@ await c.close();
 JS
 node "$work/kit-run.mjs" > "$work/kit.out" 2>&1
 if [ "$(cat "$work/kit.out")" = "acme-api|true|true" ]; then ok "kit.yaml: server name, project name and spec_path drive the server"; else bad "kit.yaml drives the server" "$(cat "$work/kit.out")"; fi
-rm -rf "$work/.archon" "$work/spec"; mv "$work/contract.off" "$work/contract"
+# an absolute contract.spec_path: a contract outside the project, loaded as it is (path.resolve, not joined to the root)
+ext="$(mktemp -d)"; cp "$work/spec/api.yaml" "$ext/outside-api.yaml"
+printf 'project_name: acme\ncontract:\n  server_name: acme-api\n  spec_path: %s/outside-api.yaml\n' "$ext" > "$work/.archon/kit.yaml"
+rm -rf "$work/spec"
+node "$work/kit-run.mjs" > "$work/kit.out" 2>&1
+if [ "$(cat "$work/kit.out")" = "acme-api|true|true" ]; then ok "kit.yaml: an absolute spec_path outside the project is loaded as it is"; else bad "an absolute spec_path" "$(cat "$work/kit.out")"; fi
+rm -rf "$ext" "$work/.archon" "$work/spec"; mv "$work/contract.off" "$work/contract"
 
 echo "contract-mcp tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

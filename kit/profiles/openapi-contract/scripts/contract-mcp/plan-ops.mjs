@@ -16,7 +16,7 @@ const MAX_OPS = 12;
 const [ticketFile, checkout = '.'] = process.argv.slice(2);
 if (!ticketFile) { console.error('usage: plan-ops.mjs <ticket.md> [<checkout>]'); process.exit(2); }
 const root = path.resolve(checkout);
-const specFile = path.join(root, kitConfig(root)('contract.spec_path'));
+const specFile = path.resolve(root, kitConfig(root)('contract.spec_path'));
 if (!existsSync(specFile)) { console.error(`plan-ops: no ${specFile}`); process.exit(1); }
 
 const text = existsSync(ticketFile) ? readFileSync(ticketFile, 'utf8') : '';

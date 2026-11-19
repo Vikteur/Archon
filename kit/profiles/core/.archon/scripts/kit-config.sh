@@ -27,3 +27,18 @@ kit_get() { # kit_get <dotted.key> <default> [ENV_NAME]
   fi
   printf '%s' "${v:-$def}"
 }
+
+# kit_list <dotted.key>: the items of a YAML list key, one per line (nothing for a missing or empty key, or with no yq).
+# The project's kit.yaml first, else kit.defaults.yaml beside it, as kit_get does; no environment override.
+#   kit_list codegraph.extra_projects        # absolute paths of the other repos CodeGraph indexes
+kit_list() {
+  local key="$1" f root v=""
+  f="${KIT_CONFIG:-}"
+  if [ -z "$f" ]; then root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; f="$root/.archon/kit.yaml"; fi
+  command -v yq >/dev/null 2>&1 || return 0
+  for f in "$f" "${f%/*}/kit.defaults.yaml"; do
+    [ -f "$f" ] || continue
+    v="$(yq -r ".$key[]" "$f" 2>/dev/null)" || v=""
+    if [ -n "$v" ]; then printf '%s\n' "$v"; return 0; fi
+  done
+}

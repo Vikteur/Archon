@@ -9,7 +9,8 @@
 # CONTRACT_REMOTE overrides where a missing contract/ is cloned from. .archon/kit.yaml (optional; KIT_* env wins) sets
 # contract.repo (owner/repo of the contract, default @@KIT_CONTRACT_REPO@@) and contract.spec_path (default
 # contract/dist/openapi.yaml; its first folder is where the contract is cloned). A spec in a folder that is not a git
-# clone is the project's own contract, used as it is.
+# clone is the project's own contract, used as it is. So is an absolute spec_path naming an existing file (the contract
+# kept outside the project): no clone, no pin; an absolute path to nothing is refused.
 set -uo pipefail
 
 dir="$(cd "${1:-.}" && pwd)" || exit 1
@@ -20,12 +21,15 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 contract_repo="$(kit_get contract.repo @@KIT_CONTRACT_REPO@@)"
 spec_path="$(kit_get contract.spec_path contract/dist/openapi.yaml)"
 cdir="${spec_path%%/*}"
+absolute=0
 say() { echo "contract-mcp: $*"; }
 fail() { say "FAIL: $*"; exit 1; }
-# The spec lives in a folder of the project (contract/dist/openapi.yaml): an absolute path, a bare file name or a ..
-# would make $cdir the root, the file itself or a folder outside the project.
+# A relative spec lives in a folder of the project (contract/dist/openapi.yaml): a bare file name or a .. would make
+# $cdir the file itself or a folder outside the project. An absolute path is the project's own contract, if it exists.
 case "$spec_path" in
-  /*|../*|*/../*|*/..) fail "contract.spec_path '$spec_path' must be a path inside the project (contract/dist/openapi.yaml)" ;;
+  /*) [ -f "$spec_path" ] || fail "contract.spec_path '$spec_path' is an absolute path to no file: put the contract there, or fix the path in .archon/kit.yaml"
+      absolute=1 ;;
+  ../*|*/../*|*/..) fail "contract.spec_path '$spec_path' must be a path inside the project (contract/dist/openapi.yaml)" ;;
   */*) ;;
   *) fail "contract.spec_path '$spec_path' must name a folder and the spec in it (contract/dist/openapi.yaml)" ;;
 esac
@@ -39,7 +43,9 @@ fi
 
 # A spec in a folder that is no clone is the project's own contract (kept in its tree): there is nothing to clone or pin.
 # -e, not -d: a worktree or a submodule has a .git file, and it is a clone to pin.
-if [ ! -e "$cdir/.git" ] && [ -f "$spec_path" ]; then
+if [ "$absolute" = 1 ]; then
+  say "contract at $spec_path (outside the project: not cloned, not pinned)"
+elif [ ! -e "$cdir/.git" ] && [ -f "$spec_path" ]; then
   say "contract in the project tree at $spec_path"
 else
   if [ ! -e "$cdir/.git" ]; then

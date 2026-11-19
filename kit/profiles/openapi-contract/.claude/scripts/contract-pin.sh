@@ -8,7 +8,8 @@
 # Prints "OK: ..." and exits 0, or prints a FAIL line and exits 1.
 # .archon/kit.yaml (optional, KIT_* env wins) sets contract.tag_key (default @@KIT_CONTRACT_TAG_KEY@@), contract.repo (default
 # @@KIT_CONTRACT_REPO@@, only named in messages) and contract.spec_path (default contract/dist/openapi.yaml; what follows its first
-# folder is the bundle checked for under <contract-dir>).
+# folder is the bundle checked for under <contract-dir>). An absolute contract.spec_path is the project's own contract:
+# the script then prints that there is nothing to pin and exits 0.
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +18,9 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 tag_key="$(kit_get contract.tag_key @@KIT_CONTRACT_TAG_KEY@@)"
 repo_name="$(kit_get contract.repo @@KIT_CONTRACT_REPO@@)"; repo_name="${repo_name#*/}"
 spec_path="$(kit_get contract.spec_path contract/dist/openapi.yaml)"
+
+# An absolute spec path is the project's own contract, kept outside the project: no clone, so nothing to pin.
+case "$spec_path" in /*) echo "OK: contract.spec_path is an absolute path ($spec_path): the project's own contract, nothing to pin"; exit 0 ;; esac
 
 dir="${1:?usage: contract-pin.sh <contract-dir> [<properties-file>]}"
 props="${2:-gradle.properties}"

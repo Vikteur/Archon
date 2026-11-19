@@ -170,8 +170,8 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   ],
   'scripts/web-uis.sh': [
     [
-      '# wedding-portal (`backlog browser`) and the Groma architecture map of wedding-portal (`groma web`)',
-      '# this project (`backlog browser`) and the Groma architecture map of this project (`groma web`)',
+      '# wedding-portal (`backlog browser`), the Groma architecture map of wedding-portal (`groma web`)',
+      '# this project (`backlog browser`), the Groma architecture map of this project (`groma web`)',
       1,
     ],
     ['while wedding-portal has no groma/ folder', 'while this project has no groma/ folder', 1],

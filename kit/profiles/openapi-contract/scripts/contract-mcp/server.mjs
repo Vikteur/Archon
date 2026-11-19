@@ -24,7 +24,7 @@ const serverName = kit('contract.server_name');
 const projectName = kit('project_name');
 const specPath = kit('contract.spec_path');
 const load = (file, hint) => {
-  try { return readFileSync(path.join(root, file), 'utf8'); } catch {
+  try { return readFileSync(path.resolve(root, file), 'utf8'); } catch {
     console.error(`${serverName}: no ${file} in ${root}. ${hint}`);
     process.exit(1);
   }

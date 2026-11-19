@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Make a run worktree's MCP servers ready, and tell the workflow nodes which ones are: runs contract-mcp-setup.sh and
-# codegraph-setup.sh, then writes .archon/mcp/build-tools.json (git-ignored) with only the servers whose setup passed.
+# codegraph-setup.sh (the latter also on each kit.yaml codegraph.extra_projects folder), then writes .archon/mcp/build-tools.json (git-ignored) with only the servers whose setup passed.
 # The nodes that use the servers declare that file as an optional `mcp:` (docs/mcp/plan.md, A3): Archon fails a node
 # whose declared server cannot start, and `optional: true` only covers a missing file, so a server that is not ready
 # must not be in it. With neither ready it removes the file, and the nodes run without the tools.
@@ -25,14 +25,25 @@ cd "$dir" || exit 1
 server="$(kit_get contract.server_name @@KIT_CONTRACT_SERVER_NAME@@)"   # the checkout's .archon/kit.yaml, else the default
 log() { printf '%s\n' "$1"; [ -z "$status" ] || printf '%s\n' "$1" >>"$status"; }
 
-run() { # run <script>: its lines through log, and its exit code
+run() { # run <script> [<dir>]: its lines through log (it works on <dir>, default the checkout), and its exit code
   local out rc
-  out="$(bash "$1" "$dir" 2>&1)"; rc=$?
+  out="$(bash "$1" "${2:-$dir}" 2>&1)"; rc=$?
   while IFS= read -r l; do [ -n "$l" ] && log "$l"; done <<<"$out"
   return "$rc"
 }
-contract=down; run "${MCP_CONTRACT_SETUP:-${MCP_PORTAL_SETUP:-$here/contract-mcp-setup.sh}}" && contract=up
+contract=down
+contract_setup="${MCP_CONTRACT_SETUP:-${MCP_PORTAL_SETUP:-$here/contract-mcp-setup.sh}}"
+# A project without a contract (no contract profile installed) has no setup script: the server is simply down.
+if [ -f "$contract_setup" ]; then run "$contract_setup" && contract=up
+else log "$server: not installed here (no $(basename "$contract_setup"))"; fi
 codegraph=down; run "${MCP_CODEGRAPH_SETUP:-$here/codegraph-setup.sh}" && codegraph=up
+# The other repos of the project (kit.yaml codegraph.extra_projects, absolute paths, say the frontend) get their own index.
+# A missing folder or a failed setup there is reported and nothing more: it never marks the checkout's codegraph down.
+while IFS= read -r extra; do
+  [ -n "$extra" ] || continue
+  if [ ! -d "$extra" ]; then log "codegraph: extra project $extra skipped, no such folder"; continue; fi
+  run "${MCP_CODEGRAPH_SETUP:-$here/codegraph-setup.sh}" "$extra" || log "codegraph: extra project $extra FAILED to index (the checkout's codegraph is unaffected)"
+done <<<"$(kit_list codegraph.extra_projects)"
 
 file=.archon/mcp/build-tools.json
 if [ "$contract" = down ] && [ "$codegraph" = down ]; then

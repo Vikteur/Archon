@@ -18,7 +18,8 @@
 # Deny shape: Claude's hookSpecificOutput.permissionDecision{,Reason} plus Copilot's top-level permissionDecision{,Reason}.
 # $CLAUDE_PROJECT_DIR falls back to `git rev-parse --show-toplevel`, then $PWD. Unreadable (no jq, not a JSON object):
 # the payload comes back unchanged, with exit 3 when it may name an agent (an agent key, or $KIT_AGENT set).
-# Keep this file bash-3.2-clean.
+# A leading `rtk ` / `rtk proxy ` of a Bash command is dropped so the fence judges the command rtk rewrote (see
+# hook_normalize_payload below). Keep this file bash-3.2-clean.
 
 if [ -z "${CLAUDE_PROJECT_DIR:-}" ]; then
   CLAUDE_PROJECT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)" || CLAUDE_PROJECT_DIR=""
@@ -26,7 +27,7 @@ if [ -z "${CLAUDE_PROJECT_DIR:-}" ]; then
   export CLAUDE_PROJECT_DIR
 fi
 
-hook_normalize_payload() { # hook_normalize_payload <json>; exit 3 = a Copilot call that may name an agent was unreadable
+_hook_normalize_core() { # the shape conversion; hook_normalize_payload below wraps it
   local p="$1" tools="${COPILOT_TOOLS_JSON:-${CLAUDE_PROJECT_DIR:-$PWD}/.archon/copilot/tools.json}" out="" pass=1
   case "$p" in
     *'"toolName"'*|*'"toolArgs"'*|*'"agentName"'*|*'"agentType"'*|*'"agentId"'*|*'"sessionId"'*|*'"workingDirectory"'*) pass=0 ;;
@@ -80,6 +81,30 @@ hook_normalize_payload() { # hook_normalize_payload <json>; exit 3 = a Copilot c
   case "$p" in *'"agentType"'*|*'"agentName"'*|*'"agentId"'*|*'"agent_type"'*) return 3 ;; esac
   [ -z "${KIT_AGENT:-}" ] || return 3
   return 0
+}
+
+# hook_normalize_payload <json>: the shape conversion, then the rtk prefix. rtk (a token-saving CLI proxy) has a Copilot
+# hook that rewrites a Bash command `git status` into `rtk git status`; the fence must judge the real command, so ONE
+# leading `rtk ` (or `rtk proxy `) is dropped from a Bash command here, in both payload shapes. Only the first word, and
+# only when a command follows: a bare `rtk` stays `rtk` (denied for an agent whose allowlist lacks it), `rtk rtk git` is
+# judged as `rtk git`, and `rtk` anywhere later in the command is left alone. Needs jq; without it nothing changes
+# (and the guards fail closed without jq anyway). Exit 3 as _hook_normalize_core gives it.
+hook_normalize_payload() { # hook_normalize_payload <json>
+  local out rc stripped
+  out="$(_hook_normalize_core "$1")"; rc=$?
+  case "$out" in
+    *rtk*)
+      if command -v jq >/dev/null 2>&1 && stripped="$(printf '%s' "$out" | jq -c '
+          # blanks only (no newline: `rtk` then a newline is two commands), and a real command word must follow
+          if type == "object" and .tool_name == "Bash" and ((.tool_input.command // null) | type) == "string"
+             and (.tool_input.command | test("^[ \\t]*rtk[ \\t]+[^ \\t\\r\\n;&|<>()]"))
+             and (.tool_input.command | test("^[ \\t]*rtk[ \\t]+proxy[ \\t]*$") | not)
+          then .tool_input.command |= (if test("^[ \\t]*rtk[ \\t]+proxy[ \\t]+[^ \\t\\r\\n;&|<>()]")
+                                       then sub("^[ \\t]*rtk[ \\t]+proxy[ \\t]+"; "") else sub("^[ \\t]*rtk[ \\t]+"; "") end)
+          else . end' 2>/dev/null)" && [ -n "$stripped" ]; then out="$stripped"; fi ;;
+  esac
+  printf '%s' "$out"
+  return "$rc"
 }
 
 hook_deny_json() { # hook_deny_json <reason>: a deny in the Claude and the Copilot shape

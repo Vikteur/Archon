@@ -48,5 +48,14 @@ done
 eq "sh: no yq is the default" claude "$(KIT_CONFIG="$tmp/kit.yaml" PATH="$(dirname "$(command -v bash)")" bash -c '. "'"$root"'/.archon/scripts/kit-config.sh"; kit_get agent_cli claude')"
 # with no default (a kit placeholder rendered empty) a missing key is empty, not an unbound-variable crash
 eq "sh: no default argument is an empty default" "" "$(KIT_CONFIG="$tmp/missing.yaml" bash -uc '. "'"$root"'/.archon/scripts/kit-config.sh"; kit_get nope' 2>&1)"
+# kit_list: a YAML list key, one item per line; kit.yaml first, else kit.defaults.yaml beside it; empty when absent
+mkdir -p "$tmp/lp" "$tmp/lq"
+printf 'codegraph:\n  extra_projects:\n    - /a/frontend\n    - "/b/other repo"\n' > "$tmp/lp/kit.yaml"
+printf 'codegraph:\n  extra_projects:\n    - /d/default\n' > "$tmp/lq/kit.defaults.yaml"; : > "$tmp/lq/kit.yaml"
+sh_list() { ( . "$root/.archon/scripts/kit-config.sh"; KIT_CONFIG="$1" kit_list "$2" ); }
+eq "sh list: items one per line" $'/a/frontend\n/b/other repo' "$(sh_list "$tmp/lp/kit.yaml" codegraph.extra_projects)"
+eq "sh list: falls back to kit.defaults.yaml" /d/default "$(sh_list "$tmp/lq/kit.yaml" codegraph.extra_projects)"
+eq "sh list: missing key is empty" "" "$(sh_list "$tmp/lp/kit.yaml" codegraph.nope)"
+eq "sh list: no file is empty" "" "$(sh_list "$tmp/none.yaml" codegraph.extra_projects)"
 echo "kit-config: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

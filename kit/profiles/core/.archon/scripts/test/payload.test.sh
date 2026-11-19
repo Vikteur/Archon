@@ -139,6 +139,34 @@ eq "scope-guard (Claude payload, an unknown tool): still no objection (Claude un
 cl="$(jq -cn --arg r "$root" '{agent_type:"developer",tool_name:"Bash",cwd:$r,tool_input:{command:"./gradlew test"}}')"
 eq "scope-guard (Claude payload): still denies" deny "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$(run_sg "$cl")")"
 
+# --- rtk prefix: the fence judges the command rtk rewrote (one leading `rtk ` / `rtk proxy `, nothing else)
+rtkcmd() { jq -r .tool_input.command <<<"$(norm "$1")"; }
+cc() { jq -cn --arg c "$1" '{agent_type:"developer",tool_name:"Bash",tool_input:{command:$c}}'; }
+cp() { jq -cn --arg c "$1" '{agentType:"developer",toolName:"bash",toolArgs:({command:$c}|tojson)}'; }
+for shape in cc cp; do
+  eq "rtk ($shape): a leading rtk is dropped" "git status" "$(rtkcmd "$($shape 'rtk git status')")"
+  eq "rtk ($shape): rtk proxy is dropped too" "git log" "$(rtkcmd "$($shape 'rtk proxy git log')")"
+  eq "rtk ($shape): the blanks around it go" "git diff" "$(rtkcmd "$($shape "  rtk   git diff")")"
+  eq "rtk ($shape): only ONE rtk is dropped" "rtk git status" "$(rtkcmd "$($shape 'rtk rtk git status')")"
+  eq "rtk ($shape): a bare rtk stays" "rtk" "$(rtkcmd "$($shape 'rtk')")"
+  eq "rtk ($shape): rtk and a blank stays" "rtk " "$(rtkcmd "$($shape 'rtk ')")"
+  eq "rtk ($shape): a bare rtk proxy stays" "rtk proxy" "$(rtkcmd "$($shape 'rtk proxy')")"
+  eq "rtk ($shape): rtk in a later word stays" "git rtk status" "$(rtkcmd "$($shape 'git rtk status')")"
+  eq "rtk ($shape): rtk in a later segment stays" "git status && rtk ls" "$(rtkcmd "$($shape 'git status && rtk ls')")"
+  eq "rtk ($shape): a word that starts with rtk stays" "rtkx git status" "$(rtkcmd "$($shape 'rtkx git status')")"
+  eq "rtk ($shape): rtk then a separator is not a command word" "rtk ; ls" "$(rtkcmd "$($shape 'rtk ; ls')")"
+done
+eq "rtk: a non-Bash tool is untouched" "rtk git status" "$(jq -r .tool_input.command <<<"$(norm '{"agent_type":"developer","tool_name":"Edit","tool_input":{"command":"rtk git status"}}')")"
+sgdeny() { local o; o="$(run_sg "$1")"; [ -n "$o" ] && jq -r ".permissionDecision // \"none\"" <<<"$o" || echo none; }
+for shape in cc cp; do
+  eq "scope-guard ($shape): an allowed command through rtk is allowed" "none" "$(sgdeny "$($shape 'rtk git status')")"
+  eq "scope-guard ($shape): rtk proxy of an allowed command is allowed" "none" "$(sgdeny "$($shape 'rtk proxy git log')")"
+  eq "scope-guard ($shape): a denied command through rtk is denied" deny "$(sgdeny "$($shape 'rtk rm -rf /tmp/x')")"
+  eq "scope-guard ($shape): a bare rtk is denied" deny "$(sgdeny "$($shape 'rtk')")"
+  eq "scope-guard ($shape): a later rtk does not launder a denied command" deny "$(sgdeny "$($shape 'git status && rtk rm -rf /tmp/x')")"
+  eq "scope-guard ($shape): rtk then a denied second segment is denied" deny "$(sgdeny "$($shape 'rtk git status && rm -rf /tmp/x')")"
+done
+
 # --- tool-advice with a Copilot payload: refuse mode denies a contract read for the developer
 ta="$root/.claude/hooks/scripts/tool-advice.sh"
 out="$(TOOL_ADVICE_CONTRACT=refuse CLAUDE_PROJECT_DIR=/work/wt bash "$ta" PreToolUse <<<'{"agentType":"developer","toolName":"view","toolArgs":{"path":"/work/wt/contract/dist/openapi.yaml"}}')"

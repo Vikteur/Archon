@@ -276,16 +276,22 @@ setver tool-a 2.88.1; setver tool-b 22.0.0; setver tool-c 1.53.0; setver tool-d 
 run PATH="$root/bin:$(dirname "$(command -v git)"):/usr/bin:/bin"
 check "I14 exit 0 without a manager" [ "$rc" = 0 ]
 
-# I15: the real scripts/tools.conf: 13 tools, known kinds, every column filled, groma pinned like example-app CI.
+# I15: the real scripts/tools.conf: 15 tools, known kinds, every column filled, groma pinned like example-app CI.
 conf=$(sed -e 's/#.*//' "$real_conf" | grep -v '^[[:space:]]*$')
 out="$conf"
-check "I15 13 tools" [ "$(grep -c . <<< "$conf")" = 13 ]
+check "I15 15 tools" [ "$(grep -c . <<< "$conf")" = 15 ]
 check "I15 order" [ "$(cut -d'|' -f1 <<< "$conf" | tr -d ' ' | tr '\n' ' ')" = \
-  "git gh node jq yq java docker claude copilot archon backlog groma codegraph " ]
+  "git gh node jq yq java docker claude copilot archon backlog groma codegraph rtk mcp-inspector " ]
 check "I15 six columns, none empty" [ -z "$(awk -F'|' 'NF != 6 { print; next } { for (i = 1; i <= 6; i++) { v = $i; gsub(/[[:space:]]/, "", v); if (v == "") print } }' <<< "$conf")" ]
 check "I15 known kinds" [ -z "$(cut -d'|' -f3 <<< "$conf" | tr -d ' ' | grep -vxE 'pkg|npm|script')" ]
 pin() { awk -F'|' -v n="$1" '{ gsub(/ /, "", $1); gsub(/ /, "", $2) } $1 == n { print $2 }' <<< "$conf"; }
 check "I15 groma is pinned to 0.6.6" [ "$(pin groma)" = 0.6.6 ]
+check "I15 rtk is pinned to 1.1.0 (not 1.2.x)" [ "$(pin rtk)" = 1.1.0 ]
+check "I15 rtk installs from the v1.1.0 install script" grep -q '| https://raw.githubusercontent.com/rtk-ai/rtk/v1.1.0/install.sh |' <<< "$conf"
+check "I15 rtk comes from winget on Windows" grep -q '^rtk .*| winget:rtk-ai.rtk ' <<< "$conf"
+check "I15 rtk is never cargo-installed" [ -z "$(grep -i cargo <<< "$conf")" ]
+check "I15 the inspector is pinned to 2.13.0" [ "$(pin mcp-inspector)" = 2.13.0 ]
+check "I15 the inspector is the official npm package" grep -q '^mcp-inspector .*| npm .*@modelcontextprotocol/inspector .*mcp-inspector --version' <<< "$conf"
 project_ci="$here/../../.github/workflows/ci.yml"
 if [ ! -f "$project_ci" ]; then
   echo "SKIP: I15 groma pin vs example-app CI ($project_ci not found)"
@@ -375,6 +381,58 @@ run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-none" INSTALL_TOOLS_ALL=
 check "L4 INSTALL_TOOLS_ALL=1: both" listed copilot
 check "L4 INSTALL_TOOLS_ALL=1: both (claude)" listed claude
 script_args=
+
+# R: the rtk row of tools.conf: winget on Windows, its pinned install script (OSS edition, checksum left on) elsewhere.
+cat > "$root/rtk.conf" <<'CONF'
+rtk | 1.1.0 | script | winget:rtk-ai.rtk | https://raw.githubusercontent.com/rtk-ai/rtk/v1.1.0/install.sh | rtk --version
+CONF
+mkdir -p "$root/rtkbin" "$root/curlrtk" "$root/rp/bin"
+cat > "$root/rtkbin/rtk" <<'STUB'
+#!/usr/bin/env bash
+v=$(cat "$STATE/rtk-ai.rtk" 2>/dev/null) || exit 127
+echo "rtk $v"
+STUB
+# the install script the curl stub "downloads": records the RTK_* variables it runs with, then makes the tool appear
+cat > "$root/curlrtk/curl" <<'STUB'
+#!/usr/bin/env bash
+echo "curl $*" >> "$LOG"
+printf 'env | grep "^RTK_" | sort | tr "\n" " " >> "$LOG"; echo >> "$LOG"\necho 1.1.0 > "$STATE/rtk-ai.rtk"\n' | sed 's/\\n/\n/g'
+STUB
+chmod +x "$root/rtkbin/rtk" "$root/curlrtk/curl"
+script_args=--check
+
+fresh r1
+run TOOLS_CONF="$root/rtk.conf" PATH="$root/rtkbin:$PATH"
+check "R1 --check: rtk missing, exit 1" [ "$rc" = 1 ]
+check "R1 --check: names rtk and its pin" said "missing  rtk (wants 1.1.0)"
+check "R1 --check installs nothing" [ "$(calls)" = 0 ]
+setver rtk-ai.rtk 1.2.0
+run TOOLS_CONF="$root/rtk.conf" PATH="$root/rtkbin:$PATH"
+check "R1 --check: 1.2.x is the wrong version" said "missing  rtk (wants 1.1.0, has 1.2.0)"
+setver rtk-ai.rtk 1.1.0
+run TOOLS_CONF="$root/rtk.conf" PATH="$root/rtkbin:$PATH"
+check "R1 --check: 1.1.0 is ok" said "ok       rtk 1.1.0"
+check "R1 --check: exit 0" [ "$rc" = 0 ]
+script_args=
+
+fresh r2
+run TOOLS_CONF="$root/rtk.conf" PATH="$root/mgr:$root/rtkbin:$PATH"
+check "R2 Windows: winget with the rtk-ai.rtk id" logged "winget install --id rtk-ai.rtk $winget_flags"
+check "R2 Windows: no script download" [ -z "$(grep -E '^(curl|powershell)' "$log")" ]
+
+fresh r3
+run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/rtk.conf" LOCAL_PREFIX="$root/rp" PATH="$root/curlrtk:$root/rtkbin:$PATH"
+check "R3 Linux: the pinned v1.1.0 install script is fetched" logged "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/v1.1.0/install.sh"
+check "R3 Linux: OSS edition, pinned version, install dir in the prefix" \
+  grep -qxF "RTK_EDITION=oss RTK_INSTALL_DIR=$root/rp/bin RTK_VERSION=v1.1.0 " "$log"
+check "R3 Linux: the checksum check is never skipped" [ -z "$(grep RTK_SKIP_CHECKSUM "$log")" ]
+check "R3 Linux: nothing goes through cargo or winget" [ -z "$(grep -E 'cargo|^winget' "$log")" ]
+check "R3 Linux: rtk counts as installed" said "Installed: rtk"
+check "R3 Linux: exit 0" [ "$rc" = 0 ]
+fresh r4
+run INSTALL_TOOLS_OS=macos TOOLS_CONF="$root/rtk.conf" LOCAL_PREFIX="$root/rp" PATH="$root/curlrtk:$root/rtkbin:$PATH"
+check "R4 macOS: same install script, brew not used" logged "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/v1.1.0/install.sh" 
+check "R4 macOS: no brew call" [ -z "$(grep '^brew' "$log")" ]
 
 echo "install-tools tests: $pass passed, $fail failed"
 [ "$fail" = 0 ]

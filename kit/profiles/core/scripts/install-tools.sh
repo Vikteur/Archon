@@ -55,7 +55,7 @@ unix_path() { if command -v cygpath > /dev/null 2>&1; then cygpath -u "$1"; else
 # (npm after node) and the re-check find what was just installed. Called again after every install.
 path_dirs=()
 prefix=${LOCAL_PREFIX:-$HOME/.local}
-if [ "$os" = linux ]; then
+if [ "$os" = linux ] || [ "$os" = macos ]; then
   path_dirs=("$prefix/bin")
 elif [ "$os" = windows ]; then
   if [ -n "${INSTALL_TOOLS_PATH_DIRS+x}" ]; then
@@ -164,7 +164,7 @@ fi
 
 # winget and brew are needed before the first install, not halfway through.
 for i in ${todo[@]+"${todo[@]}"}; do
-  [ "${kinds[i]}" = pkg ] || continue
+  [ "${kinds[i]}" = pkg ] || { [ "${kinds[i]}" = script ] && [ "$os" = windows ] && [[ "${wins[i]}" == winget:* ]]; } || continue
   [ "$os" != linux ] || continue
   if [ "$os" = windows ] && ! command -v winget > /dev/null 2>&1; then
     echo "install-tools.sh: winget is missing. Install 'App Installer' from the Microsoft Store (or update Windows), then run this again." >&2
@@ -251,8 +251,19 @@ install_tool() {
     pkg:linux) linux_install "${names[i]}" ;;
     npm:*)
       if [[ "${specs[i]}" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then npm install -g "$target@${specs[i]}"; else npm install -g "$target"; fi ;;
-    script:windows) powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm $target | iex" ;;
-    script:macos | script:linux) curl -fsSL "$target" | bash ;;
+    script:windows)
+      # a Windows column "winget:<id>" says the tool comes from winget there (rtk has no PowerShell installer)
+      case "$target" in
+        winget:*) winget install --id "${target#winget:}" -e --silent --accept-source-agreements --accept-package-agreements ;;
+        *) powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm $target | iex" ;;
+      esac ;;
+    script:macos | script:linux)
+      # rtk: its install script is pinned in the URL; the OSS edition (Apache-2.0) at the pinned version, into the prefix,
+      # with the script's own checksum check on (RTK_SKIP_CHECKSUM is never set). Never `cargo install rtk`: other crate.
+      case "${names[i]}" in
+        rtk) curl -fsSL "$target" | env RTK_VERSION="v${specs[i]}" RTK_INSTALL_DIR="$prefix/bin" RTK_EDITION=oss sh ;;
+        *) curl -fsSL "$target" | bash ;;
+      esac ;;
     *) echo "unknown kind '$kind' for ${names[i]}" >&2; return 1 ;;
   esac
 }
