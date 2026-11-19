@@ -76,7 +76,17 @@ export const SCANNED_ROOTS = [
 // Copy lists
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Never shipped (or only shipped converted). Checked first. */
+/**
+ * The owner's own tools (owner decision 2026-11-19: night-preflight is not part of the kit). They are in no profile,
+ * and the leak check fails a shipped file that still names one of their scripts (kit/SPEC.md, What never ships).
+ */
+export const NEVER_SHIP: string[] = [
+  '.archon/scripts/night-preflight.sh',
+  '.archon/scripts/test/night-preflight.test.sh',
+  'docs/archon/script/night-preflight.md',
+];
+
+/** Never shipped (or only shipped converted). Checked after NEVER_SHIP. */
 export const EXCLUDE: string[] = [
   '.claude/settings.json', // converted: hooks -> .github/hooks/kit.json, permissions.deny -> .archon/copilot/deny.json
   '.claude/skills/archon-cli/**', // the same skill ships from .agents/skills/archon-cli
@@ -239,7 +249,17 @@ export type Rewrite = [from: string, to: string, count: number];
 
 const ACCOUNTS_LIST = 'Vikteur, ViktorVS1 and viktor-vansteenweghen_ssgia';
 
+/** The delegator's night-list step 6 names night-preflight.sh, which never ships: drop it and renumber step 7. */
+export const DELEGATOR_NIGHT_STEP: Rewrite = [
+  '6. The owner runs `night-preflight.sh` (it is no delegator tool). Start nothing until the owner says it printed GO;\n' +
+    '   help fix each NO-GO it names.\n' +
+    '7. **Build the list',
+  '6. **Build the list',
+  1,
+];
+
 export const TARGETED: Record<string, Rewrite[]> = {
+  '.claude/agents/delegator.md': [DELEGATOR_NIGHT_STEP],
   '.archon/copilot/README.md': [['in the Vikteur/Archon fork', 'in the Archon fork', 1]],
   '.archon/config.yaml': [['  baseBranch: main\n', '  baseBranch: @@KIT_BASE_BRANCH@@\n', 1]],
   '.archon/workflows/build-feature.yaml': [
@@ -364,10 +384,33 @@ export interface LeakReport {
   warnings: string[];
 }
 
+const NEVER_SHIP_SCRIPTS = NEVER_SHIP.map(p => p.split('/').pop() ?? '').filter(
+  n => /\.(sh|js|mjs|ts)$/.test(n) && !/\.test\./.test(n)
+);
+
+/** A test that only asserts a fence denies the script may name it. */
+const isDenyCase = (path: string, line: string): boolean =>
+  path.endsWith('delegator-fence.test.sh') && /\bdeny\b/.test(line);
+
+/** Shipped lines that name a never-ship script by path. */
+export function neverShipRefs(f: { profile: string; path: string; content: string }): string[] {
+  const out: string[] = [];
+  const lines = f.content.split('\n');
+  for (const name of NEVER_SHIP_SCRIPTS) {
+    const re = new RegExp(`(?<![\\w-])${name.replace(/[.]/g, '\\.')}(?![\\w-])`);
+    lines.forEach((line, i) => {
+      if (re.test(line) && !isDenyCase(f.path, line))
+        out.push(`${f.profile}/${f.path}:${i + 1}: names never-ship ${name}`);
+    });
+  }
+  return out;
+}
+
 export function leakCheck(files: { profile: string; path: string; content: string }[]): LeakReport {
   const failures: string[] = [];
   const warnings: string[] = [];
   for (const f of files) {
+    failures.push(...neverShipRefs(f));
     for (const [label, re] of LEAK_FAIL) {
       const m = re.exec(f.content);
       if (m) failures.push(`${f.profile}/${f.path}: ${label} (${m[0].slice(0, 12)}...)`);

@@ -45,6 +45,7 @@ import {
   type Kind,
   LEAF_PROFILES,
   leakCheck,
+  NEVER_SHIP,
   POST_INSTALL,
   PROFILE_META,
   PROFILES,
@@ -228,6 +229,7 @@ function classifyByList(path: string): Assignment {
 }
 
 export function classify(path: string, text: string): Assignment {
+  if (NEVER_SHIP.includes(path)) return { exclude: true, why: 'never ships' };
   if (EXCLUDE.some(p => matches(p, path))) return { exclude: true, why: 'excluded' };
   const claude = classifyClaude(path);
   if (claude) return claude;
@@ -652,15 +654,15 @@ export function sync(
   }
 }
 
-interface Args {
+interface CliArgs {
   out: string;
   check: boolean;
   verify: boolean;
   source: string;
 }
 
-function parseArgs(argv: string[]): Args | string {
-  const args: Args = { out: 'kit', check: false, verify: false, source: '' };
+function parseArgs(argv: string[]): CliArgs | string {
+  const args: CliArgs = { out: 'kit', check: false, verify: false, source: '' };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] ?? '';
     if (a === '--check') args.check = true;
@@ -688,7 +690,7 @@ function runVerify(out: string): number {
   return 1;
 }
 
-function runSync(args: Args): number {
+function runSync(args: CliArgs): number {
   const r = sync(resolve(args.source), args.out, args.check);
   for (const d of r.dirty)
     console.error(`warning: ${d} has uncommitted changes; the kit reads the source's HEAD`);

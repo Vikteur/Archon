@@ -13,9 +13,12 @@ import {
   convertHooks,
   convertRule,
   convertSkillMd,
+  DELEGATOR_NIGHT_STEP,
   DISPATCH_SH,
   KIT_MODULES,
   leakCheck,
+  NEVER_SHIP,
+  neverShipRefs,
   parseHookCommand,
   type Rewrite,
   snapshot,
@@ -342,6 +345,56 @@ describe('leak check', () => {
     ]);
     expect(r.failures.map(f => f.split(':')[0])).toEqual(['core/a', 'core/b', 'java/c']);
     expect(r.warnings).toEqual(['java/d (2)']);
+  });
+});
+
+describe('never-ship files', () => {
+  test('night-preflight is in no profile', () => {
+    for (const p of NEVER_SHIP)
+      expect(classify(p, '')).toEqual({ exclude: true, why: 'never ships' });
+    expect(NEVER_SHIP).toContain('.archon/scripts/night-preflight.sh');
+  });
+
+  test("the delegator's night step 6 is dropped and step 7 renumbered", () => {
+    const night = [
+      '5. Commit the ticket edits.',
+      '6. The owner runs `night-preflight.sh` (it is no delegator tool). Start nothing until the owner says it printed GO;',
+      '   help fix each NO-GO it names.',
+      '7. **Build the list one ticket after another** (`pick-tickets.js`)',
+      '',
+    ].join('\n');
+    const out = applyRewrites('.claude/agents/delegator.md', night, [DELEGATOR_NIGHT_STEP]);
+    expect(out).toBe(
+      '5. Commit the ticket edits.\n6. **Build the list one ticket after another** (`pick-tickets.js`)\n'
+    );
+    expect(neverShipRefs({ profile: 'core', path: 'x', content: out })).toEqual([]);
+  });
+
+  test('a changed night step fails the sync loudly', () => {
+    const drifted = '6. The owner runs `night-preflight.sh` first.\n7. **Build the list\n';
+    expect(() =>
+      applyRewrites('.claude/agents/delegator.md', drifted, [DELEGATOR_NIGHT_STEP])
+    ).toThrow(/rewrite expected 1 of .*found 0/);
+  });
+
+  test('a shipped reference to a never-ship script fails, but the fence test may deny it', () => {
+    const r = leakCheck([
+      { profile: 'core', path: 'docs/a.md', content: 'ok\nrun `night-preflight.sh` first' },
+      {
+        profile: 'core',
+        path: 'docs/b.md',
+        content: 'the night-preflight-ish word and night-list.txt',
+      },
+      {
+        profile: 'core',
+        path: '.archon/scripts/test/delegator-fence.test.sh',
+        content: `case_ "no night-preflight.sh" deny "$(cmd_ 'bash night-preflight.sh')"\nallow night-preflight.sh`,
+      },
+    ]);
+    expect(r.failures).toEqual([
+      'core/docs/a.md:2: names never-ship night-preflight.sh',
+      'core/.archon/scripts/test/delegator-fence.test.sh:2: names never-ship night-preflight.sh',
+    ]);
   });
 });
 

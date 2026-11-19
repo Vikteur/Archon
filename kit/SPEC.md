@@ -23,7 +23,7 @@ Change it only together with every consumer.
 - **Deterministic.** Sorted output and no timestamps: the same source commit and overlays give the same bytes.
 - `--check` regenerates into a temp dir, diffs it with `kit/` and exits 1 on drift (printing the paths) or on an overlay whose `sourceSha256` no longer matches its `derivedFrom` file.
 - `--verify` needs no source: it checks `manifest.json` against `profiles/**` (sha256, mode, template flag, sort order, no extra or missing file), that every overlay file is synced, and the leak FAIL patterns. `bun run check:kit` runs it and `bun run check:bundled-kit` checks `packages/cli/src/bundled-kit.ts`; both are in `bun run validate`.
-- **Leak check.** The sync fails on a home path (`/home/<owner>`), an owner GitHub account, or a secret-looking token (GitHub, AWS, Slack, Anthropic keys, private keys). It warns on the source's project nouns (wedding, rekord, portal) in `core`, `java` and `java-spring`.
+- **Leak check.** The sync fails on a home path (`/home/<owner>`), an owner GitHub account, a reference to a never-ship script (see What never ships), or a secret-looking token (GitHub, AWS, Slack, Anthropic keys, private keys). It warns on the source's project nouns (wedding, rekord, portal) in `core`, `java` and `java-spring`.
 
 ## Folders
 
@@ -156,3 +156,10 @@ contract:
 - `run-wedding-portal`, which becomes the stack's `run-app`.
 - The project's own `docs/code-maps/*.md` leaves. Only the README and the `kind: worked-example` leaves ship.
 - `docs/memory.md`, `docs/rewrite/**`, `backlog/**`, `contract/**`, the build output, secrets and `.env` files.
+- `night-preflight` (owner decision 2026-11-19): `.archon/scripts/night-preflight.sh`, its test
+  `.archon/scripts/test/night-preflight.test.sh` and its doc `docs/archon/script/night-preflight.md`. They are on the
+  never-ship list (`NEVER_SHIP` in `scripts/kit-sync-lists.ts`), which no copy list overrides. The generated
+  `.github/agents/delegator.agent.md` drops step 6 of the night list (the owner runs `night-preflight.sh`) and renumbers
+  the build step to 6; the rewrite expects the source text exactly once and fails the sync when it changed. A shipped
+  file that still names a never-ship script by path fails the leak check; the one exception is a
+  `delegator-fence.test.sh` line that only asserts the fence denies it.
