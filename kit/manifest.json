@@ -2,7 +2,7 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "77208a57ff72dceae8782d1bf4706c323ff4a3b5"
+    "commit": "3f7e9468f921c447e9672286288a9803efec9ce0"
   },
   "profiles": {
     "core": {
@@ -1893,7 +1893,7 @@
       "template": false,
       "origin": ".archon/scripts/test/payload.test.sh",
       "kind": "script",
-      "sha256": "4cc9adf8ad10e48d76c93c13054bf1f921d672c99f0aa35b9cce05c6f4b5c7c2"
+      "sha256": "8196e6d218f63c424e5bd17c2aeb1b312aca98562ca60bdc2d64dc2875b3eb5f"
     },
     {
       "path": ".archon/scripts/test/pick-tickets.test.sh",
@@ -2514,7 +2514,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/payload.sh",
       "kind": "hook",
-      "sha256": "47f301ed4017d514f7097629a09ab4067647ee59570ac3671f7c4bc30f752f97"
+      "sha256": "55c79a16a69d81fc51ae9d7049a2db91ddecc38829935c78cd73648e7f93258f"
     },
     {
       "path": ".claude/hooks/scripts/scope-guard.sh",
@@ -2523,7 +2523,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "dcd32fbf3587384f668f38ca107988c6c6e3949a74b8eb65aa3d4591e92d84bf"
+      "sha256": "c031da13c485707b09fb67f26f65991212ede1339f009143bd40010066db0da3"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
@@ -2676,7 +2676,7 @@
       "template": false,
       "origin": ".claude/agents/delegator.md",
       "kind": "agent",
-      "sha256": "a025d2feb0db1d14913f3d4d2dcc796e3cc9b652a3123ae785fddeb50e10a35e"
+      "sha256": "d0ffc9152290bd5ccbae7848923932e306d3aa4012900b06f3f48bd9b924d49a"
     },
     {
       "path": ".github/agents/design-critic.agent.md",
@@ -2685,7 +2685,7 @@
       "template": false,
       "origin": ".claude/agents/design-critic.md",
       "kind": "agent",
-      "sha256": "edb7b4fd4bc6e5be7828954003e764c84fdf78291bca114e8588249819197ae9"
+      "sha256": "84e96abc70e5f43e1c753679cd441a2e6b28eb0a6816829d9ef9ce7a81514c0d"
     },
     {
       "path": ".github/agents/github-agent.agent.md",
@@ -2694,7 +2694,7 @@
       "template": false,
       "origin": ".claude/agents/github-agent.md",
       "kind": "agent",
-      "sha256": "1cd96df268b8b301bb479dcb04140f998aaa19b953bb021ab54643d3d876a63b"
+      "sha256": "10108106b2dc1883f287a58a3be10080197647ec546654e5b74b87d1c94d8112"
     },
     {
       "path": ".github/agents/retro.agent.md",
@@ -2703,7 +2703,7 @@
       "template": false,
       "origin": ".claude/agents/retro.md",
       "kind": "agent",
-      "sha256": "ab2f751f7f92ce697167b674efbe151aca4711af88cdb26a1b93723c1084b105"
+      "sha256": "72c3c4ef6b98ef11af85774f5719598215d89e430ae21dc6946d05a728ea4095"
     },
     {
       "path": ".github/agents/reviewer.agent.md",
@@ -2712,7 +2712,7 @@
       "template": false,
       "origin": ".claude/agents/reviewer.md",
       "kind": "agent",
-      "sha256": "ce0f3cf878c7f07329e306a79e99409221bf23a48ab39d6e9992593db1f51411"
+      "sha256": "d9e6e7429529db4c7b44433defb952d292b5ce892db1f4ad6fc53a7f6e87f5e7"
     },
     {
       "path": ".github/copilot-instructions.md",
@@ -3333,7 +3333,7 @@
       "template": true,
       "origin": ".claude/agents/analyst.md",
       "kind": "agent",
-      "sha256": "9d52f7d912c49f285b3863301a7de019ceacb8f8727e7fde826929f48ea528b3"
+      "sha256": "e5c8987b5b32a52fd8a2f4f24de04a6d01e9012c3b8b4ea4364ac72ab8e460c9"
     },
     {
       "path": ".github/agents/debugger.agent.md",
@@ -3342,7 +3342,7 @@
       "template": true,
       "origin": ".claude/agents/debugger.md",
       "kind": "agent",
-      "sha256": "ded367beaf8cc895a0157301fe789a2101c0101b971a6fb538886daf15b49048"
+      "sha256": "6ae2a0b22b889c368c844bf36df2f667b19cd4b5ec341befae2d50e4ee465bce"
     },
     {
       "path": ".github/agents/developer.agent.md",
@@ -3351,7 +3351,7 @@
       "template": true,
       "origin": ".claude/agents/developer.md",
       "kind": "agent",
-      "sha256": "57bc8613e96b67412a096fa5d74a65db5060afbfacce241d00432835ef000297"
+      "sha256": "c49bc2603cdbad34e5271309cd7e7bc1f6a67cf55f01d93fb470ef8a6f3a0a10"
     },
     {
       "path": ".github/agents/test-writer.agent.md",
@@ -3360,7 +3360,7 @@
       "template": true,
       "origin": ".claude/agents/test-writer.md",
       "kind": "agent",
-      "sha256": "a155ec76142105c01927bb06e544995995efbd31672fb0e19f57b8fd6a8c8f78"
+      "sha256": "9a07607d7e5d55dd70949284b4bb023fcd90a0efad446f0daa31df5f1e413725"
     },
     {
       "path": ".github/instructions/adapter.instructions.md",
@@ -4828,7 +4828,7 @@
       "template": false,
       "origin": ".claude/agents/contract-agent.md",
       "kind": "agent",
-      "sha256": "7f94cc9561a7c5dfcbb52115446c99e1db92d2048c857a4be1d4f637eed750ca"
+      "sha256": "27c6db691bda45b5576a41d0f43d09b60d64455ae59852cb98a7d6163189de99"
     },
     {
       "path": ".github/mcp.json",

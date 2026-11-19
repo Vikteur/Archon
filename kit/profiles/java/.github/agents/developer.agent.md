@@ -16,6 +16,11 @@ mcp-servers:
     tools: ["*"]
     env:
       CODEGRAPH_MCP_TOOLS: "explore,node,search,callers,callees,impact"
+hooks:
+  preToolUse:
+    - type: "command"
+      command: "env KIT_AGENT=developer bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse"
+      timeoutSec: 60
 include-custom-instructions: true
 ---
 <!-- Ported to Claude Code from templates/developer.template.md in the agentic blueprint (Copilot original: .github/). -->

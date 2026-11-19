@@ -25,12 +25,14 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
+  AGENT_SCOPES,
   convertAgent,
   convertDeny,
   convertHooks,
   convertRule,
   convertSkillMd,
   DISPATCH_SH,
+  fencedAgents,
   KIT_MODULES,
   mcpJson,
   parseYaml,
@@ -353,12 +355,13 @@ function convertText(
   f: SourceFile,
   raw: string,
   convert: Assignment & { exclude?: false },
-  rewrites: Rewrite[]
+  rewrites: Rewrite[],
+  fenced: ReadonlySet<string>
 ): string {
   let text = applyRewrites(f.path, raw, rewrites);
   if (/^docs\/code-maps\/[^/]+\.md$/.test(f.path))
     text = genericThisRepo(f.path, convert.profile, text);
-  if (convert.convert === 'agent') text = convertAgent(text, f.path);
+  if (convert.convert === 'agent') text = convertAgent(text, f.path, fenced);
   else if (convert.convert === 'rule')
     text = convertRule(basename(f.path, '.md'), text, KIT_MODULES);
   else if (convert.convert === 'skill' && basename(f.path) === 'SKILL.md')
@@ -372,6 +375,8 @@ function convertText(
 function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[] {
   const out: KitFile[] = [];
   const tracked = new Set(src.files.keys());
+  const scopes = src.files.get(AGENT_SCOPES);
+  const fenced = fencedAgents(scopes && textOf(scopes));
   for (const f of [...src.files.values()].sort((a, b) => (a.path < b.path ? -1 : 1))) {
     const raw = textOf(f);
     const a = classify(f.path, raw, tracked);
@@ -383,7 +388,7 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
         profile: a.profile,
         mode: f.gitMode === '100755' ? '0755' : '0644',
         origin: f.path,
-        content: convertText(f, raw, a, rewrites[f.path] ?? []),
+        content: convertText(f, raw, a, rewrites[f.path] ?? [], fenced),
       })
     );
   }

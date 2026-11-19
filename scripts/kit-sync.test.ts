@@ -18,6 +18,7 @@ import {
   convertSkillMd,
   DELEGATOR_NIGHT_STEP,
   DISPATCH_SH,
+  fencedAgents,
   KIT_MODULES,
   leakCheck,
   NEVER_SHIP,
@@ -141,6 +142,11 @@ function fixture(): string {
   write(root, '.claude/rules/general.md', '# General\n');
   write(root, '.claude/settings.json', `${JSON.stringify(SETTINGS, null, 2)}\n`);
   write(root, '.claude/hooks/scripts/guard.sh', '#!/usr/bin/env bash\nexit 0\n', true);
+  write(
+    root,
+    '.claude/hooks/agent-scopes.json',
+    '{"_comment":"fences","agents":{"developer":{}}}\n'
+  );
   write(root, '.claude/scripts/contract-pin.sh', 'repo=Vikteur/rekord-contract\n', true);
   write(
     root,
@@ -192,6 +198,18 @@ describe('agent conversion', () => {
     expect(out).toContain('`SendMessage`');
     expect(out).toContain('`git add *`');
     expect(out).toContain('Delegate only to these agents: `github-agent`.');
+  });
+
+  test('a fenced agent runs scope-guard from its own frontmatter hook, naming itself', () => {
+    expect(out).not.toContain('hooks:');
+    const fenced = convertAgent(AGENT, 'developer.md', new Set(['developer']));
+    expect(fenced).toContain(
+      'hooks:\n  preToolUse:\n    - type: "command"\n      command: "env KIT_AGENT=developer bash .github/hooks/dispatch.sh PreToolUse \'*\' .claude/hooks/scripts/scope-guard.sh PreToolUse"\n      timeoutSec: 60\ninclude-custom-instructions: true\n---'
+    );
+    expect(fencedAgents('{"_comment":"x","agents":{"developer":{},"analyst":{}}}')).toEqual(
+      new Set(['developer', 'analyst'])
+    );
+    expect(fencedAgents(undefined).size).toBe(0);
   });
 
   test('fails on a tool it cannot map', () => {
@@ -613,6 +631,7 @@ describe('sync on a fixture repo', () => {
     expect(keys).toEqual([
       'core/.archon/copilot/deny.json',
       'core/.archon/scripts/test/guard.test.sh',
+      'core/.claude/hooks/agent-scopes.json',
       'core/.claude/hooks/scripts/guard.sh',
       'core/.github/hooks/dispatch.sh',
       'core/.github/hooks/kit.json',
@@ -659,6 +678,9 @@ describe('sync on a fixture repo', () => {
       'utf8'
     );
     expect(agent).toContain('args: ["scripts/contract-mcp/server.mjs"]');
+    expect(agent).toContain(
+      'command: "env KIT_AGENT=developer bash .github/hooks/dispatch.sh PreToolUse'
+    );
     expect(readFileSync(join(out, 'profiles/java/docs/code-maps/java.md'), 'utf8')).toContain(
       '## This repo\nFill in this project'
     );

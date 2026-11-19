@@ -3,6 +3,11 @@ name: "design-critic"
 description: "Design critic — pre-build/refactor trade-off review."
 model: "claude-opus-5.5"
 tools: ["read", "search", "edit", "web", "execute"]
+hooks:
+  preToolUse:
+    - type: "command"
+      command: "env KIT_AGENT=design-critic bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse"
+      timeoutSec: 60
 include-custom-instructions: true
 ---
 Load these skills first: design-review, clean-architecture.

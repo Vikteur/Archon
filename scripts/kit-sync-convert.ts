@@ -161,24 +161,57 @@ function agentNotes(t: AgentTools): string[] {
   return notes;
 }
 
+/** The source's agent fences; scope-guard.sh reads them under both CLIs. */
+export const AGENT_SCOPES = '.claude/hooks/agent-scopes.json';
+
+/** The agents `.claude/hooks/agent-scopes.json` fences: the keys of its `agents` map. */
+export function fencedAgents(json: string | undefined): Set<string> {
+  if (json === undefined) return new Set();
+  const agents = (JSON.parse(json) as { agents?: Record<string, unknown> }).agents;
+  return new Set(Object.keys(agents ?? {}));
+}
+
+/**
+ * A fenced agent's own preToolUse hook. A root session (`copilot --agent <name>`) carries no agent field, so the
+ * repo-wide scope-guard hook sees no agent; this one runs only while the agent is selected and names it through
+ * KIT_AGENT (payload.sh). `env` so the prefix works whether the CLI runs the command through a shell or not.
+ */
+function agentScopeHook(name: string, where: string): string[] {
+  if (!/^[A-Za-z0-9_-]+$/.test(name))
+    throw new Error(`${where}: agent name ${name} is not shell-safe`);
+  const command = `env KIT_AGENT=${name} bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse`;
+  return [
+    'hooks:',
+    '  preToolUse:',
+    '    - type: "command"',
+    `      command: ${y(command)}`,
+    '      timeoutSec: 60',
+  ];
+}
+
 function agentFront(
   fm: Record<string, unknown>,
   name: string,
   model: string | undefined,
   tools: string[],
-  servers: [string, McpServer][]
+  servers: [string, McpServer][],
+  hooks: string[]
 ): string[] {
   const out = ['---', `name: ${y(name)}`, `description: ${y(String(fm.description ?? ''))}`];
   if (model) out.push(`model: ${y(model)}`);
   out.push(`tools: ${yList(tools)}`);
   if (servers.length) out.push('mcp-servers:');
   for (const [k, s] of servers) out.push(`  ${y(k)}:`, ...mcpEntry(s));
-  out.push('include-custom-instructions: true', '---', '');
+  out.push(...hooks, 'include-custom-instructions: true', '---', '');
   return out;
 }
 
 /** `.claude/agents/<n>.md` -> `.github/agents/<n>.agent.md` (kit/SPEC.md, Conversion rules). */
-export function convertAgent(text: string, where = 'agent'): string {
+export function convertAgent(
+  text: string,
+  where = 'agent',
+  fenced: ReadonlySet<string> = new Set()
+): string {
   const parts = splitFrontmatter(text);
   if (!parts) throw new Error(`${where}: no frontmatter`);
   const fm = parseYaml(parts.front, where);
@@ -186,7 +219,8 @@ export function convertAgent(text: string, where = 'agent'): string {
   if (!name) throw new Error(`${where}: no name`);
   const model = agentModel(fm, where);
   const tools = agentTools(fm.tools, where);
-  const front = agentFront(fm, name, model, tools.tools, agentServers(fm.mcpServers, where));
+  const hooks = fenced.has(name) ? agentScopeHook(name, where) : [];
+  const front = agentFront(fm, name, model, tools.tools, agentServers(fm.mcpServers, where), hooks);
   let body = parts.body.replace(SOURCE_CONTRACT_SERVER, CONTRACT_SERVER);
   const skills = Array.isArray(fm.skills) ? (fm.skills as unknown[]).map(String) : [];
   if (skills.length)

@@ -3,6 +3,11 @@ name: "retro"
 description: "Retro — after a run, review the workflow process from its evidence: what failed, what dragged, and where the process can improve. Never runs tests or reads code."
 model: "claude-opus-5.5"
 tools: ["read", "search", "edit", "execute"]
+hooks:
+  preToolUse:
+    - type: "command"
+      command: "env KIT_AGENT=retro bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse"
+      timeoutSec: 60
 include-custom-instructions: true
 ---
 Load these skills first: retro.

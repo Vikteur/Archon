@@ -307,6 +307,9 @@ seg_allowed() {  # seg_allowed <segment> — 0 when the segment starts with an a
 check_cmd() {
   [ -n "$cmd" ] || allow
   [ -n "$cmds" ] || deny "BLOCKED: agent '$agent' has no commandAllowlist in $policy_rel, so it may not run shell commands."
+  # The quote-aware pass below is quadratic in bash (about 5 s at 16 KB), and a hook that outlives its timeout fails
+  # OPEN under Copilot CLI: a longer command is denied rather than read slowly.
+  [ "${#cmd}" -le "${SCOPE_GUARD_MAX_CMD:-16384}" ] || deny "BLOCKED: agent '$agent' ran a ${#cmd}-character command; this guard reads at most ${SCOPE_GUARD_MAX_CMD:-16384}. Put long text in a file (git commit -F <file>, gh pr create --body-file <file>) and retry."
 
   # One pass that reads quotes as bash does (TASK-62): '…' is plain text; $'…' is text whose \ escapes the next
   # character; outside quotes and in "…" a \ escapes the next character, and $( or a backtick is command

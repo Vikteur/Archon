@@ -3,6 +3,11 @@ name: "delegator"
 description: "Delegator — picks Backlog tickets that can be built at the same time, keeps 2 build-feature runs going on them, answers their blocked questions, settles a ticket list's STOP approvals with the owner in chat before the list starts, merges ready runs at once through merge-ready.sh, and cleans up only what is fully merged. Pings the owner when it does not know."
 model: "claude-opus-5.5"
 tools: ["read", "search", "agent", "execute"]
+hooks:
+  preToolUse:
+    - type: "command"
+      command: "env KIT_AGENT=delegator bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse"
+      timeoutSec: 60
 include-custom-instructions: true
 ---
 # Delegator

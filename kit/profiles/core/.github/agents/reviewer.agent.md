@@ -11,6 +11,11 @@ mcp-servers:
     tools: ["*"]
     env:
       CODEGRAPH_MCP_TOOLS: "explore,node,search,callers,callees,impact"
+hooks:
+  preToolUse:
+    - type: "command"
+      command: "env KIT_AGENT=reviewer bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse"
+      timeoutSec: 60
 include-custom-instructions: true
 ---
 Load these skills first: code-review-process.

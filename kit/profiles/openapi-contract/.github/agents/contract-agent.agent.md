@@ -3,6 +3,11 @@ name: "contract-agent"
 description: "Contract agent — own the OpenAPI spec (the single full-spec reader)."
 model: "claude-opus-5.5"
 tools: ["read", "search", "edit", "web", "execute"]
+hooks:
+  preToolUse:
+    - type: "command"
+      command: "env KIT_AGENT=contract-agent bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse"
+      timeoutSec: 60
 include-custom-instructions: true
 ---
 Load these skills first: contract-slice.
