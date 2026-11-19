@@ -1,0 +1,61 @@
+{{!
+  Write-capable port implementation over Panache, every query scoped by the caller's organisation.
+  Requires the key to be the JPA @Id: render jpa-entity with naturalKey + fromDomain, panache-repository
+  with naturalKey, and entity-mapper. save() merges, so it inserts a new key and overwrites an existing one of the
+  same organisation; a key held by another organisation throws instead of overwriting that row (with random UUIDs
+  only a forged id gets there). With a serial id, new <Name>Entity(...) would INSERT on every save: load the entity
+  and mutate it instead. Transactions stay on the use case.
+  Target: <capability>-adapter/src/main/java/<package path>/adapter/repository/Default<Name>Repository.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, name (camelCase of Name), Key (PascalCase of key),
+          key (domain getter and entity field), keyType (domain key type),
+          typedId (optional, domain id type of the key: the entity stores its UUID value())
+}}
+package {{package}}.adapter.repository;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.*;
+import {{package}}.repository.{{Name}}Repository;
+import jakarta.enterprise.context.ApplicationScoped;
+import lombok.RequiredArgsConstructor;
+
+import java.util.Optional;
+
+@ApplicationScoped
+@RequiredArgsConstructor
+public class Default{{Name}}Repository implements {{Name}}Repository {
+    private static final String BY_ORGANISATION_AND_KEY = "organisationId = ?1 and {{key}} = ?2";
+
+    private final {{Name}}PanacheRepository panacheRepository;
+
+    @Override
+    public Optional<{{Name}}> findById(OrganisationId organisationId, {{{keyType}}} {{key}}) {
+        return panacheRepository.find(BY_ORGANISATION_AND_KEY, organisationId.value(), {{key}}{{#typedId}}.value(){{/typedId}})
+                .firstResultOptional()
+                .map({{Name}}EntityMapper::map);
+    }
+
+    @Override
+    public boolean existsById(OrganisationId organisationId, {{{keyType}}} {{key}}) {
+        return panacheRepository.count(BY_ORGANISATION_AND_KEY, organisationId.value(), {{key}}{{#typedId}}.value(){{/typedId}}) > 0;
+    }
+
+    @Override
+    public void save(OrganisationId organisationId, {{Name}} {{name}}) {
+        var {{key}} = {{name}}.get{{Key}}(){{#typedId}}.value(){{/typedId}};
+        panacheRepository.findByIdOptional({{key}})
+                .filter(existing -> !existing.getOrganisationId().equals(organisationId.value()))
+                .ifPresent(existing -> {
+                    throw new IllegalStateException("{{Name}} " + {{key}} + " belongs to another organisation");
+                });
+        panacheRepository.getEntityManager().merge(new {{Name}}Entity(organisationId, {{name}}));
+        panacheRepository.flush();
+    }
+
+    @Override
+    public void deleteById(OrganisationId organisationId, {{{keyType}}} {{key}}) {
+        panacheRepository.delete(BY_ORGANISATION_AND_KEY, organisationId.value(), {{key}}{{#typedId}}.value(){{/typedId}});
+    }
+}

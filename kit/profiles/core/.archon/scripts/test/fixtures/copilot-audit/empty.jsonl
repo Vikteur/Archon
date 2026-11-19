@@ -1,0 +1,2 @@
+{"type":"workflow_start","workflow_name":"build-feature-copilot","ts":"2026-11-19T10:00:00.000Z"}
+{"type":"provider_event","step":"x","event":{"type":"agent_message_chunk","text":"hi"},"ts":"2026-11-19T10:00:01.000Z"}

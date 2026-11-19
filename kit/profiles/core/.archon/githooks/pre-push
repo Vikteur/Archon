@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Pre-push in Archon processes (owner decisions D12 and D14, 2026-10-20). .archon/config.yaml points core.hooksPath at
+# .archon/githooks for every Archon process (the commit-msg hook), and git then no longer runs the clone's own
+# <git common dir>/hooks/pre-push, where push-guard.sh install puts the guard that refuses pushes to main. This file
+# hands each push to that hook, with git's arguments and stdin, so the guard holds inside runs too.
+#   Called by git: pre-push <remote> <url>, one "<local ref> <local sha> <remote ref> <remote sha>" line per ref on stdin.
+# Exit: the clone hook's exit code (non-zero stops the push); 0 when the clone has no pre-push hook (the guard is not
+# installed). It never runs .githooks/pre-push (that one stays the owner's to switch on).
+set -uo pipefail
+common=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd) || {
+  echo "pre-push: cannot find the git common dir; push refused" >&2; exit 1; }
+hook="$common/hooks/pre-push"
+[ -e "$hook" ] || exit 0
+[ -x "$hook" ] || { echo "pre-push: $hook is not executable; push refused" >&2; exit 1; }
+exec "$hook" "$@"

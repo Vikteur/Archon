@@ -1,0 +1,15 @@
+# Flushes the owner's ping bundle at 08:00 and at the evening round, 17:30 (owner decision 2026-10-23, docs/memory.md).
+# A flush missed while the machine was off runs at the next boot (Persistent=true); a queue that is still older than
+# 14 h goes out with the next ping anyway. Install: docs/archon/notify.md. Checked in, not installed.
+[Unit]
+Description=Send the bundled owner pings at 08:00 and 17:30
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+OnCalendar=*-*-* 17:30:00
+AccuracySec=1min
+Persistent=true
+Unit=notify-digest.service
+
+[Install]
+WantedBy=timers.target

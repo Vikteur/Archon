@@ -1,0 +1,178 @@
+{
+ "id": "c39c920f-c9d2-454a-b828-5fd77da3ee5d",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-6.1",
+ "started_at": "2026-10-08T18:25:52.000Z",
+ "completed_at": "2026-10-08T19:30:12.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-6.1-route-guard",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'ready': Bash node 'ready' failed [exit 1]: [stderr]\nNo CI run for this commit: the pull request stays a draft (P5).\n[stdout]\n{\"state\": \"none\", \"sha\": \"feab916487f950f6914f0c15f4873ee73877ecfe\", \"detail\": \"no CI run registered for feab916487f950f6914f0c15f4873ee73877ecfe\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\c39c920f-c9d2-454a-b828-5fd77da3ee5d"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'ready': Bash node 'ready' failed [exit 1]: [stderr]\nNo CI run for this commit: the pull request stays a draft (P5).\n[stdout]\n{\"state\": \"none\", \"sha\": \"feab916487f950f6914f0c15f4873ee73877ecfe\", \"detail\": \"no CI run registered for feab916487f950f6914f0c15f4873ee73877ecfe\"}",
+  "first_failed_node": "ready",
+  "nodes": [
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ready",
+    "state": "failed",
+    "error": "Bash node 'ready' failed [exit 1]: [stderr]\nNo CI run for this commit: the pull request stays a draft (P5).\n[stdout]\n{\"state\": \"none\", \"sha\": \"feab916487f950f6914f0c15f4873ee73877ecfe\", \"detail\": \"no CI run registered for feab916487f950f6914f0c15f4873ee73877ecfe\"}"
+   },
+   {
+    "node_id": "merged",
+    "state": "skipped"
+   },
+   {
+    "node_id": "finalize",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "skipped"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-6.1\",\"stop\":\"stop-auth-access\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":true,\"stop_reason\":\"auth-access: adding the Quarkus extension io.quarkus:quarkus-security turns on real enforcement of @Authenticated/@RolesAllowed/@DenyAll/@PermitAll in every profile (D1). T..."
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":true,\"why\":\"ticket labels: stop-auth-access; plan: auth-access: adding the Quarkus extension io.quarkus:quarkus-security turns on real enforcement of @Authenticated/@RolesAllowed/@DenyAll/@Pe..."
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "completed",
+   "kind": "gate",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Running the last mutation: a throwaway unannotated `MusicApi` stub in `example-adapter`, which I delete afterwards.Step 4 is done: the full local gate is green, and all four mutations went red as plann..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first unchecked step is Step 4, which is marked `(verify only)`. It adds no behaviour, so as the test agent I write nothing for it and stop here. I made no changes and no commit for this step."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Running the last mutation: a throwaway unannotated `MusicApi` stub in `example-adapter`, which I delete afterwards.Step 4 is done: the full local gate is green, and all four mutations went red as plann..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Footprint matches the plan. Now the diff itself and the ticket.While the gate runs, I'll fill in the ticket's missing modified-file list (the groma guide requires it).While waiting, a check that the m..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: agent sessions load Groma..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":7,\"refs\":\"\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"feat(security): route-guard test over the generated interfaces and the Quarkus security extension (TASK-6.1)\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/45\",\"sha\":\"feab916487f950f6914f0c15f4873ee73877ecfe\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"none\",\"sha\":\"feab916487f950f6914f0c15f4873ee73877ecfe\",\"detail\":\"no CI run registered for feab916487f950f6914f0c15f4873ee73877ecfe\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "merged",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "finalize",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "close-out",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

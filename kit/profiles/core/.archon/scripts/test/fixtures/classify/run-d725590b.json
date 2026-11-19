@@ -1,0 +1,178 @@
+{
+ "id": "d725590b-0dd1-4ca9-a2ab-7e0ead825790",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-7.3",
+ "started_at": "2026-10-08T18:25:54.000Z",
+ "completed_at": "2026-10-08T20:46:04.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-7.3-first-admin-bootstrap",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'ready': Bash node 'ready' failed [exit 1]: [stderr]\nNo CI run for this commit: the pull request stays a draft (P5).\n[stdout]\n{\"state\": \"none\", \"sha\": \"947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\", \"detail\": \"no CI run registered for 947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\d725590b-0dd1-4ca9-a2ab-7e0ead825790"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'ready': Bash node 'ready' failed [exit 1]: [stderr]\nNo CI run for this commit: the pull request stays a draft (P5).\n[stdout]\n{\"state\": \"none\", \"sha\": \"947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\", \"detail\": \"no CI run registered for 947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\"}",
+  "first_failed_node": "ready",
+  "nodes": [
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ready",
+    "state": "failed",
+    "error": "Bash node 'ready' failed [exit 1]: [stderr]\nNo CI run for this commit: the pull request stays a draft (P5).\n[stdout]\n{\"state\": \"none\", \"sha\": \"947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\", \"detail\": \"no CI run registered for 947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\"}"
+   },
+   {
+    "node_id": "merged",
+    "state": "skipped"
+   },
+   {
+    "node_id": "finalize",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "skipped"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-7.3\",\"stop\":\"stop-auth-access,stop-production-config,stop-crypto-logging\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":true,\"stop_reason\":\"STOP items touched: authentication/authorization (creating the first ADMIN account and membership at startup, UD-14.g); encryption and what gets logged (scrypt parameters, ..."
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":true,\"why\":\"ticket labels: stop-auth-access,stop-production-config,stop-crypto-logging; plan: STOP items touched: authentication/authorization (creating the first ADMIN account and membership..."
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "completed",
+   "kind": "gate",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "The full gates are running (`test`, `integrationTest`, `startupTest`, `resourceTest`, `build`). I'll check the result when that background job finishes.Step 7 passes, and I marked it `- [x] (verify on..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first unchecked step is step 7, \"(verify only) Full local gates\". It adds no behaviour, so there are no tests to write. I wrote nothing and committed nothing, and I didn't edit the plan or create ..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The full gates are running (`test`, `integrationTest`, `startupTest`, `resourceTest`, `build`). I'll check the result when that background job finishes.Step 7 passes, and I marked it `- [x] (verify on..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Reviewing the branch against the plan now: I've read the ticket and the plan, and next I'm going through the diff file by file.I've read the full diff. Now I'm finding the legacy-api reference file th..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: agent sessions load Groma..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":46,\"refs\":\"clock-and-generators,first-admin-bootstrap,password-hashing\",\"dropped\":\"example-app-api\"}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"feat(security): create the first admin and business at first start from the secret settings, with scrypt (TASK-7.3)\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/48\",\"sha\":\"947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"none\",\"sha\":\"947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\",\"detail\":\"no CI run registered for 947b1bbeb4b9258d815232bd0955eb1ec4bb2dbc\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "merged",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "finalize",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "close-out",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

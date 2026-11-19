@@ -1,0 +1,136 @@
+{
+ "id": "078ca850-804d-4741-8dff-c21886c8b934",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-1.2",
+ "started_at": "2026-10-07T08:02:20.000Z",
+ "completed_at": "2026-10-07T08:10:41.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\archon\\task-build-feature-1791360136914",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'implement': Loop node 'implement' exceeded max iterations (10) without a passing 'until_bash' check",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\078ca850-804d-4741-8dff-c21886c8b934"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'implement': Loop node 'implement' exceeded max iterations (10) without a passing 'until_bash' check",
+  "first_failed_node": "implement",
+  "nodes": [
+   {
+    "node_id": "stop-gate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "implement",
+    "state": "failed",
+    "error": "Loop node 'implement' exceeded max iterations (10) without a passing 'until_bash' check"
+   },
+   {
+    "node_id": "review",
+    "state": "skipped"
+   },
+   {
+    "node_id": "approve",
+    "state": "skipped"
+   },
+   {
+    "node_id": "pr-text",
+    "state": "skipped"
+   },
+   {
+    "node_id": "open-pr",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ready",
+    "state": "skipped"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-1.2\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":false,\"stop_reason\":\"\"}"
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":false,\"why\":\"\"}"
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "skipped",
+   "kind": "gate",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "failed",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "review",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "approve",
+   "state": "skipped",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

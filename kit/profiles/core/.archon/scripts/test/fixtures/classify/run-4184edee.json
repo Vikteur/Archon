@@ -1,0 +1,142 @@
+{
+ "id": "4184edee-b624-4535-97d1-c3539b45e0e6",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-24.2",
+ "started_at": "2026-10-07T15:07:20.000Z",
+ "completed_at": "2026-10-07T16:24:01.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\archon\\task-build-feature-1791385637840",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\n  Blocked: archon/task-build-feature-1791385637840\n    ✗ running workflow: build-feature (id: 4184edee-b624-4535-97d1-c3539b45e0e6)\n  Use --force to override.\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete archon/task-build-feature-1791385637840\n[stdout]\n{\"backlog\":\"2d9b311\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\4184edee-b624-4535-97d1-c3539b45e0e6"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\n  Blocked: archon/task-build-feature-1791385637840\n    ✗ running workflow: build-feature (id: 4184edee-b624-4535-97d1-c3539b45e0e6)\n  Use --force to override.\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete archon/task-build-feature-1791385637840\n[stdout]\n{\"backlog\":\"2d9b311\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "first_failed_node": "close-out",
+  "nodes": [
+   {
+    "node_id": "stop-gate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "failed",
+    "error": "Bash node 'close-out' failed [exit 1]: [stderr]\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'backlog/tasks/task-24.2 - P3-E04-T02-Candidate-retrieval-the-fuzzy-measures-the-token-gate-the-fallback-and-library-order.md', LF will be replaced by CRLF the next time Git touches it\n  Blocked: archon/task-build-feature-1791385637840\n    ✗ running workflow: build-feature (id: 4184edee-b624-4535-97d1-c3539b45e0e6)\n  Use --force to override.\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete archon/task-build-feature-1791385637840\n[stdout]\n{\"backlog\":\"2d9b311\",\"branch\":\"kept\",\"worktree\":\"kept\"}"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-24.2\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":false,\"stop_reason\":\"\"}"
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":false,\"why\":\"\"}"
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "skipped",
+   "kind": "gate",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Step 5 is done and committed as `a9fdb64`, `feat(matching): TrackMatcher, Score, Bucket and MatchQuery score the retrieved candidates (AC #5, #7, #8, #9)`.\n\n`./gradlew test integrationTest` is green. ..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The shell rejected my multi-file command, so I'm checking what got written and will redo it with the file tools.Nothing was written. Writing the files directly.Step 5's tests are written and committed..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Step 5 is done and committed as `a9fdb64`, `feat(matching): TrackMatcher, Score, Bucket and MatchQuery score the retrieved candidates (AC #5, #7, #8, #9)`.\n\n`./gradlew test integrationTest` is green. ..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The production code is a faithful port. Now the tests.The production code matches legacy-api. Before judging the tests against it, I'll check the current plan text and that the build runs.Baseline run..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"feat(matching): candidate retrieval with the fuzzy measures, token gate, fallback and library order (TASK-24.2)\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/14\",\"sha\":\"5aa09b58f9cd86a07199cf8570dfbc8728278b81\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"green\",\"sha\":\"5aa09b58f9cd86a07199cf8570dfbc8728278b81\",\"detail\":\"\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\": \"green\", \"sha\": \"5aa09b58f9cd86a07199cf8570dfbc8728278b81\", \"detail\": \"\"}"
+  },
+  {
+   "nodeId": "merged",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"merged\",\"merge\":\"e2c5e7a26e1983cc0dbf19cabe1dada16f6d19e5\",\"head\":\"667554dfbed6af26be1b3dafe81f34db4b5aa88c\",\"branch\":\"archon/task-build-feature-1791385637840\",\"ci\":\"green\",\"backlog\":\"C:/Use..."
+  },
+  {
+   "nodeId": "finalize",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"close\":true}"
+  },
+  {
+   "nodeId": "close-out",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

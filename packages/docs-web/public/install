@@ -10,12 +10,23 @@
 #                       An empty value installs none. Without it, the installer asks.
 #                       Releases up to 0.11.1 bundle their providers and have no
 #                       `archon provider`; pin one with `--providers=`.
+#   --no-kit-tools    - Skip the kit tools step (`archon kit tools`, else `archon kit doctor`,
+#                       run only when this Archon has a `kit` command).
+#   --no-backlog      - The kit tools step leaves Backlog.md out (`archon kit tools --no-backlog`;
+#                       kit setup asks about it itself, and leaves it out by default).
+#   --no-setup        - Do not start `archon kit setup`, the guided kit install. In a terminal,
+#                       an Archon that has it starts it at the end (it installs the kit tools
+#                       itself, so the kit tools step is skipped then).
 #
 # Options (via environment variables):
 #   VERSION          - Specific version to install (default: latest)
 #   INSTALL_DIR      - Installation directory (default: /usr/local/bin)
 #   SKIP_CHECKSUM    - Set to "true" to skip checksum verification (not recommended)
 #   ARCHON_PROVIDERS - Same as --providers; the flag wins
+#   ARCHON_REPO      - GitHub owner/repo to download from (default: coleam00/Archon)
+#   ARCHON_NO_KIT_TOOLS - Set to "1" to skip the kit tools step (same as --no-kit-tools)
+#   ARCHON_NO_SETUP  - Set to "1" to not start `archon kit setup` (same as --no-setup)
+#   ARCHON_NO_BACKLOG - Set to "1" to leave Backlog.md out of the kit tools step (same as --no-backlog)
 #
 # Examples:
 #   # Install latest
@@ -37,7 +48,7 @@
 set -euo pipefail
 
 # Configuration
-REPO="coleam00/Archon"
+REPO="${ARCHON_REPO:-coleam00/Archon}"
 BINARY_NAME="archon"
 VERSION="${VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
@@ -273,9 +284,63 @@ install_providers() {
   success "Providers installed: $providers"
 }
 
+# Install the tools the Copilot kit needs. Feature-detected: `archon kit tools`,
+# else `archon kit doctor`, else nothing (older Archon without a `kit` command).
+# A failing step is a warning, never an install failure. With no_backlog=true the tool
+# installer leaves Backlog.md out: INSTALL_TOOLS_BACKLOG=0, and --no-backlog when the CLI has it.
+install_kit_tools() {
+  local archon="$1" no_backlog="${2:-false}" help_out
+  if ! help_out=$("$archon" kit --help 2>&1); then
+    info "This Archon has no 'kit' command; skipping the kit tools step."
+    return 0
+  fi
+  if printf '%s\n' "$help_out" | grep -Eqw 'tools'; then
+    local args=(tools)
+    if [ "$no_backlog" = true ] && printf '%s\n' "$help_out" | grep -q 'no-backlog'; then
+      args+=(--no-backlog)
+    fi
+    info "Installing kit tools: archon kit ${args[*]}"
+    if [ "$no_backlog" = true ]; then
+      INSTALL_TOOLS_BACKLOG=0 "$archon" kit "${args[@]}" || warn "'archon kit tools' failed; re-run it by hand."
+    else
+      "$archon" kit "${args[@]}" || warn "'archon kit tools' failed; re-run it by hand."
+    fi
+  elif printf '%s\n' "$help_out" | grep -Eqw 'doctor'; then
+    info "No 'archon kit tools'; running: archon kit doctor"
+    "$archon" kit doctor || warn "'archon kit doctor' reported problems."
+  else
+    info "'archon kit' has neither 'tools' nor 'doctor'; skipping the kit tools step."
+  fi
+}
+
+# Start `archon kit setup` on the terminal (under `curl | bash` stdin is the script).
+# Returns 1 when it did not start: --no-setup, no terminal, or an Archon without it.
+# A setup that does not finish is a warning, never an install failure. ARCHON_TTY,
+# when set, stands in for the terminal (tests).
+run_kit_setup() {
+  local archon="$1" no_tools="$2" tty="${ARCHON_TTY:-/dev/tty}" help_out
+  ( : <"$tty" ) 2>/dev/null || return 1
+  [ -t 1 ] || [ -n "${ARCHON_TTY:-}" ] || return 1
+  help_out=$("$archon" kit --help 2>&1) || return 1
+  printf '%s\n' "$help_out" | grep -Eqw 'setup' || return 1
+  local args=()
+  if [ "$no_tools" = true ]; then args+=(--no-tools); fi
+  echo ""
+  info "Starting the guided kit install: archon kit setup ${args[*]-}"
+  "$archon" kit setup ${args[@]+"${args[@]}"} <"$tty" \
+    || warn "'archon kit setup' did not finish; re-run it any time: archon kit setup"
+  return 0
+}
+
 # Main installation
 main() {
   local providers_arg="" providers_given=false
+  local kit_tools=true
+  [ "${ARCHON_NO_KIT_TOOLS:-}" = "1" ] && kit_tools=false
+  local kit_setup=true
+  [ "${ARCHON_NO_SETUP:-}" = "1" ] && kit_setup=false
+  local no_backlog=false
+  [ "${ARCHON_NO_BACKLOG:-}" = "1" ] && no_backlog=true
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --providers)
@@ -287,6 +352,18 @@ main() {
       --providers=*)
         providers_arg="${1#--providers=}"
         providers_given=true
+        shift
+        ;;
+      --no-kit-tools)
+        kit_tools=false
+        shift
+        ;;
+      --no-setup)
+        kit_setup=false
+        shift
+        ;;
+      --no-backlog)
+        no_backlog=true
         shift
         ;;
       *)
@@ -432,6 +509,14 @@ main() {
       || info "No terminal to ask which providers to add; adding none."
   fi
   install_providers "$INSTALL_DIR/$BINARY_NAME" "$providers"
+
+  local no_tools=true
+  [ "$kit_tools" = true ] && no_tools=false
+  if [ "$kit_setup" = true ] && run_kit_setup "$INSTALL_DIR/$BINARY_NAME" "$no_tools"; then
+    :
+  elif [ "$kit_tools" = true ]; then
+    install_kit_tools "$INSTALL_DIR/$BINARY_NAME" "$no_backlog"
+  fi
 
   echo ""
   echo "Get started:"

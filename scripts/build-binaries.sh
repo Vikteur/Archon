@@ -15,6 +15,9 @@
 #   TARGET     - bun target triple (e.g. bun-darwin-arm64); CI mode
 #   OUTFILE    - output path for the CLI binary; CI mode. The server and provider
 #                plugin binaries are written beside it under their release asset names.
+#   ARCHON_LOCAL_BUILD - set to 1 by scripts/install-local.sh: a single-target build for
+#                this machine is not a release build, so a missing archon-web.tar.gz only
+#                warns (the web UI is installed from the local build instead).
 
 set -euo pipefail
 
@@ -46,6 +49,7 @@ echo "Updating build-time constants (version=${VERSION}, is_binary=true)..."
 
 # Compute SHA-256 of the web dist tarball when available (CI publishes it before binaries).
 is_release_build() {
+  [ "${ARCHON_LOCAL_BUILD:-}" = "1" ] && return 1
   [ -n "${CI:-}" ] || { [ -n "$TARGET" ] && [ -n "$OUTFILE" ]; }
 }
 

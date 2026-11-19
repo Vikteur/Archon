@@ -1,5 +1,5 @@
 /**
- * Event bridge between @github/copilot-sdk's callback-based session.on() API
+ * Event bridge between @microsoft/copilot-sdk's callback-based session.on() API
  * and Archon's async-generator MessageChunk contract.
  *
  * Three concerns in this file:
@@ -13,7 +13,7 @@
  *     wrapper; lives here rather than in provider.ts so the queue/listener/
  *     cleanup lifecycle stays readable.
  *
- * Module-scope invariant: type-only imports from @github/copilot-sdk. Value
+ * Module-scope invariant: type-only imports from @microsoft/copilot-sdk. Value
  * imports go inside `provider.ts` via dynamic `await import(...)`. See the
  * PI lazy-load test for rationale.
  */
@@ -21,9 +21,11 @@ import { createLogger } from '@archon/paths';
 import type {
   AssistantMessageEvent,
   CopilotSession,
+  HookEndData,
+  HookStartData,
   SessionEvent,
   ToolExecutionCompleteData,
-} from '@github/copilot-sdk';
+} from '@microsoft/copilot-sdk';
 
 import { sessionPreview, truncateToolOutput } from '@archon/provider-contract';
 
@@ -183,6 +185,52 @@ function mcpServerStatusOf(
   };
 }
 
+function toolCallUpdateOf({
+  toolCallId,
+  success,
+  result,
+  error,
+}: ToolExecutionCompleteData): MessageChunk {
+  // `denied`: a preToolUse hook (or the permission handler) blocked the call.
+  // The reason reaches the stream as the failed call's output.
+  if (error?.code === 'denied') getLog().info({ toolCallId }, 'copilot.tool_denied');
+  // Prefer detailedContent (full output) over content (truncated for LLM).
+  const rawOutput = result?.detailedContent ?? result?.content ?? '';
+  return {
+    type: 'tool_call_update',
+    toolCallId,
+    status: success ? 'completed' : 'failed',
+    ...truncateToolOutput(success ? rawOutput : formatToolFailure(rawOutput, error)),
+  };
+}
+
+function hookStartedOf({ hookInvocationId, hookType }: HookStartData): MessageChunk {
+  return {
+    type: 'hook',
+    hookId: hookInvocationId,
+    hookName: '',
+    hookEvent: hookType,
+    status: 'started',
+  };
+}
+
+/**
+ * A file hook (`.github/hooks/*.json`) finished. `success: false` covers a hook
+ * that errored (the runtime then denies a preToolUse call) and one that timed
+ * out (the runtime lets the call run). `error.source` is the hook file; the
+ * error text can carry hook stderr, so it is not logged.
+ */
+function hookEndedOf({ hookInvocationId, hookType, success, error }: HookEndData): MessageChunk {
+  if (!success) getLog().warn({ hookType, source: error?.source }, 'copilot.hook_failed');
+  return {
+    type: 'hook',
+    hookId: hookInvocationId,
+    hookName: error?.source ?? '',
+    hookEvent: hookType,
+    status: success ? 'succeeded' : 'failed',
+  };
+}
+
 /**
  * Translate one Copilot SDK `SessionEvent` into zero or more Archon
  * `MessageChunk`s, mutating the supplied context (captured usage, terminal
@@ -220,19 +268,12 @@ export function mapCopilotEvent(event: SessionEvent, ctx: EventMapperContext): M
       if (args !== undefined) call.rawInput = args;
       return [call];
     }
-    case 'tool.execution_complete': {
-      const { toolCallId, success, result, error } = event.data;
-      // Prefer detailedContent (full output) over content (truncated for LLM).
-      const rawOutput = result?.detailedContent ?? result?.content ?? '';
-      return [
-        {
-          type: 'tool_call_update',
-          toolCallId,
-          status: success ? 'completed' : 'failed',
-          ...truncateToolOutput(success ? rawOutput : formatToolFailure(rawOutput, error)),
-        },
-      ];
-    }
+    case 'tool.execution_complete':
+      return [toolCallUpdateOf(event.data)];
+    case 'hook.start':
+      return [hookStartedOf(event.data)];
+    case 'hook.end':
+      return [hookEndedOf(event.data)];
     case 'session.error': {
       // Don't emit a warning here — defer until after sendAndWait resolves. If
       // the SDK delivers a fallback assistant message (transient upstream errors

@@ -1,0 +1,54 @@
+{{!
+  Upsert use case: load by key, update the existing aggregate or build a new one through the Factory,
+  persist only when the Notification is clean.
+  @Service on the class, so component scanning picks it up and the transaction proxy wraps execute();
+  Spring's @Transactional, not jakarta.transaction's.
+  Needs: entity/factory/mother rendered with upsert=true, create-or-update-request, repository-port-crud,
+  domain-config (declares the Factory bean). The request carries the caller's organisation; every port call passes it.
+  Target: <capability>-usecase/src/main/java/<package path>/usecase/CreateOrUpdate<Name>UseCase.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, name (camelCase of Name),
+          Key (PascalCase of the identity field, e.g. Id)
+}}
+package {{package}}.usecase;
+
+import {{basePackage}}.common.domain.validation.Notification;
+import {{package}}.domain.CreateOrUpdate{{Name}}Request;
+import {{package}}.domain.{{Name}};
+import {{package}}.domain.{{Name}}Factory;
+import {{package}}.repository.{{Name}}Repository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class CreateOrUpdate{{Name}}UseCase {
+    private final {{Name}}Repository {{name}}Repository;
+    private final {{Name}}Factory {{name}}Factory;
+
+    public Notification execute(CreateOrUpdate{{Name}}Request request) {
+        Notification notification;
+        {{Name}} {{name}};
+
+        var existing = {{name}}Repository.findById(request.getOrganisationId(), request.get{{Key}}());
+        if (existing.isPresent()) {
+            {{name}} = existing.get();
+            notification = {{name}}.update(request);
+        } else {
+            var creation = {{name}}Factory.create(request);
+            {{name}} = creation.getValue();
+            notification = creation.getNotification();
+        }
+
+        if (notification.hasErrors()) {
+            return notification;
+        }
+
+        {{name}}Repository.save(request.getOrganisationId(), {{name}});
+        return notification;
+    }
+}

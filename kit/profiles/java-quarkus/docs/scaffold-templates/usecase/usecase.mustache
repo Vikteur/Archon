@@ -1,0 +1,33 @@
+{{!
+  Query use case: one execute() orchestrating domain + ports. Exemplar: invoice-usecase GetInvoicesUseCase.
+  A query that cannot fail returns its result; one that can (an unknown id) returns a Notification with a code.
+  The caller's organisation is the query's only input here and goes to every port method.
+  @ApplicationScoped on the class, not a CDI producer: interceptors such as @Transactional do not apply to
+  produced beans.
+  Target: <capability>-usecase/src/main/java/<package path>/usecase/<Name>UseCase.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name (verb+noun, e.g. GetInvoices),
+          Result (domain return type, as in repository-port), Repository (port type), repository (camelCase),
+          method (port method)
+}}
+package {{package}}.usecase;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.*;
+import {{package}}.repository.{{Repository}};
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
+@ApplicationScoped
+@Transactional
+@RequiredArgsConstructor
+public class {{Name}}UseCase {
+    private final {{Repository}} {{repository}};
+
+    public {{{Result}}} execute(OrganisationId organisationId) {
+        return {{repository}}.{{method}}(organisationId);
+    }
+}

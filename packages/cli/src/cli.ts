@@ -398,6 +398,7 @@ const NO_GIT_COMMANDS = [
   'chat',
   'serve',
   'skill',
+  'kit',
   'doctor',
   'telemetry',
   'auth',
@@ -560,6 +561,8 @@ async function dispatchGatedCommand(ctx: CliRouteContext): Promise<number> {
       return await routes.runTelemetry(ctx);
     case 'skill':
       return await routes.runSkill(ctx);
+    case 'kit':
+      return await routes.runKit(ctx);
     default:
       return await routes.runUnknownCommand(ctx);
   }

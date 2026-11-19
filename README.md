@@ -146,6 +146,18 @@ To let your coding agent drive Archon for you, run `archon skill add` in your pr
 
 Other installs (from source, Docker, servers), provider setup and the Claude Code binary path are in the [installation guide](https://archon.diy/getting-started/installation/). The [quick start](https://archon.diy/getting-started/quick-start/) shows how to write a brief a run can deliver against.
 
+### Install from this fork (clone)
+
+To run the fork's own build (branch `local/console`) instead of a release, clone it and run the local installer. It needs [Bun](https://bun.sh), builds the CLI, server and Claude provider for this machine, installs them as a set (CLI to `~/.local/bin`, the rest under `~/.archon`), keeps `<name>.prev-<timestamp>` backups of what it replaces, and then installs the Copilot kit tools:
+
+```bash
+git clone https://github.com/Vikteur/Archon
+cd Archon && git checkout local/console
+bash scripts/install-local.sh        # --prefix, --archon-home, --skip-web, --skip-tools, --dry-run
+```
+
+Then, in a project: `archon kit add <project> --trust` and `archon kit doctor <project>`. A running `archon serve` is not stopped; restart it yourself. The release installer reads this fork too: `ARCHON_REPO=Vikteur/Archon bash scripts/install.sh`.
+
 ## Connect a platform
 
 The CLI and web console work out of the box. Connect a chat platform or forge to start and follow runs from there:

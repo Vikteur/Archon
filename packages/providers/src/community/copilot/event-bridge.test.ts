@@ -1,11 +1,12 @@
 import { describe, expect, mock, test } from 'bun:test';
 import { createMockLogger } from '../../test/mocks/logger';
 
+const mockLogger = createMockLogger();
 mock.module('@archon/paths', () => ({
-  createLogger: mock(() => createMockLogger()),
+  createLogger: mock(() => mockLogger),
 }));
 
-import type { SessionEvent } from '@github/copilot-sdk';
+import type { SessionEvent } from '@microsoft/copilot-sdk';
 import { TOOL_OUTPUT_MAX_CHARS } from '@archon/provider-contract';
 
 import type { TokenUsage } from '../../types';
@@ -289,7 +290,99 @@ describe('mapCopilotEvent', () => {
       evt('tool.execution_complete', { toolCallId: 'c1', success: false, ...data }),
       makeCtx()
     );
-    expect(out).toEqual([{ type: 'tool_call_update', toolCallId: 'c1', status: 'failed', output }]);
+    expect(out).toEqual([
+      {
+        type: 'tool_call_update',
+        toolCallId: 'c1',
+        status: 'failed',
+        output,
+      },
+    ]);
+  });
+
+  test('a tool a hook denied → failed update with the reason, and a tool_denied log', () => {
+    mockLogger.info.mockClear();
+    const out = mapCopilotEvent(
+      evt('tool.execution_complete', {
+        toolCallId: 'c9',
+        success: false,
+        error: {
+          code: 'denied',
+          message: 'Denied by preToolUse hook: no pushes',
+        },
+      }),
+      makeCtx()
+    );
+    expect(out).toEqual([
+      {
+        type: 'tool_call_update',
+        toolCallId: 'c9',
+        status: 'failed',
+        output: 'Denied by preToolUse hook: no pushes',
+      },
+    ]);
+    expect(mockLogger.info).toHaveBeenCalledWith({ toolCallId: 'c9' }, 'copilot.tool_denied');
+  });
+
+  test('hook.start and a successful hook.end → hook started/succeeded', () => {
+    const ctx = makeCtx();
+    const out = [
+      evt('hook.start', {
+        hookInvocationId: 'h1',
+        hookType: 'preToolUse',
+        input: {},
+      }),
+      evt('hook.end', {
+        hookInvocationId: 'h1',
+        hookType: 'preToolUse',
+        success: true,
+      }),
+    ].flatMap(event => mapCopilotEvent(event, ctx));
+    expect(out).toEqual([
+      {
+        type: 'hook',
+        hookId: 'h1',
+        hookName: '',
+        hookEvent: 'preToolUse',
+        status: 'started',
+      },
+      {
+        type: 'hook',
+        hookId: 'h1',
+        hookName: '',
+        hookEvent: 'preToolUse',
+        status: 'succeeded',
+      },
+    ]);
+  });
+
+  test('a failed hook.end → hook failed named by its file, logged without the error text', () => {
+    mockLogger.warn.mockClear();
+    const out = mapCopilotEvent(
+      evt('hook.end', {
+        hookInvocationId: 'h2',
+        hookType: 'preToolUse',
+        success: false,
+        error: {
+          message: 'Error: Hook command failed with code 1\nStderr: secret-ish\n',
+          source: '.github/hooks/policy.json',
+        },
+      }),
+      makeCtx()
+    );
+    expect(out).toEqual([
+      {
+        type: 'hook',
+        hookId: 'h2',
+        hookName: '.github/hooks/policy.json',
+        hookEvent: 'preToolUse',
+        status: 'failed',
+      },
+    ]);
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      { hookType: 'preToolUse', source: '.github/hooks/policy.json' },
+      'copilot.hook_failed'
+    );
   });
 
   test.each([

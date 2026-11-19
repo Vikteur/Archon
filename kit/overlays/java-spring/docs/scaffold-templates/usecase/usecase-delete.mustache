@@ -1,0 +1,41 @@
+{{!
+  Delete use case: an unknown key becomes a NOT_FOUND Notification (404 through ErrorStatusTable), never an
+  exception. A key of another organisation is unknown too.
+  @Service on the class, so component scanning picks it up and the transaction proxy wraps execute();
+  Spring's @Transactional, not jakarta.transaction's.
+  Do not echo a personal identifier (national ID, name, ...) in the error message; drop the %s if the key is one.
+  Target: <capability>-usecase/src/main/java/<package path>/usecase/Delete<Name>UseCase.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, name (camelCase of Name), key, keyType
+}}
+package {{package}}.usecase;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{basePackage}}.common.domain.validation.ErrorCode;
+import {{basePackage}}.common.domain.validation.Notification;
+import {{package}}.domain.*;
+import {{package}}.repository.{{Name}}Repository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class Delete{{Name}}UseCase {
+    private final {{Name}}Repository {{name}}Repository;
+
+    public Notification execute(OrganisationId organisationId, {{{keyType}}} {{key}}) {
+        var notification = Notification.empty();
+
+        if (!{{name}}Repository.existsById(organisationId, {{key}})) {
+            notification.addError(ErrorCode.NOT_FOUND, "No {{name}} found for {{key}} '%s'".formatted({{key}}));
+        } else {
+            {{name}}Repository.deleteById(organisationId, {{key}});
+        }
+
+        return notification;
+    }
+}

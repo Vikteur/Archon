@@ -1,0 +1,20 @@
+{{!
+  Builds and validates an aggregate. Exemplar: authentication-domain BlockedAudienceFactory.
+  Framework-free: usecase/domain-config declares it as a Spring @Bean for the use cases.
+  Target: <capability>-domain/src/main/java/<package path>/domain/<Name>Factory.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, name (camelCase of Name),
+          upsert (bool, same value as entity.mustache)
+}}
+package {{package}}.domain;
+
+import {{basePackage}}.common.domain.validation.Creation;
+
+public class {{Name}}Factory {
+    public Creation<{{Name}}> create({{#upsert}}CreateOrUpdate{{/upsert}}{{^upsert}}Create{{/upsert}}{{Name}}Request request) {
+        var {{name}} = new {{Name}}(request);
+        return Creation.of({{name}}, {{name}}.validate());
+    }
+}

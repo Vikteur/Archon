@@ -1,0 +1,12 @@
+{
+  "about": "One change per pointer-check status, against openapi.yaml in this folder; the last two are pointers as strings.",
+  "changes": [
+    { "op": "replace", "path": ["paths", "/status", "get", "description"], "old": "Answers whether the service is up." },
+    { "op": "replace", "path": ["paths", "/status", "get", "summary"], "old": "Health" },
+    { "op": "remove", "path": ["paths", "/status", "get", "x-gone"], "old": "anything" },
+    { "op": "add", "path": ["paths", "/status", "get", "x-new"], "value": "new" },
+    { "op": "add", "path": ["paths", "/status", "get", "operationId"], "value": "getHealth" },
+    { "op": "replace", "path": "/paths/~1notes~1search/get/parameters/0/name", "old": "q" },
+    { "op": "replace", "path": "/paths/~1status/get/tags", "old": ["Health"] }
+  ]
+}

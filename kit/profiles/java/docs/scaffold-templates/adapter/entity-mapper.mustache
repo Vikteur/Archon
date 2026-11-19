@@ -1,0 +1,31 @@
+{{!
+  Entity -> domain mapping in one static place, shared by the repository and its tests.
+  Never maps the other way; that is <Name>Entity(OrganisationId, <Name>). The organisation stays in the adapter.
+  A typed id (naturalKey.typedId, the domain id type) is wrapped back with <IdType>.of(uuid).
+  Target: <capability>-adapter/src/main/java/<package path>/adapter/repository/<Name>EntityMapper.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, Name, naturalKey (optional: name, pascal, typedId (optional, domain id type)), fields[name, pascal]
+          For boolean columns the entity getter is is<Pascal>().
+}}
+package {{package}}.adapter.repository;
+
+import {{package}}.domain.*;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+final class {{Name}}EntityMapper {
+
+    static {{Name}} map({{Name}}Entity entity) {
+        return {{Name}}.builder()
+{{#naturalKey}}
+                .{{name}}({{#typedId}}{{typedId}}.of(entity.get{{pascal}}()){{/typedId}}{{^typedId}}entity.get{{pascal}}(){{/typedId}})
+{{/naturalKey}}
+{{#fields}}
+                .{{name}}(entity.get{{pascal}}())
+{{/fields}}
+                .build();
+    }
+}

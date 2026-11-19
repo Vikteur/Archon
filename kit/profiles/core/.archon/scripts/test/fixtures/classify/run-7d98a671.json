@@ -1,0 +1,170 @@
+{
+ "id": "7d98a671-764e-4232-a57e-fffb79b94a1d",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-40",
+ "started_at": "2026-10-08T17:21:57.000Z",
+ "completed_at": "2026-10-08T21:08:14.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-40-test-task-inputs",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nl,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-40-test-task-inputs\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-40-test-task-inputs': Permission denied\\n\"},\"branch\":\"feat/task-40-test-task-inputs\",\"envId\":\"0176e45a6b2448ab67f87d458f765fc4\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-40-test-task-inputs — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-40-test-task-inputs\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-40-test-task-inputs': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-40-test-task-inputs\n[stdout]\n{\"backlog\":\"f2f9aac\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\7d98a671-764e-4232-a57e-fffb79b94a1d"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nl,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-40-test-task-inputs\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-40-test-task-inputs': Permission denied\\n\"},\"branch\":\"feat/task-40-test-task-inputs\",\"envId\":\"0176e45a6b2448ab67f87d458f765fc4\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-40-test-task-inputs — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-40-test-task-inputs\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-40-test-task-inputs': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-40-test-task-inputs\n[stdout]\n{\"backlog\":\"f2f9aac\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "first_failed_node": "close-out",
+  "nodes": [
+   {
+    "node_id": "stop-gate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "failed",
+    "error": "Bash node 'close-out' failed [exit 1]: [stderr]\nl,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-40-test-task-inputs\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-40-test-task-inputs': Permission denied\\n\"},\"branch\":\"feat/task-40-test-task-inputs\",\"envId\":\"0176e45a6b2448ab67f87d458f765fc4\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-40-test-task-inputs — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-40-test-task-inputs\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-40-test-task-inputs': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-40-test-task-inputs\n[stdout]\n{\"backlog\":\"f2f9aac\",\"branch\":\"kept\",\"worktree\":\"kept\"}"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-40\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":false,\"stop_reason\":\"\"}"
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":false,\"why\":\"\"}"
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "skipped",
+   "kind": "gate",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Step 4's checks have all passed. I'm marking it done in the plan and recording the evidence on the ticket.Step 4 passed and is marked `- [x] (verify only)` in the plan. I committed nothing, because no..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first unchecked step in the plan is Step 4, which is marked `(verify only)`. As the instructions say for that kind of step, I wrote nothing and made no commit, and I did not edit the plan."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Step 4's checks have all passed. I'm marking it done in the plan and recording the evidence on the ticket.Step 4 passed and is marked `- [x] (verify only)` in the plan. I committed nothing, because no..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Running the test; it should fail on `.gitattributes` and `.gitignore`.Red for the right reason (`[\".gitattributes\", \".gitignore\"]`). Committing the test alone.Now the fix, inside the `tasks.test` bloc..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: agent sessions load Groma..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":5,\"refs\":\"\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"TASK-40: the repo files that application tests read are inputs of the Gradle test task\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/40\",\"sha\":\"acb5d7a41c4ff6146e25c888af3671f363fdc411\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"green\",\"sha\":\"acb5d7a41c4ff6146e25c888af3671f363fdc411\",\"detail\":\"\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\": \"green\", \"sha\": \"acb5d7a41c4ff6146e25c888af3671f363fdc411\", \"detail\": \"\"}"
+  },
+  {
+   "nodeId": "merged",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"merged\",\"merge\":\"1ba7709b5447ed05e602810acd2483117d858ece\",\"head\":\"37ca9cb9f99bd8e73e1d7b568212dd9c608cb9e0\",\"branch\":\"feat/task-40-test-task-inputs\",\"ci\":\"green\",\"backlog\":\"<home>/..."
+  },
+  {
+   "nodeId": "finalize",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"close\":true}"
+  },
+  {
+   "nodeId": "close-out",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

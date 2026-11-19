@@ -1,0 +1,14 @@
+{
+  "minWords": 15,
+  "explainStatuses": ["409"],
+  "lookAlikes": [["deleteProject", "archiveProject"], ["moveNote", "copyNote"]],
+  "humanConfirm": {
+    "tag:Admin": "Who can sign in, and with which roles.",
+    "sendDigest": "E-mails every member of the project.",
+    "exportNotes": "Hands out every note of the account."
+  },
+  "alsoDestroys": { "importNotes": "the notes the project had" },
+  "accept": {
+    "deleteComment": { "reversibility": "A comment is cheap to write again." }
+  }
+}

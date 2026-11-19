@@ -23,6 +23,9 @@
       "!.claude",
       "!.github",
       "!docs",
+      "!kit/profiles",
+      "!kit/manifest.json",
+      "!packages/cli/src/bundled-kit.ts",
       "!workspace"
     ]
   },

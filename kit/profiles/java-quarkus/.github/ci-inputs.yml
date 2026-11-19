@@ -1,0 +1,98 @@
+# The input manifest of the CI jobs (CI plan 2026-10-20, C10; owner decisions D2, D3): for each job of
+# .github/workflows/ci.yml, the tracked files whose content can change its result. .claude/scripts/ci-plan.sh reads it
+# at the tested tree and fingerprints each job's inputs; a job may reuse a green run only when its fingerprint is equal.
+# Over-approximate: a file listed here that a job never reads only costs a reuse, a file missing from here is a miss.
+# Every change to this file changes every job's fingerprint (it is in `always`), so a narrowed manifest never reuses a
+# run made under the old one.
+#
+# Entries (paths relative to the repo root):
+#   .            the whole tree
+#   dir/         everything under dir
+#   name         the file name, or everything under a folder of that name
+#   a glob       * and ** match any characters, / included; ? one character (over-approximates, the safe direction)
+# Keys per job:
+#   inputs           what the job reads. A job whose steps walk a directory (./gradlew, git ls-files, find) takes .
+#   when-targets     mutation only: the inputs when the change has mutation targets (then Gradle runs)
+#   exclude          literal folders taken out of `inputs`. Only the D3 v1 list is allowed (backlog/, docs/retro/, the
+#                    docs/tokenomics reports), only for test, mutation and image; ci-plan.sh refuses any other. An
+#                    exclusion holds for a plan only when its folder's name occurs as a word in none of the job's readers.
+#   readers          globs whose text the exclusion proof reads, beside the scripts the job's run: lines reach
+#   contract         the job reads the rekord-contract at the pin of gradle.properties: the resolved commit is an input
+#   docker-context   the Docker build context is an input: the ! entries of .dockerignore when it denies by default
+#                    (starts with *), otherwise the whole tree; the local ids of the Dockerfile's base images too
+#   mutation-targets the sorted mutation targets (mutation-gate.sh's rule) with their blobs are an input
+# groma is never narrowed (D3): ci-plan.sh plans it on the whole tree whatever this file says.
+version: 1
+
+# Inputs of every job: the planner, its manifest, the runner and the gate that reads its statuses, the workflow (whole
+# file in v1), and .gitattributes (git check-attr in the tests reads it).
+always:
+  - .github/ci-inputs.yml
+  - .github/workflows/ci.yml
+  - .claude/scripts/ci-plan.sh
+  - .claude/scripts/ci-local.sh
+  - .archon/scripts/local-ci-status.sh
+  - .gitattributes
+
+jobs:
+  test:
+    # The Java side (owner decision 2026-10-23): every module's src/ and build file, the Gradle wrapper and settings,
+    # config/ and lombok.config. The tests read repo files through wedding.repoRoot: the build files, the migrations,
+    # every src/*/resources/ folder (the settings tests walk the tree for them), config/ and docs/memory.md. The steps
+    # after Gradle run .claude/scripts/ (build-shape-check.sh reads docs/memory.md). The scaffold and workflow suites
+    # moved to archon-scripts (2026-10-23), and with them scripts/, docs/code-maps/, docs/scaffold-templates/ and
+    # .github/agents/ left this list; the codegen and WireMock suites moved to image (2026-10-23), test-set-coverage's
+    # to archon-scripts, and with them .claude/hooks/, scripts/test/ and docs/code-maps/jvm-testing.md left it too.
+    # The --audit run of 2026-10-23 found two reads outside it: NoAuthSwitchSettingsTest reads Dockerfile, and generated-untracked-check.sh's git reads .gitignore.
+    # .gitattributes is in `always`.
+    # TestDataGateTest reads docs/code-maps/test-data.md (TASK-42), the one leaf back in this list.
+    inputs:
+      - "*/src/**"
+      - "*.gradle.kts"
+      - gradle/
+      - gradlew
+      - gradlew.bat
+      - gradle.properties
+      - lombok.config
+      - config/
+      - .claude/scripts/
+      - docs/memory.md
+      - docs/code-maps/test-data.md
+      - Dockerfile
+      - .gitignore
+    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
+    readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
+    contract: true
+
+  mutation:
+    # No target: mutation-gate.sh passes before Gradle starts, and the job reads only the gate and its suite. Its
+    # git ls-files --exclude-standard reads .gitignore (found by --audit, 2026-10-23).
+    inputs: [.claude/scripts/, scripts/test/, config/, .gitignore]
+    # A target: Gradle runs PIT, which reads the whole tree like the test job.
+    when-targets: [.]
+    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
+    readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
+    mutation-targets: true
+
+  image:
+    # The build reads the Docker context (from .dockerignore); the steps run the image suites and the contract checks.
+    # image-check.sh compares the health response with the shared-adapter fixture (found by --audit, 2026-10-23), which
+    # "*/src/**" holds. The codegen and WireMock suites (moved from test, 2026-10-23) run Gradle on every module: the
+    # Java side of the test job's list. codegen.test.sh runs a .claude/hooks/ guard, wiremock-harness.test.sh reads
+    # docs/code-maps/jvm-testing.md, generated-untracked-check.test.sh's git reads .gitignore.
+    inputs: [Dockerfile, .dockerignore, .claude/scripts/, .claude/hooks/, scripts/test/, "*/src/**", "*.gradle.kts",
+      gradle/, gradlew, gradlew.bat, gradle.properties, lombok.config, config/, docs/code-maps/jvm-testing.md, .gitignore]
+    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
+    readers: [Dockerfile, .dockerignore, "*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties,
+      settings.gradle.kts]
+    docker-context: true
+    contract: true
+
+  archon-scripts:
+    # The suites read .archon/, .claude/, scripts/ and docs/tokenomics/; plan-spike.test.sh walks git ls-files over the
+    # whole repo, so the job takes the whole tree.
+    inputs: [.]
+
+  groma:
+    # The architecture check reads the whole tree (backlog/ included); never narrowed (D3).
+    inputs: [.]

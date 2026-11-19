@@ -1,0 +1,119 @@
+---
+runtime: lazy
+kind: worked-example
+---
+
+<!-- AI_DISCLAIMER v1.0 -->
+# Code map — `api-first-controller` (project: `shop-backend`)
+
+> This file has been created (totally or partially) with the assistance of artificial intelligence tools.
+> All content has been generated under the direct supervision of a named individual,
+> and under the AI.Backbone Orchestrator Compliance framework
+
+## This repo (wedding-portal)
+These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
+(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
+
+- **The controller implements the generated `<Tag>Api`** (`app.rekord.api`) in
+  `app.rekord.<context>.adapter.controller`; it stays thin: get `organisationId` from `CurrentOrganisation`
+  (shared-adapter), call the use case, `NotificationResponses.throwOnErrors(notification)`, map to the DTO.
+- `SuccessStatus.answer(201, body)` / `SuccessStatus.answer(204)` in `app.rekord.common.adapter.controller` set non-200 success statuses; a shared helper answers 501 for generated methods whose ticket has not
+  shipped yet.
+- A fixed `Cache-Control` is `@Cache` on the implementing method; `@ResponseHeader` there is ignored (Quarkus reads the JAX-RS metadata from the generated interface). Example: `HealthResource`.
+- **Request body limit** is set explicitly to 10240K (parity), never left to the default.
+- **Every implemented route outside the allow-list carries `@Authenticated`, `@RolesAllowed`, `@PermitAll` or `@DenyAll`**
+  on the method or the class; `application/.../security/RouteGuardTest` refuses it otherwise.
+
+## Where this pattern lives (exemplars)
+| Exemplar | What it shows | Layer / module |
+|----------|---------------|----------------|
+| [`CustomerController.java`](exemplars/customer-controller.md#api-first-controller) | `implements <Capability>Api`, delegates to use-cases, maps via a static `*ToDTOMapper` | adapter (`account-adapter`) |
+
+### Excerpts
+Generated-contract controller (full source in the [exemplar leaf](exemplars/customer-controller.md#api-first-controller)):
+```java
+public class CustomerController implements AccountApi {
+    @Override
+    @Cache(maxAge = 86400)
+    public List<DelegationDTO> getAllDelegations() {
+        return getDelegationsUseCase.execute().stream()
+                .map(DelegationToDTOMapper::map).toList();
+```
+
+Controller-owned route beside generated overrides:
+```java
+@GET
+@Path("api/delegation/verify-topic-access/{topic}")
+public Boolean verifyDelegationForTopic(@PathParam("topic") Topic topic) {
+    return verifyDelegationForTopicAccessUseCase.execute(topic);
+}
+```
+
+### Edge cases
+Generated override plus one manual route in the same controller:
+```java
+assertThat(CustomerController.class.getInterfaces()).contains(AccountApi.class);
+assertThat(CustomerController.class.getDeclaredMethod("verifyDelegationForTopic", Topic.class)).isNotNull();
+```
+Expected: contract methods stay on the generated interface; controller-specific routes can coexist when the contract has not absorbed them yet.
+
+Boundary mapping after a successful read:
+```java
+var dto = DelegationToDTOMapper.map(delegation);
+assertThat(dto.customerName()).isEqualTo("Jane Doe");
+```
+Expected: the controller maps domain output through a dedicated mapper instead of constructing DTOs inline.
+
+Use-case validation failure on a write endpoint:
+```java
+var thrown = catchThrowableOfType(controller::recordLastVisit, WebApplicationException.class);
+assertThat(thrown.getResponse().getStatus()).isEqualTo(400);
+assertThat(((NotificationDTO) thrown.getResponse().getEntity()).getErrors()).contains("Could not record Springfield storefront visit");
+```
+Expected: write endpoints translate the returned notification into an HTTP response without leaking domain internals.
+
+## Scaffold
+Render the base case with `scripts/scaffold.sh <template> '<json on one line>' <target>` from the repo root. The
+template's header comment lists its exact variables; the script refuses to overwrite an existing file.
+
+| Template | Target | Variables | Left to you |
+|---|---|---|---|
+| [adapter/controller](../scaffold-templates/adapter/controller.mustache) | `<capability>-adapter/src/main/java/<pkg>/adapter/controller/<Name>Controller.java` | `package` (base package, without `.adapter.controller`), `basePackage`, `Name`, `Api`, `apiPackage`, `modelPackage`, `UseCase`, `useCase`, `operationId`, `Domain` (all from the contract's tag and operation); the organisation comes from `CurrentOrganisation` | path/query parameters and request bodies; non-200 responses; more operations on the same `Api`; list results; authorization (a STOP item) |
+| [adapter/controller-command](../scaffold-templates/adapter/controller-command.mustache) | `.../adapter/controller/<Name>Controller.java` | `package` (base package, without `.adapter.controller`), `basePackage`, `Name`, `Api`, `apiPackage`, `modelPackage`, `Domain`, `Dto`, `dto`, `upsertOperationId`, `deleteOperationId`, `key`, `pathKeyType`, `typedId` (the domain id type wrapping the path UUID) (all from the contract's tag and operations); errors go through `NotificationResponses.throwOnErrors` | success statuses other than 204; more operations on the same `Api`; authorization (a STOP item) |
+
+The mapper it calls comes from `domain-dto-mapper`; its test from `jvm-testing` (controller-test).
+
+A write operation pair (create-or-update and delete by key) uses controller-command instead. It calls the use cases
+from `usecase-orchestration` (usecase-create-or-update, usecase-delete), maps the body with request-dto-to-domain-mapper
+(`domain-dto-mapper`) and is tested by controller-command-test (`jvm-testing`).
+
+## Local conventions (the project facts the skill omits)
+- Package root: `<capability>-adapter/src/main/java/com/acme/shop/<capability>/adapter/controller/`.
+- Naming shape: `*Controller`, `implements <Capability>Api` (the JAX-RS interface generated by
+  openapi-generator `jaxrs-spec`, `interfaceOnly=true`, `returnResponse=false`, from
+  `shop.openapi-conventions.gradle.kts`). Methods return what the interface declares (the DTO, or `void`);
+  a fixed `Cache-Control` via `@Cache`, a non-200 status with a body via a thrown
+  `WebApplicationException` carrying its response.
+- Required collaborators: one `*UseCase` per endpoint, constructor-injected; a static
+  `*ToDTOMapper` for the domain→DTO step (never inline DTO construction).
+- Config / wiring: plain class, no scope annotation (Quarkus REST manages the resource); the
+  `@Path`/`@GET`/`@PathParam` annotations live on the generated Api interface. Lombok
+  `@RequiredArgsConstructor` for constructor injection.
+
+## Frequency & coverage (why this earned a skill)
+- Occurrences: 33 files across 14 modules (as of `abc1234`).
+- Hotspots: every capability adapter with a REST surface (`access-matrix-adapter`,
+  `product-restriction-adapter`, `application`, `authentication-adapter`, `promotion-adapter`,
+  `payments-gateway`, `storefront-adapter`, `partner-gateway`, `merchant-adapter`,
+  `campaign-adapter`, `account-adapter`, `attribute-mapping-adapter`, `invoice-adapter`,
+  `order-adapter`).
+
+## Drift / exceptions
+- Not every controller method is a generated-interface override — a controller may add a
+  hand-annotated `@GET @Path` route alongside the generated ones (see `CustomerController.verifyDelegationForTopic`)
+  when the OpenAPI contract does not yet cover that endpoint. Treat as intentional, not drift.
+
+## Provenance
+- Scanned at: `abc1234` · tool/query: `scripts/scan-patterns.sh --glob '*.java' 'Controller implements [A-Za-z]+Api'`
+
+[memory, 2026-10-17]: ../memory.md

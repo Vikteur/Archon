@@ -131,6 +131,96 @@ decision, driving the SDLC pack's queues, setup and configuration, authoring, an
 prompt guidance. It is also installed automatically during
 `archon setup`. The former `skill install` verb is a deprecated alias that prints a warning.
 
+### `kit setup`
+
+The guided install of the bundled GitHub Copilot kit, and the main way to install it. It
+asks for the backend repository (a git checkout), the frontend repository (optional) and
+the OpenAPI contract file, and checks each answer as it is typed. Then it asks whether to
+use Backlog.md for tickets (default no). After a confirmation it installs the tools
+(without `backlog` when Backlog.md is off), installs the kit into the backend
+(`kit add --trust`), sets `contract.spec_path` to the absolute contract path and `backlog`
+to `true` or `false` in `kit.yaml`, runs the contract MCP setup, builds
+the CodeGraph index of both repositories, gives the frontend the codegraph MCP server,
+folder trust and a `codegraph.extra_projects` entry in the backend's `kit.yaml`, runs
+`rtk init --copilot` in each repository, checks every MCP server and starts the web views.
+The [Copilot Kit guide](/guides/copilot-kit/) describes each step.
+
+```bash
+# Ask in the terminal (offers the last run's answers)
+archon kit setup
+
+# No questions
+archon kit setup --backend ~/code/backend --contract ~/code/contract/dist/openapi.yaml --yes
+```
+
+| Flag | Effect |
+|------|--------|
+| `--backend <path>` | Backend git repository (gets the kit) |
+| `--frontend <path>` | Frontend git repository; leave it out to skip the frontend |
+| `--contract <file>` | OpenAPI contract: `.yaml`, `.yml` or `.json` with a top-level `openapi` key |
+| `--profile a,b,c` | Kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--backlog` | Use Backlog.md for tickets (absent: off, `backlog: false` in `kit.yaml`) |
+| `--yes` | Skip the confirmation |
+| `--no-tools` | Skip the tool installer |
+| `--no-rtk` | Skip the rtk hooks |
+| `--no-web` | Do not start the web views |
+
+The answers are saved in `<archon home>/kit-setup.json` (the three paths, the
+profiles and the Backlog.md answer). Each step's output goes to `<archon home>/logs/kit-setup-<time>.log`; a failed
+step names that log, and the later steps still run. Without a terminal, `--backend` and
+`--contract` are required.
+
+Exit codes: `0` done or cancelled, `1` a step failed, `2` a usage error (missing or invalid
+flags, an unknown profile).
+
+### `kit add [path]`, `kit doctor [path]`, `kit tools [path]`, `kit list`
+
+Install the bundled GitHub Copilot kit into a git project, check it, or list its profiles.
+The kit is a set of agents, skills, hooks, instructions, scripts, MCP servers and workflows,
+grouped into profiles (`core`, `java`, `java-quarkus`, `java-spring`, `openapi-contract`).
+
+```bash
+# Install the default profiles into the current repository
+archon kit add
+
+# Pick profiles, preview, and set a kit.yaml value
+archon kit add /path/to/project --profile core,java,java-spring --set contract.repo=acme/contract --dry-run
+
+# Check tools, Copilot auth and trust, MCP servers, hooks and drift
+archon kit doctor
+
+# Show profiles and which are installed here
+archon kit list
+```
+
+`add` resolves `requires` between profiles, rejects exclusive combinations, writes
+`.archon/kit.yaml` from the kit defaults when it is missing, renders `@@KIT_<NAME>@@`
+placeholders in template files from it, and merges the kit's model aliases into
+`.archon/config.yaml` (only missing keys). A file that differs from the kit is kept and
+reported as `kept (differs)` unless `--force` is given. Then it runs
+`scripts/install-tools.sh` (skip with `--no-tools`), the profiles' post-install commands
+(skip with `--no-post-install`) and `archon validate workflows`.
+
+| Flag | Effect |
+|------|--------|
+| `--profile a,b,c` | Profiles to install (default: `profiles` in `.archon/kit.yaml`, then the kit defaults) |
+| `--force` | Overwrite files that differ |
+| `--dry-run` | Print the plan, write nothing |
+| `--set key=value` | Override a `kit.yaml` key; dot keys such as `contract.repo`; repeatable |
+| `--trust` | Add the project to `trustedFolders` in `$COPILOT_HOME/config.json` (default `~/.copilot`) |
+| `--user-hooks` | Write `$COPILOT_HOME/hooks/archon-kit-run-guard.json` so the run guard loads in untrusted folders |
+
+`kit tools [path] [--check] [--no-backlog]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code. `--no-backlog` runs it with `INSTALL_TOOLS_BACKLOG=0`, so `backlog` is left out; without it the script reads `backlog:` from `.archon/kit.yaml`, then the kit defaults, and installs it unless that says `false`. In a folder without that script it runs the kit's bundled installer and tool list from a temp folder instead, which switches on no git hooks. `add` and `doctor` reuse it.
+
+`@@KIT_PROJECT_DIR@@` is built in: it renders as the absolute (real) project path and is never read from `kit.yaml`.
+
+`doctor` exits non-zero when a required check fails. It runs `scripts/install-tools.sh --check`
+when the project has one (otherwise it checks the tools itself, and reports `backlog` as
+skipped when `kit.yaml` says `backlog: false`), checks Copilot auth (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or a logged-in
+user in `config.json`) and folder trust, starts each server in `.github/mcp.json` and runs MCP
+`initialize` and `tools/list` (20 s limit), checks that `.github/hooks/kit.json` scripts exist,
+and compares installed files with the kit's checksums.
+
 ### `serve`
 
 Start the web UI server in the foreground. The same command works from a binary install and from a source checkout. The server runs as a child process.

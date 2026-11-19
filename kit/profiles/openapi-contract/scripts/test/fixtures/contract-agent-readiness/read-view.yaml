@@ -1,0 +1,88 @@
+# The `read` view and the first paragraph (read.mjs): one case per operation. Also the tiny spec of the findability cases.
+openapi: 3.0.3
+info:
+  title: Read view fixture
+  version: 1.0.0
+paths:
+  /spaced:
+    get:
+      operationId: getSpaced
+      summary: List spaced notes
+      # A line of only spaces and a tab is a paragraph break: the first paragraph is 7 words.
+      description: "Lists the spaced notes, nothing to poll.\n  \t\nA second paragraph that no first-paragraph count sees."
+      responses:
+        '200':
+          description: The notes.
+  /plain:
+    get:
+      operationId: getPlain
+      summary: Show a plain note
+      # No blank line: the whole description is the first paragraph, 7 words.
+      description: |-
+        Shows one plain note.
+        Uses `getPlainNoteById` words.
+      responses:
+        '200':
+          description: The note.
+  /folded:
+    get:
+      operationId: getFolded
+      summary: Show a folded note
+      # A folded block turns the blank source line into one newline, so there is no paragraph break: 7 words.
+      description: >-
+        Shows a folded note.
+
+        Still the first.
+      responses:
+        '200':
+          description: The note.
+  /things:
+    parameters:
+      - name: space
+        in: query
+        description: The space the thing goes in.
+        schema:
+          type: string
+    post:
+      operationId: createThing
+      summary: Create a thing
+      description: Creates a thing in a space. Nothing else changes, and nothing to poll.
+      x-access: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Thing'
+      responses:
+        '201':
+          description: The new thing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thing'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  schemas:
+    Thing:
+      type: object
+      x-owner: things
+      example: { name: a }
+      properties:
+        name:
+          type: string
+          example: a
+        example:
+          type: string
+          description: A property named example stays.
+        parent:
+          $ref: '#/components/schemas/Thing'
+  responses:
+    Conflict:
+      description: A thing with that name is already in the space.
+      content:
+        application/json:
+          schema:
+            type: object
+          example: { code: THING_TAKEN }

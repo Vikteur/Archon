@@ -1,0 +1,17 @@
+# The delegator supervisor's tick (owner decision 2026-10-20, D15; ROADMAP R20). Started by delegator-supervisor.timer
+# every 3 minutes; one tick takes seconds and always exits 0 (it fails open: errors go to its log, never a crash loop).
+# Shadow mode until the owner creates the root-owned live flag. Install, watch, pause and switch:
+# docs/archon/supervisor.md. This file is checked in; the owner installs it (a deployed local service is a STOP item).
+[Unit]
+Description=Delegator supervisor tick (shadow until the owner switches it live)
+Documentation=file://@@KIT_PROJECT_DIR@@/docs/archon/supervisor.md
+
+[Service]
+Type=oneshot
+WorkingDirectory=@@KIT_PROJECT_DIR@@
+# A unit does not get the login PATH: archon, backlog, node, gh and jq live in these folders.
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:%h/.bun/bin:%h/.archon/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env bash @@KIT_PROJECT_DIR@@/.archon/scripts/supervisor-tick.sh tick
+# A tick that hangs is killed before the next one is due; the tick's own lock stops an overlap in any case.
+TimeoutStartSec=170
+Nice=10

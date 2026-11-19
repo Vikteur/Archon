@@ -1,0 +1,23 @@
+{{!
+  Makes the framework-free domain Factory a Spring bean, so a use case can take it in its constructor.
+  One config per context; add a @Bean method per Factory. The domain stays free of Spring: the bean is declared here.
+  Target: <capability>-usecase/src/main/java/<package path>/config/<Name>DomainConfig.java
+  Package: "package" is the base package, without the ".config" this template appends (com.example.guest renders
+          package com.example.guest.config); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, Name (aggregate), name (camelCase of Name)
+}}
+package {{package}}.config;
+
+import {{package}}.domain.{{Name}}Factory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class {{Name}}DomainConfig {
+
+    @Bean
+    {{Name}}Factory {{name}}Factory() {
+        return new {{Name}}Factory();
+    }
+}

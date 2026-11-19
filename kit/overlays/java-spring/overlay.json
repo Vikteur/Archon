@@ -1,0 +1,162 @@
+{
+  ".github/ci-inputs.yml": {
+    "derivedFrom": ".github/ci-inputs.yml",
+    "sourceSha256": "5c8996f160e9beac718e6ed1b99053025236780393877b5ac915c09fd53f8dfd"
+  },
+  ".github/skills/api-first-controller/SKILL.md": {
+    "derivedFrom": ".claude/skills/api-first-controller/SKILL.md",
+    "sourceSha256": "4fcdd8ff1830ca82138c3899cbc9eea260aa74d3b8c54e1995328b3e989163ca"
+  },
+  ".github/skills/archunit-fitness/SKILL.md": {
+    "derivedFrom": ".claude/skills/archunit-fitness/SKILL.md",
+    "sourceSha256": "ddc94ab07b0434b9f50046147ded1861cbe8b267f1edc6399119606af93d9b95"
+  },
+  ".github/skills/bean-config-di/SKILL.md": {
+    "derivedFrom": ".claude/skills/bean-config-di/SKILL.md",
+    "sourceSha256": "0e8b8804cc157f409f20b6281a8253d254eace2a22697cc8924beb880e51551e"
+  },
+  ".github/skills/domain-events/SKILL.md": {
+    "derivedFrom": ".claude/skills/domain-events/SKILL.md",
+    "sourceSha256": "0199f2f929f150a86f86a0cb0b96a5612a811ba7d2463b619b879d745122f9e8"
+  },
+  ".github/skills/domain-to-dto-mapper-tests/SKILL.md": {
+    "derivedFrom": ".claude/skills/domain-to-dto-mapper-tests/SKILL.md",
+    "sourceSha256": "4618ce7ba6e379ecd98f23a5dc1991c0b5651aa673eb44afcb567fd64a214061"
+  },
+  ".github/skills/exception-to-http/SKILL.md": {
+    "derivedFrom": ".claude/skills/exception-to-http/SKILL.md",
+    "sourceSha256": "b720eb5f6e5237431bcdbcbaf8c76cd0155ac4d8f0ec8edfd5bfd23e51546a31"
+  },
+  ".github/skills/persistence-repository/SKILL.md": {
+    "derivedFrom": ".claude/skills/persistence-repository/SKILL.md",
+    "sourceSha256": "14cf65a54fd4e6e851b5e62d38bf29f6e6598ddca97e39a87635295ed5518cb8"
+  },
+  ".github/skills/resilience4j/SKILL.md": {
+    "derivedFrom": ".claude/skills/resilience4j/SKILL.md",
+    "sourceSha256": "0bdaa5361dba4d297ca2abbe6e8b70f91785e610b21cddfd25546ba8991d8d9c"
+  },
+  ".github/skills/run-app/SKILL.md": {
+    "derivedFrom": ".claude/skills/run-wedding-portal/SKILL.md",
+    "sourceSha256": "443983360722853108e859dda6aaebfaf400de1d8dba5e3e644ac999685b55ea"
+  },
+  ".github/skills/run-app/smoke.sh": {
+    "derivedFrom": ".claude/skills/run-wedding-portal/smoke.sh",
+    "sourceSha256": "f42171d25d255889d6d14f26bfcc60790ce66f049fdb6d706ae6becaf155bd14"
+  },
+  ".github/skills/testcontainers/SKILL.md": {
+    "derivedFrom": ".claude/skills/testcontainers/SKILL.md",
+    "sourceSha256": "0f734e4f04e795569f79bc25ca8d9ffd5c526b5d686aeaa658e368cf862d144d"
+  },
+  ".github/workflows/ci.yml": {
+    "derivedFrom": ".github/workflows/ci.yml",
+    "sourceSha256": "4999b043cd44b5d500ac12b5c951377e33a565280971a7e7580573b2f70e8c45"
+  },
+  "docs/code-maps/api-first-controller.md": {
+    "derivedFrom": "docs/code-maps/api-first-controller.md",
+    "sourceSha256": "5284802412769246ec6e3e27c10c1a7d60510dda3ffcc9d33008cd270a6c0a9a"
+  },
+  "docs/code-maps/bean-config-di.md": {
+    "derivedFrom": "docs/code-maps/bean-config-di.md",
+    "sourceSha256": "7a4c01c74eee595f486f293be47189c3a9c45e114873544ffa838da94b9bfe9c"
+  },
+  "docs/code-maps/exception-to-http.md": {
+    "derivedFrom": "docs/code-maps/exception-to-http.md",
+    "sourceSha256": "dda19ab873f6cff29342d7e81f4b837889fa80b84498a3456222e2d6dd33a9dd"
+  },
+  "docs/code-maps/exemplars/customer-controller.md": {
+    "derivedFrom": "docs/code-maps/exemplars/customer-controller.md",
+    "sourceSha256": "da39324580562a3c259c6483ced2b411253ce8482b4cfdad07b0048bec337c03"
+  },
+  "docs/code-maps/exemplars/default-registry-gateway.md": {
+    "derivedFrom": "docs/code-maps/exemplars/default-registry-gateway.md",
+    "sourceSha256": "a9d792ffe26bd1c630ea3f1ae45b7c9ac46f2323ec60e532f829ef778023150b"
+  },
+  "docs/code-maps/exemplars/rest-exception-handler.md": {
+    "derivedFrom": "docs/code-maps/exemplars/rest-exception-handler.md",
+    "sourceSha256": "50c55eb6f06dd6433f400d68941b578534c6c48bca9ce91071c8251df324c95c"
+  },
+  "docs/code-maps/exemplars/sales-region-jpa-repository.md": {
+    "derivedFrom": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
+    "sourceSha256": "c90833311910df432d1b793b7d6a3b9680e4fef7bec33f7a778da729ccd1343a"
+  },
+  "docs/code-maps/exemplars/web-service-config.md": {
+    "derivedFrom": "docs/code-maps/exemplars/web-service-config.md",
+    "sourceSha256": "95f4360dad935558a6bcb7cf37d6bc7707322a6fb9ef8871fef7b03f554bd868"
+  },
+  "docs/code-maps/persistence-repository.md": {
+    "derivedFrom": "docs/code-maps/persistence-repository.md",
+    "sourceSha256": "62efa1f19ea13ed6f11789b76a305ef62b65683ac1bcb228750d150479b104ef"
+  },
+  "docs/code-maps/resilience4j.md": {
+    "derivedFrom": "docs/code-maps/resilience4j.md",
+    "sourceSha256": "c57ecdaad002e02b3cf18733335e5b04412b318317ffa7e366df03c4ba2171a8"
+  },
+  "docs/code-maps/testcontainers.md": {
+    "derivedFrom": "docs/code-maps/testcontainers.md",
+    "sourceSha256": "d77aa6f7a2ad009ede6d20f8ec3400e4900158f0a42dd539a7d9b1217269c586"
+  },
+  "docs/scaffold-templates/adapter/controller-command-test.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/controller-command-test.mustache",
+    "sourceSha256": "22cf2e07affa468613165604ea976220bf558867ead1273a1b1a1ec6ed206615"
+  },
+  "docs/scaffold-templates/adapter/controller-command.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/controller-command.mustache",
+    "sourceSha256": "a9fe65c586671235e02b1b92ea25ae0e56c4168081719dc5bc1dabfd8b242916"
+  },
+  "docs/scaffold-templates/adapter/controller-test.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/controller-test.mustache",
+    "sourceSha256": "41b8e60f29b0e021aaa8db999c00af362d3e11e28995e2a59f7409c0b292e5b0"
+  },
+  "docs/scaffold-templates/adapter/controller.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/controller.mustache",
+    "sourceSha256": "c9aa350eb82bcd9e54bc20bdb964f27bc05be551cdaecd7ccc27c11a044a730e"
+  },
+  "docs/scaffold-templates/adapter/default-repository-crud-test.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/default-repository-crud-test.mustache",
+    "sourceSha256": "0738df2fcbf1d3913b6c9a7d044551cbd6a557c142d30b8f587ee9a1b66a9110"
+  },
+  "docs/scaffold-templates/adapter/default-repository-crud.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/default-repository-crud.mustache",
+    "sourceSha256": "bc5f9c67346fdbb7839982854817012f0f5c3b953b2a297c37b358cc1a13b7a7"
+  },
+  "docs/scaffold-templates/adapter/default-repository-test.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/default-repository-test.mustache",
+    "sourceSha256": "f6b7f6ac199369917bfaba8e65718674ef72a1922fe25cbea80b7c70efdc91d8"
+  },
+  "docs/scaffold-templates/adapter/default-repository.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/default-repository.mustache",
+    "sourceSha256": "b04748472a872a72cfbae2815dd7f28b8d8ef300b4e7e2b7e0ad48e19719bc70"
+  },
+  "docs/scaffold-templates/adapter/flyway-migration.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/flyway-migration.mustache",
+    "sourceSha256": "7afdd0fd5b9c34ba7ac2f8f97e735544c75eb40110391b9a3399293a3e5ba019"
+  },
+  "docs/scaffold-templates/adapter/panache-repository.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/panache-repository.mustache",
+    "sourceSha256": "20f3905f3cdf29a6c669cf2e637cba3e014a448a0745476fe5181249bee63d9b"
+  },
+  "docs/scaffold-templates/adapter/table-test.mustache": {
+    "derivedFrom": "docs/scaffold-templates/adapter/table-test.mustache",
+    "sourceSha256": "e4e1c84683e418ccb1b962c2a9eb8ac105f7ef87aa557b9a1b27ee1c9aa490e2"
+  },
+  "docs/scaffold-templates/domain/factory.mustache": {
+    "derivedFrom": "docs/scaffold-templates/domain/factory.mustache",
+    "sourceSha256": "ed7fb1564a2b5644cd22e024a461e822f26409a103a6997a31c0246c1786b0b0"
+  },
+  "docs/scaffold-templates/usecase/domain-config.mustache": {
+    "derivedFrom": "docs/scaffold-templates/usecase/domain-config.mustache",
+    "sourceSha256": "aec17e8bcfa6df6ddd6eec1905cdd64c9424a929ceec3684d8c566f696b53fe2"
+  },
+  "docs/scaffold-templates/usecase/usecase-create-or-update.mustache": {
+    "derivedFrom": "docs/scaffold-templates/usecase/usecase-create-or-update.mustache",
+    "sourceSha256": "9697e67899e6e9b569d58b9f4a7eb3b674230f65d2dc01831907cc2e914f1c60"
+  },
+  "docs/scaffold-templates/usecase/usecase-delete.mustache": {
+    "derivedFrom": "docs/scaffold-templates/usecase/usecase-delete.mustache",
+    "sourceSha256": "c167f767511b97879bdfa3bcde7c53f41f631f6f8100130e61ee20cfe029f53a"
+  },
+  "docs/scaffold-templates/usecase/usecase.mustache": {
+    "derivedFrom": "docs/scaffold-templates/usecase/usecase.mustache",
+    "sourceSha256": "38af8237d2f9ac885be7fa7af0517a35c3783a1650bf0a467e0cfe9b33dbcb91"
+  }
+}

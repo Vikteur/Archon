@@ -1,0 +1,140 @@
+{
+ "id": "syn00015",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-99.1",
+ "started_at": "2026-10-20T11:00:00.000Z",
+ "completed_at": "2026-10-20T11:59:00.000Z",
+ "working_path": "<home>/.archon/workspaces/o/r/worktrees/build-feature-1",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'ready': Bash node 'ready' failed [exit 1]: [stderr]\n.archon/scripts/ci-by-sha.sh: line 42: pr: unbound variable"
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'ready': Bash node 'ready' failed [exit 1]: [stderr]\n.archon/scripts/ci-by-sha.sh: line 42: pr: unbound variable",
+  "first_failed_node": "ready",
+  "nodes": [
+   {
+    "node_id": "ready",
+    "state": "failed",
+    "error": "Bash node 'ready' failed [exit 1]: [stderr]\n.archon/scripts/ci-by-sha.sh: line 42: pr: unbound variable"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-99.1\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "explore",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "skill-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "scaffold-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "rebase-main",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/o/r/pull/7\",\"sha\":\"aaaaaaa\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "completed",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

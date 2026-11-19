@@ -1,0 +1,148 @@
+{
+ "id": "9297a329-48d6-4c46-bbf1-852793a5e86f",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-1.1",
+ "started_at": "2026-10-07T06:55:35.000Z",
+ "completed_at": "2026-10-07T06:55:36.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\archon\\task-build-feature-1791354426992",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' failed: node ticket failed. 11 downstream nodes were skipped.",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\9297a329-48d6-4c46-bbf1-852793a5e86f"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' failed: node ticket failed. 11 downstream nodes were skipped.",
+  "first_failed_node": "ticket",
+  "nodes": [
+   {
+    "node_id": "ticket",
+    "state": "failed",
+    "error": "Bash node 'ticket' failed [exit 1]: No backlog/ found for TASK-1.1; set BACKLOG_CWD to the umbrella repo."
+   },
+   {
+    "node_id": "plan",
+    "state": "skipped"
+   },
+   {
+    "node_id": "stop-route",
+    "state": "skipped"
+   },
+   {
+    "node_id": "stop-gate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "implement",
+    "state": "skipped"
+   },
+   {
+    "node_id": "review",
+    "state": "skipped"
+   },
+   {
+    "node_id": "approve",
+    "state": "skipped"
+   },
+   {
+    "node_id": "pr-text",
+    "state": "skipped"
+   },
+   {
+    "node_id": "open-pr",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ready",
+    "state": "skipped"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "plan",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "skipped",
+   "kind": "gate",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "skipped",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "review",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "approve",
+   "state": "skipped",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

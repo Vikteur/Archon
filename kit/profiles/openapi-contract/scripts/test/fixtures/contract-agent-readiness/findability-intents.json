@@ -1,0 +1,5 @@
+[
+  { "id": "hit", "set": "tuned", "intent": "List the spaced notes", "expected": "getSpaced",
+    "facts": [{ "label": "completion cue", "cue": "completion" }, { "label": "second", "all": ["\\bsecond paragraph\\b"] }] },
+  { "id": "miss", "set": "held-out", "intent": "Zebra unicorn", "expected": "getPlain", "lookAlike": "getFolded" }
+]

@@ -1,0 +1,1464 @@
+[
+  {
+    "id": "measurer-1",
+    "set": "tuned",
+    "intent": "The couple wants their order gone but may change their mind",
+    "expected": "trashWedding",
+    "lookAlike": "eraseWedding",
+    "facts": [
+      {
+        "label": "restoreWedding",
+        "all": [
+          "restoreWedding"
+        ]
+      },
+      {
+        "label": "90 days",
+        "all": [
+          "\\b90[\\s-]*days?\\b"
+        ]
+      }
+    ],
+    "alsoIn": [
+      "orders-1"
+    ]
+  },
+  {
+    "id": "measurer-2",
+    "set": "tuned",
+    "intent": "Remove the photographer from the order",
+    "expected": "setWeddingTeamSlot",
+    "lookAlike": "deleteWeddingPerson",
+    "alsoIn": [
+      "orders-2"
+    ]
+  },
+  {
+    "id": "measurer-3",
+    "set": "tuned",
+    "intent": "Cancel an invoice that was already issued",
+    "expected": "creditInvoice",
+    "lookAlike": "deleteInvoice",
+    "facts": [
+      {
+        "label": "draft deleted",
+        "all": [
+          "\\bdraft",
+          "\\bdelet"
+        ]
+      },
+      {
+        "label": "issued credited",
+        "all": [
+          "\\bissued\\b",
+          "\\bcredit"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "measurer-4",
+    "set": "tuned",
+    "intent": "Take away a DJ's access for now",
+    "expected": "disableMember",
+    "lookAlike": "deleteMember",
+    "facts": [
+      {
+        "label": "enableMember",
+        "all": [
+          "enableMember"
+        ]
+      }
+    ],
+    "alsoIn": [
+      "project-members-4"
+    ]
+  },
+  {
+    "id": "measurer-5",
+    "set": "tuned",
+    "intent": "The project link leaked; the couple needs a new one",
+    "expected": "rotatePortalLink",
+    "lookAlike": "revokePortalLink",
+    "facts": [
+      {
+        "label": "a new link",
+        "all": [
+          "\\bnew\\b",
+          "\\blinks?\\b"
+        ]
+      }
+    ],
+    "alsoIn": [
+      "project-members-5"
+    ]
+  },
+  {
+    "id": "measurer-6",
+    "set": "tuned",
+    "intent": "Make sure that song is never played at the order",
+    "expected": "blockPortalSong",
+    "lookAlike": "deletePortalSong",
+    "facts": [
+      {
+        "label": "every version",
+        "all": [
+          "\\bevery\\b",
+          "\\bversion"
+        ]
+      }
+    ],
+    "alsoIn": [
+      "project-members-6"
+    ]
+  },
+  {
+    "id": "measurer-7",
+    "set": "tuned",
+    "intent": "Remove one folder from the DJ's library",
+    "expected": "deleteLibrarySource",
+    "lookAlike": "deleteLibrary"
+  },
+  {
+    "id": "measurer-8",
+    "set": "tuned",
+    "intent": "Remove one contact person from a vendor, not the company",
+    "expected": "deleteVendorContact",
+    "lookAlike": "deleteVendor",
+    "alsoIn": [
+      "the-rest-23"
+    ],
+    "facts": [
+      {
+        "label": "names deleteVendor",
+        "all": [
+          "`deleteVendor`"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "measurer-9",
+    "set": "tuned",
+    "intent": "Which fields must a request to create a order have?",
+    "expected": "createWedding",
+    "alsoIn": [
+      "orders-3"
+    ],
+    "facts": [
+      {
+        "label": "required fields",
+        "all": [
+          "coupleDisplayName",
+          "orderDate"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "measurer-10",
+    "set": "tuned",
+    "intent": "Why would updating an invoice answer 409?",
+    "expected": "updateInvoice",
+    "facts": [
+      {
+        "label": "409",
+        "all": [
+          "\\b409\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "measurer-11",
+    "set": "tuned",
+    "intent": "How does a caller learn that a password-reset request finished?",
+    "expected": "requestPasswordReset",
+    "facts": [
+      {
+        "label": "completion cue",
+        "cue": "completion"
+      }
+    ]
+  },
+  {
+    "id": "measurer-12",
+    "set": "tuned",
+    "intent": "Does the planner export include invoices and credit notes?",
+    "expected": "getWeddingPlannerExport",
+    "facts": [
+      {
+        "label": "invoices",
+        "all": [
+          "\\binvoices?\\b"
+        ]
+      },
+      {
+        "label": "credit notes",
+        "all": [
+          "\\bcredit[- ]?notes?\\b"
+        ]
+      }
+    ],
+    "alsoIn": [
+      "orders-4"
+    ],
+    "lookAlike": "getWeddingAccessRequestExport"
+  },
+  {
+    "id": "billing-1",
+    "set": "tuned",
+    "intent": "Show the unpaid invoices",
+    "expected": "listIssuedInvoices",
+    "lookAlike": "markInvoiceUnpaid"
+  },
+  {
+    "id": "billing-2",
+    "set": "tuned",
+    "intent": "Which invoices are overdue?",
+    "expected": "listIssuedInvoices"
+  },
+  {
+    "id": "billing-3",
+    "set": "tuned",
+    "intent": "Finalize the invoice so it gets its number",
+    "expected": "issueInvoice",
+    "lookAlike": "sendInvoice"
+  },
+  {
+    "id": "billing-4",
+    "set": "tuned",
+    "intent": "Void an issued invoice",
+    "expected": "creditInvoice",
+    "lookAlike": "deleteInvoice"
+  },
+  {
+    "id": "billing-5",
+    "set": "tuned",
+    "intent": "Remind the couple to pay the invoice",
+    "expected": "sendInvoice"
+  },
+  {
+    "id": "billing-6",
+    "set": "tuned",
+    "intent": "Resend the quote to the couple",
+    "expected": "sendQuote",
+    "lookAlike": "issueQuote"
+  },
+  {
+    "id": "billing-7",
+    "set": "tuned",
+    "intent": "The couple accepted the offer: bill them for it",
+    "expected": "convertQuoteToInvoice",
+    "lookAlike": "createInvoice"
+  },
+  {
+    "id": "billing-8",
+    "set": "tuned",
+    "intent": "Change the due date of a draft invoice",
+    "expected": "updateInvoice",
+    "lookAlike": "createInvoice"
+  },
+  {
+    "id": "billing-9",
+    "set": "tuned",
+    "intent": "Change the IBAN printed on our invoices",
+    "expected": "updateOrganizationBilling"
+  },
+  {
+    "id": "billing-10",
+    "set": "tuned",
+    "intent": "The payment was recorded by mistake",
+    "expected": "markInvoiceUnpaid",
+    "lookAlike": "markInvoicePaid"
+  },
+  {
+    "id": "billing-11",
+    "set": "tuned",
+    "intent": "Withdraw a quote the couple declined",
+    "expected": "deleteQuote"
+  },
+  {
+    "id": "billing-12",
+    "set": "tuned",
+    "intent": "List every invoice of one order, drafts too",
+    "expected": "listWeddingInvoices",
+    "lookAlike": "listIssuedInvoices"
+  },
+  {
+    "id": "billing-13",
+    "set": "tuned",
+    "intent": "Delete a draft invoice",
+    "expected": "deleteInvoice",
+    "lookAlike": "creditInvoice"
+  },
+  {
+    "id": "billing-14",
+    "set": "tuned",
+    "intent": "Record that the couple paid the invoice",
+    "expected": "markInvoicePaid"
+  },
+  {
+    "id": "billing-15",
+    "set": "tuned",
+    "intent": "Set the default planner fee",
+    "expected": "updateOrganizationBilling"
+  },
+  {
+    "id": "billing-16",
+    "set": "tuned",
+    "intent": "Send the couple the credit note",
+    "expected": "sendCreditNote",
+    "lookAlike": "creditInvoice"
+  },
+  {
+    "id": "orders-5",
+    "set": "tuned",
+    "intent": "The couple sent a GDPR subject access request for their data",
+    "expected": "getWeddingAccessRequestExport",
+    "lookAlike": "getWeddingPlannerExport"
+  },
+  {
+    "id": "orders-6",
+    "set": "tuned",
+    "intent": "The couple invoke their right to be forgotten",
+    "expected": "eraseWedding",
+    "lookAlike": "trashWedding",
+    "facts": [
+      {
+        "label": "kept invoices",
+        "all": [
+          "\\b7 years\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "orders-7",
+    "set": "tuned",
+    "intent": "Permanently delete a order",
+    "expected": "eraseWedding",
+    "lookAlike": "trashWedding"
+  },
+  {
+    "id": "orders-8",
+    "set": "tuned",
+    "intent": "Undelete a order that was deleted by mistake",
+    "expected": "restoreWedding",
+    "lookAlike": "trashWedding"
+  },
+  {
+    "id": "orders-9",
+    "set": "tuned",
+    "intent": "Show the deleted orders in the bin",
+    "expected": "listTrashedWeddings",
+    "lookAlike": "listWeddings"
+  },
+  {
+    "id": "orders-10",
+    "set": "tuned",
+    "intent": "Is the DJ available on that date or already booked?",
+    "expected": "listDateConflicts"
+  },
+  {
+    "id": "orders-11",
+    "set": "tuned",
+    "intent": "Assign a DJ to the order",
+    "expected": "setWeddingTeamSlot"
+  },
+  {
+    "id": "orders-12",
+    "set": "tuned",
+    "intent": "Give a member account access to one order",
+    "expected": "setWeddingTeamSlot"
+  },
+  {
+    "id": "orders-13",
+    "set": "tuned",
+    "intent": "Add the bride's mother to the order",
+    "expected": "addWeddingPerson",
+    "lookAlike": "setWeddingTeamSlot"
+  },
+  {
+    "id": "orders-14",
+    "set": "tuned",
+    "intent": "Change the groom's phone number",
+    "expected": "updateWeddingPerson",
+    "lookAlike": "updateWedding"
+  },
+  {
+    "id": "orders-15",
+    "set": "tuned",
+    "intent": "Move the order to another date",
+    "expected": "updateWedding",
+    "facts": [
+      {
+        "label": "code stale",
+        "all": [
+          "codeStale"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "orders-16",
+    "set": "tuned",
+    "intent": "Find upcoming orders by couple name",
+    "expected": "listWeddings"
+  },
+  {
+    "id": "orders-17",
+    "set": "tuned",
+    "intent": "Download a backup of everything stored about a order",
+    "expected": "getWeddingPlannerExport",
+    "lookAlike": "getWeddingAccessRequestExport"
+  },
+  {
+    "id": "orders-18",
+    "set": "tuned",
+    "intent": "Who are the vendors on this order?",
+    "expected": "getWeddingTeam",
+    "lookAlike": "listWeddingPeople"
+  },
+  {
+    "id": "orders-19",
+    "set": "tuned",
+    "intent": "Mark the order as completed",
+    "expected": "updateWedding",
+    "facts": [
+      {
+        "label": "completion rule",
+        "all": [
+          "CANNOT_COMPLETE"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "orders-20",
+    "set": "tuned",
+    "intent": "Remove a partner from the order",
+    "expected": "deleteWeddingPerson",
+    "lookAlike": "setWeddingTeamSlot"
+  },
+  {
+    "id": "project-members-101",
+    "set": "tuned",
+    "intent": "Remove a DJ from our business for good",
+    "expected": "deleteMember",
+    "lookAlike": "disableMember",
+    "facts": [
+      {
+        "label": "disableMember",
+        "all": [
+          "disableMember"
+        ]
+      },
+      {
+        "label": "cannot be undone",
+        "all": [
+          "for good|cannot be undone"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-102",
+    "set": "tuned",
+    "intent": "Log the couple out on this device",
+    "expected": "closePortalSession",
+    "facts": [
+      {
+        "label": "link keeps working",
+        "all": [
+          "keeps working"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-103",
+    "set": "tuned",
+    "intent": "Reset a member's password while email is down",
+    "expected": "setMemberTemporaryPassword",
+    "facts": [
+      {
+        "label": "changeOwnPassword",
+        "all": [
+          "changeOwnPassword"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-104",
+    "set": "tuned",
+    "intent": "Promote a DJ to planner",
+    "expected": "setMemberRoles",
+    "facts": [
+      {
+        "label": "sessions end",
+        "all": [
+          "\\bsessions?\\b",
+          "\\bend"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-105",
+    "set": "tuned",
+    "intent": "Resend the invitation email",
+    "expected": "createInvite",
+    "lookAlike": "withdrawInvite",
+    "facts": [
+      {
+        "label": "withdraw then invite again",
+        "all": [
+          "withdrawInvite",
+          "invite again"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-106",
+    "set": "tuned",
+    "intent": "Join the business from an invitation",
+    "expected": "acceptInviteAndSignIn",
+    "lookAlike": "previewInvite"
+  },
+  {
+    "id": "project-members-107",
+    "set": "tuned",
+    "intent": "Move a song up the couple's list",
+    "expected": "reorderPortalList"
+  },
+  {
+    "id": "project-members-108",
+    "set": "tuned",
+    "intent": "Show the run sheet of the order day to the couple",
+    "expected": "getPortalTimeline"
+  },
+  {
+    "id": "project-members-109",
+    "set": "tuned",
+    "intent": "Add a song to the couple's list",
+    "expected": "savePortalSong",
+    "lookAlike": "blockPortalSong"
+  },
+  {
+    "id": "project-members-110",
+    "set": "tuned",
+    "intent": "Remove a song from the couple's list",
+    "expected": "deletePortalSong",
+    "lookAlike": "unblockPortalSong",
+    "facts": [
+      {
+        "label": "undo with savePortalSong",
+        "all": [
+          "savePortalSong"
+        ]
+      },
+      {
+        "label": "unblockPortalSong",
+        "all": [
+          "unblockPortalSong"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-111",
+    "set": "tuned",
+    "intent": "Allow a blocked song to be played again",
+    "expected": "unblockPortalSong",
+    "lookAlike": "deletePortalSong",
+    "facts": [
+      {
+        "label": "deletePortalSong",
+        "all": [
+          "deletePortalSong"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-112",
+    "set": "tuned",
+    "intent": "Turn the couple's project link off",
+    "expected": "revokePortalLink",
+    "lookAlike": "rotatePortalLink",
+    "facts": [
+      {
+        "label": "back on by rotating",
+        "all": [
+          "rotatePortalLink"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "project-members-113",
+    "set": "tuned",
+    "intent": "The couple lost the project email with their link",
+    "expected": "rotatePortalLink",
+    "lookAlike": "getPortalAccess"
+  },
+  {
+    "id": "project-members-114",
+    "set": "tuned",
+    "intent": "Rename a team member",
+    "expected": "updateMemberProfile"
+  },
+  {
+    "id": "project-members-115",
+    "set": "tuned",
+    "intent": "Connect a DJ account to their vendor entry",
+    "expected": "linkMemberToVendor",
+    "lookAlike": "unlinkMemberFromVendor"
+  },
+  {
+    "id": "project-members-116",
+    "set": "tuned",
+    "intent": "Sign the couple in to the project with their magic link and code",
+    "expected": "openPortalSession"
+  },
+  {
+    "id": "project-members-117",
+    "set": "tuned",
+    "intent": "Make a new account for a DJ without sending an email",
+    "expected": "createMember",
+    "lookAlike": "createInvite"
+  },
+  {
+    "id": "project-members-118",
+    "set": "tuned",
+    "intent": "Give the couple a new access code after the date changed",
+    "expected": "reissuePortalAccessCode"
+  },
+  {
+    "id": "project-members-119",
+    "set": "tuned",
+    "intent": "How many songs has the couple picked so far",
+    "expected": "getWeddingSongListProgress"
+  },
+  {
+    "id": "project-members-120",
+    "set": "tuned",
+    "intent": "Cancel an invitation that was sent by mistake",
+    "expected": "withdrawInvite",
+    "lookAlike": "createInvite"
+  },
+  {
+    "id": "project-members-121",
+    "set": "tuned",
+    "intent": "Let a song be played again after all",
+    "expected": "unblockPortalSong",
+    "lookAlike": "deletePortalSong"
+  },
+  {
+    "id": "library-matching-dj-1",
+    "set": "tuned",
+    "intent": "Rescan my music folder",
+    "expected": "startFolderScan",
+    "facts": [
+      {
+        "label": "poll",
+        "all": [
+          "\\bpoll"
+        ]
+      },
+      {
+        "label": "files leave",
+        "all": [
+          "\\bleave the library"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-2",
+    "set": "tuned",
+    "intent": "Switch to my other library",
+    "expected": "selectLibrary",
+    "facts": [
+      {
+        "label": "per member",
+        "all": [
+          "\\bper member"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-3",
+    "set": "tuned",
+    "intent": "Delete the examplebox XML I imported",
+    "expected": "deleteLibrarySource",
+    "lookAlike": "deleteImportedPlaylist",
+    "facts": [
+      {
+        "label": "re-import",
+        "all": [
+          "re-?import"
+        ]
+      },
+      {
+        "label": "deleteLibrary",
+        "all": [
+          "\\bdeleteLibrary\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-4",
+    "set": "tuned",
+    "intent": "Import my examplebox XML",
+    "expected": "importexampleboxXml",
+    "lookAlike": "importPlaylist",
+    "facts": [
+      {
+        "label": "replaces",
+        "all": [
+          "\\breplac"
+        ]
+      },
+      {
+        "label": "importPlaylist",
+        "all": [
+          "\\bimportPlaylist\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-5",
+    "set": "tuned",
+    "intent": "Export the playlist as M3U",
+    "expected": "exportPlaylistFile",
+    "facts": [
+      {
+        "label": "m3u8",
+        "all": [
+          "\\bm3u"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-6",
+    "set": "tuned",
+    "intent": "Show me the run sheet of the order",
+    "expected": "getDjWedding",
+    "facts": [
+      {
+        "label": "run sheet",
+        "all": [
+          "\\brun sheet"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-7",
+    "set": "tuned",
+    "intent": "Which gigs do I have coming up",
+    "expected": "listDjWeddings"
+  },
+  {
+    "id": "library-matching-dj-8",
+    "set": "tuned",
+    "intent": "What did the couple change since yesterday",
+    "expected": "listDjWeddingChanges",
+    "facts": [
+      {
+        "label": "since",
+        "all": [
+          "`since`"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-9",
+    "set": "tuned",
+    "intent": "Clear all saved choices",
+    "expected": "forgetActiveLibraryTrackChoices",
+    "lookAlike": "forgetTrackChoice",
+    "facts": [
+      {
+        "label": "no undo",
+        "all": [
+          "no undo|cannot be undone"
+        ]
+      },
+      {
+        "label": "listTrackChoices first",
+        "all": [
+          "listTrackChoices",
+          "\\bfirst\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-10",
+    "set": "tuned",
+    "intent": "Undo my file choice for this song",
+    "expected": "forgetTrackChoice",
+    "lookAlike": "forgetActiveLibraryTrackChoices",
+    "facts": [
+      {
+        "label": "rememberTrackChoice",
+        "all": [
+          "\\brememberTrackChoice\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-11",
+    "set": "tuned",
+    "intent": "Always use this file for this song",
+    "expected": "rememberTrackChoice",
+    "facts": [
+      {
+        "label": "shared",
+        "all": [
+          "\\bshared\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-12",
+    "set": "tuned",
+    "intent": "Which tracks do I still need to buy",
+    "expected": "exportUnmatchedTracks",
+    "lookAlike": "exportWeddingMissingTracks"
+  },
+  {
+    "id": "library-matching-dj-13",
+    "set": "tuned",
+    "intent": "Is the scan finished",
+    "expected": "getFolderScanStatus",
+    "facts": [
+      {
+        "label": "scanning",
+        "all": [
+          "`scanning`"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-14",
+    "set": "tuned",
+    "intent": "Download the order's playlists for examplebox",
+    "expected": "exportWeddingexampleboxXml",
+    "lookAlike": "exportPlaylistFile",
+    "facts": [
+      {
+        "label": "preview",
+        "all": [
+          "getWeddingExportSummary"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-15",
+    "set": "tuned",
+    "intent": "Upload examplebox.xml",
+    "expected": "importexampleboxXml"
+  },
+  {
+    "id": "library-matching-dj-16",
+    "set": "tuned",
+    "intent": "Remove one folder from my library",
+    "expected": "deleteLibrarySource",
+    "lookAlike": "deleteLibrary",
+    "facts": [
+      {
+        "label": "deleteLibrary",
+        "all": [
+          "\\bdeleteLibrary\\b"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-17",
+    "set": "tuned",
+    "intent": "Delete my whole library",
+    "expected": "deleteLibrary",
+    "lookAlike": "deleteLibrarySource",
+    "facts": [
+      {
+        "label": "cannot be undone",
+        "all": [
+          "cannot be undone"
+        ]
+      },
+      {
+        "label": "deleteLibrarySource",
+        "all": [
+          "deleteLibrarySource"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-18",
+    "set": "tuned",
+    "intent": "Which songs must not be played at this order",
+    "expected": "getDjSongLists",
+    "facts": [
+      {
+        "label": "blocklist",
+        "all": [
+          "blocklist"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-19",
+    "set": "tuned",
+    "intent": "Which files could the scan not read",
+    "expected": "getScanUnreadableFiles"
+  },
+  {
+    "id": "library-matching-dj-20",
+    "set": "tuned",
+    "intent": "Find my files for these Spotify songs",
+    "expected": "matchTracks",
+    "lookAlike": "fetchSpotifyPlaylist"
+  },
+  {
+    "id": "library-matching-dj-21",
+    "set": "tuned",
+    "intent": "Remove a playlist I imported",
+    "expected": "deleteImportedPlaylist",
+    "lookAlike": "deleteLibrarySource",
+    "facts": [
+      {
+        "label": "re-import",
+        "all": [
+          "re-?import"
+        ]
+      },
+      {
+        "label": "stays",
+        "all": [
+          "\\bstay"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-22",
+    "set": "tuned",
+    "intent": "List my libraries",
+    "expected": "getLibraryOverview",
+    "facts": [
+      {
+        "label": "visible",
+        "all": [
+          "visible-libraries|can see"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "library-matching-dj-23",
+    "set": "tuned",
+    "intent": "Phone number of the photographer at this order",
+    "expected": "getDjWedding",
+    "facts": [
+      {
+        "label": "phone",
+        "all": [
+          "`phone`"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "the-rest-1",
+    "set": "tuned",
+    "intent": "Cancel a task that will not be done",
+    "expected": "setTaskStatus",
+    "lookAlike": "deleteTask"
+  },
+  {
+    "id": "the-rest-2",
+    "set": "tuned",
+    "intent": "Mark a task as done",
+    "expected": "setTaskStatus",
+    "lookAlike": "updateTask"
+  },
+  {
+    "id": "the-rest-3",
+    "set": "tuned",
+    "intent": "Reopen a finished task",
+    "expected": "setTaskStatus"
+  },
+  {
+    "id": "the-rest-4",
+    "set": "tuned",
+    "intent": "Delete a task",
+    "expected": "deleteTask",
+    "lookAlike": "setTaskStatus",
+    "facts": [
+      {
+        "label": "undo cue",
+        "all": [
+          "no undo|for good"
+        ]
+      },
+      {
+        "label": "names setTaskStatus",
+        "all": [
+          "setTaskStatus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "the-rest-5",
+    "set": "tuned",
+    "intent": "Hide a run-sheet line from the couple",
+    "expected": "updateTimelineItem",
+    "lookAlike": "deleteTimelineItem"
+  },
+  {
+    "id": "the-rest-6",
+    "set": "tuned",
+    "intent": "Delete a line from the run sheet",
+    "expected": "deleteTimelineItem",
+    "lookAlike": "updateTimelineItem",
+    "facts": [
+      {
+        "label": "undo cue",
+        "all": [
+          "no undo|for good"
+        ]
+      },
+      {
+        "label": "blast cue",
+        "all": [
+          "nothing else|only"
+        ]
+      },
+      {
+        "label": "names updateTimelineItem",
+        "all": [
+          "updateTimelineItem"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "the-rest-7",
+    "set": "tuned",
+    "intent": "The order day schedule",
+    "expected": "getTimeline"
+  },
+  {
+    "id": "the-rest-8",
+    "set": "tuned",
+    "intent": "Show the open tasks of a order",
+    "expected": "listTasks"
+  },
+  {
+    "id": "the-rest-9",
+    "set": "tuned",
+    "intent": "The user forgot their password",
+    "expected": "requestPasswordReset",
+    "lookAlike": "completePasswordReset",
+    "facts": [
+      {
+        "label": "completion cue",
+        "all": [
+          "nothing to (poll|wait for)"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "the-rest-10",
+    "set": "tuned",
+    "intent": "Set a new password from the reset e-mail",
+    "expected": "completePasswordReset",
+    "lookAlike": "changeOwnPassword"
+  },
+  {
+    "id": "the-rest-11",
+    "set": "tuned",
+    "intent": "Change my own password",
+    "expected": "changeOwnPassword",
+    "lookAlike": "completePasswordReset"
+  },
+  {
+    "id": "the-rest-12",
+    "set": "tuned",
+    "intent": "Log in to the planner app",
+    "expected": "signIn"
+  },
+  {
+    "id": "the-rest-13",
+    "set": "tuned",
+    "intent": "Log out",
+    "expected": "signOut"
+  },
+  {
+    "id": "the-rest-14",
+    "set": "tuned",
+    "intent": "Which user is logged in right now",
+    "expected": "getCurrentAccount"
+  },
+  {
+    "id": "the-rest-15",
+    "set": "tuned",
+    "intent": "Change the company name",
+    "expected": "replaceOrganizationSettings"
+  },
+  {
+    "id": "the-rest-16",
+    "set": "tuned",
+    "intent": "Change the business time zone",
+    "expected": "replaceOrganizationSettings"
+  },
+  {
+    "id": "the-rest-17",
+    "set": "tuned",
+    "intent": "Replace the logo printed on invoices",
+    "expected": "uploadOrganizationLogo",
+    "lookAlike": "deleteOrganizationLogo"
+  },
+  {
+    "id": "the-rest-18",
+    "set": "tuned",
+    "intent": "Show the activity history of the business",
+    "expected": "listAuditEvents"
+  },
+  {
+    "id": "the-rest-19",
+    "set": "tuned",
+    "intent": "Is the server up",
+    "expected": "getHealth"
+  },
+  {
+    "id": "the-rest-20",
+    "set": "tuned",
+    "intent": "Find a supplier in the directory",
+    "expected": "listVendors"
+  },
+  {
+    "id": "the-rest-21",
+    "set": "tuned",
+    "intent": "Rename a vendor",
+    "expected": "updateVendor",
+    "facts": [
+      {
+        "label": "409 cause",
+        "all": [
+          "409",
+          "VENDOR_NAME_TAKEN"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "the-rest-22",
+    "set": "tuned",
+    "intent": "Delete a vendor we no longer work with",
+    "expected": "deleteVendor",
+    "lookAlike": "deleteVendorContact",
+    "facts": [
+      {
+        "label": "409 cause",
+        "all": [
+          "409",
+          "VENDOR_IN_USE"
+        ]
+      },
+      {
+        "label": "names deleteVendorContact",
+        "all": [
+          "deleteVendorContact"
+        ]
+      },
+      {
+        "label": "undo cue",
+        "all": [
+          "no undo|for good"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "the-rest-24",
+    "set": "tuned",
+    "intent": "Login",
+    "expected": "signIn"
+  },
+  {
+    "id": "the-rest-25",
+    "set": "tuned",
+    "intent": "Delete a vendor from the directory",
+    "expected": "deleteVendor",
+    "lookAlike": "deleteVendorContact"
+  },
+  {
+    "id": "the-rest-26",
+    "set": "tuned",
+    "intent": "Search the vendors for a florist",
+    "expected": "listVendors"
+  },
+  {
+    "id": "error-code-VENDOR_IN_USE",
+    "set": "error-code",
+    "intent": "What does the error code VENDOR_IN_USE mean?",
+    "expected": "deleteVendor"
+  },
+  {
+    "id": "error-code-NOT_IN_TRASH",
+    "set": "error-code",
+    "intent": "What does the error code NOT_IN_TRASH mean?",
+    "expected": "restoreWedding"
+  },
+  {
+    "id": "error-code-VENDOR_NAME_TAKEN",
+    "set": "error-code",
+    "intent": "What does the error code VENDOR_NAME_TAKEN mean?",
+    "expected": "updateVendor",
+    "lookAlike": "createVendor"
+  },
+  {
+    "id": "error-code-BAD_CREDENTIALS",
+    "set": "error-code",
+    "intent": "What does the error code BAD_CREDENTIALS mean?",
+    "expected": "signIn"
+  },
+  {
+    "id": "error-code-PROJECT_LINK_EXPIRED",
+    "set": "error-code",
+    "intent": "What does the error code PROJECT_LINK_EXPIRED mean?",
+    "expected": "openPortalSession"
+  },
+  {
+    "id": "error-code-INVALID_RESET_TOKEN",
+    "set": "error-code",
+    "intent": "What does the error code INVALID_RESET_TOKEN mean?",
+    "expected": "completePasswordReset"
+  },
+  {
+    "id": "error-code-VENDOR_ALREADY_LINKED",
+    "set": "error-code",
+    "intent": "What does the error code VENDOR_ALREADY_LINKED mean?",
+    "expected": "linkMemberToVendor"
+  },
+  {
+    "id": "error-code-LIST_FULL",
+    "set": "error-code",
+    "intent": "What does the error code LIST_FULL mean?",
+    "expected": "savePortalSong"
+  },
+  {
+    "id": "error-code-BAD_XML",
+    "set": "error-code",
+    "intent": "What does the error code BAD_XML mean?",
+    "expected": "importexampleboxXml",
+    "lookAlike": "importPlaylist"
+  },
+  {
+    "id": "error-code-BAD_PLAYLIST",
+    "set": "error-code",
+    "intent": "What does the error code BAD_PLAYLIST mean?",
+    "expected": "importPlaylist",
+    "lookAlike": "importexampleboxXml"
+  },
+  {
+    "id": "error-code-FOLDER_NOT_FOUND",
+    "set": "error-code",
+    "intent": "What does the error code FOLDER_NOT_FOUND mean?",
+    "expected": "startFolderScan"
+  },
+  {
+    "id": "error-code-NOTHING_SKIPPED",
+    "set": "error-code",
+    "intent": "What does the error code NOTHING_SKIPPED mean?",
+    "expected": "getScanUnreadableFiles"
+  },
+  {
+    "id": "error-code-UNSUPPORTED_FILE_TYPE",
+    "set": "error-code",
+    "intent": "What does the error code UNSUPPORTED_FILE_TYPE mean?",
+    "expected": "uploadOrganizationLogo"
+  },
+  {
+    "id": "error-code-LIBRARY_NAME_TAKEN",
+    "set": "error-code",
+    "intent": "What does the error code LIBRARY_NAME_TAKEN mean?",
+    "expected": "renameLibrary",
+    "lookAlike": "createLibrary"
+  },
+  {
+    "id": "held-out-1",
+    "set": "held-out",
+    "intent": "Put the Smith order aside for now, I might want it back later",
+    "expected": "trashWedding",
+    "lookAlike": "eraseWedding"
+  },
+  {
+    "id": "held-out-2",
+    "set": "held-out",
+    "intent": "Wipe the cancelled order completely, no way to bring it back",
+    "expected": "eraseWedding",
+    "lookAlike": "trashWedding"
+  },
+  {
+    "id": "held-out-3",
+    "set": "held-out",
+    "intent": "Bring back the order I binned by mistake yesterday",
+    "expected": "restoreWedding",
+    "lookAlike": "listTrashedWeddings"
+  },
+  {
+    "id": "held-out-4",
+    "set": "held-out",
+    "intent": "The couple asked for a copy of all their personal data we hold",
+    "expected": "getWeddingAccessRequestExport",
+    "lookAlike": "getWeddingPlannerExport"
+  },
+  {
+    "id": "held-out-5",
+    "set": "held-out",
+    "intent": "Temporarily lock out our photographer's login without removing her account",
+    "expected": "disableMember",
+    "lookAlike": "deleteMember"
+  },
+  {
+    "id": "held-out-6",
+    "set": "held-out",
+    "intent": "Cancel the pending team invitation I sent to the wrong email address",
+    "expected": "withdrawInvite",
+    "lookAlike": "deleteMember"
+  },
+  {
+    "id": "held-out-7",
+    "set": "held-out",
+    "intent": "Make the couple's old link stop working and give them a new one",
+    "expected": "rotatePortalLink",
+    "lookAlike": "revokePortalLink"
+  },
+  {
+    "id": "held-out-8",
+    "set": "held-out",
+    "intent": "Kill the guest link entirely, nobody should get in with it anymore",
+    "expected": "revokePortalLink",
+    "lookAlike": "rotatePortalLink"
+  },
+  {
+    "id": "held-out-9",
+    "set": "held-out",
+    "intent": "We never want to hear the Macarena at our party",
+    "expected": "blockPortalSong",
+    "lookAlike": "deletePortalSong"
+  },
+  {
+    "id": "held-out-10",
+    "set": "held-out",
+    "intent": "Take that song off our first dance picks, we changed our mind",
+    "expected": "deletePortalSong",
+    "lookAlike": "blockPortalSong"
+  },
+  {
+    "id": "held-out-11",
+    "set": "held-out",
+    "intent": "Log me out of the song picker on this shared laptop",
+    "expected": "closePortalSession",
+    "lookAlike": "signOut"
+  },
+  {
+    "id": "held-out-12",
+    "set": "held-out",
+    "intent": "Get rid of the florist company from our supplier directory altogether",
+    "expected": "deleteVendor",
+    "lookAlike": "deleteVendorContact"
+  },
+  {
+    "id": "held-out-13",
+    "set": "held-out",
+    "intent": "The caterer's old salesperson left, drop just that person",
+    "expected": "deleteVendorContact",
+    "lookAlike": "deleteVendor"
+  },
+  {
+    "id": "held-out-14",
+    "set": "held-out",
+    "intent": "Tick off the cake tasting to-do as finished",
+    "expected": "setTaskStatus",
+    "lookAlike": "updateTask"
+  },
+  {
+    "id": "held-out-15",
+    "set": "held-out",
+    "intent": "Scrap the drafted price proposal before it ever goes out",
+    "expected": "deleteQuote",
+    "lookAlike": "deleteInvoice"
+  },
+  {
+    "id": "held-out-16",
+    "set": "held-out",
+    "intent": "Reverse a bill that was already finalised because the couple got a refund",
+    "expected": "creditInvoice",
+    "lookAlike": "deleteInvoice"
+  },
+  {
+    "id": "held-out-17",
+    "set": "held-out",
+    "intent": "The couple's bank transfer bounced, so set that bill back to outstanding",
+    "expected": "markInvoiceUnpaid",
+    "lookAlike": "creditInvoice"
+  },
+  {
+    "id": "held-out-18",
+    "set": "held-out",
+    "intent": "Finalise the proposal so it gets a number and can't be edited",
+    "expected": "issueQuote",
+    "lookAlike": "sendQuote"
+  },
+  {
+    "id": "held-out-19",
+    "set": "held-out",
+    "intent": "Clear all the files I pinned to songs in my current collection",
+    "expected": "forgetActiveLibraryTrackChoices",
+    "lookAlike": "forgetTrackChoice"
+  },
+  {
+    "id": "held-out-20",
+    "set": "held-out",
+    "intent": "Give me a list of tracks I still need to buy for this playlist",
+    "expected": "exportUnmatchedTracks",
+    "lookAlike": "exportWeddingMissingTracks"
+  },
+  {
+    "id": "held-out-21",
+    "set": "held-out",
+    "intent": "Switch which of my music collections the song lookup uses",
+    "expected": "selectLibrary",
+    "lookAlike": "renameLibrary"
+  },
+  {
+    "id": "held-out-22",
+    "set": "held-out",
+    "intent": "Remove our studio's logo image from the account branding",
+    "expected": "deleteOrganizationLogo",
+    "lookAlike": "uploadOrganizationLogo"
+  }
+]

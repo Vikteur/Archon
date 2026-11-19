@@ -1,0 +1,27 @@
+{{!
+  Input for both the Factory (create) and <Name>.update() (update); carries the key so the use case
+  can decide which path to take. Exemplar: authentication-domain CreateOrUpdateBlockedAudienceRequest.
+  Render entity, factory, mother and factory-test with upsert=true to consume it.
+  Target: <capability>-domain/src/main/java/<package path>/domain/CreateOrUpdate<Name>Request.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  The caller's organisation is always the first field: the use case passes it to every port method.
+  Vars:   package, basePackage (root holding common/), Name, fields[type, name]  (include the key field)
+}}
+package {{package}}.domain;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+
+@Builder
+@Getter
+@EqualsAndHashCode
+public class CreateOrUpdate{{Name}}Request {
+    private OrganisationId organisationId;
+{{#fields}}
+    private {{{type}}} {{name}};
+{{/fields}}
+}

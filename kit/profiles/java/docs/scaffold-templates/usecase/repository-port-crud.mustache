@@ -1,0 +1,26 @@
+{{!
+  Write-capable port: the aggregate carries its own key, so save() is an upsert.
+  Every method takes the caller's OrganisationId first: a port never reads or writes another organisation's rows.
+  Implemented by default-repository-crud.
+  Target: <capability>-usecase/src/main/java/<package path>/repository/<Name>Repository.java
+  Package: "package" is the base package, without the ".repository" this template appends (com.example.guest renders
+          package com.example.guest.repository); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, name (camelCase of Name), key, keyType (e.g. GadgetId)
+}}
+package {{package}}.repository;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.*;
+
+import java.util.Optional;
+
+public interface {{Name}}Repository {
+    Optional<{{Name}}> findById(OrganisationId organisationId, {{{keyType}}} {{key}});
+
+    boolean existsById(OrganisationId organisationId, {{{keyType}}} {{key}});
+
+    void save(OrganisationId organisationId, {{Name}} {{name}});
+
+    void deleteById(OrganisationId organisationId, {{{keyType}}} {{key}});
+}

@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: schema-graph fixture
+  version: 1.0.0
+paths:
+  /folders/{folderId}:
+    parameters:
+      - name: folderId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/id'
+    get:
+      operationId: getFolder
+      responses:
+        '200':
+          description: The folder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/folder'
+    patch:
+      operationId: renameFolder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/folderInput'
+      responses:
+        '200':
+          description: The folder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/folder'
+  /shapes:
+    post:
+      operationId: addShape
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/shape'
+      responses:
+        '204':
+          description: Added.
+components:
+  schemas:
+    id:
+      type: string
+      format: uuid
+    named:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 80
+          description: What people call it. Unique within its parent.
+    folder:
+      description: A folder of notes. It may hold other folders.
+      allOf:
+        - $ref: '#/components/schemas/named'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              $ref: '#/components/schemas/id'
+            parent:
+              $ref: '#/components/schemas/folder'
+            children:
+              type: array
+              items:
+                $ref: '#/components/schemas/folder'
+    folderInput:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          maxLength: 80
+        colour:
+          type: string
+          enum: [RED, BLUE]
+          nullable: true
+    circle:
+      type: object
+      required: [kind, radius]
+      properties:
+        kind:
+          type: string
+        radius:
+          type: number
+          minimum: 0
+    square:
+      type: object
+      required: [kind, side]
+      properties:
+        kind:
+          type: string
+        side:
+          type: number
+    shape:
+      oneOf:
+        - $ref: '#/components/schemas/circle'
+        - $ref: '#/components/schemas/square'
+      discriminator:
+        propertyName: kind
+        mapping:
+          round: '#/components/schemas/circle'
+          SQUARE: '#/components/schemas/square'

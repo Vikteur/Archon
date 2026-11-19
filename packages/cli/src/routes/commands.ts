@@ -532,6 +532,77 @@ export async function runSkill({
   return await skillInstallCommand(targetPath);
 }
 
+export async function runKit({
+  subcommand,
+  positionals,
+  values,
+  cwd,
+  json,
+}: CliRouteContext): Promise<number> {
+  if (
+    subcommand !== 'add' &&
+    subcommand !== 'doctor' &&
+    subcommand !== 'list' &&
+    subcommand !== 'setup' &&
+    subcommand !== 'tools'
+  ) {
+    const problem =
+      subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`;
+    return await fail(json, `${problem}\nAvailable: add, doctor, list, setup, tools`);
+  }
+  if (subcommand === 'setup') return await runKitSetup(positionals, values, cwd, json);
+  if (positionals.length > 3) return await fail(json, `Usage: archon kit ${subcommand} [path]`);
+  const { kitCommand } = await loadRoute(() => import('../commands/kit'), { providers: false });
+  const profile = typeof values.profile === 'string' ? values.profile : '';
+  return await kitCommand(subcommand, positionals[2], cwd, {
+    profiles: profile
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean),
+    check: values.check === true,
+    force: values.force === true,
+    dryRun: values['dry-run'] === true,
+    noTools: values['no-tools'] === true,
+    noPostInstall: values['no-post-install'] === true,
+    noBacklog: values['no-backlog'] === true,
+    trust: values.trust === true,
+    userHooks: values['user-hooks'] === true,
+    set: Array.isArray(values.set) ? (values.set as string[]) : [],
+  });
+}
+
+async function runKitSetup(
+  positionals: string[],
+  values: CliRouteContext['values'],
+  cwd: string,
+  json: boolean | undefined
+): Promise<number> {
+  const { KIT_SETUP_USAGE, defaultSetupDeps, kitSetupCommand } = await loadRoute(
+    () => import('../commands/kit-setup'),
+    { providers: false }
+  );
+  if (positionals.length > 2) return await fail(json, KIT_SETUP_USAGE);
+  const text = (name: string): string | undefined =>
+    typeof values[name] === 'string' ? (values[name] as string) : undefined;
+  return await kitSetupCommand(
+    {
+      backend: text('backend'),
+      frontend: text('frontend'),
+      contract: text('contract'),
+      profiles: (text('profile') ?? '')
+        .split(',')
+        .map(name => name.trim())
+        .filter(Boolean),
+      backlog: values.backlog === true,
+      yes: values.yes === true,
+      noTools: values['no-tools'] === true,
+      noRtk: values['no-rtk'] === true,
+      noWeb: values['no-web'] === true,
+    },
+    defaultSetupDeps(cwd)
+  );
+}
+
 export async function runUnknownCommand({ command, json }: CliRouteContext): Promise<number> {
   const problem = command === undefined ? 'Missing command' : `Unknown command: ${command}`;
   // Help text goes to stdout, which would corrupt the

@@ -1,0 +1,52 @@
+{{!
+  Write resource implementing the JAX-RS interface generated from the contract (interface-only,
+  returnResponse=false): DTO -> request via the mapper, the caller's organisation from CurrentOrganisation,
+  a Notification error -> NotificationResponses.throwOnErrors (status from ErrorStatusTable: 422 without a code,
+  404 for NOT_FOUND, ...), success -> the void method's 204. No mapping or rules inline.
+  The method signatures must match the generated Api interface exactly; the DTOs are generated.
+  Authorization (@RolesAllowed, ownership checks) is hand-written: it is a STOP item.
+  Target: <capability>-adapter/src/main/java/<package path>/adapter/controller/<Name>Controller.java
+  Package: "package" is the base package, without the ".adapter.controller" this template appends (com.example.guest
+          renders package com.example.guest.adapter.controller); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name (controller prefix, e.g. GadgetAdmin),
+          Api (generated interface), apiPackage (package of the generated interface),
+          modelPackage (package of the generated DTOs), Domain (aggregate),
+          Dto (generated DTO name without the DTO suffix), dto (camelCase of Dto),
+          upsertOperationId, deleteOperationId, key, pathKeyType (generated path parameter type, e.g. UUID),
+          typedId (optional, domain id type wrapping the path UUID with of(), e.g. GadgetId)
+}}
+package {{package}}.adapter.controller;
+
+import {{apiPackage}}.{{Api}};
+import {{basePackage}}.common.adapter.controller.CurrentOrganisation;
+import {{modelPackage}}.{{Dto}}DTO;
+import {{package}}.domain.*;
+import {{package}}.usecase.CreateOrUpdate{{Domain}}UseCase;
+import {{package}}.usecase.Delete{{Domain}}UseCase;
+import lombok.RequiredArgsConstructor;
+{{#typedId}}
+
+import java.util.UUID;
+{{/typedId}}
+
+import static {{basePackage}}.common.adapter.controller.NotificationResponses.throwOnErrors;
+
+@RequiredArgsConstructor
+public class {{Name}}Controller implements {{Api}} {
+
+    private final CreateOrUpdate{{Domain}}UseCase createOrUpdate{{Domain}}UseCase;
+    private final Delete{{Domain}}UseCase delete{{Domain}}UseCase;
+    private final CurrentOrganisation currentOrganisation;
+
+    @Override
+    public void {{upsertOperationId}}({{Dto}}DTO {{dto}}DTO) {
+        throwOnErrors(createOrUpdate{{Domain}}UseCase.execute(
+                {{Domain}}RequestDTOToDomainMapper.map(currentOrganisation.get(), {{dto}}DTO)));
+    }
+
+    @Override
+    public void {{deleteOperationId}}({{{pathKeyType}}} {{key}}) {
+        throwOnErrors(delete{{Domain}}UseCase.execute(currentOrganisation.get(), {{#typedId}}{{typedId}}.of({{key}}){{/typedId}}{{^typedId}}{{key}}{{/typedId}}));
+    }
+}

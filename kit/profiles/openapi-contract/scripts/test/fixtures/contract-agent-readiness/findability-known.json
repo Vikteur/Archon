@@ -1,0 +1,43 @@
+{
+  "note": "The intents of intents.json that miss at 10 in mode (b), and the ones that tie with or trail their look-alike there, on the pinned contract v7.2.0. Both lists may only shrink: findability.mjs --known fails on a miss or tie not listed, and on a listed one that is gone.",
+  "misses": [
+    "measurer-9",
+    "billing-11",
+    "orders-8",
+    "orders-9",
+    "library-matching-dj-22",
+    "the-rest-22",
+    "the-rest-24",
+    "error-code-VENDOR_IN_USE",
+    "error-code-LIST_FULL",
+    "error-code-BAD_XML",
+    "error-code-BAD_PLAYLIST",
+    "error-code-LIBRARY_NAME_TAKEN",
+    "held-out-1",
+    "held-out-5",
+    "held-out-8",
+    "held-out-9",
+    "held-out-10",
+    "held-out-13",
+    "held-out-14",
+    "held-out-15",
+    "held-out-16",
+    "held-out-17",
+    "held-out-19"
+  ],
+  "ties": [
+    "measurer-7",
+    "billing-13",
+    "project-members-115",
+    "library-matching-dj-4",
+    "library-matching-dj-9",
+    "library-matching-dj-16",
+    "library-matching-dj-17",
+    "library-matching-dj-21",
+    "error-code-VENDOR_NAME_TAKEN",
+    "held-out-2",
+    "held-out-3",
+    "held-out-11",
+    "held-out-12"
+  ]
+}

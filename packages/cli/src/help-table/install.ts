@@ -1,5 +1,5 @@
 import { attachmentCommands } from '../attachment-commands';
-import type { HelpEntry, HelpGroup } from './types';
+import type { FlagHelp, HelpEntry, HelpGroup } from './types';
 
 function attachmentHelp(command: keyof typeof attachmentCommands, scopedOnly = false): HelpEntry[] {
   return Object.entries(attachmentCommands[command])
@@ -12,6 +12,49 @@ function attachmentHelp(command: keyof typeof attachmentCommands, scopedOnly = f
     }));
 }
 
+const kitAddFlags: FlagHelp[] = [
+  {
+    spec: '--profile <a,b,c>',
+    description: 'Profiles to install (default: kit.yaml, then kit defaults)',
+  },
+  { spec: '--force', description: 'Overwrite files that differ from the kit' },
+  { spec: '--dry-run', description: 'Show what would change, write nothing' },
+  { spec: '--no-tools', description: 'Skip scripts/install-tools.sh' },
+  { spec: '--no-post-install', description: 'Skip the profiles post-install commands' },
+  { spec: '--trust', description: 'Trust the project folder in $COPILOT_HOME/config.json' },
+  { spec: '--user-hooks', description: 'Install the run-guard hook in $COPILOT_HOME/hooks' },
+  { spec: '--set <key=value>', description: 'Override a kit.yaml key (dot keys, repeatable)' },
+];
+
+const kitSetupFlags: FlagHelp[] = [
+  { spec: '--backend <path>', description: 'Backend git repository (gets the kit)' },
+  {
+    spec: '--frontend <path>',
+    description: 'Frontend git repository (gets the codegraph MCP server; absent skips it)',
+  },
+  { spec: '--contract <file>', description: 'OpenAPI contract (.yaml, .yml or .json)' },
+  {
+    spec: '--profile <a,b,c>',
+    description: 'Kit profiles (default: last run, then core,java,java-spring,openapi-contract)',
+  },
+  { spec: '--backlog', description: 'Use Backlog.md for tickets (absent: off)' },
+  { spec: '--yes', description: 'Skip the confirmation' },
+  { spec: '--no-tools', description: 'Skip the tool installer' },
+  { spec: '--no-rtk', description: 'Skip the rtk hooks' },
+  { spec: '--no-web', description: 'Do not start the web views' },
+];
+
+const kitToolsFlags: FlagHelp[] = [
+  { spec: '--check', description: 'Only report the tools, install nothing' },
+  { spec: '--no-backlog', description: 'Leave Backlog.md out (INSTALL_TOOLS_BACKLOG=0)' },
+];
+
+const kitFlags: Record<string, FlagHelp[]> = {
+  add: kitAddFlags,
+  setup: kitSetupFlags,
+  tools: kitToolsFlags,
+};
+
 export const installHelp: HelpGroup = {
   entries: [
     {
@@ -20,6 +63,10 @@ export const installHelp: HelpGroup = {
       description: 'Start the web UI server (binary installs download server and UI on first run)',
     },
     ...attachmentHelp('skill'),
+    ...attachmentHelp('kit').map(entry => {
+      const scopedFlags = kitFlags[entry.subcommand ?? ''];
+      return scopedFlags ? { ...entry, scopedFlags } : entry;
+    }),
     ...attachmentHelp('provider'),
     ...attachmentHelp('plugin'),
     {

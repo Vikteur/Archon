@@ -1,0 +1,254 @@
+{
+ "id": "4c92a55f8143ad2a876cee5647021b44",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-2.3",
+ "started_at": "2026-10-18T04:34:06.000Z",
+ "completed_at": "2026-10-18T04:56:20.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\build-feature-1792298046823",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'skill-check': Bash node 'skill-check' failed [exit 1]: SKILLS: step 3: the build agent never loaded code-generation\nSKILLS: step 4: no test agent window found to check its Test skills against\nSKILLS: step 4: no build agent window found to check its Build skills against\nSKILLS: step 5: no test agent window found to check its Test skills against\nSKILLS: step 5: no build agent window found to check its Build skills against\nSKILLS: step 6: no test agent window found to check its Test skills against\nSKILLS: step 7: no test agent window found to check its Test skills against\nSKILLS: step 8: no test agent window found to check its Test skills against\nSKILLS: 8 problem(s): load every skill on the step's line with the Skill tool.",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\4c92a55f8143ad2a876cee5647021b44"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'skill-check': Bash node 'skill-check' failed [exit 1]: SKILLS: step 3: the build agent never loaded code-generation\nSKILLS: step 4: no test agent window found to check its Test skills against\nSKILLS: step 4: no build agent window found to check its Build skills against\nSKILLS: step 5: no test agent window found to check its Test skills against\nSKILLS: step 5: no build agent window found to check its Build skills against\nSKILLS: step 6: no test agent window found to check its Test skills against\nSKILLS: step 7: no test agent window found to check its Test skills against\nSKILLS: step 8: no test agent window found to check its Test skills against\nSKILLS: 8 problem(s): load every skill on the step's line with the Skill tool.",
+  "first_failed_node": "skill-check",
+  "nodes": [
+   {
+    "node_id": "skill-check",
+    "state": "failed",
+    "error": "Bash node 'skill-check' failed [exit 1]: SKILLS: step 3: the build agent never loaded code-generation\nSKILLS: step 4: no test agent window found to check its Test skills against\nSKILLS: step 4: no build agent window found to check its Build skills against\nSKILLS: step 5: no test agent window found to check its Test skills against\nSKILLS: step 5: no build agent window found to check its Build skills against\nSKILLS: step 6: no test agent window found to check its Test skills against\nSKILLS: step 7: no test agent window found to check its Test skills against\nSKILLS: step 8: no test agent window found to check its Test skills against\nSKILLS: 8 problem(s): load every skill on the step's line with the Skill tool."
+   },
+   {
+    "node_id": "review",
+    "state": "skipped"
+   },
+   {
+    "node_id": "tdd-check",
+    "state": "skipped"
+   },
+   {
+    "node_id": "map-scan",
+    "state": "skipped"
+   },
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "map-check",
+    "state": "skipped"
+   },
+   {
+    "node_id": "map-links",
+    "state": "skipped"
+   },
+   {
+    "node_id": "rebase-main",
+    "state": "skipped"
+   },
+   {
+    "node_id": "pr-text",
+    "state": "skipped"
+   },
+   {
+    "node_id": "open-pr",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ready",
+    "state": "skipped"
+   },
+   {
+    "node_id": "auto-merge",
+    "state": "skipped"
+   },
+   {
+    "node_id": "merged",
+    "state": "skipped"
+   },
+   {
+    "node_id": "main-ci",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ticket-files",
+    "state": "skipped"
+   },
+   {
+    "node_id": "finalize",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "skipped"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-2.3\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":true,\"stop_reason\":\"Production configuration / secrets (CI): the image job gains a @@KIT_CONTRACT_REPO@@ checkout using the CONTRACT_TOKEN secret, every contract checkout switches from the d..."
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":true,\"why\":\"plan: Production configuration / secrets (CI): the image job gains a @@KIT_CONTRACT_REPO@@ checkout using the CONTRACT_TOKEN secret, every contract checkout switches from the de..."
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Step 2 is built and committed as `e854084`, but I couldn't mark it done. `affected-check.sh` fails on the last step, `codegen.test.sh`, and I've written a `BLOCKED:` line at the end of the plan.\n\n- **..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "I wrote the tests for Step 2 and committed them as `86c69dc`, `test(step 3): ...`. The red log is `artifacts/runs/4c92a55f8143ad2a876cee5647021b44/red/step-3.log`. I didn't edit the plan.\n\n**`OpenApiG..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Step 2 is built and committed as `e854084`, but I couldn't mark it done. `affected-check.sh` fails on the last step, `codegen.test.sh`, and I've written a `BLOCKED:` line at the end of the plan.\n\n- **..."
+  },
+  {
+   "nodeId": "skill-check",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "review",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-links",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "rebase-main",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "auto-merge",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "merged",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "main-ci",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ticket-files",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "finalize",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "close-out",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

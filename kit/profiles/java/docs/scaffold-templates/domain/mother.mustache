@@ -1,0 +1,47 @@
+{{!
+  Object Mother: named fixtures + a fluent override builder. Exemplar: order-domain OrderMother.
+  Goes through the real constructor, so domain invariants still apply. Shared with other modules'
+  tests via the test-jar-producer convention plugin.
+  For a record domain type, make build() return the record's own builder instead of the request.
+  Target: <capability>-domain/src/test/java/<package path>/domain/<Name>Mother.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, Name, fixture (scenario name, e.g. standardGadget), upsert (bool, same value as entity.mustache),
+          fields[type, name, example]
+}}
+package {{package}}.domain;
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
+
+public class {{Name}}Mother {
+
+    public static {{Name}} {{fixture}}() {
+        return {{Name}}Builder.builder().build();
+    }
+
+    @Accessors(fluent = true)
+    @Setter
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class {{Name}}Builder {
+{{#fields}}
+        private {{{type}}} {{name}} = {{{example}}};
+{{/fields}}
+
+        public static {{Name}}Builder builder() {
+            return new {{Name}}Builder();
+        }
+
+        public {{Name}} build() {
+            var request = {{#upsert}}CreateOrUpdate{{/upsert}}{{^upsert}}Create{{/upsert}}{{Name}}Request.builder()
+{{#fields}}
+                    .{{name}}({{name}})
+{{/fields}}
+                    .build();
+            return new {{Name}}(request);
+        }
+    }
+}

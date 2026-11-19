@@ -1,0 +1,13 @@
+openapi: 3.0.3
+info:
+  title: Clean fixture
+  version: 1.0.0
+paths:
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [Notes]
+      summary: List notes
+      description: Lists the notes of one project, newest first. Use it to find a note's id before you change or move it.
+      responses:
+        '200': { description: The notes. }

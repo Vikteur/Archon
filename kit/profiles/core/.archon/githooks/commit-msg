@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# commit-msg hook for Archon run worktrees only (owner decision D12, 2026-10-20). Archon switches it on for its own
+# processes through .archon/config.yaml `env` (GIT_CONFIG_COUNT/KEY_0/VALUE_0: core.hooksPath=.archon/githooks), never
+# clone-wide: a clone-wide core.hooksPath would also turn on .githooks/pre-push (the groma check) in every checkout.
+#   commit-msg <message file>
+# 1. Outside a linked worktree (the main checkout, where close-out and the reports commit) it does nothing.
+# 2. The Conventional Commit subject check, .githooks/commit-msg: exit 1 refuses the commit.
+# 3. The commit-shape rule of the test-first gate, `tdd-check.sh --staged`: a feat/fix/refactor commit that changes a
+#    test source file needs a `Test fix:` body line. Exit 1 refuses the commit.
+# Anything else (a missing script, a usage error, exit 2) only warns and lets the commit through: the tdd-check node
+# stays the gate (P6), this hook only moves its feedback to the moment of the commit.
+# A refused commit may be split or reworded, and commits that are not pushed yet may be rewritten for it (amend,
+# reset --soft and recommit); a pushed commit is never rewritten for its shape. --no-verify is denied to run agents.
+set -uo pipefail
+
+msg=${1:-}
+[ -n "$msg" ] || { echo "commit-msg: no message file given; not checked" >&2; exit 0; }
+gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || exit 0
+common=$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P) || exit 0
+[ "$(cd "$gitdir" && pwd -P)" = "$common" ] && exit 0
+top=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+
+refused() {
+  echo "commit-msg: commit refused (run worktree). Split or reword it; a commit not pushed yet may be rewritten for this, a pushed one never." >&2
+  exit 1
+}
+
+subject_check="$top/.githooks/commit-msg"
+if [ -f "$subject_check" ]; then
+  bash "$subject_check" "$msg"; rc=$?
+  [ "$rc" -eq 1 ] && refused
+  [ "$rc" -eq 0 ] || echo "commit-msg: the subject check ended with exit $rc; not checked" >&2
+else
+  echo "commit-msg: no $subject_check; the subject is not checked" >&2
+fi
+
+shape_check="$top/.archon/scripts/tdd-check.sh"
+if [ -f "$shape_check" ]; then
+  bash "$shape_check" --staged "$msg"; rc=$?
+  [ "$rc" -eq 1 ] && refused
+  [ "$rc" -eq 0 ] || echo "commit-msg: tdd-check.sh --staged ended with exit $rc; the commit shape is not checked" >&2
+else
+  echo "commit-msg: no $shape_check; the commit shape is not checked" >&2
+fi
+exit 0

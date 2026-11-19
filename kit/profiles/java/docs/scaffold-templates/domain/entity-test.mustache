@@ -1,0 +1,52 @@
+{{!
+  Spec for <Name>.update(): a valid request changes every non-identity field without errors,
+  and clearing any non-identity field yields a validation error.
+  Only for an aggregate rendered with entity.mustache upsert=true. For boolean fields the getter is is<Pascal>().
+  Target: <capability>-domain/src/test/java/<package path>/domain/<Name>Test.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, Name, fixture (Mother method),
+          fields[type, name, pascal, identity (bool), example (fixture value), changed (new value), last]
+}}
+package {{package}}.domain;
+
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{Name}}Test {
+
+    @Test
+    void givenValidRequest_whenUpdate_thenApplyChangesWithoutErrors() {
+        var aggregate = {{Name}}Mother.{{fixture}}();
+
+        var notification = aggregate.update(validRequest().build());
+
+        assertThat(notification.hasErrors()).isFalse();
+{{#fields}}
+{{^identity}}
+        assertThat(aggregate.get{{pascal}}()).isEqualTo({{{changed}}});
+{{/identity}}
+{{/fields}}
+    }
+{{#fields}}
+{{^identity}}
+
+    @Test
+    void givenRequestWithout{{pascal}}_whenUpdate_thenReturnValidationError() {
+        var notification = {{Name}}Mother.{{fixture}}().update(validRequest().{{name}}(null).build());
+
+        assertThat(notification.hasErrors()).isTrue();
+        assertThat(notification.errorMessage()).contains("{{name}}");
+    }
+{{/identity}}
+{{/fields}}
+
+    private static CreateOrUpdate{{Name}}Request.CreateOrUpdate{{Name}}RequestBuilder validRequest() {
+        return CreateOrUpdate{{Name}}Request.builder()
+{{#fields}}
+                .{{name}}({{#identity}}{{{example}}}{{/identity}}{{^identity}}{{{changed}}}{{/identity}}){{#last}};{{/last}}
+{{/fields}}
+    }
+}
