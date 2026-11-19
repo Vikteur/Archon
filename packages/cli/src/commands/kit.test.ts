@@ -24,6 +24,7 @@ import {
   existingFileState,
   flattenKitConfig,
   kitAddCommand,
+  readKitLock,
   mergeAliases,
   renderTemplate,
   resolveProfiles,
@@ -203,6 +204,22 @@ describe('kit', () => {
       logs.length = 0;
       expect(await add()).toBe(0);
       expect(logs.join('\n')).toContain('0 written');
+    });
+    it('updates a file it wrote that the project never edited, keeps one the project edited', async () => {
+      await add({ profiles: ['java'] });
+      writeFileSync(join(project, 'src.txt'), 'my edit\n');
+      const newer = makeKit();
+      for (const key of ['java/README.md', 'java/src.txt']) newer.files[key] = 'newer kit\n';
+      for (const f of newer.manifest.files) f.sha256 = sha(newer.files[`${f.profile}/${f.path}`]);
+      logs.length = 0;
+      expect(await add({ profiles: ['java'] }, newer)).toBe(0);
+      expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('newer kit\n');
+      expect(readFileSync(join(project, 'src.txt'), 'utf-8')).toBe('my edit\n');
+      expect(logs.join('\n')).toContain('kept (differs)  src.txt');
+      const lock = readKitLock(project);
+      expect(lock['README.md']).toBe(sha('newer kit\n'));
+      expect(lock['src.txt']).toBe(sha('java file\n'));
+      expect(lock['.archon/kit.yaml']).toBeUndefined();
     });
     it('keeps a differing file unless --force', async () => {
       await add();

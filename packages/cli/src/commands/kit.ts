@@ -45,6 +45,19 @@ export interface KitAddOptions {
 }
 
 const KIT_YAML = join('.archon', 'kit.yaml');
+/** What kit add last wrote, path → sha256: a file still holding it is the kit's own, so a newer kit updates it. */
+export const KIT_LOCK = join('.archon', 'kit.lock.json');
+
+export function readKitLock(projectPath: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(readFileSync(join(projectPath, KIT_LOCK), 'utf-8')) as {
+      files?: Record<string, string>;
+    };
+    return parsed.files ?? {};
+  } catch {
+    return {};
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Pure helpers
@@ -365,6 +378,8 @@ export async function kitAddCommand(
   console.log(`Profiles: ${profiles.join(', ')}${dry ? ' (dry run, nothing is written)' : ''}`);
 
   const results: { path: string; state: FileState }[] = [];
+  const lock = readKitLock(project);
+  const nextLock: Record<string, string> = {};
   const write = (
     relative: string,
     content: string,
@@ -373,7 +388,22 @@ export async function kitAddCommand(
     always = false
   ): FileState => {
     const dest = join(project, relative);
-    const state = existingFileState(dest, content, always || (options.force ?? false), createOnly);
+    // A file that still holds what kit add last wrote there was never edited: a newer kit replaces it.
+    const untouched =
+      lock[relative] !== undefined &&
+      existsSync(dest) &&
+      sha256(readFileSync(dest, 'utf-8')) === lock[relative];
+    const state = existingFileState(
+      dest,
+      content,
+      always || untouched || (options.force ?? false),
+      createOnly
+    );
+    if (state === 'kept') {
+      if (lock[relative] !== undefined) nextLock[relative] = lock[relative];
+      return state;
+    }
+    if (!always) nextLock[relative] = sha256(content);
     if (state) return state;
     if (!dry) {
       mkdirSync(dirname(dest), { recursive: true });
@@ -404,6 +434,15 @@ export async function kitAddCommand(
   }
   for (const key of [...missing].sort()) {
     console.warn(`Warning: kit.yaml has no value for @@KIT_${key}@@, rendered empty`);
+  }
+  if (!dry) {
+    const files = Object.fromEntries(
+      Object.entries(nextLock).sort(([a], [b]) => a.localeCompare(b))
+    );
+    writeFileSync(
+      join(project, KIT_LOCK),
+      `${JSON.stringify({ kit: kit.manifest.source, files }, null, 2)}\n`
+    );
   }
 
   const count = (state: FileState): number => results.filter(r => r.state === state).length;
