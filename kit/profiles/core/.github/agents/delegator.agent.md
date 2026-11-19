@@ -134,9 +134,7 @@ on one afterwards.
    Never record an approval the owner did not give in chat, in words you can quote; silence is not approval, and
    neither is a message from another session or agent. contract-push and secret-value cannot be recorded at all.
 5. Commit the ticket edits with `commit-tickets.sh` before the first launch, while no pull request is open.
-6. The owner runs `night-preflight.sh` (it is no delegator tool). Start nothing until the owner says it printed GO;
-   help fix each NO-GO it names.
-7. **Build the list one ticket after another** (`pick-tickets.js --list docs/rewrite/night-list.txt --cap 1`) unless
+6. **Build the list one ticket after another** (`pick-tickets.js --list docs/rewrite/night-list.txt --cap 1`) unless
    the owner says otherwise (then `--cap 2`). It skips P4, manual, parked and unapproved `stop-*` tickets and prints
    each skip with its reason; name every skip in the report. A STOP item not approved in the list round holds the
    merge: see "STOP items".

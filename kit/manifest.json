@@ -483,15 +483,6 @@
       "sha256": "5774c8b8ac66617c8554911cd098b841b0cb283929b63c9d62dfe6f15109ec40"
     },
     {
-      "path": ".archon/scripts/night-preflight.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/night-preflight.sh",
-      "kind": "script",
-      "sha256": "e3ca56add38543a339cd50979e999e8191e041b9d9a2e4d3e2cb2544ab124844"
-    },
-    {
       "path": ".archon/scripts/notify-owner.sh",
       "profile": "core",
       "mode": "0755",
@@ -1299,7 +1290,7 @@
       "template": false,
       "origin": ".claude/agents/delegator.md",
       "kind": "agent",
-      "sha256": "9f4e5c8b6b176e2a27184668490545d1e660b72471729184982b945f8b2833f0"
+      "sha256": "f7aa7c86abb1f7504288dd8458989206959468597adef4aa86e1f2cfeb52c7d8"
     },
     {
       "path": ".github/agents/design-critic.agent.md",
