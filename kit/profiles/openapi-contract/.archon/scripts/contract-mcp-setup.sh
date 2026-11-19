@@ -49,7 +49,9 @@ have="$(jq -r '.sources.version // empty' "$report" 2>/dev/null)"
 if [ -n "$want" ] && [ "$have" = "$want" ]; then
   say "readiness report of v$want present"
 else
-  bash scripts/contract-agent-readiness.sh --spec "$spec_path" \
-    --map docs/code-maps/contract-agent-readiness.map.json >/dev/null 2>&1 || fail "the readiness check"
+  # The map (look-alikes, thresholds) is the project's own leaf; a project without one is checked on the defaults.
+  map=docs/code-maps/contract-agent-readiness.map.json
+  map_args=(); [ ! -f "$map" ] || map_args=(--map "$map")
+  bash scripts/contract-agent-readiness.sh --spec "$spec_path" "${map_args[@]}" >/dev/null 2>&1 || fail "the readiness check"
   say "readiness report of v$want written"
 fi
