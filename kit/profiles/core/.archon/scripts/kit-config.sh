@@ -7,7 +7,7 @@
 # The file is $KIT_CONFIG, else <repo root>/.archon/kit.yaml (the repo root is git's top level, else $PWD). Reading needs
 # yq (mikefarah v4); with no yq, no file or no such key the default is printed. A null or empty value is "no key".
 kit_get() { # kit_get <dotted.key> <default> [ENV_NAME]
-  local key="$1" def="$2" env="${3:-}" v="" f root
+  local key="$1" def="${2-}" env="${3:-}" v="" f root
   [ -n "$env" ] || env="KIT_$(printf '%s' "$key" | tr 'a-z.' 'A-Z_')"
   v="${!env:-}"
   if [ -z "$v" ]; then

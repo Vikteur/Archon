@@ -8,7 +8,8 @@
 # that fails. The build-feature ticket node runs it and goes on when it fails: a run never stops for a docs tool.
 # CONTRACT_REMOTE overrides where a missing contract/ is cloned from. .archon/kit.yaml (optional; KIT_* env wins) sets
 # contract.repo (owner/repo of the contract, default @@KIT_CONTRACT_REPO@@) and contract.spec_path (default
-# contract/dist/openapi.yaml; its first folder is where the contract is cloned).
+# contract/dist/openapi.yaml; its first folder is where the contract is cloned). A spec in a folder that is not a git
+# clone is the project's own contract, used as it is.
 set -uo pipefail
 
 dir="$(cd "${1:-.}" && pwd)" || exit 1
@@ -29,12 +30,18 @@ else
   say "node_modules installed"
 fi
 
-if [ ! -d "$cdir/.git" ]; then
-  git clone -q --depth 1 "${CONTRACT_REMOTE:-https://github.com/$contract_repo.git}" "$cdir" >/dev/null 2>&1 \
-    || fail "cannot clone ${contract_repo#*/} into $cdir/"
+# A spec in a folder that is no clone is the project's own contract (kept in its tree): there is nothing to clone or pin.
+if [ ! -d "$cdir/.git" ] && [ -f "$spec_path" ]; then
+  say "contract in the project tree at $spec_path"
+else
+  if [ ! -d "$cdir/.git" ]; then
+    [ -n "$contract_repo" ] || fail "no $spec_path and no contract.repo in .archon/kit.yaml to clone it from"
+    git clone -q --depth 1 "${CONTRACT_REMOTE:-https://github.com/$contract_repo.git}" "$cdir" >/dev/null 2>&1 \
+      || fail "cannot clone ${contract_repo#*/} into $cdir/"
+  fi
+  pin="$(bash .claude/scripts/contract-pin.sh "$cdir")" || fail "${pin#FAIL: }"
+  say "${pin#OK: }"
 fi
-pin="$(bash .claude/scripts/contract-pin.sh "$cdir")" || fail "${pin#FAIL: }"
-say "${pin#OK: }"
 
 report=build/contract-agent-readiness/readiness-report.json
 want="$(sed -n 's/^  version: *//p' "$spec_path" | head -n 1 | tr -d "\"' ")"

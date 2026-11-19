@@ -37,5 +37,7 @@ for impl in sh js; do
 done
 # without yq the shell helper still answers the default
 eq "sh: no yq is the default" claude "$(KIT_CONFIG="$tmp/kit.yaml" PATH="$(dirname "$(command -v bash)")" bash -c '. "'"$root"'/.archon/scripts/kit-config.sh"; kit_get agent_cli claude')"
+# with no default (a kit placeholder rendered empty) a missing key is empty, not an unbound-variable crash
+eq "sh: no default argument is an empty default" "" "$(KIT_CONFIG="$tmp/missing.yaml" bash -uc '. "'"$root"'/.archon/scripts/kit-config.sh"; kit_get nope' 2>&1)"
 echo "kit-config: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
