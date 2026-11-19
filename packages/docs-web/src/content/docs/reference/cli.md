@@ -131,7 +131,7 @@ decision, driving the SDLC pack's queues, setup and configuration, authoring, an
 prompt guidance. It is also installed automatically during
 `archon setup`. The former `skill install` verb is a deprecated alias that prints a warning.
 
-### `kit add [path]`, `kit doctor [path]`, `kit list`
+### `kit add [path]`, `kit doctor [path]`, `kit tools [path]`, `kit list`
 
 Install the bundled GitHub Copilot kit into a git project, check it, or list its profiles.
 The kit is a set of agents, skills, hooks, instructions, scripts, MCP servers and workflows,
@@ -167,6 +167,10 @@ reported as `kept (differs)` unless `--force` is given. Then it runs
 | `--set key=value` | Override a `kit.yaml` key; dot keys such as `contract.repo`; repeatable |
 | `--trust` | Add the project to `trustedFolders` in `$COPILOT_HOME/config.json` (default `~/.copilot`) |
 | `--user-hooks` | Write `$COPILOT_HOME/hooks/archon-kit-run-guard.json` so the run guard loads in untrusted folders |
+
+`kit tools [path] [--check]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code; it errors if the script is missing. `add` and `doctor` reuse it.
+
+`@@KIT_PROJECT_DIR@@` is built in: it renders as the absolute (real) project path and is never read from `kit.yaml`.
 
 `doctor` exits non-zero when a required check fails. It runs `scripts/install-tools.sh --check`
 when the project has one, checks Copilot auth (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or a logged-in

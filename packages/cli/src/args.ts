@@ -89,6 +89,7 @@ export const cliArgOptions: CliArgOptions = {
   profile: { type: 'string' },
   'no-tools': { type: 'boolean' },
   'no-post-install': { type: 'boolean' },
+  check: { type: 'boolean' },
   trust: { type: 'boolean' },
   'user-hooks': { type: 'boolean' },
   stubs: { type: 'string' },

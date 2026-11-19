@@ -11,7 +11,15 @@
  */
 import { spawn, spawnSync } from 'child_process';
 import { createHash } from 'crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import {
+  chmodSync,
+  existsSync,
+  realpathSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'fs';
 import { homedir } from 'os';
 import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
@@ -31,6 +39,8 @@ export interface KitAddOptions {
   set?: string[];
   /** Skip `archon validate workflows` (tests). */
   skipValidate?: boolean;
+  /** `kit tools --check`. */
+  check?: boolean;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -249,7 +259,27 @@ function streamCommand(command: string, cwd: string): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// kit tools
+// ---------------------------------------------------------------------------
+
+const INSTALL_TOOLS = join('scripts', 'install-tools.sh');
+
+/** Run `bash scripts/install-tools.sh [--check]` in the project, streaming output. */
+export async function kitToolsCommand(targetPath: string, check = false): Promise<number> {
+  const project = resolve(targetPath);
+  if (!existsSync(join(project, INSTALL_TOOLS))) {
+    console.error(
+      `Error: ${join(project, INSTALL_TOOLS)} not found. Install the kit first: archon kit add ${project}`
+    );
+    return 1;
+  }
+  return await streamCommand(`bash ${INSTALL_TOOLS}${check ? ' --check' : ''}`, project);
+}
+
+// ---------------------------------------------------------------------------
 // kit add
+// ---------------------------------------------------------------------------
+
 // ---------------------------------------------------------------------------
 
 type FileState = 'written' | 'unchanged' | 'kept';
@@ -308,7 +338,7 @@ export async function kitAddCommand(
     return 1;
   }
   const config = parseYaml(kitYamlText) as unknown;
-  const vars = flattenKitConfig(config);
+  const vars = { ...flattenKitConfig(config), PROJECT_DIR: realpathSync(project) };
 
   console.log(`Kit ${kit.manifest.source.name}@${kit.manifest.source.commit.slice(0, 7)}`);
   console.log(`Profiles: ${profiles.join(', ')}${dry ? ' (dry run, nothing is written)' : ''}`);
@@ -363,7 +393,7 @@ export async function kitAddCommand(
   const installTools = join(project, 'scripts', 'install-tools.sh');
   if (!options.noTools && !dry && existsSync(installTools)) {
     console.log('\nRunning scripts/install-tools.sh');
-    const code = await streamCommand('bash scripts/install-tools.sh', project);
+    const code = await kitToolsCommand(project);
     if (code !== 0) console.warn(`Warning: scripts/install-tools.sh exited with ${code}`);
   }
 
@@ -547,9 +577,9 @@ export function checkTools(
   projectPath: string,
   env: NodeJS.ProcessEnv = process.env
 ): DoctorCheck[] {
-  const installer = join(projectPath, 'scripts', 'install-tools.sh');
+  const installer = join(projectPath, INSTALL_TOOLS);
   if (existsSync(installer) && readFileSync(installer, 'utf-8').includes('--check')) {
-    const result = spawnSync('bash', ['scripts/install-tools.sh', '--check'], {
+    const result = spawnSync('bash', [INSTALL_TOOLS, '--check'], {
       cwd: projectPath,
       encoding: 'utf-8',
       timeout: 120000,
@@ -854,12 +884,19 @@ export async function kitCommand(
   cwd: string,
   options: KitAddOptions
 ): Promise<number> {
-  if (subcommand !== 'add' && subcommand !== 'doctor' && subcommand !== 'list') {
+  if (
+    subcommand !== 'add' &&
+    subcommand !== 'doctor' &&
+    subcommand !== 'list' &&
+    subcommand !== 'tools'
+  ) {
     console.error(
-      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list`
+      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, tools`
     );
     return 1;
   }
+  if (subcommand === 'tools')
+    return await kitToolsCommand(targetArg ? resolve(targetArg) : cwd, options.check);
   const { BUNDLED_KIT: kit } = await import('../bundled-kit');
   const target = targetArg ? resolve(targetArg) : cwd;
   if (subcommand === 'list') return kitListCommand(target, kit);

@@ -10,12 +10,14 @@ import {
   readFileSync,
   statSync,
   writeFileSync,
+  realpathSync,
 } from 'fs';
 import { createHash } from 'crypto';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { removeTempTree } from '@archon/paths/test-utils';
 import {
+  kitToolsCommand,
   applySetOverrides,
   checkMcpServers,
   computeDrift,
@@ -35,7 +37,7 @@ function makeKit(): Kit {
     'core/README.md': '# core\n',
     'core/scripts/run.sh': '#!/bin/bash\necho hi\n',
     'core/.github/agent.md':
-      'repo @@KIT_CONTRACT_REPO@@ branches @@KIT_BRANCHES@@ none @@KIT_NOPE@@\n',
+      'dir @@KIT_PROJECT_DIR@@ repo @@KIT_CONTRACT_REPO@@ branches @@KIT_BRANCHES@@ none @@KIT_NOPE@@\n',
     'java/README.md': '# java wins\n',
     'java/src.txt': 'java file\n',
     'spring/s.txt': 'spring\n',
@@ -155,9 +157,10 @@ describe('kit', () => {
     it('renders template files on add and warns once per missing key', async () => {
       expect(await add({ set: ['contract.repo=acme/contract'] })).toBe(0);
       expect(readFileSync(join(project, '.github/agent.md'), 'utf-8')).toBe(
-        'repo acme/contract branches a, b none \n'
+        `dir ${realpathSync(project)} repo acme/contract branches a, b none \n`
       );
       expect(logs.filter(l => l.includes('@@KIT_NOPE@@'))).toHaveLength(1);
+      expect(logs.some(l => l.includes('PROJECT_DIR'))).toBe(false);
     });
   });
 
@@ -245,6 +248,22 @@ describe('kit', () => {
       expect(JSON.parse(readFileSync(join(home, 'config.json'), 'utf-8')).trustedFolders).toEqual([
         resolve(project),
       ]);
+    });
+  });
+
+  describe('tools', () => {
+    it('errors when the script is missing, else runs it with --check and returns its code', async () => {
+      expect(await kitToolsCommand(project)).toBe(1);
+      expect(logs.join('\n')).toContain('install-tools.sh');
+      mkdirSync(join(project, 'scripts'));
+      writeFileSync(
+        join(project, 'scripts/install-tools.sh'),
+        'echo "args:$*" > args.txt\n[ "$1" = "--check" ] && exit 4\nexit 0\n'
+      );
+      expect(await kitToolsCommand(project)).toBe(0);
+      expect(readFileSync(join(project, 'args.txt'), 'utf-8').trim()).toBe('args:');
+      expect(await kitToolsCommand(project, true)).toBe(4);
+      expect(readFileSync(join(project, 'args.txt'), 'utf-8').trim()).toBe('args:--check');
     });
   });
 

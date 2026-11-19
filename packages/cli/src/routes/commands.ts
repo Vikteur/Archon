@@ -542,7 +542,7 @@ export async function runKit({
   if (subcommand !== 'add' && subcommand !== 'doctor' && subcommand !== 'list') {
     const problem =
       subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`;
-    return await fail(json, `${problem}\nAvailable: add, doctor, list`);
+    return await fail(json, `${problem}\nAvailable: add, doctor, list, tools`);
   }
   if (positionals.length > 3) return await fail(json, `Usage: archon kit ${subcommand} [path]`);
   const { kitCommand } = await loadRoute(() => import('../commands/kit'), { providers: false });
@@ -552,6 +552,7 @@ export async function runKit({
       .split(',')
       .map(name => name.trim())
       .filter(Boolean),
+    check: values.check === true,
     force: values.force === true,
     dryRun: values['dry-run'] === true,
     noTools: values['no-tools'] === true,

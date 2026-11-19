@@ -262,6 +262,7 @@ Commands:
   skill add [path]           Add archon-cli into .claude/skills and .agents/skills
   kit add [path]             Install the Copilot kit (profiles, kit.yaml, aliases, hooks) into a git project
   kit doctor [path]          Check kit tools, Copilot auth and trust, MCP servers, hooks and file drift
+  kit tools [path] [--check] Run the project scripts/install-tools.sh (--check only verifies)
   kit list                   List kit profiles and which are installed here
   provider add <id...>       Add maintained providers matching this Archon release (connects your agent CLI or SDK)
   plugin add <owner/repo[/path][@tag]>

@@ -20,6 +20,10 @@ export const attachmentCommands = {
       args: '[path]',
       description: 'Check kit tools, Copilot auth and trust, MCP servers, hooks and file drift',
     },
+    tools: {
+      args: '[path] [--check]',
+      description: 'Run the project scripts/install-tools.sh (--check only verifies)',
+    },
     list: {
       args: '',
       description: 'List kit profiles and which are installed here',
