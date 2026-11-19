@@ -300,8 +300,18 @@ profiles and which ones are installed here. The flags and exit codes are in the
   `2 MCP servers were blocked by policy: 'codegraph', 'contract-api' (Not found in registry <url>)`.
   The servers themselves work (the setup's servers check starts them outside Copilot), and
   Copilot's logs do not record the block, so `kit doctor` cannot see it. Its admin has to
-  allow them. Until then, agents run without MCP: the build workflow falls back to file
-  searches, and its MCP check warns.
+  allow them. Until then, the kit's agents and the build workflow's nodes fall back to the
+  same functions through the CLIs, which the agents' Bash allowlists (and `agent-scopes.json`)
+  permit:
+  - CodeGraph, read-only: `codegraph explore "<question>"`, `codegraph node <symbol>`,
+    `codegraph callers <symbol>`, `codegraph callees <symbol>`, `codegraph impact <symbol>`
+    and `codegraph query <name>`.
+  - The contract server (openapi-contract): `node scripts/contract-mcp/cli.mjs search <words...>`,
+    `read <operationId>`, `where <operationId>` (or `--tag <t>`, `--status live|stub|none`),
+    `schema <name>` and `usedBy <target>`. It prints the MCP tool's JSON answer.
+
+  Where a CLI fails too, they fall back to file searches, and the build workflow's MCP check
+  warns.
 - **Structured output.** Structured output from a Copilot node is best effort. Check the
   result of a node that needs a strict format.
 
