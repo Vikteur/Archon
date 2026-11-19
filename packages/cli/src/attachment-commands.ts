@@ -10,6 +10,21 @@ export const attachmentCommands = {
       description: 'Deprecated alias for archon skill add',
     },
   },
+  kit: {
+    add: {
+      args: '[path]',
+      description:
+        'Install the Copilot kit (profiles, kit.yaml, aliases, hooks) into a git project',
+    },
+    doctor: {
+      args: '[path]',
+      description: 'Check kit tools, Copilot auth and trust, MCP servers, hooks and file drift',
+    },
+    list: {
+      args: '',
+      description: 'List kit profiles and which are installed here',
+    },
+  },
   provider: {
     add: {
       args: '<id...>',
