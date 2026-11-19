@@ -1,0 +1,25 @@
+name: portal-metrics
+description: |
+  Record this project's past runs as metrics for the console's Metrics tab: the pull requests build-feature runs
+  opened (sdlc.prs_opened, sdlc.prs_merged, sdlc.prs_abandoned, sdlc.pr_merge_rate, with the runs that worked on
+  each) and every run's start and recorded cost (runs.started, runs.spend_usd). Re-runs replace earlier records.
+
+  Use when: the Metrics tab should show current figures. Run it on demand (`archon workflow run portal-metrics`);
+  nothing schedules it.
+  NOT for: the SDLC build queue's pull requests, which its own archon-metrics-prs records.
+
+# It reads the state store and GitHub, not a checkout, so it runs beside any other run on the same checkout.
+worktree:
+  enabled: false
+mutates_checkout: false
+
+nodes:
+  - id: record
+    bash: node .archon/scripts/run-metrics.js
+    mutates_checkout: false
+    output_format:
+      type: object
+      required: [metrics]
+      properties:
+        metrics: { type: array }
+        skipped: { type: array }

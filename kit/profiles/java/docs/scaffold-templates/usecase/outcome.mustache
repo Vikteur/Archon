@@ -1,0 +1,26 @@
+{{!
+  A use case's result when it ends in more than one way: a sealed interface with one record per case, so the caller's
+  switch has to cover them all. Exemplar: account-usecase RegisterCustomerOutcome.
+  Target: <capability>-usecase/src/main/java/<package path>/usecase/<Name>Outcome.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, Name, imports (optional, fully qualified), cases[Case, fields[type, name, last] (none for a case
+          that carries nothing)]
+  Types use triple braces so generics are not HTML-escaped.
+}}
+package {{package}}.usecase;
+{{#imports.length}}
+
+{{/imports.length}}
+{{#imports}}
+import {{.}};
+{{/imports}}
+
+public sealed interface {{Name}}Outcome {
+{{#cases}}
+
+    record {{Case}}({{#fields}}{{{type}}} {{name}}{{^last}}, {{/last}}{{/fields}}) implements {{Name}}Outcome {
+    }
+{{/cases}}
+}

@@ -1,0 +1,6 @@
+# Flaky-test signatures for red-triage.sh (CI plan C17, owner decision D5 2026-10-20): a red job whose log matches a
+# listed signature gets one script-decided rerun, and its green status then says `green on rerun after flaky:<id>`.
+# One per line: <id><TAB><added, YYYY-MM-DD><TAB><job><TAB><extended regex, grep -E>. A signature expires 14 days after
+# it was added (red-triage.sh ignores it from then on): fix the test, or add it again with a new date and a reason in
+# the commit. Lines starting with # are comments.
+merge-path-7a	2026-10-23	archon-scripts	^FAIL: 7a a head pushed after ready

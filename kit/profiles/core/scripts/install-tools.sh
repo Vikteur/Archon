@@ -1,0 +1,296 @@
+#!/usr/bin/env bash
+# One-step tool install (TASK-37): installs every tool listed in scripts/tools.conf on Windows (winget, from Git Bash),
+# on macOS (Homebrew) and on Linux (no sudo: jq, yq and gh as release downloads into ~/.local, npm -g for the npm tools,
+# the installer scripts; git, node, java and docker are only checked and a missing one is warned about). The npm tools are installed at their pinned version; the others come through winget,
+# Homebrew or their own installer, and are only checked against the version in tools.conf. A tool that is already
+# installed at a fitting version is skipped, so a second run installs nothing. Ends with a summary and the steps that
+# stay manual.
+#   bash scripts/install-tools.sh            install what is missing
+#   bash scripts/install-tools.sh --check    only report what is missing or at the wrong version; installs nothing and
+#                                            skips the git hooks; exit 1 when any tool is missing
+# Environment (for tests; the defaults are right on a real machine):
+#   TOOLS_CONF                tool list (default: tools.conf beside this script)
+#   INSTALL_TOOLS_OS          windows | macos | linux (default: from uname)
+#   LOCAL_PREFIX              Linux install prefix (default: ~/.local; binaries go to its bin/)
+#   JQ_VERSION, YQ_VERSION, GH_VERSION   Linux download versions (1.7.1, v4.54.1, 2.63.2)
+#   PORTAL_DIR                the checkout whose scripts/install-hooks.sh switches the git hooks on (default: this repo)
+#   INSTALL_TOOLS_PATH_DIRS   directories put on PATH after a Windows install, colon-separated (default: the usual ones)
+# Plain bash 3.2 on purpose: a fresh Mac has no newer one. Exit 1 when an install failed (including one that left the
+# tool at a version that does not fit), when a package manager is missing, or when the OS is not supported.
+set -o pipefail
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+conf=${TOOLS_CONF:-$here/tools.conf}
+portal=${PORTAL_DIR:-$(cd "$here/.." && pwd)}
+
+os=${INSTALL_TOOLS_OS:-}
+if [ -z "$os" ]; then
+  case "$(uname -s)" in
+    MINGW* | MSYS* | CYGWIN*) os=windows ;;
+    Darwin) os=macos ;;
+    Linux) os=linux ;;
+    *) os=other ;;
+  esac
+fi
+case "$os" in
+  windows | macos | linux) ;;
+  *) echo "install-tools.sh: $os ($(uname -s)) is not supported yet (Windows with Git Bash, macOS and Linux only)." >&2; exit 1 ;;
+esac
+check_only=0
+case "${1:-}" in
+  --check) check_only=1 ;;
+  '') ;;
+  *) echo "usage: install-tools.sh [--check]" >&2; exit 2 ;;
+esac
+[ -f "$conf" ] || { echo "install-tools.sh: tool list not found: $conf" >&2; exit 1; }
+
+trim() { local v=$1; v=${v#"${v%%[![:space:]]*}"}; v=${v%"${v##*[![:space:]]}"}; printf '%s' "$v"; }
+unix_path() { if command -v cygpath > /dev/null 2>&1; then cygpath -u "$1"; else printf '%s' "$1"; fi; }
+
+# A winget install does not update the running shell's PATH: put the usual install directories on it, so later steps
+# (npm after node) and the re-check find what was just installed. Called again after every install.
+path_dirs=()
+prefix=${LOCAL_PREFIX:-$HOME/.local}
+if [ "$os" = linux ]; then
+  path_dirs=("$prefix/bin")
+elif [ "$os" = windows ]; then
+  if [ -n "${INSTALL_TOOLS_PATH_DIRS+x}" ]; then
+    IFS=: read -r -a path_dirs <<< "$INSTALL_TOOLS_PATH_DIRS"
+  else
+    path_dirs=("/c/Program Files/nodejs")
+    [ -z "${APPDATA:-}" ] || path_dirs+=("$(unix_path "$APPDATA")/npm")
+    [ -z "${LOCALAPPDATA:-}" ] || path_dirs+=("$(unix_path "$LOCALAPPDATA")/Microsoft/WinGet/Links")
+    path_dirs+=("$HOME/.archon/bin" "$HOME/.local/bin")
+  fi
+fi
+refresh_path() {
+  local d
+  for d in ${path_dirs[@]+"${path_dirs[@]}"}; do
+    [ -n "$d" ] && [ -d "$d" ] || continue
+    case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
+  done
+  export PATH
+}
+
+# version_fits <spec> <version>: "-" is any version, ">=X.Y" a numeric minimum, anything else a prefix (1.53.0, 25).
+version_fits() {
+  local spec=$1 ver=$2 min a b i
+  case "$spec" in
+    -) return 0 ;;
+    '>='*)
+      [ -n "$ver" ] || return 1
+      min=${spec#>=}
+      IFS=. read -r -a a <<< "$ver"; IFS=. read -r -a b <<< "$min"
+      for ((i = 0; i < ${#a[@]} || i < ${#b[@]}; i++)); do
+        if ((10#${a[i]:-0} > 10#${b[i]:-0})); then return 0; fi
+        if ((10#${a[i]:-0} < 10#${b[i]:-0})); then return 1; fi
+      done
+      return 0 ;;
+    *)
+      spec=${spec%.}
+      [ -n "$ver" ] && { [ "$ver" = "$spec" ] || [[ "$ver" == "$spec".* ]]; } ;;
+  esac
+}
+
+# check_tool <spec> <check command>: sets found_version; succeeds when the tool runs and its version fits the spec.
+found_version=""
+check_tool() {
+  local spec=$1 check=$2 out
+  found_version=""
+  command -v "${check%% *}" > /dev/null 2>&1 || return 1
+  out=$(eval "$check" 2>&1 < /dev/null) || return 1
+  found_version=$(printf '%s\n' "$out" | grep -oE '[0-9]+(\.[0-9]+)*' | head -1)
+  version_fits "$spec" "$found_version"
+}
+
+names=(); specs=(); kinds=(); wins=(); macs=(); checks=()
+while IFS= read -r line || [ -n "$line" ]; do
+  line=${line%$'\r'}; line=${line%%#*}
+  [ -n "$(trim "$line")" ] || continue
+  IFS='|' read -r name spec kind win mac check <<< "$line"
+  names+=("$(trim "$name")"); specs+=("$(trim "$spec")"); kinds+=("$(trim "$kind")")
+  wins+=("$(trim "$win")"); macs+=("$(trim "$mac")"); checks+=("$(trim "$check")")
+done < "$conf"
+
+installed=(); skipped=(); failed=(); notes=()
+todo=()
+refresh_path
+echo "Checking ${#names[@]} tools ($os)"
+for i in "${!names[@]}"; do
+  if check_tool "${specs[i]}" "${checks[i]}"; then
+    echo "  ok       ${names[i]} ${found_version}"
+    skipped+=("${names[i]}")
+  else
+    echo "  missing  ${names[i]} (wants ${specs[i]}${found_version:+, has $found_version})"
+    todo+=("$i")
+  fi
+done
+
+if [ "$check_only" -eq 1 ]; then
+  echo
+  if [ "${#todo[@]}" -eq 0 ]; then echo "Check: every tool is in place."; exit 0; fi
+  missing=()
+  for i in "${todo[@]}"; do missing+=("${names[i]}"); done
+  echo "Check: missing or wrong version: ${missing[*]}"
+  exit 1
+fi
+
+# winget and brew are needed before the first install, not halfway through.
+for i in ${todo[@]+"${todo[@]}"}; do
+  [ "${kinds[i]}" = pkg ] || continue
+  [ "$os" != linux ] || continue
+  if [ "$os" = windows ] && ! command -v winget > /dev/null 2>&1; then
+    echo "install-tools.sh: winget is missing. Install 'App Installer' from the Microsoft Store (or update Windows), then run this again." >&2
+    exit 1
+  fi
+  if [ "$os" = macos ] && ! command -v brew > /dev/null 2>&1; then
+    echo "install-tools.sh: Homebrew is missing. Install it first:" >&2
+    echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' >&2
+    exit 1
+  fi
+  break
+done
+
+# Linux, no sudo. fetch <url> <dest>; sum_of <file> <name> [<column>]: the sha256 listed for <name>; fetch_checked <url>
+# <dest> <sums url> <name> [<column>] downloads, and verifies against the release's checksum file when there is one (a
+# file that cannot be fetched is a warning; a mismatch fails).
+fetch() { curl -fsSL -o "$2" "$1"; }
+fetch_checked() {
+  local url=$1 dest=$2 sums_url=$3 name=$4 col=${5:-1} sums want got
+  fetch "$url" "$dest" || return 1
+  sums=$(mktemp)
+  if fetch "$sums_url" "$sums" 2> /dev/null; then
+    want=$(awk -v n="$name" -v c="$col" '$1 == n || $2 == n || $2 == "*" n {print $c; exit}' "$sums")
+    got=$(sha256sum "$dest" | cut -d' ' -f1)
+    rm -f "$sums"
+    if [ -n "$want" ] && [ "$want" != "$got" ]; then echo "checksum mismatch for $name" >&2; rm -f "$dest"; return 1; fi
+    [ -n "$want" ] || echo "  no checksum listed for $name" >&2
+  else
+    rm -f "$sums"; echo "  no checksum file for $name, skipping the check" >&2
+  fi
+}
+linux_arch() { case "$(uname -m)" in x86_64 | amd64) echo amd64 ;; aarch64 | arm64) echo arm64 ;; *) echo "$(uname -m)" ;; esac; }
+linux_install() { # linux_install <name>
+  local n=$1 arch ver tmp
+  arch=$(linux_arch); mkdir -p "$prefix/bin" || return 1
+  case "$n" in
+    jq)
+      ver=${JQ_VERSION:-1.7.1}; tmp=$(mktemp)
+      fetch_checked "https://github.com/jqlang/jq/releases/download/jq-$ver/jq-linux-$arch" "$tmp" \
+        "https://github.com/jqlang/jq/releases/download/jq-$ver/sha256sum.txt" "jq-linux-$arch" 1 || return 1
+      install -m 0755 "$tmp" "$prefix/bin/jq"; rm -f "$tmp" ;;
+    yq)
+      ver=${YQ_VERSION:-v4.54.1}; tmp=$(mktemp)
+      # mikefarah's `checksums` file lists several hashes per file; checksums_hashes_order names the columns
+      local order col
+      order=$(curl -fsSL "https://github.com/mikefarah/yq/releases/download/$ver/checksums_hashes_order" 2> /dev/null | grep -n -x 'SHA-256' | cut -d: -f1)
+      col=$(( ${order:-0} + 1 ))
+      [ "$col" -gt 1 ] || col=0
+      if [ "$col" -gt 1 ]; then
+        fetch_checked "https://github.com/mikefarah/yq/releases/download/$ver/yq_linux_$arch" "$tmp" \
+          "https://github.com/mikefarah/yq/releases/download/$ver/checksums" "yq_linux_$arch" "$col" || return 1
+      else
+        echo "  no checksum list for yq, skipping the check" >&2
+        fetch "https://github.com/mikefarah/yq/releases/download/$ver/yq_linux_$arch" "$tmp" || return 1
+      fi
+      install -m 0755 "$tmp" "$prefix/bin/yq"; rm -f "$tmp" ;;
+    gh)
+      ver=${GH_VERSION:-2.63.2}; tmp=$(mktemp)
+      fetch_checked "https://github.com/cli/cli/releases/download/v$ver/gh_${ver}_linux_$arch.tar.gz" "$tmp" \
+        "https://github.com/cli/cli/releases/download/v$ver/gh_${ver}_checksums.txt" "gh_${ver}_linux_$arch.tar.gz" 1 || return 1
+      tar -xzf "$tmp" -C "$prefix" --strip-components=1 "gh_${ver}_linux_$arch/bin/gh" "gh_${ver}_linux_$arch/share" 2> /dev/null \
+        || tar -xzf "$tmp" -C "$prefix" --strip-components=1 || { rm -f "$tmp"; return 1; }
+      rm -f "$tmp" ;;
+    java | docker)
+      echo "$n cannot be installed without sudo: install it with your package manager (see tools.conf for the version)" >&2
+      return 2 ;;
+    *)
+      echo "$n cannot be installed here: install it with your package manager" >&2
+      return 1 ;;
+  esac
+}
+
+# install_tool <index>: runs the one install command for the tool on this OS.
+install_tool() {
+  local i=$1 kind=${kinds[$1]} target
+  if [ "$os" = windows ]; then target=${wins[i]}; else target=${macs[i]}; fi
+  case "$kind:$os" in
+    pkg:windows) winget install --id "$target" -e --silent --accept-source-agreements --accept-package-agreements ;;
+    pkg:macos)
+      case "$target" in
+        cask:*) brew install --cask "${target#cask:}" ;;
+        *) brew install "$target" ;;
+      esac ;;
+    pkg:linux) linux_install "${names[i]}" ;;
+    npm:*)
+      if [[ "${specs[i]}" =~ ^[0-9]+(\.[0-9]+)+$ ]]; then npm install -g "$target@${specs[i]}"; else npm install -g "$target"; fi ;;
+    script:windows) powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "irm $target | iex" ;;
+    script:macos | script:linux) curl -fsSL "$target" | bash ;;
+    *) echo "unknown kind '$kind' for ${names[i]}" >&2; return 1 ;;
+  esac
+}
+
+echo
+if [ "${#todo[@]}" -eq 0 ]; then
+  echo "Nothing to install: every tool is already in place."
+else
+  for i in "${todo[@]}"; do
+    echo "Installing ${names[i]}"
+    if result=$(install_tool "$i" 2>&1 < /dev/null); then
+      refresh_path
+      if check_tool "${specs[i]}" "${checks[i]}"; then
+        installed+=("${names[i]}")
+      elif [ -n "$found_version" ]; then
+        # Found, but at a version that does not fit (an older copy earlier on PATH, say): the install did not help.
+        echo "  failed: ${names[i]} installed, but $(command -v "${checks[i]%% *}") still runs $found_version (wants ${specs[i]})"
+        failed+=("${names[i]}")
+      else
+        installed+=("${names[i]}")
+        notes+=("${names[i]} is installed but not found on this PATH yet: open a new terminal.")
+      fi
+    else
+      rc=$?
+      printf '%s\n' "$result" | tail -n 15 | sed 's/^/    /'
+      if [ "$os" = linux ] && [ "$rc" -eq 2 ]; then
+        echo "  warning: ${names[i]} is missing and is not installed by this script"
+        notes+=("${names[i]} is missing: install it by hand.")
+        failed+=("${names[i]}")
+      else
+        echo "  failed: ${names[i]}"
+        failed+=("${names[i]}")
+      fi
+    fi
+  done
+fi
+
+# The repo's git hooks (.githooks/: commit-msg, the pre-push map check) are switched on by its own script.
+echo
+if [ -f "$portal/scripts/install-hooks.sh" ]; then
+  echo "Switching on wedding-portal's git hooks (scripts/install-hooks.sh)"
+  if ! (cd "$portal" && bash scripts/install-hooks.sh); then
+    echo "  failed: wedding-portal hooks"
+    failed+=("wedding-portal-hooks")
+  fi
+else
+  echo "Skipped wedding-portal hooks: $portal/scripts/install-hooks.sh not found."
+fi
+
+list() { if [ "$#" -eq 0 ]; then echo none; else echo "$*"; fi; }
+echo
+echo "Summary"
+echo "  Installed: $(list ${installed[@]+"${installed[@]}"})"
+echo "  Skipped: $(list ${skipped[@]+"${skipped[@]}"})"
+echo "  Failed: $(list ${failed[@]+"${failed[@]}"})"
+if [ "${#notes[@]}" -gt 0 ]; then
+  printf '  Note: %s\n' "${notes[@]}"
+fi
+
+cat <<'STEPS'
+
+Still to do by hand (they need you):
+  1. gh auth login          sign in to GitHub
+  2. claude                 start Claude Code once and log in, then exit
+  3. Docker Desktop         start it once so the daemon runs
+STEPS
+
+[ "${#failed[@]}" -eq 0 ]

@@ -1,0 +1,14 @@
+{
+  "_comment": "Owner-editable map from the Copilot CLI's tool-call events (as Archon's copilot provider logs them) to the Claude tool names the audit gates read. Fix this file after the first live run: `node .archon/scripts/copilot-audit.js --names <run-id>` lists the tool names the run log really holds.",
+  "event": { "type": "tool_call", "nameField": "name", "inputField": "rawInput" },
+  "tools": {
+    "skill": { "as": "Skill", "key": "skill", "from": ["skill", "name", "skill_name"] },
+    "view": { "as": "Read", "key": "file_path", "from": ["path", "file_path"] },
+    "create": { "as": "Write", "key": "file_path", "from": ["path", "file_path"] },
+    "edit": { "as": "Edit", "key": "file_path", "from": ["path", "file_path"] },
+    "str_replace_editor": { "as": "Edit", "key": "file_path", "from": ["path", "file_path"] },
+    "bash": { "as": "Bash", "key": "command", "from": ["command"] },
+    "grep": "Grep",
+    "glob": "Glob"
+  }
+}

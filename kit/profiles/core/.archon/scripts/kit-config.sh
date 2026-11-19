@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# kit-config.sh — SOURCED helper: read one key of .archon/kit.yaml (the project config the Copilot kit writes) with an
+# environment override and a default, so a checkout without the file behaves as it always did.
+#   . "$(dirname "$0")/kit-config.sh"
+#   kit_get contract.spec_path contract/dist/openapi.yaml        # env KIT_CONTRACT_SPEC_PATH, else kit.yaml, else the default
+#   kit_get build_workflow build-feature BUILD_WORKFLOW          # an explicit env name as the third argument
+# The file is $KIT_CONFIG, else <repo root>/.archon/kit.yaml (the repo root is git's top level, else $PWD). Reading needs
+# yq (mikefarah v4); with no yq, no file or no such key the default is printed. A null or empty value is "no key".
+kit_get() { # kit_get <dotted.key> <default> [ENV_NAME]
+  local key="$1" def="$2" env="${3:-}" v="" f root
+  [ -n "$env" ] || env="KIT_$(printf '%s' "$key" | tr 'a-z.' 'A-Z_')"
+  v="${!env:-}"
+  if [ -z "$v" ]; then
+    f="${KIT_CONFIG:-}"
+    if [ -z "$f" ]; then root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; f="$root/.archon/kit.yaml"; fi
+    if [ -f "$f" ] && command -v yq >/dev/null 2>&1; then
+      v="$(yq -r ".$key // \"\"" "$f" 2>/dev/null)" || v=""
+      [ "$v" != null ] || v=""
+    fi
+  fi
+  printf '%s' "${v:-$def}"
+}

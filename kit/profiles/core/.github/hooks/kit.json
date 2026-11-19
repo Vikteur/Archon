@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SessionStart '' .claude/hooks/scripts/audit-log.sh sessionStart",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SessionStart '' .archon/scripts/delegator-session.sh sessionStart",
+        "timeoutSec": 30
+      }
+    ],
+    "userPromptSubmitted": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh UserPromptSubmit '' .claude/hooks/scripts/audit-log.sh userPrompt",
+        "timeoutSec": 10
+      }
+    ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PreToolUse 'Write|Edit|MultiEdit|NotebookEdit|Bash' .claude/hooks/scripts/guard-generated.sh PreToolUse",
+        "timeoutSec": 60
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PreToolUse 'Write|Edit|MultiEdit|NotebookEdit|Bash' .claude/hooks/scripts/scope-guard.sh PreToolUse",
+        "timeoutSec": 60
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PreToolUse 'Read|Grep|Glob' .claude/hooks/scripts/scope-guard.sh PreToolUse",
+        "timeoutSec": 60
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PreToolUse 'Read|Grep|Glob' .claude/hooks/scripts/tool-advice.sh PreToolUse",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PreToolUse 'Bash' .claude/hooks/scripts/tool-advice.sh PreToolUse",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PostToolUse '' .claude/hooks/scripts/audit-log.sh postToolUse",
+        "timeoutSec": 10
+      }
+    ],
+    "postToolUseFailure": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PostToolUseFailure '' .claude/hooks/scripts/audit-log.sh postToolUseFailure",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStart": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SubagentStart '' .claude/hooks/scripts/audit-log.sh subagentStart",
+        "timeoutSec": 10
+      }
+    ],
+    "subagentStop": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SubagentStop '' .claude/hooks/scripts/audit-log.sh subagentStop",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SubagentStop '' .claude/hooks/scripts/arch-fitness.sh",
+        "timeoutSec": 600
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SubagentStop '' .claude/hooks/scripts/verify-claims.sh",
+        "timeoutSec": 60
+      }
+    ],
+    "sessionEnd": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SessionEnd '' .claude/hooks/scripts/audit-log.sh sessionEnd",
+        "timeoutSec": 10
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh SessionEnd '' .archon/scripts/delegator-session.sh sessionEnd",
+        "timeoutSec": 30
+      }
+    ],
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh Stop '' .archon/scripts/delegator-session.sh stop",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}

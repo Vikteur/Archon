@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "f=\"${COPILOT_PROJECT_DIR:-${CLAUDE_PROJECT_DIR:-.}}/.archon/copilot/hooks/run-guard.sh\"; if [ -f \"$f\" ]; then exec bash \"$f\"; else exit 0; fi",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

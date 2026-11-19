@@ -1,0 +1,104 @@
+{{!
+  Upsert use-case spec: Create and Update branches, each with a clean and an invalid path.
+  Ports and the aggregate are mocked; the save is verified in order and never happens on errors.
+  Target: <capability>-usecase/src/test/java/<package path>/usecase/CreateOrUpdate<Name>UseCaseTest.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   same as usecase-create-or-update.mustache (incl. basePackage), plus key (camelCase of Key), keyExample (Java literal)
+}}
+package {{package}}.usecase;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{basePackage}}.common.domain.validation.Creation;
+import {{basePackage}}.common.domain.validation.Notification;
+import {{package}}.domain.*;
+import {{package}}.repository.{{Name}}Repository;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CreateOrUpdate{{Name}}UseCaseTest {
+    private static final OrganisationId ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000001"));
+
+    @Mock
+    private {{Name}}Repository {{name}}Repository;
+    @Mock
+    private {{Name}}Factory {{name}}Factory;
+    @Mock
+    private {{Name}} {{name}};
+    @InjectMocks
+    private CreateOrUpdate{{Name}}UseCase useCase;
+
+    private final CreateOrUpdate{{Name}}Request request = CreateOrUpdate{{Name}}Request.builder()
+            .organisationId(ORGANISATION)
+            .{{key}}({{{keyExample}}})
+            .build();
+
+    @Nested
+    class Create {
+        @Test
+        void givenUnknown{{Key}}_whenExecute_thenCreateAndSave() {
+            when({{name}}Repository.findById(ORGANISATION, {{{keyExample}}})).thenReturn(Optional.empty());
+            when({{name}}Factory.create(request)).thenReturn(Creation.of({{name}}));
+
+            var notification = useCase.execute(request);
+
+            assertThat(notification.hasErrors()).isFalse();
+            var inOrder = inOrder({{name}}Repository, {{name}}Factory);
+            inOrder.verify({{name}}Repository).findById(ORGANISATION, {{{keyExample}}});
+            inOrder.verify({{name}}Factory).create(request);
+            inOrder.verify({{name}}Repository).save(ORGANISATION, {{name}});
+            inOrder.verifyNoMoreInteractions();
+        }
+
+        @Test
+        void givenInvalidRequest_whenExecute_thenReturnErrorsWithoutSaving() {
+            when({{name}}Repository.findById(ORGANISATION, {{{keyExample}}})).thenReturn(Optional.empty());
+            when({{name}}Factory.create(request)).thenReturn(Creation.empty(Notification.of("error")));
+
+            var notification = useCase.execute(request);
+
+            assertThat(notification.errorMessage()).isEqualTo("error");
+            verify({{name}}Repository, never()).save(any(), any());
+        }
+    }
+
+    @Nested
+    class Update {
+        @Test
+        void givenExisting{{Name}}_whenExecute_thenUpdateAndSave() {
+            when({{name}}Repository.findById(ORGANISATION, {{{keyExample}}})).thenReturn(Optional.of({{name}}));
+            when({{name}}.update(request)).thenReturn(Notification.empty());
+
+            var notification = useCase.execute(request);
+
+            assertThat(notification.hasErrors()).isFalse();
+            verify({{name}}Repository).save(ORGANISATION, {{name}});
+            verifyNoInteractions({{name}}Factory);
+        }
+
+        @Test
+        void givenInvalidUpdate_whenExecute_thenReturnErrorsWithoutSaving() {
+            when({{name}}Repository.findById(ORGANISATION, {{{keyExample}}})).thenReturn(Optional.of({{name}}));
+            when({{name}}.update(request)).thenReturn(Notification.of("error"));
+
+            var notification = useCase.execute(request);
+
+            assertThat(notification.errorMessage()).isEqualTo("error");
+            verify({{name}}Repository, never()).save(any(), any());
+            verifyNoInteractions({{name}}Factory);
+        }
+    }
+}

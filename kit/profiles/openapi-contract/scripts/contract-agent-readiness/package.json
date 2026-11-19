@@ -1,0 +1,8 @@
+{
+  "name": "contract-agent-readiness",
+  "private": true,
+  "description": "Pinned YAML parser for scripts/contract-agent-readiness.sh; installed with npm ci from the lockfile.",
+  "dependencies": {
+    "yaml": "2.9.1"
+  }
+}

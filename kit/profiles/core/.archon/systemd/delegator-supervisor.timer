@@ -1,0 +1,14 @@
+# Wakes the delegator supervisor every 3 minutes (the owner's "wekker", owner decision 2026-10-20, D15; ROADMAP R20).
+# A missed tick is not caught up (Persistent=false): the next one reads the state as it is then.
+# Install and switch: docs/archon/supervisor.md. Checked in, not installed.
+[Unit]
+Description=Run the delegator supervisor tick every 3 minutes
+
+[Timer]
+OnCalendar=*:0/3
+AccuracySec=10s
+Persistent=false
+Unit=delegator-supervisor.service
+
+[Install]
+WantedBy=timers.target
