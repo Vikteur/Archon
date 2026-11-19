@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "about": "The STOP policy as data (owner decisions 2026-10-20 D4, D8 and the STOP rule changes; docs/archon/stop-policy.md). Read from origin/main by stop-check.sh, stop-scan.js and stop-approve.sh. A protected path: only the owner changes it. Approvals are given in chat in the list round and recorded by stop-approve.sh record (owner decision 2026-11-19).",
-  "owner": "Viktor Van Steenweghen",
-  "timezone": "Europe/Brussels",
+  "owner": "@@KIT_OWNER@@",
+  "timezone": "@@KIT_TIMEZONE@@",
   "expiry": {
     "max_days": 7
   },
@@ -16,7 +16,7 @@
       "match": [
         "contract (push|change)",
         "push(es|ing)? (to )?the (hub|contract)",
-        "rekord-contract",
+        "@@KIT_CONTRACT_REPO@@",
         "\\bstop-contract-push\\b"
       ],
       "signals": [
@@ -224,8 +224,8 @@
   "protected_paths": [
     ".archon/stop/**",
     ".claude/CLAUDE.md",
-    ".claude/rules/**",
-    ".claude/agents/**",
+    ".github/instructions/**",
+    ".github/agents/**",
     ".claude/hooks/**",
     ".claude/settings*.json",
     ".claude/delegator.settings.json",

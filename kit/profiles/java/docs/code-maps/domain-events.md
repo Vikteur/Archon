@@ -10,13 +10,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- The aggregate records its events; the use case publishes them through a `DomainEventPublisher` port.
-- The adapter uses CDI `Event`; listeners use `@Observes`, and those that must only follow a commit use
-  `@Observes(during = TransactionPhase.AFTER_SUCCESS)`.
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

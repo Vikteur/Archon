@@ -15,7 +15,7 @@
 // mode each skip is also printed to stderr, one line each.
 // Candidates are the ready To Do tickets (`backlog task list -s "To Do" --ready --json`: every dependency done), highest
 // priority first, then by ordinal. A ticket is picked when its Groma component references (a reference that is a bare
-// element id such as `portal-backend`, not a path) share none with a ticket already picked or one In Progress (busy).
+// element id such as `orders-backend`, not a path) share none with a ticket already picked or one In Progress (busy).
 // An In Progress ticket that depends on a ticket waits for it (TASK-63): its components do not count as busy for that
 // one, and do for every other. The list leaves dependencies out, so they are read per In Progress ticket with
 // `backlog task view <id> --json`. An In Progress ticket labelled `parked` (park-ticket.sh) holds no component and its

@@ -14,22 +14,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- **Toolchain:** Java 26; Gradle Kotlin DSL; every version in `gradle/libs.versions.toml`.
-- **Modules:** one domain/usecase/adapter triad per context, plus `spotify-gateway`, `musicfolder-gateway`, `pdf-gateway`,
-  `application` and `logging`. The Quarkus plugin builds the app in `application` only (`shared-adapter` applies it for
-  `@QuarkusTest`, with `quarkusBuild` off); every usecase, adapter and gateway module ships a
-  `META-INF/beans.xml`, so Quarkus indexes it (`build-shape-check.sh` checks the file). An adapter or gateway module without a real bean has a `*ModuleProbe` that `ModuleBeanDiscoveryTest`
-  injects; the usecase modules have none until their first use case.
-- **Packages:** `app.rekord.<context>.{domain,usecase,repository,adapter.controller,adapter.repository}`; shared code in
-  `app.rekord.common.domain(.validation)` and `app.rekord.common.adapter.controller`. Ports (repository and gateway
-  alike) live in `app.rekord.<context>.repository`. A gateway is `app.rekord.<context>.gateway.<system>` under the
-  context whose port it implements; a generated client `app.rekord.<vendor>.gateway.client`.
-- **Ids** are typed UUID records, `record GadgetId(UUID value)`.
-- **Lombok** is allowed, the domain included.
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

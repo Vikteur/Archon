@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Update the token and cost reports and commit them on the docs home's main (P2: a script, not a model).
-#   commit-reports.sh <repo dir: wedding-portal's main checkout>
+#   commit-reports.sh <repo dir: the project's main checkout>
 # Runs tokenomics.js update --incremental for the repo (only what changed since the ledger's latest day; owner decision
 # 2026-10-23: a full rebuild took close-out minutes; run tokenomics.js update without it for one), then commits only docs/tokenomics and pushes. Anything else changed in the
 # repo is left alone. A push rejected because main moved on is rebased once and pushed again. Off main it does nothing:

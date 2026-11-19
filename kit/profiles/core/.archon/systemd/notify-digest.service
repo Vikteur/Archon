@@ -3,13 +3,13 @@
 # file is checked in; the owner installs it.
 [Unit]
 Description=Send the bundled owner pings (notify-owner.sh --flush)
-Documentation=file://%h/wedding-portal/docs/archon/notify.md
+Documentation=file://@@KIT_PROJECT_DIR@@/docs/archon/notify.md
 
 [Service]
 Type=oneshot
-WorkingDirectory=%h/wedding-portal
+WorkingDirectory=@@KIT_PROJECT_DIR@@
 # A unit does not get the login PATH: gh, jq, node and backlog live in these folders.
 Environment=PATH=%h/.local/bin:%h/.npm-global/bin:%h/.bun/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/usr/bin/env bash %h/wedding-portal/.archon/scripts/notify-owner.sh --flush
+ExecStart=/usr/bin/env bash @@KIT_PROJECT_DIR@@/.archon/scripts/notify-owner.sh --flush
 TimeoutStartSec=300
 Nice=10

@@ -6,7 +6,7 @@
 # Writes the ticket to $ARTIFACTS_DIR/ticket.md and prints one JSON line: {"task": "TASK-4.2", "stop": "stop-db-migration"}.
 # A request without a TASK id prints {"task": "", "stop": ""}. A TASK id that Backlog cannot find fails the node.
 #
-# The Backlog lives in the wedding-portal repo. It is read from the main checkout of the repo the run is in, never from
+# The Backlog lives in this repo. It is read from the main checkout of the repo the run is in, never from
 # the run's worktree (whose copy of backlog/ is the branch's, not the live one), else from a sibling of that main
 # checkout that has one. BACKLOG_CWD overrides.
 set -euo pipefail

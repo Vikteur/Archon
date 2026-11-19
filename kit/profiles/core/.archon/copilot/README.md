@@ -5,8 +5,8 @@ VS Code. The workflow is generated from `build-feature.yaml` by `.archon/scripts
 
 ## What Copilot reads (Copilot CLI 1.0.114, `copilot help config`)
 
-- Skills: `.github/skills`, `.github/skills`, `.agents/skills`, then `~/.copilot/skills`, `~/.agents/skills`. The repo's
-  `.github/skills` and `.agents/skills/archon-cli` load as they are; no copies.
+- Skills: `.github/skills`, `.claude/skills`, `.agents/skills`, then `~/.copilot/skills`, `~/.agents/skills`. The repo's
+  `.claude/skills` and `.agents/skills/archon-cli` load as they are; no copies.
 - Instructions: `AGENTS.md`, `CLAUDE.md`, `.claude/CLAUDE.md`, `.claude/rules/**`, `.github/copilot-instructions.md`.
   `.github/copilot-instructions.md` is the short Copilot-side note (Claude-only mechanics do not apply; how to drive a run).
 - Agents: `.github/agents` and `.claude/agents/`. Hooks: Claude Code event names in `.claude/settings.json` run on matching Copilot events;

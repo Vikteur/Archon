@@ -6,7 +6,7 @@
 # Usage: bash .claude/scripts/contract-pin.sh <contract-dir> [<properties-file>]   (properties default: gradle.properties)
 # The branch comes from CONTRACT_PIN_BRANCH, GITHUB_HEAD_REF, GITHUB_REF_NAME or git, in that order.
 # Prints "OK: ..." and exits 0, or prints a FAIL line and exits 1.
-# .archon/kit.yaml (optional, KIT_* env wins) sets contract.tag_key (default rekordContractTag), contract.repo (default
+# .archon/kit.yaml (optional, KIT_* env wins) sets contract.tag_key (default @@KIT_CONTRACT_TAG_KEY@@), contract.repo (default
 # @@KIT_CONTRACT_REPO@@, only named in messages) and contract.spec_path (default contract/dist/openapi.yaml; what follows its first
 # folder is the bundle checked for under <contract-dir>).
 set -uo pipefail
@@ -14,7 +14,7 @@ set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../.archon/scripts/kit-config.sh
 . "$here/../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { printf '%s' "$2"; }
-tag_key="$(kit_get contract.tag_key rekordContractTag)"
+tag_key="$(kit_get contract.tag_key @@KIT_CONTRACT_TAG_KEY@@)"
 repo_name="$(kit_get contract.repo @@KIT_CONTRACT_REPO@@)"; repo_name="${repo_name#*/}"
 spec_path="$(kit_get contract.spec_path contract/dist/openapi.yaml)"
 

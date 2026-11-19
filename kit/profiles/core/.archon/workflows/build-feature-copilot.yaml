@@ -41,7 +41,7 @@ nodes:
       # The run trace (skills, templates, scripts per node) in the ARTIFACTS tab; it follows the run and exits when it ends.
       node .archon/scripts/run-trace.js --start "$WORKFLOW_ID" "$ARTIFACTS_DIR" >/dev/null 2>&1 || true
       out=$(bash .archon/scripts/ticket.sh "$ARGUMENTS") || exit $?
-      # The portal-api and CodeGraph MCP servers need git-ignored things in this worktree (node_modules, the contract,
+      # The @@KIT_CONTRACT_SERVER_NAME@@ and CodeGraph MCP servers need git-ignored things in this worktree (node_modules, the contract,
       # the readiness report; the .codegraph/ index). mcp-setup.sh readies both and writes .archon/mcp/build-tools.json
       # with only the servers that are ready: the nodes below declare it as an optional `mcp:`, and a server in it
       # that cannot start would fail them (docs/mcp/plan.md, A3). A failure only costs the nodes those tools.
@@ -74,7 +74,7 @@ nodes:
       Backlog ticket: $ticket.output.task (full text in $ARTIFACTS_DIR/ticket.md when it is set).
       Read $ARTIFACTS_DIR/ticket.md and $ARTIFACTS_DIR/plan-context.md first; read a file only for what they do not say,
       and each file once.
-      If mcp__portal-api__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
+      If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
       readied them), use them before Read and Grep:
       - `where` (operationId, tag or status) for where an operation is built, whether it is a stub, and its tests;
       - `codegraph_explore` for how an area works; `codegraph_callers` and `codegraph_impact` for who calls a symbol and
@@ -84,7 +84,7 @@ nodes:
       Map the code this request touches; change nothing. Write $ARTIFACTS_DIR/explore.md once, at the end, at most 120
       lines:
       - the files and symbols involved, each with its layer (domain, usecase, adapter, gateway, platform; see
-        .claude/rules/ and docs/code-maps/clean-architecture.md) and one line on what it does;
+        .github/instructions/ and docs/code-maps/clean-architecture.md) and one line on what it does;
       - the existing tests that cover them, and the test command for each module;
       - every place that writes the state the request changes;
       - open questions the plan must answer.
@@ -115,7 +115,7 @@ nodes:
       every script's header and test) and $ARTIFACTS_DIR/explore.md (the code the request touches). Read a file only for
       what they do not say, and read each file once, a script too, with the Read tool: note what you need the first
       time.
-      If mcp__portal-api__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
+      If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
       readied them), use them before Read and Grep:
       - `usedBy` (a schema or schema.field) for every operation a contract or pin change reaches, request or response;
       - `schema` for a schema's fields; `where` for an operation's controller, stub status and tests;
@@ -170,8 +170,8 @@ nodes:
       until the step is built (tests first, always). Fold a docs-only change into the step it documents.
       A step that adds a port (a new Repository or Gateway interface, or a file under a usecase module's repository/
       package) delivers its adapter (or a stub) in the same step: the use case that injects it is a bean, so every
-      Quarkus test fails on the unsatisfied port until the adapter exists. plan-check fails a plan that names a
-      port's `Default<Name>` adapter only in a later step.
+      test that boots the app's DI container fails on the unsatisfied port until the adapter exists. plan-check
+      fails a plan that names a port's `Default<Name>` adapter only in a later step.
       Under every step, add two lines, one per agent, each with only the skills from that agent's column that fit
       what the step touches (the skill names, not the paths): `Test skills: <names>` for the test agent and
       `Build skills: <names>` for the build agent. A step touches several rows when it changes several things.
@@ -185,7 +185,7 @@ nodes:
         | repository, entity                | testcontainers                           | persistence-repository, jpa-entity-mapping                       |
         | database schema                   | testcontainers                           | flyway-migrations                                                |
         | gateway, remote call              |                                          | resilience4j, domain-dto-mapper                                  |
-        | CDI wiring, config, profiles      |                                          | bean-config-di                                                   |
+        | DI wiring, config, profiles       |                                          | bean-config-di                                                   |
         | generated code, codegen in build  |                                          | code-generation                                                  |
         | test against a real service       | testcontainers                           |                                                                  |
         | architecture rule                 | archunit-fitness                         |                                                                  |
@@ -334,7 +334,7 @@ nodes:
           prompt: |
             Request: $ARGUMENTS
             You are the test agent: you write tests, never production code.
-            If mcp__portal-api__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
+            If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
             readied them), use them before Read and Grep:
             - `schema` for the fields a mother, fixture or request body needs;
             - `where` for an operation's existing HTTP tests and unit tests, to extend them instead of writing a second one;
@@ -426,7 +426,7 @@ nodes:
             Request: $ARGUMENTS
             Read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its position among the
             plan's checkbox lines (the first checkbox is 1).
-            If mcp__portal-api__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
+            If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
             readied them), use them before Read and Grep:
             - `where` for the controller line and the generated interface method of an operation;
             - `schema` for the fields a mapper or DTO needs;
@@ -535,7 +535,7 @@ nodes:
     prompt: |
       Request: $ARGUMENTS
       Review all changes on this branch against $ARTIFACTS_DIR/plan.md, including that every behaviour has a test.
-      If mcp__portal-api__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
+      If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
       readied them), use them before Read and Grep:
       - `codegraph_impact` on each changed symbol, for a caller the branch missed;
       - `usedBy` on a changed schema field, for an operation the branch missed;
@@ -778,7 +778,7 @@ nodes:
           mcp: { path: .archon/mcp/build-tools.json, optional: true }
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Bash(*commit-tickets*)", "Bash(*backlog task*)", "Bash(*sync-main*)", "Bash(*git push*@@KIT_BASE_BRANCH@@*)", "Bash(*git push*HEAD:@@KIT_BASE_BRANCH@@*)", "Bash(cd @@KIT_PROJECT_DIR@@ &&*)", "Bash(cd @@KIT_PROJECT_DIR@@;*)", "Bash(git -C @@KIT_PROJECT_DIR@@ *)"]
           prompt: |
-            If mcp__portal-api__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
+            If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
             readied them), use them before Read and Grep:
             - `codegraph_callers` and `codegraph_callees` to walk from the failing test to its cause;
             - `codegraph_impact` to bound the suspects; `where` when the failing test is an HTTP test of an operation.
@@ -914,7 +914,7 @@ nodes:
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Bash(*commit-tickets*)", "Bash(*backlog task*)", "Bash(*sync-main*)", "Bash(*git push*@@KIT_BASE_BRANCH@@*)", "Bash(*git push*HEAD:@@KIT_BASE_BRANCH@@*)", "Bash(cd @@KIT_PROJECT_DIR@@ &&*)", "Bash(cd @@KIT_PROJECT_DIR@@;*)", "Bash(git -C @@KIT_PROJECT_DIR@@ *)"]
           prompt: |
             Request: $ARGUMENTS
-            You are the GitHub agent. Read .claude/agents/github-agent.md and follow it yourself, its allowlist included; this node has no subagents.
+            You are the GitHub agent. Read .github/agents/github-agent.agent.md and follow it yourself, its allowlist included; this node has no subagents.
             Pull request $open-pr.output.pr, head $gate.output.sha, base $BASE_BRANCH: $gate.output.state.
             $gate.output.detail
             - conflict: resolve it as its "Resolving merge conflicts" section says: rebase this branch onto

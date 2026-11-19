@@ -13,7 +13,7 @@
 #   INSTALL_TOOLS_OS          windows | macos | linux (default: from uname)
 #   LOCAL_PREFIX              Linux install prefix (default: ~/.local; binaries go to its bin/)
 #   JQ_VERSION, YQ_VERSION, GH_VERSION   Linux download versions (1.7.1, v4.54.1, 2.63.2)
-#   PORTAL_DIR                the checkout whose scripts/install-hooks.sh switches the git hooks on (default: this repo)
+#   PROJECT_DIR               the checkout whose scripts/install-hooks.sh switches the git hooks on (default: this repo)
 #   INSTALL_TOOLS_PATH_DIRS   directories put on PATH after a Windows install, colon-separated (default: the usual ones)
 # Plain bash 3.2 on purpose: a fresh Mac has no newer one. Exit 1 when an install failed (including one that left the
 # tool at a version that does not fit), when a package manager is missing, or when the OS is not supported.
@@ -21,7 +21,7 @@ set -o pipefail
 
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 conf=${TOOLS_CONF:-$here/tools.conf}
-portal=${PORTAL_DIR:-$(cd "$here/.." && pwd)}
+project=${PROJECT_DIR:-$(cd "$here/.." && pwd)}
 
 os=${INSTALL_TOOLS_OS:-}
 if [ -z "$os" ]; then
@@ -265,14 +265,14 @@ fi
 
 # The repo's git hooks (.githooks/: commit-msg, the pre-push map check) are switched on by its own script.
 echo
-if [ -f "$portal/scripts/install-hooks.sh" ]; then
-  echo "Switching on wedding-portal's git hooks (scripts/install-hooks.sh)"
-  if ! (cd "$portal" && bash scripts/install-hooks.sh); then
-    echo "  failed: wedding-portal hooks"
-    failed+=("wedding-portal-hooks")
+if [ -f "$project/scripts/install-hooks.sh" ]; then
+  echo "Switching on the project's git hooks (scripts/install-hooks.sh)"
+  if ! (cd "$project" && bash scripts/install-hooks.sh); then
+    echo "  failed: the project hooks"
+    failed+=("project-hooks")
   fi
 else
-  echo "Skipped wedding-portal hooks: $portal/scripts/install-hooks.sh not found."
+  echo "Skipped the project hooks: $project/scripts/install-hooks.sh not found."
 fi
 
 list() { if [ "$#" -eq 0 ]; then echo none; else echo "$*"; fi; }

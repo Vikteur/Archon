@@ -130,11 +130,11 @@ session_start() {
     while IFS= read -r r; do lines+=("  $r"); done <<< "$held"
   fi
   # delegator.md changed since the last delegator session: say so, the rules this session follows are new.
-  if [ -f .claude/agents/delegator.md ]; then
-    sha=$(git hash-object .claude/agents/delegator.md 2>/dev/null)
+  if [ -f .github/agents/delegator.agent.md ]; then
+    sha=$(git hash-object .github/agents/delegator.agent.md 2>/dev/null)
     old=$(cat "$state/delegator.md.sha" 2>/dev/null || true)
     if [ -n "$sha" ] && [ -n "$old" ] && [ "$sha" != "$old" ]; then
-      lines+=("delegator.md changed since the last delegator session (last commit: $(git log -1 --format='%h %s' -- .claude/agents/delegator.md 2>/dev/null)): follow the new text, not what an earlier session did.")
+      lines+=("delegator.md changed since the last delegator session (last commit: $(git log -1 --format='%h %s' -- .github/agents/delegator.agent.md 2>/dev/null)): follow the new text, not what an earlier session did.")
     fi
     [ -n "$sha" ] && echo "$sha" > "$state/delegator.md.sha"
   fi

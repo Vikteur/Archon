@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { trackTempRoots } from '@archon/paths/test-utils';
 import { renderBundledKit } from './generate-bundled-kit';
+import { depsCheck, installableSets, judgeDeps, KNOWN_GAPS } from './kit-sync-deps';
+import { genericThisRepo, renamePath } from './kit-sync-generic';
 import {
   applyGlobalRewrites,
   applyRewrites,
@@ -143,13 +145,18 @@ function fixture(): string {
   write(root, 'docs/scaffold-templates/a/resource.mustache', 'import jakarta.ws.rs.GET;\n');
   write(root, 'docs/scaffold-templates/a/entity.mustache', 'record {{name}}() {}\n');
   write(root, 'docs/code-maps/README.md', '# Code maps\n');
-  write(root, 'docs/code-maps/java.md', '---\nkind: worked-example\n---\nJava.\n');
+  write(
+    root,
+    'docs/code-maps/java.md',
+    '---\nkind: worked-example\n---\n## This repo (sample-app)\nOur modules.\n\n## Where this pattern lives\nJava.\n'
+  );
   write(root, 'docs/code-maps/flyway.md', '---\nkind: project\n---\nProject facts.\n');
   write(
     root,
     'docs/code-maps/exemplars/x.md',
     '---\nkind: worked-example\nserves: [java, resilience4j]\n---\nX.\n'
   );
+  write(root, 'scripts/portal-mcp/server.mjs', 'export {};\n');
   write(root, 'README.md', 'outside the scanned roots\n');
   git(root, 'add', '-A');
   git(root, 'commit', '-q', '-m', 'fixture');
@@ -333,6 +340,105 @@ describe('placeholders and rewrites', () => {
   });
 });
 
+describe('project nouns and Copilot paths', () => {
+  test('the contract server, its scripts and the pin key become generic', () => {
+    expect(
+      applyGlobalRewrites(
+        'mcp__portal-api__read portal-api scripts/portal-mcp/x portal-mcp: up portal-metrics rekordContractTag my-portal-api'
+      )
+    ).toBe(
+      'mcp__@@KIT_CONTRACT_SERVER_NAME@@__read @@KIT_CONTRACT_SERVER_NAME@@ scripts/contract-mcp/x contract-mcp: up run-metrics @@KIT_CONTRACT_TAG_KEY@@ my-portal-api'
+    );
+    expect(applyGlobalRewrites('WorkingDirectory=%h/wedding-portal')).toBe(
+      'WorkingDirectory=@@KIT_PROJECT_DIR@@'
+    );
+    expect(renamePath('scripts/portal-mcp/server.mjs')).toBe('scripts/contract-mcp/server.mjs');
+    expect(renamePath('.archon/workflows/portal-metrics.yaml')).toBe(
+      '.archon/workflows/run-metrics.yaml'
+    );
+    expect(renamePath('scripts/other.sh')).toBe('scripts/other.sh');
+  });
+
+  test('agent, rule and skill paths move to .github, except in the files that mean the Claude ones', () => {
+    const text =
+      'see .claude/agents/developer.md, .claude/agents/, .claude/rules/domain.md and .claude/skills/x';
+    expect(applyGlobalRewrites(text, 'a.md')).toBe(
+      'see .github/agents/developer.agent.md, .github/agents/, .github/instructions/domain.instructions.md and .github/skills/x'
+    );
+    expect(applyGlobalRewrites('.github/agents/developer.agent.md', 'a.md')).toBe(
+      '.github/agents/developer.agent.md'
+    );
+    expect(applyGlobalRewrites(text, '.claude/hooks/scripts/audit-log.sh')).toBe(text);
+  });
+
+  test("a listed leaf's This repo section ships as the stub; an unlisted one fails", () => {
+    const leaf = '# X\n## This repo (src)\nOur facts.\n\n## Where this pattern lives\nExample.\n';
+    const out = genericThisRepo('docs/code-maps/java.md', 'java', leaf);
+    expect(out).not.toContain('Our facts');
+    expect(out).toContain('## This repo\nFill in');
+    expect(out).toContain('## Where this pattern lives\nExample.');
+    expect(() => genericThisRepo('docs/code-maps/java.md', 'java', '# X\n')).toThrow(
+      /no "## This repo/
+    );
+    expect(() => genericThisRepo('docs/code-maps/new.md', 'core', leaf)).toThrow(
+      /THIS_REPO_LEAVES/
+    );
+    expect(genericThisRepo('docs/code-maps/new.md', 'java-quarkus', leaf)).toBe(leaf);
+  });
+});
+
+describe('dependency check', () => {
+  test('enumerates the installable sets', () => {
+    const sets = installableSets().map(s => s.join(','));
+    expect(sets).toHaveLength(8);
+    expect(sets).toContain('core');
+    expect(sets).toContain('core,java,java-spring,openapi-contract');
+    expect(sets.some(s => s.includes('java-quarkus') && s.includes('java-spring'))).toBe(false);
+    expect(sets.some(s => s.includes('java-quarkus') && !s.includes(',java,'))).toBe(false);
+  });
+
+  test('a set without a file a shipped script, leaf or agent needs is named', () => {
+    const files = [
+      { profile: 'core', path: '.claude/scripts/ci-local.sh', content: '' },
+      { profile: 'java-quarkus', path: '.github/workflows/ci.yml', content: '' },
+      {
+        profile: 'java',
+        path: 'docs/code-maps/x.md',
+        content: '| [t](../scaffold-templates/a/t.mustache) | `src/**` |\n',
+      },
+      { profile: 'java-quarkus', path: 'docs/scaffold-templates/a/t.mustache', content: '' },
+      {
+        profile: 'java',
+        path: '.github/agents/d.agent.md',
+        content: '    args: ["scripts/contract-mcp/server.mjs"]\n',
+      },
+      { profile: 'openapi-contract', path: 'scripts/contract-mcp/server.mjs', content: '' },
+    ];
+    const lines = depsCheck(files);
+    expect(lines).toContain(
+      'core,java: .claude/scripts/ci-local.sh needs .github/workflows/ci.yml (it reads it)'
+    );
+    expect(lines).toContain(
+      'core,java,java-spring: docs/code-maps/x.md needs docs/scaffold-templates/a/t.mustache (its ## Scaffold table (targets.js))'
+    );
+    expect(lines).toContain(
+      'core,java,java-quarkus: .github/agents/d.agent.md needs scripts/contract-mcp/server.mjs (its mcp-servers entry)'
+    );
+    expect(lines.some(l => l.startsWith('core: '))).toBe(false);
+    expect(lines.some(l => l.startsWith('core,java,java-quarkus,openapi-contract: '))).toBe(false);
+  });
+
+  test('a known gap is reported, an unknown one fails, an unused entry is named', () => {
+    const r = judgeDeps([
+      'core,java: .claude/scripts/ci-local.sh needs .github/workflows/ci.yml (it reads it)',
+      'core,java,java-quarkus: docs/code-maps/x.md needs docs/y (z)',
+    ]);
+    expect(r.known).toHaveLength(1);
+    expect(r.failures).toEqual(['core,java,java-quarkus: docs/code-maps/x.md needs docs/y (z)']);
+    expect(r.unused).toHaveLength(KNOWN_GAPS.length - 1);
+  });
+});
+
 describe('leak check', () => {
   test('fails on a home path, an owner account and a token; warns on project nouns', () => {
     const r = leakCheck([
@@ -342,8 +448,9 @@ describe('leak check', () => {
       { profile: 'java', path: 'd', content: 'the wedding portal' },
       { profile: 'java-quarkus', path: 'e', content: 'the wedding portal' },
       { profile: 'core', path: 'f', content: 'clean' },
+      { profile: 'core', path: 'g', content: '"owner": "Viktor Van Steenweghen"' },
     ]);
-    expect(r.failures.map(f => f.split(':')[0])).toEqual(['core/a', 'core/b', 'java/c']);
+    expect(r.failures.map(f => f.split(':')[0])).toEqual(['core/a', 'core/b', 'java/c', 'core/g']);
     expect(r.warnings).toEqual(['java/d (2)']);
   });
 });
@@ -439,6 +546,7 @@ describe('sync on a fixture repo', () => {
       'java-quarkus/docs/scaffold-templates/a/resource.mustache',
       'openapi-contract/.claude/scripts/contract-pin.sh',
       'openapi-contract/.github/mcp.json',
+      'openapi-contract/scripts/contract-mcp/server.mjs',
     ]);
     const byKey = new Map(manifest.files.map(f => [`${f.profile}/${f.path}`, f]));
     expect(byKey.get('java-quarkus/.github/skills/run-app/scripts/smoke.sh')?.mode).toBe('0755');
@@ -456,6 +564,14 @@ describe('sync on a fixture repo', () => {
     const skill = readFileSync(join(out, 'profiles/core/.github/skills/grill-pr/SKILL.md'), 'utf8');
     expect(skill).toContain(
       '.github/skills/grill-pr/references and .github/skills/run-app/SKILL.md'
+    );
+    const agent = readFileSync(
+      join(out, 'profiles/java/.github/agents/developer.agent.md'),
+      'utf8'
+    );
+    expect(agent).toContain('args: ["scripts/contract-mcp/server.mjs"]');
+    expect(readFileSync(join(out, 'profiles/java/docs/code-maps/java.md'), 'utf8')).toContain(
+      '## This repo\nFill in this project'
     );
     expect(verifyKit(out)).toEqual([]);
     write(out, 'kit.defaults.yaml', 'base_branch: main\n');

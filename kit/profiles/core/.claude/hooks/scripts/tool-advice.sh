@@ -10,7 +10,8 @@
 #   The contract-agent owns the spec and is never covered; nor is a main session outside a run worktree.
 # Two rules:
 #   contract   a Read, Grep or Glob of contract/**, or a Bash search (grep, sed, cat, ... as the first stage of a
-#              command) naming contract/, openapi.yaml or an operationId → "use mcp__portal-api__search / read".
+#              command) naming contract/, openapi.yaml or an operationId → "use mcp__<server>__search / read", the
+#              server being contract.server_name of .archon/kit.yaml (kit-config.sh; default @@KIT_CONTRACT_SERVER_NAME@@).
 #              TOOL_ADVICE_CONTRACT=report (default) adds the advice as context and lets the call run; =refuse denies
 #              it with the same words. D5: report for one week of runs, then refuse.
 #   symbol     a Grep whose pattern is one Java symbol (CamelCase, optionally .member, no spaces or regex) over Java
@@ -28,6 +29,8 @@ here="$(cd "$(dirname "$0")" && pwd)"
   hook_normalize_payload() { printf '%s' "$1"; }
   hook_deny_json() { jq -cn --arg r "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'; }
 }
+# kit_get from the project's kit-config.sh; without it, the default
+. "$here/../../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { printf '%s' "$2"; }
 agents=" analyst developer test-writer debugger "
 command -v jq >/dev/null 2>&1 || exit 0
 payload="$(hook_normalize_payload "$(cat)")"
@@ -42,14 +45,16 @@ root="${CLAUDE_PROJECT_DIR:-$PWD}"
 rel="${path#"$root"/}"; [ "$path" = "$root" ] && rel=""
 
 # A run worktree covers every session in it, and only for the servers that run has (build-tools.json).
-portal=1; codegraph=1
+server=""
+server_name() { [ -n "$server" ] || server="$(kit_get contract.server_name @@KIT_CONTRACT_SERVER_NAME@@)"; }
+contract=1; codegraph=1
 case "$agents" in
   *" $agent "*) ;;
   *)
     case "${cwd:-$root}/" in "${ARCHON_HOME:-$HOME/.archon}"/workspaces/*/*/worktrees/*/*) ;; *) exit 0 ;; esac
     tools="$root/.archon/mcp/build-tools.json"
-    portal=0; codegraph=0
-    jq -e 'has("portal-api")' "$tools" >/dev/null 2>&1 && portal=1
+    contract=0; codegraph=0; server_name
+    jq -e --arg s "$server" 'has($s)' "$tools" >/dev/null 2>&1 && contract=1
     jq -e 'has("codegraph")' "$tools" >/dev/null 2>&1 && codegraph=1 ;;
 esac
 
@@ -63,8 +68,9 @@ say() { # say <advice> [refuse]
 }
 
 contract_advice() { # contract_advice <what>
-  [ "$portal" -eq 1 ] || return 0
-  local msg="tool-advice: $1 of the contract by hand. mcp__portal-api__search finds an operation by its words and mcp__portal-api__read answers it in full with its verdict; mcp__portal-api__schema answers a schema. Read the contract file only for what they leave out (docs/mcp/plan.md, C4)."
+  [ "$contract" -eq 1 ] || return 0
+  server_name
+  local msg="tool-advice: $1 of the contract by hand. mcp__${server}__search finds an operation by its words and mcp__${server}__read answers it in full with its verdict; mcp__${server}__schema answers a schema. Read the contract file only for what they leave out (docs/mcp/plan.md, C4)."
   if [ "${TOOL_ADVICE_CONTRACT:-report}" = refuse ]; then say "BLOCKED: $msg" refuse; fi
   say "$msg"
 }

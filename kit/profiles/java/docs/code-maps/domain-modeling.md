@@ -10,16 +10,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- **Ids** are typed UUID records (`record GadgetId(UUID value)`); aggregates refer to each other by id only.
-- **No tenancy field** on an aggregate: the organisation is a repository-port parameter ([usecase-orchestration]).
-- Final fields; state changes through named methods (state machines); enums are mapped to contract values in the web
-  mappers, not in the domain.
-- Derived ids are pure functions with characterization tests. The domain never reads the clock or makes randomness.
-- Factories return `Creation<T>` ([validation-notification-result]). Lombok is allowed.
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

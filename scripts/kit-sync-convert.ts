@@ -331,7 +331,7 @@ export function mcpJson(withContract: boolean): string {
     servers[CONTRACT_SERVER] = {
       type: 'local',
       command: 'node',
-      args: ['scripts/portal-mcp/server.mjs'],
+      args: ['scripts/contract-mcp/server.mjs'],
       tools: ['*'],
     };
   return `${JSON.stringify({ mcpServers: servers }, null, 2)}\n`;

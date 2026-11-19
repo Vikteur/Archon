@@ -17,6 +17,8 @@
 #      marker and no condition on the commit message;
 #   N7 the job set equals the last "CI job set" recorded in <memory-file>, so the job set changes only together with a
 #      decision entry there (append a new bullet that names the new set; the last one counts).
+# The rules hold on either stack (kit key `stack`): nothing here reads it. The contract repo is kit key contract.repo
+# (default @@KIT_CONTRACT_REPO@@); its checkout step is named "Check out <repo name>", or kit key contract.checkout_step.
 # Usage: bash .claude/scripts/ci-workflow-check.sh [<workflow-dir>] [<build-file>] [<memory-file>]
 # Prints every FAIL line and exits 1, or prints "ci-workflow: ok" and exits 0. Needs yq (mikefarah v4).
 set -uo pipefail
@@ -25,7 +27,12 @@ dir="${1:-.github/workflows}"
 build_file="${2:-build.gradle.kts}"
 memory_file="${3:-docs/memory.md}"
 gradle_line="./gradlew test integrationTest build"
-checkout_name="Check out rekord-contract"
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../.archon/scripts/kit-config.sh
+. "$here/../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { local e="${3:-}"; printf '%s' "${!e:-$2}"; }
+contract_repo="$(kit_get contract.repo @@KIT_CONTRACT_REPO@@ KIT_CONTRACT_REPO)"
+contract_name="${contract_repo#*/}"
+checkout_name="$(kit_get contract.checkout_step "Check out $contract_name" KIT_CONTRACT_CHECKOUT_STEP)"
 readonly_run="bash .claude/scripts/contract-read-only-check.sh contract"
 token_expr='${{ secrets.CONTRACT_TOKEN }}'
 fail=0
@@ -83,18 +90,18 @@ for f in "${files[@]}"; do
     bad "$f: secrets are named one by one, never as a whole"
   fi
 
-  # Every rekord-contract checkout, in any job of any workflow, uses the CI secret; the secret appears nowhere else.
+  # Every contract checkout, in any job of any workflow, uses the CI secret; the secret appears nowhere else.
   good_checkouts=0
   while IFS= read -r t; do
     [ -n "$t" ] || continue
     if [ "$t" = "$token_expr" ]; then
       good_checkouts=$((good_checkouts + 1))
     else
-      bad "$f: the rekord-contract checkout must use token $token_expr and nothing else"
+      bad "$f: the $contract_name checkout must use token $token_expr and nothing else"
     fi
-  done < <(q '.. | select(tag == "!!map" and has("uses")) | select(.uses | test("^actions/checkout@")) | select(.with.repository == "@@KIT_CONTRACT_REPO@@") | (.with.token | tostring)' "$f")
+  done < <(q '.. | select(tag == "!!map" and has("uses")) | select(.uses | test("^actions/checkout@")) | select(.with.repository == "'"$contract_repo"'") | (.with.token | tostring)' "$f")
   [ "$(grep -o 'CONTRACT_TOKEN' "$f" | wc -l | tr -d ' ')" -eq "$good_checkouts" ] \
-    || bad "$f: CONTRACT_TOKEN may appear only as the token of the rekord-contract checkout"
+    || bad "$f: CONTRACT_TOKEN may appear only as the token of the $contract_name checkout"
 
   if q '.jobs[].steps[].run' "$f" | grep -qF "$gradle_line"; then
     gradle_files+=("$f")
@@ -184,18 +191,18 @@ label() { [ "${names[$1]}" != "null" ] && echo "${names[$1]}" || echo "${uses[$1
 checkout=""
 for i in "${!uses[@]}"; do
   case "${uses[$i]}" in actions/checkout@*) ;; *) continue ;; esac
-  [ "${repos[$i]}" = "@@KIT_CONTRACT_REPO@@" ] || continue
+  [ "${repos[$i]}" = "$contract_repo" ] || continue
   [ -n "$checkout" ] || checkout="$i"
 done
 
 if [ -z "$checkout" ]; then
-  bad "$ci: job $job has no step that checks out @@KIT_CONTRACT_REPO@@"
+  bad "$ci: job $job has no step that checks out $contract_repo"
 else
-  [ "${names[$checkout]}" = "$checkout_name" ] || bad "$ci: the rekord-contract checkout step must be named \"$checkout_name\""
-  [ "${persists[$checkout]}" != "false" ] || bad "$ci: the rekord-contract checkout must keep its credentials for the read-only check"
-  [ "${paths[$checkout]}" = "contract" ] || bad "$ci: the rekord-contract checkout must go to path contract"
+  [ "${names[$checkout]}" = "$checkout_name" ] || bad "$ci: the $contract_name checkout step must be named \"$checkout_name\""
+  [ "${persists[$checkout]}" != "false" ] || bad "$ci: the $contract_name checkout must keep its credentials for the read-only check"
+  [ "${paths[$checkout]}" = "contract" ] || bad "$ci: the $contract_name checkout must go to path contract"
   readonly_at=$((checkout + 1))
-  [ "${runs[$readonly_at]:-}" = "$readonly_run" ] || bad "$ci: the step after the rekord-contract checkout must run $readonly_run"
+  [ "${runs[$readonly_at]:-}" = "$readonly_run" ] || bad "$ci: the step after the $contract_name checkout must run $readonly_run"
   # Both steps run on every event: an if could skip the checkout or the read-only proof.
   for i in "$checkout" "$readonly_at"; do
     [ -n "${names[$i]:-}" ] || continue
@@ -234,13 +241,13 @@ for j in $(q '.jobs | keys | .[]' "$ci"); do
   done < <(q ".jobs[\"$j\"].steps | to_entries | .[] | [.key, (.value.with.repository | tostring), (.value.run | tostring | sub(\"\\n.*\"; \"\"))] | @tsv" "$ci")
   jco=""
   for i in "${!jrepos[@]}"; do
-    [ "${jrepos[$i]}" = "@@KIT_CONTRACT_REPO@@" ] && { jco="$i"; break; }
+    [ "${jrepos[$i]}" = "$contract_repo" ] && { jco="$i"; break; }
   done
   if [ -z "$jco" ]; then
     bad "$ci: job $j generates code or starts the application but does not check out @@KIT_CONTRACT_REPO@@"
   else
     [ "${jruns[$((jco + 1))]:-}" = "$readonly_run" ] \
-      || bad "$ci: job $j: the step after the rekord-contract checkout must run $readonly_run"
+      || bad "$ci: job $j: the step after the $contract_name checkout must run $readonly_run"
     [ "${jruns[$((jco + 2))]:-}" = "$pin_run" ] \
       || bad "$ci: job $j: the step after the read-only check must run $pin_run"
   fi

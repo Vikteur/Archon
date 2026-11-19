@@ -2,6 +2,8 @@
  * kit-sync's copy lists, rewrites and leak patterns (kit/SPEC.md): which source file goes to which profile, and what
  * kit-sync changes in it. scripts/kit-sync.ts runs them.
  */
+import { mergeRewrites, NOUN_REWRITES, NOUN_TARGETED } from './kit-sync-generic';
+
 export const PROFILES = [
   'core',
   'java',
@@ -55,8 +57,12 @@ export const EXCLUSIVE: Profile[][] = [['java-quarkus', 'java-spring']];
 export const POST_INSTALL: { profile: Profile; run: string; optional: boolean }[] = [
   { profile: 'core', run: 'bash scripts/install-hooks.sh', optional: true },
   { profile: 'core', run: 'bash .archon/scripts/codegraph-setup.sh', optional: true },
-  { profile: 'openapi-contract', run: 'npm ci --prefix scripts/portal-mcp', optional: false },
-  { profile: 'openapi-contract', run: 'bash .archon/scripts/portal-mcp-setup.sh', optional: true },
+  { profile: 'openapi-contract', run: 'npm ci --prefix scripts/contract-mcp', optional: false },
+  {
+    profile: 'openapi-contract',
+    run: 'bash .archon/scripts/contract-mcp-setup.sh',
+    optional: true,
+  },
   { profile: 'core', run: 'bash .archon/scripts/mcp-setup.sh', optional: true },
 ];
 
@@ -258,7 +264,7 @@ export const DELEGATOR_NIGHT_STEP: Rewrite = [
   1,
 ];
 
-export const TARGETED: Record<string, Rewrite[]> = {
+const BASE_TARGETED: Record<string, Rewrite[]> = {
   '.claude/agents/delegator.md': [DELEGATOR_NIGHT_STEP],
   '.archon/copilot/README.md': [['in the Vikteur/Archon fork', 'in the Archon fork', 1]],
   '.archon/config.yaml': [['  baseBranch: main\n', '  baseBranch: @@KIT_BASE_BRANCH@@\n', 1]],
@@ -349,13 +355,19 @@ export const TARGETED: Record<string, Rewrite[]> = {
   ],
 };
 
-/** Applied to every shipped text file after conversion, except the verbatim `.agents/skills/archon-cli/**`. */
+/** Exact rewrites per source file (the lists above plus kit-sync-generic.ts's NOUN_TARGETED). */
+export const TARGETED: Record<string, Rewrite[]> = mergeRewrites(BASE_TARGETED, NOUN_TARGETED);
+
+/**
+ * Applied to every shipped text file after conversion, except the verbatim `.agents/skills/archon-cli/**`; then
+ * kit-sync-generic.ts's PATH_REWRITES, except in its PATH_SKIP files.
+ */
 export const GLOBAL_REWRITES: [RegExp, string][] = [
   [/\/home\/viktor\/wedding-portal(?![\w-])/g, '@@KIT_PROJECT_DIR@@'],
   [/\.claude([/\\])skills\1run-wedding-portal/g, '.github$1skills$1run-app'],
   [/(?<![\w-])run-wedding-portal(?![\w-])/g, 'run-app'],
-  [/\.claude([/\\])skills(?![\w-])/g, '.github$1skills'],
   [/Vikteur\/rekord-contract/g, '@@KIT_CONTRACT_REPO@@'],
+  ...NOUN_REWRITES,
 ];
 
 /** The source's main checkout: `archon kit add` renders @@KIT_PROJECT_DIR@@ as the project's absolute path. */
@@ -370,6 +382,7 @@ export const SOURCE_CONTRACT_SERVER = /(?<![\w-])portal-api(?![\w-])/g;
 const LEAK_FAIL: [string, RegExp][] = [
   ['home path', /\/home\/viktor\b/],
   ['owner account', /\b(Vikteur|ViktorVS1|viktor-vansteenweghen)/],
+  ['owner name', /\bViktor\s+Van\s+Steenweghen\b/i],
   ['GitHub token', /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}/],
   ['AWS key', /\bAKIA[0-9A-Z]{16}\b/],
   ['private key', /-----BEGIN [A-Z ]*PRIVATE KEY-----/],

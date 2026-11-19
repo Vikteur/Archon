@@ -36,6 +36,8 @@ import {
   parseYaml,
   splitFrontmatter,
 } from './kit-sync-convert';
+import { depsCheck, judgeDeps } from './kit-sync-deps';
+import { genericThisRepo, PATH_REWRITES, PATH_SKIP, renamePath } from './kit-sync-generic';
 import {
   AGENT_PROFILES,
   EXCLUDE,
@@ -259,9 +261,11 @@ export function applyRewrites(path: string, text: string, rules: Rewrite[]): str
   return out;
 }
 
-export function applyGlobalRewrites(text: string): string {
+/** `path` is the source path: a PATH_SKIP file keeps its Claude Code path references. */
+export function applyGlobalRewrites(text: string, path = ''): string {
   let out = text;
   for (const [re, to] of GLOBAL_REWRITES) out = out.replace(re, to);
+  if (!PATH_SKIP.includes(path)) for (const [re, to] of PATH_REWRITES) out = out.replace(re, to);
   return out;
 }
 
@@ -272,7 +276,7 @@ function targetPath(path: string, convert: 'agent' | 'skill' | 'rule' | 'copy'):
     const [, , skill, ...rest] = path.split('/');
     return ['.github/skills', SKILL_RENAMES[skill ?? ''] ?? skill, ...rest].join('/');
   }
-  return path;
+  return renamePath(path);
 }
 
 function copilotWorkflowFromScript(src: Source): string {
@@ -327,6 +331,8 @@ function convertText(
   rewrites: Rewrite[]
 ): string {
   let text = applyRewrites(f.path, raw, rewrites);
+  if (/^docs\/code-maps\/[^/]+\.md$/.test(f.path))
+    text = genericThisRepo(f.path, convert.profile, text);
   if (convert.convert === 'agent') text = convertAgent(text, f.path);
   else if (convert.convert === 'rule')
     text = convertRule(basename(f.path, '.md'), text, KIT_MODULES);
@@ -334,7 +340,7 @@ function convertText(
     text = convertSkillMd(text, f.path);
   if (f.path.startsWith('.agents/skills/archon-cli/'))
     return text.replace(PROJECT_DIR, '@@KIT_PROJECT_DIR@@');
-  return applyGlobalRewrites(text);
+  return applyGlobalRewrites(text, f.path);
 }
 
 /** Every tracked source file that is not excluded, converted and rewritten. */
@@ -365,7 +371,7 @@ function copilotWorkflow(src: Source, rewrites: Record<string, Rewrite[]>): KitF
     copilotWorkflowFromScript(src),
     rewrites[COPILOT_WORKFLOW] ?? []
   );
-  const content = applyGlobalRewrites(text);
+  const content = applyGlobalRewrites(text, COPILOT_WORKFLOW);
   return [
     kitFile({
       path: COPILOT_WORKFLOW,
@@ -609,6 +615,7 @@ export function verifyKit(out: string): string[] {
     if (!listed.has(p)) problems.push(`extra: profiles/${p}`);
   problems.push(...verifyOverlays(out));
   for (const f of leakCheck(files).failures) problems.push(`leak: ${f}`);
+  for (const d of judgeDeps(depsCheck(files)).failures) problems.push(`deps: ${d}`);
   return problems;
 }
 
@@ -696,6 +703,11 @@ function runSync(args: CliArgs): number {
     console.error(`warning: ${d} has uncommitted changes; the kit reads the source's HEAD`);
   for (const w of r.kit.warnings) console.log(`WARN project noun: ${w}`);
   for (const f of r.kit.failures) console.error(`FAIL leak: ${f}`);
+  const deps = judgeDeps(depsCheck(r.kit.files));
+  for (const d of deps.known) console.log(`WARN deps: ${d}`);
+  for (const u of deps.unused)
+    console.log(`WARN deps: KNOWN_GAPS entry ${u} matches no gap; remove it`);
+  for (const d of deps.failures) console.error(`FAIL deps: ${d}`);
   if (r.kit.failures.length) return 1;
   for (const s of r.stale) console.error(`stale overlay: ${s}`);
   const counts = PROFILES.map(p => `${p} ${r.kit.files.filter(f => f.profile === p).length}`).join(

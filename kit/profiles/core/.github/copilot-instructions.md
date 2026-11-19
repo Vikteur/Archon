@@ -1,11 +1,11 @@
 # GitHub Copilot CLI: instructions for this repo
 
 `AGENTS.md` and `.claude/CLAUDE.md` bind you exactly as they bind Claude: the constitution (P1-P8), the STOP list and
-"how work moves". Read them; nothing here overrides them. `.claude/rules/` applies to the files you edit.
+"how work moves". Read them; nothing here overrides them. `.github/instructions/` applies to the files you edit.
 
-You read `.github/skills`, `.claude/agents`, `.claude/rules` and the hooks in `.claude/settings.json` and
+You read `.github/skills`, `.github/agents`, `.github/instructions` and the hooks in `.claude/settings.json` and
 `.github/hooks/*.json` like any Copilot CLI session. Claude-only mechanics do not exist for you: the Agent tool (do a
-subagent's job yourself, following its file in `.claude/agents/`, or run it as `--agent <name>`) and the delegator.
+subagent's job yourself, following its file in `.github/agents/`, or run it as `--agent <name>`) and the delegator.
 The rules they enforce still hold; the gates (`commit-msg` hook, local CI by commit SHA, `tdd-check`) and the run guard
 (`.archon/copilot/hooks/run-guard.sh`) are what catch you.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Checks the Groma architecture map under groma/ (TASK-36): set up for the Java scanner, curated rather than a first
 # scan, every element described, in sync with the source (a fresh scan changes nothing), and loaded into agent sessions
-# beside this repo's own Backlog.md tickets. (The browser view, with the backlog attached, is weddingapp's
+# beside this repo's own Backlog.md tickets. (The browser view, with the backlog attached, is
 # scripts/web-uis.sh.)
 # Needs the groma CLI (npm install -g groma.md) and a clean groma/ in the work tree, because it rescans. GROMA names
 # the CLI (default: groma). Whatever the scan leaves in groma/ is undone when the script ends, however it ends.

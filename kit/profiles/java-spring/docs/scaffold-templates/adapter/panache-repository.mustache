@@ -1,0 +1,37 @@
+{{!
+  Package-private Spring Data JPA repository (Spring Data's repository interface, never injected past the adapter);
+  only the Default<Name>Repository adapter uses it. Every lookup is scoped by the row's organisation_id;
+  needs org.springframework.boot:spring-boot-starter-data-jpa. The file keeps the template's old name, so the code
+  maps' Scaffold tables still find it; it renders <Name>JpaRepository.
+  naturalKey (optional, as in jpa-entity): makes its type the @Id type instead of Long
+  (JpaRepository<Entity, Id>). With naturalKey only (default-repository-crud), leave Key out:
+  default-repository-crud scopes the inherited findById by organisation itself.
+  Key: a derived query, so Key must be the PascalCase of the entity field key (Spring Data parses the method name).
+  Target: <capability>-adapter/src/main/java/<package path>/adapter/repository/<Name>JpaRepository.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, Name, Key (optional, PascalCase lookup field), key (entity field name),
+          keyType (entity field type), naturalKey (optional: type, typedId (optional, set for a typed id: type is UUID))
+}}
+package {{package}}.adapter.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+{{#Key}}
+
+import java.util.Optional;
+import java.util.UUID;
+{{/Key}}
+{{^Key}}
+{{#naturalKey.typedId}}
+
+import java.util.UUID;
+{{/naturalKey.typedId}}
+{{/Key}}
+
+interface {{Name}}JpaRepository extends JpaRepository<{{Name}}Entity, {{^naturalKey}}Long{{/naturalKey}}{{#naturalKey}}{{{type}}}{{/naturalKey}}> {
+{{#Key}}
+
+    Optional<{{Name}}Entity> findByOrganisationIdAnd{{Key}}(UUID organisationId, {{{keyType}}} {{key}});
+{{/Key}}
+}

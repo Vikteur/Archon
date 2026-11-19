@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Starts the two browser views of the work in the background and prints their URLs: the Backlog.md board of
-# wedding-portal (`backlog browser`) and the Groma architecture map of wedding-portal (`groma web`) with that backlog
+# this project (`backlog browser`) and the Groma architecture map of this project (`groma web`) with that backlog
 # attached (BACKLOG_CWD), so the open tickets show on the map. A view already running is reused; `stop` ends both.
 # Both read this repo's main checkout, not a worktree, so the board shows what is on main.
 #   web-uis.sh [start|status|stop]
 # Overrides: MAP_DIR (default: this repo's main checkout), HUB_DIR (the checkout that holds
 # backlog/; default: MAP_DIR), BACKLOG_PORT (6420), GROMA_PORT (6421), STATE_DIR (pid and log files; default:
 # $TMPDIR/web-uis).
-# The map is skipped, with the reason, while wedding-portal has no groma/ folder (no map built yet).
+# The map is skipped, with the reason, while this project has no groma/ folder (no map built yet).
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

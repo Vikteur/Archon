@@ -10,24 +10,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- **Every use case returns a `Notification`**, also for not found and forbidden. Each error carries an `ErrorCode`
-  enum value: the 44 codes of rekord-contract v6.1.3, nothing else. An error without a code counts as 422
-  `VALIDATION_FAILED`.
-- **`Creation<T>`** is the factory result: `Creation.of(value, notification)`, `Creation.of(value)` and
-  `Creation.empty(notification)`.
-- **Validators** in `app.rekord.common.domain.validation`: `ObjectValidator` and `StringValidator` append
-  `"<field> is required"` to the notification.
-- **`addViolation(property, message)`** declares the request property a rule broke. The error string is the path, a
-  space and the message (`displayName is reserved`, `lines[2].name is a duplicate`); the path is lower camel case with
-  list indexes, anything else is an `IllegalArgumentException`. A rule that checks no single property keeps calling
-  `addError(message)`: the message stands alone. A use case that refuses on rules evaluates every rule, then throws
-  `ValidationFailedException` (a `RejectedException`) once, with the errors in rule order.
-- Shared domain code lives in `app.rekord.common.domain(.validation)`; the HTTP side of a notification is
-  [exception-to-http].
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

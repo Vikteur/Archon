@@ -10,22 +10,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- **Shape:** `@ApplicationScoped`, one constructor; `@Transactional` on write methods only. A use case built by a
-  producer method loses the interceptor, so use cases are managed beans (`UseCaseTransactionBoundaryTest` in `application`, tag `resource-test`, and rule A15; the PostgreSQL
-  row-level rollback, PIN-AC-0452, is P0-E04-T02 and has no test yet).
-- **Returns a `Notification`** always, also for not found and forbidden ([validation-notification-result]).
-  A use case that refuses on its own rules evaluates every rule into one Notification and throws
-  `ValidationFailedException` once after the last rule; `ProbeRulesUseCase` in `shared-usecase/src/test` is the exemplar.
-- **Repository ports:** every method takes `OrganisationId` as its first parameter; the aggregate has no tenancy
-  field. Create and CreateOrUpdate requests carry `organisationId` as their first field.
-- **No configuration reads.** Time, ids and tokens come from the `Clock`, `IdGenerator` and `TokenGenerator` ports;
-  their implementations live beside each other in `application`.
-- **The domain `Factory` producer** is `<package>.config.<Name>DomainConfig` (template
-  `usecase/domain-config.mustache`).
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

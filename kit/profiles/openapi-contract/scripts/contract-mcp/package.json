@@ -1,5 +1,5 @@
 {
-  "name": "portal-mcp",
+  "name": "contract-mcp",
   "private": true,
   "type": "module",
   "description": "A local MCP server over the pinned portal API contract: search and read its operations. It never calls the backend.",

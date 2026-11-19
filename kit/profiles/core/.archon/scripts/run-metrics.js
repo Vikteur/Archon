@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Records this project's past Archon runs as metric records, so the console's Metrics tab has data.
-// Usage: node .archon/scripts/run-metrics.js   (the `record` node of the `portal-metrics` workflow)
+// Usage: node .archon/scripts/run-metrics.js   (the `record` node of the `run-metrics` workflow)
 //
 // Prints one JSON document, `{ metrics, skipped }`, on stdout; the engine stores `metrics` as the node's records and
 // aggregates them by name, window and subject (see the Archon metrics guide). Nothing is written anywhere else.
@@ -23,7 +23,7 @@ const { execFileSync } = require('child_process');
 /** The engine accepts at most this many run ids on one record. */
 const MAX_RUNS = 20;
 /** This workflow's own runs are bookkeeping, not project work. */
-const SELF = 'portal-metrics';
+const SELF = 'run-metrics';
 const LIST_LIMIT = 100000;
 
 const fail = (msg) => { console.error(`run-metrics: ${msg}`); process.exit(1); };

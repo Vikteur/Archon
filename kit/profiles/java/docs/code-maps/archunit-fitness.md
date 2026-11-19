@@ -13,48 +13,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- **Rules carried over** (numbers as in history, git bb1988a): A1 domain depends on the JDK only (Lombok allowed);
-  A8 no `Instant`/`LocalDate`/`LocalDateTime`/`OffsetDateTime.now()`, `System.currentTimeMillis()`,
-  `UUID.randomUUID()`, `new Random()`, `new SecureRandom()`, `Math.random()`, `Clock.systemUTC()` or `Clock.systemDefaultZone()` outside `app.rekord.application.config`,
-  where the clock, id and token providers live (only these eleven calls: another time or random source is not caught); A9 no `@Inject` field (jakarta or javax); A10 no cycles between contexts; A12 configuration types
-  (`org.eclipse.microprofile.config..`, `io.smallrye.config..`, `@ConfigProperty`, `@ConfigMapping`) only in
-  `application` and gateways.
-- **The usecase layer** may use `@Transactional` and `@ApplicationScoped`, nothing else from a framework.
-- **A13, adapted:** errors travel as a `Notification` ([exception-to-http]), so the old exception-family rule shrinks to
-  two: a domain or usecase `Throwable` extends `RekordException` (`app.rekord.common.domain.error.RekordException`,
-  named by class name, empty allowed), and only the helper package throws a `WebApplicationException`.
-- **In force today:** `application/src/test/java/app/rekord/application/architecture/AdapterPackageConventionTest.java`
-  (ArchUnit 1.5.1, `libs.archunit.junit5`), one `@ArchTest` field per rule with `.because(...)`: no class in
-  `app.rekord.adapter..`; `@Path` classes and `*Controller`s in `app.rekord.*.adapter.controller`; `@Entity` classes and
-  `*Repository` implementations in `app.rekord.*.adapter.repository`; no controller → repository dependency; no
-  context adapter → another context's adapter (only `app.rekord.common.adapter..` is shared). It runs in the fast
-  `test` set.
-- **The A1-A15 suite (TASK-3.1, A15 TASK-3.2)**, all in that package, one `static final ArchRule A<n>` per rule plus a
-  `FreezingArchRule.freeze(...)` `@ArchTest` twin that runs against every main class:
-  - `FrozenBaselineTest`: the empty store (`archunit.properties`); a new violation fails the build, the store refuses
-    every addition and a refreeze;
-  - `DomainConventionTest` A1; `LayerDirectionConventionTest` A2, A10; `UsecaseConventionTest` A3 (CT-11) and A15: no CDI `@Produces` method returns a type in
-    `app.rekord.*.usecase..` or `app.rekord.*.repository..` (PIN-AC-0448), and the rule allows an empty set;
-  - `AdapterBoundaryConventionTest` A4-A6 and A16 (A6 now names the persistence packages only; A16: only the common controller helper reads `io.quarkus.hibernate.validator..`); `CrossCuttingConventionTest` A7-A9, A12, A13;
-  - `ResourceConventionTest` A11: a resource (an adapter class named `*Resource`/`*Controller`, annotated `@Path`, or
-    implementing a `@Path` interface) implements a generated `app.rekord.api.*Api`, and no adapter class or interface
-    carries a `@Path` of its own;
-  - `StatusHelperConventionTest` A14: only `app.rekord.common.adapter.controller` sets a response status, through
-    `jakarta.ws.rs.core.Response` or RESTEasy Reactive's `RestResponse` (status factories such as `created`,
-    `notAcceptable`, `seeOther`, their builders' `status`/`create`), `@ResponseStatus`, `ContainerResponseContext.setStatus`/`setStatusInfo`
-    or Vert.x `setStatusCode` (which code it sets is the helper's concern, not the rule's);
-  - `ModulePackageConventionTest`: every class sits in its module's layer packages (`-domain`, `-usecase` with its
-    `config`, `-adapter`, `-gateway`, `application`, `logging`), so the package rules A1, A3 and A11 see every class of
-    a module; a module it cannot tell, or of an unknown kind, is a violation;
-  - `Layers.java` holds the package patterns; `SuiteCoverageTest` pins that every module with main code is scanned,
-    compiled at release 26.
-- **Rule: breach test first.** Each rule has a `<X>RuleBreachTest` that feeds fixtures from `app.rekord.archfixture..`
-  (never scanned: `DoNotIncludeTests`) to the plain rule constant and expects a violation naming the fixture. The
-  suite runs the frozen twin, and the store refuses every addition.
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

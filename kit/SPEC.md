@@ -1,7 +1,7 @@
 # Copilot kit: layout and contract
 
 This file is the contract shared by every piece of kit work:
-- the generator `scripts/kit-sync.ts` (its copy lists and rewrites in `scripts/kit-sync-lists.ts`, the conversions in `scripts/kit-sync-convert.ts`, source and overlay reading in `scripts/kit-sync-source.ts`);
+- the generator `scripts/kit-sync.ts` (its copy lists and rewrites in `scripts/kit-sync-lists.ts`, the project-noun and path rewrites in `scripts/kit-sync-generic.ts`, the dependency check in `scripts/kit-sync-deps.ts`, the conversions in `scripts/kit-sync-convert.ts`, source and overlay reading in `scripts/kit-sync-source.ts`);
 - the embedder `scripts/generate-bundled-kit.ts`;
 - the CLI commands `archon kit add`, `archon kit doctor` and `archon kit tools`;
 - the hand-written overlays.
@@ -22,8 +22,9 @@ Change it only together with every consumer.
 - **Reads the source's HEAD.** It reads git-tracked files from the commit `git rev-parse HEAD` names, never the work tree, so one commit gives one kit; uncommitted changes under the scanned roots are a warning. The scanned roots are `.agents/`, `.archon/`, `.claude/`, `.githooks/`, `.github/`, `docs/code-maps/`, `docs/scaffold-templates/` and `scripts/`. Every tracked file under them is assigned to a profile or excluded by the copy lists, or the sync fails. Binary files and symlinks fail it too.
 - **Deterministic.** Sorted output and no timestamps: the same source commit and overlays give the same bytes.
 - `--check` regenerates into a temp dir, diffs it with `kit/` and exits 1 on drift (printing the paths) or on an overlay whose `sourceSha256` no longer matches its `derivedFrom` file.
-- `--verify` needs no source: it checks `manifest.json` against `profiles/**` (sha256, mode, template flag, sort order, no extra or missing file), that every overlay file is synced, and the leak FAIL patterns. `bun run check:kit` runs it and `bun run check:bundled-kit` checks `packages/cli/src/bundled-kit.ts`; both are in `bun run validate`.
-- **Leak check.** The sync fails on a home path (`/home/<owner>`), an owner GitHub account, a reference to a never-ship script (see What never ships), or a secret-looking token (GitHub, AWS, Slack, Anthropic keys, private keys). It warns on the source's project nouns (wedding, rekord, portal) in `core`, `java` and `java-spring`.
+- `--verify` needs no source: it checks `manifest.json` against `profiles/**` (sha256, mode, template flag, sort order, no extra or missing file), that every overlay file is synced, the leak FAIL patterns and the dependency check. `bun run check:kit` runs it and `bun run check:bundled-kit` checks `packages/cli/src/bundled-kit.ts`; both are in `bun run validate`.
+- **Leak check.** The sync fails on a home path (`/home/<owner>`), an owner GitHub account, the owner's full name, a reference to a never-ship script (see What never ships), or a secret-looking token (GitHub, AWS, Slack, Anthropic keys, private keys). It warns on the source's project nouns (wedding, rekord, portal) in `core`, `java` and `java-spring`.
+- **Dependency check.** Every profile set `kit add` accepts (core, closed under `requires`, at most one of an exclusive group: 8 sets) must hold what its shipped files read: in a set with `java`, `.github/workflows/ci.yml` for `ci-local.sh` and `ci-plan.sh` and `.github/ci-inputs.yml` for `ci-plan.sh`; every template a code-map leaf's `## Scaffold` row links (the rows `scripts/scaffold/targets.js` reads); and every project script an agent's `mcp-servers` entry runs. A missing file fails `--verify` and prints `FAIL deps:` in a sync. `KNOWN_GAPS` in `scripts/kit-sync-deps.ts` accepts a gap with a reason, reported as `WARN deps:`; a sync names an entry that no longer matches, so it goes once the gap closes.
 
 ## Folders
 
@@ -49,7 +50,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 | `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/PIT/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
 | `java-quarkus` | java | The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus-flavoured scaffold templates, and run-wedding-portal → `run-app`. |
 | `java-spring` | java | The same paths as `java-quarkus`, rewritten for Spring Boot. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
-| `openapi-contract` | core | The contract-api MCP server (`scripts/portal-mcp/**`), `scripts/contract-agent-readiness/**`, contract-pin, contract-db-parity and the contract-agent. |
+| `openapi-contract` | core | The contract-api MCP server (`scripts/contract-mcp/**`, from the source's `scripts/portal-mcp/**`), `scripts/contract-agent-readiness/**`, contract-pin, contract-db-parity and the contract-agent. |
 
 `java-quarkus` and `java-spring` are mutually exclusive. The default for a new project is `core,java,java-spring,openapi-contract`.
 
@@ -83,8 +84,8 @@ Profiles are installed in this order. When two profiles carry the same path, the
   "postInstall": [
     { "profile": "core", "run": "bash scripts/install-hooks.sh", "optional": true },
     { "profile": "core", "run": "bash .archon/scripts/codegraph-setup.sh", "optional": true },
-    { "profile": "openapi-contract", "run": "npm ci --prefix scripts/portal-mcp", "optional": false },
-    { "profile": "openapi-contract", "run": "bash .archon/scripts/portal-mcp-setup.sh", "optional": true },
+    { "profile": "openapi-contract", "run": "npm ci --prefix scripts/contract-mcp", "optional": false },
+    { "profile": "openapi-contract", "run": "bash .archon/scripts/contract-mcp-setup.sh", "optional": true },
     { "profile": "core", "run": "bash .archon/scripts/mcp-setup.sh", "optional": true }
   ]
 }
@@ -109,6 +110,8 @@ Profiles are installed in this order. When two profiles carry the same path, the
 ```yaml
 profiles: [core, java, java-spring, openapi-contract]
 base_branch: main
+owner: ""                    # .archon/stop/policy.json: the name approvals are recorded for
+timezone: UTC                # .archon/stop/policy.json and park-ticket.sh: the zone of approval ids and parked notes
 gh_accounts: []              # gh-switch-account skill
 ntfy_topic: ""               # notify-owner.sh
 agent_cli: copilot           # supervisor/delegator scripts: claude | copilot
@@ -127,8 +130,8 @@ commands:
   integration_test: "./gradlew integrationTest"
   check: "./gradlew check"
 contract:
-  server_name: contract-api
-  repo: ""                   # owner/repo of the contract hub
+  server_name: contract-api  # read at runtime by mcp-setup.sh, mcp-use-check.js, tool-advice.sh and tokenomics
+  repo: ""                   # owner/repo of the contract hub; ci-plan.sh reads it with tag_key at runtime
   spec_path: contract/dist/openapi.yaml
   tag_key: contractTag       # gradle.properties key that pins the contract
   generated_dir: ""          # e.g. shared-adapter/build/generated/openapi/src/main/java/com/acme/api
@@ -146,10 +149,12 @@ contract:
 | — | `.github/hooks/dispatch.sh` | Generated, a fixed script. It reads stdin, normalizes the payload with `.claude/hooks/scripts/payload.sh`, applies the Claude matcher regex (anchored) to the normalized tool name, runs the script with the normalized payload (from `.claude/hooks` for a script under it, else the project root; a missing script is a no-op), turns a PreToolUse exit 2 into a deny with stderr as the reason, and translates a Claude `hookSpecificOutput.permissionDecision` into Copilot's top-level `permissionDecision`/`permissionDecisionReason`. |
 | `.claude/settings.json` `permissions.deny` | `.archon/copilot/deny.json` | Read by `run-guard.sh`, which enforces it in every session, not only in run worktrees. |
 | `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. A rule without `paths:` (general) gets `applyTo: "**"`. |
-| MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/portal-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
+| MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/contract-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
 | `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | Copied when the source tracks it; otherwise generated with `.archon/scripts/copilot-workflow.js`. Both workflows ship. |
 | Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync-lists.ts`. `.github/workflows/ci.yml`, `.github/ci-inputs.yml` and `ci-workflow-check.sh` are Quarkus-built and go to `java-quarkus`. A scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject` goes to `java-quarkus`, every other one to `java`. |
-| Every shipped text file | — | After conversion: `.claude/skills` (either slash) becomes `.github/skills`, `run-wedding-portal` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and both build-feature workflows) and the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime). |
+| Every shipped text file | — | After conversion: `run-wedding-portal` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path (and its systemd form `%h/wedding-portal`) becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). The project nouns go (`NOUN_REWRITES`): `portal-api` and `mcp__portal-api__` become `@@KIT_CONTRACT_SERVER_NAME@@`, `rekordContractTag` becomes `@@KIT_CONTRACT_TAG_KEY@@`, `portal-mcp` becomes `contract-mcp` and `portal-metrics` becomes `run-metrics`, and the files ship renamed to match (`scripts/contract-mcp/**`, `.archon/scripts/contract-mcp-setup.sh`, `.archon/workflows/run-metrics.yaml`). Then the Claude Code paths move to where the kit ships them (`PATH_REWRITES`): `.claude/agents/<n>.md` → `.github/agents/<n>.agent.md`, `.claude/rules/<l>.md` → `.github/instructions/<l>.instructions.md`, the bare folders → `.github/agents` and `.github/instructions`, and `.claude/skills` (either slash) → `.github/skills`; the files that mean the Claude paths themselves keep them (`PATH_SKIP`: `.archon/copilot/README.md`, `skill-check.js`, `audit-log.sh`, `verify-claims.sh`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and both build-feature workflows), the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime), the STOP policy's `owner`, `timezone` and hub repo (`@@KIT_OWNER@@`, `@@KIT_TIMEZONE@@`, `@@KIT_CONTRACT_REPO@@`), and the project names in comments and messages (`NOUN_TARGETED`). |
+| `docs/code-maps/<leaf>.md` (core, java) | same | A listed leaf's `## This repo (<source>)` section, which holds the source's facts, ships as a `## This repo` stub that asks the project to fill it in (`THIS_REPO_LEAVES`). The sync fails when a listed leaf lost the section or an unlisted core or java leaf has one. |
+| `.claude/CLAUDE.md` | same (core overlay) | `kit/overlays/core/.claude/CLAUDE.md`: the constitution (P1–P8), the STOP list and How work moves kept, the source's dates, ticket ids and project paths dropped, and its values placeholders (`@@KIT_BASE_BRANCH@@`, `@@KIT_CONTRACT_REPO@@`, `@@KIT_CONTRACT_SERVER_NAME@@`, `@@KIT_BUILD_WORKFLOW@@`, `@@KIT_COMMANDS_TEST@@`). Its `sourceSha256` makes `--check` report it stale when the source's CLAUDE.md changes. |
 
 ## What never ships
 

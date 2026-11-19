@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The contract operations a ticket names, with where they live in the code (P2: a script, not a model). It runs
 // `where`'s logic (code-index.mjs) and reads `read`'s readiness verdict without the MCP server, for plan-context.sh.
-// Usage: node scripts/portal-mcp/plan-ops.mjs <ticket.md> [<checkout>]
+// Usage: node scripts/contract-mcp/plan-ops.mjs <ticket.md> [<checkout>]
 // Writes a Markdown section to stdout, or nothing when the ticket names no operation. An operation is named by its
 // operationId as a whole word, or by `METHOD /path` exactly as the contract writes it. Needs the checkout's
 // the contract bundle, contract/dist/openapi.yaml by default (`contract.spec_path` of .archon/kit.yaml; exit 1 without it); the readiness report only adds the verdicts.
@@ -49,7 +49,7 @@ const list = (label, items) => (items?.length ? [`  - ${label}: ${items.map((i) 
 const out = [
   '## Contract operations this ticket names',
   '',
-  `_Where each one lives, from scripts/portal-mcp/plan-ops.mjs (the logic of portal-api's \`where\`, contract v${spec.info?.version}). `
+  `_Where each one lives, from scripts/contract-mcp/plan-ops.mjs (the logic of @@KIT_CONTRACT_SERVER_NAME@@'s \`where\`, contract v${spec.info?.version}). `
     + 'Ask `where`, `schema` or `usedBy` for more; read a file only for what this does not say._',
 ];
 if (!verdicts) out.push('', '_No readiness report of this contract version: the verdicts are left out._');

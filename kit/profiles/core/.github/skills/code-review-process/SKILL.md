@@ -25,7 +25,7 @@ framing — that is [[design-review]].
 
 ## Pattern signals (discovery cues — how the scanner recognizes this in any codebase)
 - A per-part / per-slice pipeline where each part declares its own files and acceptance criteria.
-- Per-layer review checklists or path-scoped rules (`.claude/rules/*.md`) scoped to a layer.
+- Per-layer review checklists or path-scoped rules (`.github/instructions/*.instructions.md`) scoped to a layer.
 - A green-gate (passing hooks/CI) that precedes a human/agent review step; a combined-overview artifact.
 
 ## Project specifics → see docs

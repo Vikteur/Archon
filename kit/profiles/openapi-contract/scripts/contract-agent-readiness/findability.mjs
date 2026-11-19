@@ -56,7 +56,7 @@ const MODES = {
   a: 'operationId words, method, path words, summary',
   b: 'the same plus the first paragraph',
 };
-// Mode (b) is what the portal-api MCP server's search matches on.
+// Mode (b) is what the @@KIT_CONTRACT_SERVER_NAME@@ MCP server's search matches on.
 const docText = { a: searchHit, b: searchText };
 const KS = [1, 3, 10];
 const recallOf = (rs) => Object.fromEntries(Object.keys(MODES).map((mode) => [mode, Object.fromEntries(KS

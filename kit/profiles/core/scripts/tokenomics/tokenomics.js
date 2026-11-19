@@ -28,6 +28,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+
+// The contract MCP server's name: contract.server_name of .archon/kit.yaml (kit-config.js), default @@KIT_CONTRACT_SERVER_NAME@@
+const SERVER = (() => {
+  try { return require('../../.archon/scripts/kit-config.js').kitGet('contract.server_name', '@@KIT_CONTRACT_SERVER_NAME@@'); } catch { return '@@KIT_CONTRACT_SERVER_NAME@@'; }
+})();
 const { StringDecoder } = require('string_decoder');
 
 const SCHEMA = 1;
@@ -866,15 +871,15 @@ function buildRecords(files, cfg, san) {
 }
 
 // A build-feature run's ticket node writes mcp-status.txt (mcp-setup.sh) into the run's artifacts folder; its last
-// "mcp: portal-api up|down, codegraph up|down" line says which servers the nodes had (docs/mcp/plan.md, C1).
-const MCP_LINE = /^mcp: portal-api (up|down), codegraph (up|down)$/;
+// "mcp: <contract server> up|down, codegraph up|down" line says which servers the nodes had (docs/mcp/plan.md, C1).
+const MCP_LINE = /^mcp: (\S+) (up|down), codegraph (up|down)$/;
 function mcpStatus(root, runId) {
   if (!root || !/^[A-Za-z0-9_-]{1,80}$/.test(String(runId))) return null;
   for (const owner of listDir(root)) for (const repo of listDir(path.join(root, owner))) {
     const text = readText(path.join(root, owner, repo, 'artifacts', 'runs', runId, 'mcp-status.txt'));
     if (text === null) continue;
     const m = text.split('\n').map(l => MCP_LINE.exec(l.trim())).filter(Boolean).pop();
-    return m ? { codegraph: m[2], portalApi: m[1] } : null;
+    return m ? { codegraph: m[3], contract: m[2], server: m[1] } : null;
   }
   return null;
 }
@@ -1118,7 +1123,7 @@ function renderTicket(cx, ticket, recs) {
   for (const a of agents) if (a.archon && a.archon.mcp) runs.set(a.archon.runId, a.archon.mcp);
   if (runs.size) {
     L.push('## MCP servers', '', 'What mcp-setup.sh found in each run worktree; a node of a run with a server down worked without its tools.', '',
-      ...table(['Run', 'portal-api', 'codegraph'], ['l', 'l', 'l'], [...runs].sort((a, b) => cmp(a[0], b[0])).map(([id, m]) => [id, m.portalApi, m.codegraph])), '');
+      ...table(['Run', SERVER, 'codegraph'], ['l', 'l', 'l'], [...runs].sort((a, b) => cmp(a[0], b[0])).map(([id, m]) => [id, m.contract, m.codegraph])), '');
   }
   L.push('## What each agent did', '');
   for (const a of agents) {
@@ -1202,13 +1207,13 @@ function toolChoice(L, cx) {
   const groups = new Map();
   for (const r of cx.recs) {
     const k = r.kind === 'archon-node' ? `${r.kind} / ${r.label}` : r.type ? `${r.kind} / ${r.type}` : r.kind;
-    const g = groups.get(k) || groups.set(k, { agg: newAgg(), keys: new Set(), tickets: new Set(), portal: 0, codegraph: 0, grep: 0, glob: 0, bash: 0, contract: 0, whole: 0 }).get(k);
+    const g = groups.get(k) || groups.set(k, { agg: newAgg(), keys: new Set(), tickets: new Set(), server: 0, codegraph: 0, grep: 0, glob: 0, bash: 0, contract: 0, whole: 0 }).get(k);
     const act = r.activity || {};
     addAgg(g.agg, cx.aggOf.get(r));
     g.keys.add(r.key);
     if (r.ticket && r.ticket !== COORD) g.tickets.add(r.ticket);
     for (const [t, v] of Object.entries(act.tools || {})) {
-      if (t.startsWith('mcp__portal-api__')) g.portal += v;
+      if (t.startsWith(`mcp__${SERVER}__`)) g.server += v;
       else if (t.startsWith('mcp__codegraph__')) g.codegraph += v;
       else if (t === 'Grep') g.grep += v;
       else if (t === 'Glob') g.glob += v;
@@ -1218,11 +1223,11 @@ function toolChoice(L, cx) {
     g.whole += act.wholeJavaReads || 0;
   }
   L.push('## Tool choice by agent kind and type', '',
-    'Calls to the portal-api and CodeGraph MCP servers against searching and reading by hand. Each Archon node has its own row. Bash searches counts grep, sed, cat, find and the like in Bash commands, a pipe stage included. A contract read is a Read of contract/; a whole Java read is a Read of a .java file with no offset or limit. Tokens per ticket is over the tickets the kind worked on.', '');
+    `Calls to the ${SERVER} and CodeGraph MCP servers against searching and reading by hand. Each Archon node has its own row. Bash searches counts grep, sed, cat, find and the like in Bash commands, a pipe stage included. A contract read is a Read of contract/; a whole Java read is a Read of a .java file with no offset or limit. Tokens per ticket is over the tickets the kind worked on.`, '');
   if (!groups.size) { L.push('None yet.', ''); return; }
-  L.push(...table(['Name', 'Invocations', 'portal-api', 'codegraph', 'Grep', 'Glob', 'Bash searches', 'Contract reads', 'Whole Java reads', 'Tokens per ticket'],
+  L.push(...table(['Name', 'Invocations', SERVER, 'codegraph', 'Grep', 'Glob', 'Bash searches', 'Contract reads', 'Whole Java reads', 'Tokens per ticket'],
     ['l', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r', 'r'],
-    [...groups].sort((a, b) => b[1].agg.usd - a[1].agg.usd || cmp(a[0], b[0])).map(([k, g]) => [k, int(g.keys.size), int(g.portal), int(g.codegraph),
+    [...groups].sort((a, b) => b[1].agg.usd - a[1].agg.usd || cmp(a[0], b[0])).map(([k, g]) => [k, int(g.keys.size), int(g.server), int(g.codegraph),
       int(g.grep), int(g.glob), int(g.bash), int(g.contract), int(g.whole), g.tickets.size ? int(tokensOf(g.agg) / g.tickets.size) : ''])), '');
 }
 

@@ -211,15 +211,30 @@ mutation_targets() {
   done < "$tmp/targets"
 }
 
-# contract_commit: the commit the pin resolves to; exit 1 with the reason when it cannot be trusted.
+# kit_key <dotted key> <default>: the key of .archon/kit.yaml at the tested tree (env KIT_<KEY> first), else the default.
+# Inline, not kit-config.sh: the planner runs as a blob of the base (git show), with no checkout beside it.
+kit_key() {
+  local env v=""
+  env="KIT_$(printf '%s' "$1" | tr 'a-z.' 'A-Z_')"; v="${!env:-}"
+  if [ -z "$v" ] && command -v yq >/dev/null 2>&1; then
+    v=$(git -C "$repo" show "$tree:.archon/kit.yaml" 2>/dev/null | yq -r ".$1 // \"\"" 2>/dev/null) || v=""
+    [ "$v" != null ] || v=""
+  fi
+  printf '%s' "${v:-$2}"
+}
+
+# contract_commit: the commit the pin resolves to; exit 1 with the reason when it cannot be trusted. The pin is the
+# contract.tag_key line of gradle.properties, the hub contract.repo (kit.yaml; defaults @@KIT_CONTRACT_TAG_KEY@@ and
+# @@KIT_CONTRACT_REPO@@).
 contract_commit() {
-  local pin refs c
-  pin=$(git -C "$repo" show "$tree:gradle.properties" 2>/dev/null | grep -E '^rekordContractTag=' | head -n 1 \
+  local pin refs c key hub
+  key=$(kit_key contract.tag_key @@KIT_CONTRACT_TAG_KEY@@); hub=$(kit_key contract.repo @@KIT_CONTRACT_REPO@@)
+  pin=$(git -C "$repo" show "$tree:gradle.properties" 2>/dev/null | grep -E "^${key}=" | head -n 1 \
     | cut -d= -f2- | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-  [ -n "$pin" ] || { echo "no rekordContractTag in gradle.properties"; return 1; }
+  [ -n "$pin" ] || { echo "no $key in gradle.properties"; return 1; }
   [[ "$pin" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "the branch pin $pin depends on the branch name"; return 1; }
   if [ -n "${CI_PLAN_CONTRACT_COMMIT:-}" ]; then echo "$pin $CI_PLAN_CONTRACT_COMMIT"; return 0; fi
-  refs=$(timeout 30 git ls-remote "${CI_PLAN_CONTRACT_REMOTE:-https://github.com/@@KIT_CONTRACT_REPO@@.git}" \
+  refs=$(timeout 30 git ls-remote "${CI_PLAN_CONTRACT_REMOTE:-https://github.com/$hub.git}" \
     "refs/tags/$pin" "refs/tags/$pin^{}" 2>/dev/null) || { echo "the pin $pin did not resolve"; return 1; }
   c=$(printf '%s\n' "$refs" | awk -v t="refs/tags/$pin^{}" '$2 == t { print $1 }')
   [ -n "$c" ] || c=$(printf '%s\n' "$refs" | awk -v t="refs/tags/$pin" '$2 == t { print $1 }')

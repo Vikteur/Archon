@@ -119,7 +119,7 @@ on one afterwards.
 2. **Find every STOP item, every STOP type.** For every listed ticket, read the whole ticket (description, acceptance
    criteria, the linked spec), not only its `stop-*` labels. `node .archon/scripts/stop-scan.js <TASK-id>...` prints
    the signals per ticket and category; you judge each hit. A criterion that edits a protected path
-   (`.claude/agents/**`, a hook, `.archon/stop/**`, a merge script) is a governance item for that exact path.
+   (`.github/agents/**`, a hook, `.archon/stop/**`, a merge script) is a governance item for that exact path.
 3. **Ask the owner in chat, in one go, before the list starts**: every likely item, each explained. Per item the owner
    approves, refuses (the ticket leaves the list), or has the ticket changed so the item goes away.
 4. **Record what the owner approved.** Write the answers to a file, one line each:

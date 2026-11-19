@@ -7,7 +7,7 @@ mcp-servers:
   "@@KIT_CONTRACT_SERVER_NAME@@":
     type: "local"
     command: "node"
-    args: ["scripts/portal-mcp/server.mjs"]
+    args: ["scripts/contract-mcp/server.mjs"]
     tools: ["*"]
   "codegraph":
     type: "local"
@@ -79,7 +79,7 @@ tool list did not start: fall back to `Read` and `Grep`, and say so in your summ
 - Runs on Claude Sonnet 5.5, like every agent that writes code or tests (UD-21.a).
 - **Owns the layer's architecture-fitness rules** (the `archunit-fitness` skill — the invariants
   live there, not here) that the **post-part hook** (`arch-fitness`) executes after each developer
-  part. Author/maintain them per layer; they enforce the path-scoped `.claude/rules/*.md` invariants
+  part. Author/maintain them per layer; they enforce the path-scoped `.github/instructions/*.instructions.md` invariants
   *executably*, not as prose.
 
 ## On Copilot CLI

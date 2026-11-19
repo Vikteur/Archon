@@ -4,14 +4,14 @@
 # docs/archon/supervisor.md. This file is checked in; the owner installs it (a deployed local service is a STOP item).
 [Unit]
 Description=Delegator supervisor tick (shadow until the owner switches it live)
-Documentation=file://%h/wedding-portal/docs/archon/supervisor.md
+Documentation=file://@@KIT_PROJECT_DIR@@/docs/archon/supervisor.md
 
 [Service]
 Type=oneshot
-WorkingDirectory=%h/wedding-portal
+WorkingDirectory=@@KIT_PROJECT_DIR@@
 # A unit does not get the login PATH: archon, backlog, node, gh and jq live in these folders.
 Environment=PATH=%h/.local/bin:%h/.npm-global/bin:%h/.bun/bin:%h/.archon/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/usr/bin/env bash %h/wedding-portal/.archon/scripts/supervisor-tick.sh tick
+ExecStart=/usr/bin/env bash @@KIT_PROJECT_DIR@@/.archon/scripts/supervisor-tick.sh tick
 # A tick that hangs is killed before the next one is due; the tick's own lock stops an overlap in any case.
 TimeoutStartSec=170
 Nice=10

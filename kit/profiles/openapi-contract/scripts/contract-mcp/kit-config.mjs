@@ -10,10 +10,10 @@ export const DEFAULTS = {
   'project_name': 'wedding-portal',
   'contract.spec_path': 'contract/dist/openapi.yaml',
   'contract.repo': '@@KIT_CONTRACT_REPO@@',
-  'contract.tag_key': 'rekordContractTag',
+  'contract.tag_key': '@@KIT_CONTRACT_TAG_KEY@@',
   'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/app/rekord/api',
   'contract.api_package': 'app.rekord.api',
-  'contract.server_name': 'portal-api',
+  'contract.server_name': '@@KIT_CONTRACT_SERVER_NAME@@',
 };
 
 export function kitConfig(root, env = process.env) {

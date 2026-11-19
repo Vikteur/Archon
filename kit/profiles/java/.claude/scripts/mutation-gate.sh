@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # The mutation gate (decision 2026-10-18, docs/memory.md; retro fault #1): runs PIT on the main classes the branch
 # changes in the pure-Java modules (shared-domain, shared-usecase, *-domain, *-usecase) and, by the owner's decision of
-# 2026-10-18, in every *-gateway module by that naming convention (their tests need no Quarkus and no container), and
-# fails when a mutant in one of them survives or has no test covering it, unless config/mutation-accepted.txt accepts
-# it. Adapters stay out.
+# 2026-10-18, in every *-gateway module by that naming convention (their tests boot no framework, Quarkus or Spring, and
+# need no container), and fails when a mutant in one of them survives or has no test covering it, unless
+# config/mutation-accepted.txt accepts it. Adapters stay out.
 #   - Targets: every src/main/java/**/*.java file of those modules that differs from the merge-base with the base ref,
 #     untracked files included, deleted ones and package-info/module-info left out; nested classes come along.
 #   - One Gradle run, `:<module>:pitest` for each module with a target, the targets in -PpitTargets. No target, no

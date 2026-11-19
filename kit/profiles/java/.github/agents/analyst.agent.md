@@ -7,7 +7,7 @@ mcp-servers:
   "@@KIT_CONTRACT_SERVER_NAME@@":
     type: "local"
     command: "node"
-    args: ["scripts/portal-mcp/server.mjs"]
+    args: ["scripts/contract-mcp/server.mjs"]
     tools: ["*"]
   "codegraph":
     type: "local"

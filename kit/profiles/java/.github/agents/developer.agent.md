@@ -7,7 +7,7 @@ mcp-servers:
   "@@KIT_CONTRACT_SERVER_NAME@@":
     type: "local"
     command: "node"
-    args: ["scripts/portal-mcp/server.mjs"]
+    args: ["scripts/contract-mcp/server.mjs"]
     tools: ["*"]
   "codegraph":
     type: "local"
@@ -36,7 +36,7 @@ The orchestrator hands a per-part slice, nothing more:
   the blueprint-side `scripts/worktree-part.sh` (consumer repos: the shipped
   `scripts/worktree-consumer.sh`), which installed (via apm) **only this layer's skills** + its
   instruction backstop + the developer agent into the worktree (`.github/skills/`,
-  `.claude/rules/`, `.claude/agents/`). The developer never loads another layer's or side's
+  `.github/instructions/`, `.github/agents/`). The developer never loads another layer's or side's
   skills — a domain developer has no usecase/controller skills, a frontend developer has no `java`.
 
 It does **not** receive: other parts, the full Declared Files, the DAG, or another layer's

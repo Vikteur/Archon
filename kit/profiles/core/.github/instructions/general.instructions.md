@@ -9,7 +9,7 @@ applyTo: "**"
 > file is preloaded at conversation head. **If it is not already in your context, open it now and
 > read it before doing anything else** — everything below assumes it.
 >
-> This file exists only as a backstop for a harness that reads `.claude/rules/` but not the
+> This file exists only as a backstop for a harness that reads `.github/instructions/` but not the
 > root instruction file. It restates the two rules that are unsafe to miss and nothing
 > else; do not let it grow back into a second copy of the ground rules.
 

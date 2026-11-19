@@ -63,7 +63,7 @@
 # needs: wait, not with the job's own time or its timeout): two Docker builds of the Dockerfile at once share its Gradle
 # cache mount, where one Gradle cannot ask the other for its lock and fails after a minute. Gradle on the host needs no
 # such lock: each job worktree has its own project cache (.gradle), its builds their own daemon, and a shared ~/.gradle
-# is safe for Gradle. Testcontainers and the Quarkus tests take free ports (test-port=0).
+# is safe for Gradle. Testcontainers and the app tests take free ports (Quarkus test-port=0, Spring RANDOM_PORT).
 # A plain --post call (no --force, --rerun-failed, --all or --audit) runs nothing and exits 0 when the commit's local
 # CI is finished (local-ci-status.sh reads green or red) or pending with its run alive (a live queue entry). It says
 # which and names the folder. A pending one whose run is gone (stale: local-ci-status.sh finds no live queue entry of

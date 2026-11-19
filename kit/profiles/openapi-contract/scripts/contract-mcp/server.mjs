@@ -1,10 +1,10 @@
-// portal-api: a local MCP server over the pinned portal API contract, as docs only. `search` finds operations by an
+// @@KIT_CONTRACT_SERVER_NAME@@: a local MCP server over the pinned portal API contract, as docs only. `search` finds operations by an
 // agent's words, `read` answers one operation in full with its agent-readiness verdict, `where` answers where an
 // operation lives in the Java code (code-index.mjs), `schema` one schema's fields and `usedBy` the operations and
 // Java lines that carry a schema or a field (schema-graph.mjs). It reads two git-ignored files and the checkout's own
 // Java sources: no backend, no sign-in, no network. What search and read send is defined once, in
 // scripts/contract-agent-readiness/read.mjs, so the readiness check measures exactly what an agent gets here.
-// Claude Code starts it over stdio: node scripts/portal-mcp/server.mjs (from any folder; CLAUDE_PROJECT_DIR or this
+// Claude Code starts it over stdio: node scripts/contract-mcp/server.mjs (from any folder; CLAUDE_PROJECT_DIR or this
 // file's place gives the repo root).
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

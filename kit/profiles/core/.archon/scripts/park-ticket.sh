@@ -4,7 +4,7 @@
 #   park-ticket.sh <TASK-id> -m <why> [--run <run id>] [--pr <pr url>] [--no-commit]
 #   park-ticket.sh --unpark <TASK-id> -m <why> [--no-commit]
 # The reason may also follow the id as a plain argument (`park-ticket.sh TASK-6.1 "held: STOP item"`), not both.
-# Park adds the label `parked` and appends a note "Parked <Brussels time>: <why>" (with the run and the pull request
+# Park adds the label `parked` and appends a note "Parked <local time>: <why>" (with the run and the pull request
 # when given) to the ticket's implementation notes. pick-tickets.js then leaves a parked In Progress ticket out of busy
 # and its run out of the cap, and skips a parked To Do ticket. With --pr it takes the pull request out of the merge
 # queue (`merge-turn.sh drop`; not queued is fine); with --run it clears the run's ready record (`ready-runs.sh clear`),
@@ -54,7 +54,7 @@ view() { backlog task view "$id" --json 2>/dev/null | jq -ce '.task // .' 2>/dev
 before=$(view) || fail "cannot read $id with backlog task view"
 status=$(jq -r '.status' <<< "$before")
 has_label=$(jq -r '(.labels // []) | index("parked") != null' <<< "$before")
-when=$(TZ=Europe/Brussels date '+%Y-%m-%d %H:%M %Z')
+when=$(TZ=@@KIT_TIMEZONE@@ date '+%Y-%m-%d %H:%M %Z')
 
 if [ -z "$unpark" ] && [ "$has_label" = false ]; then
   note="Parked $when: $why"

@@ -26,7 +26,7 @@
 #                   declared would bounce honest work. Requiring at least one proves the agent was
 #                   in the right place.
 #
-# Framework scaffolding is excluded from both: `apm install` rewrites `.github/skills/`,
+# Framework scaffolding is excluded from both: `apm install` rewrites `.claude/skills/`,
 # `.claude/agents/`, `.claude/rules/` (or their .github/ equivalents) and `apm.yml` on every worktree re-scope, so counting
 # those would let an agent pass this gate by having done nothing at all. Same exclusion list
 # `worktree-consumer.sh` uses for its dirty check, and for the same reason.
@@ -112,7 +112,7 @@ fi
 # whose path merely CONTAINS one of these strings is not silently forgiven.
 is_scaffolding() {
   case "$1" in
-    .claude/agents/*|.claude/rules/*|.github/skills/*|\
+    .claude/agents/*|.claude/rules/*|.claude/skills/*|\
     apm.yml|\
     .apm-audit/*|.codegraph/*) return 0 ;;
   esac
@@ -124,9 +124,9 @@ changed_raw=""
 # Uncommitted (tracked + untracked). Two flags carry weight here:
 #   -z      a real-world repo has paths with spaces, and `--porcelain`'s quoting of them would
 #           otherwise arrive as a literal `"…"` that matches nothing.
-#   -uall   without it git COLLAPSES an untracked directory to one entry (`?? .github/skills/`), which the
+#   -uall   without it git COLLAPSES an untracked directory to one entry (`?? .claude/skills/`), which the
 #           scaffolding filter below — written against file paths — does not match. A fresh worktree
-#           whose only change is `apm install` laying down `.github/skills/` then reads as one real
+#           whose only change is `apm install` laying down `.claude/skills/` then reads as one real
 #           changed file and PASSES. That is precisely the "did nothing" case this gate exists for,
 #           so the collapsed form is not a cosmetic difference.
 while IFS= read -r -d '' entry; do
@@ -159,7 +159,7 @@ done < <(printf '%s' "$changed_raw" | sort -u)
 if [ -z "$changed" ]; then
   echo "::error::[verify-claims] FAILED — this agent reported completion, but the repository is"
   echo "          unchanged. No uncommitted edits, and no commits since"
-  echo "          '${base:-<no base resolved>}'. Framework scaffolding (.github/skills,"
+  echo "          '${base:-<no base resolved>}'. Framework scaffolding (.claude/skills,"
   echo "          .claude/agents, .claude/rules, their .github/ twins, apm.yml) is excluded."
   echo "          Either the writes went somewhere other than this work tree (a temp copy, a path"
   echo "          outside the worktree, a different checkout), or they never happened. Re-do the"

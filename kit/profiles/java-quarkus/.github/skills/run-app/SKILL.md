@@ -29,7 +29,7 @@ bash .github/skills/run-app/smoke.sh stop
 
 A cold start takes about 17 s (contract clone included); a warm one reuses the running instance. `start` first makes
 sure `contract/` exists: it clones `@@KIT_CONTRACT_REPO@@` there when missing and checks it out at
-`rekordContractTag` from `gradle.properties` with `.claude/scripts/contract-pin.sh`. It sets throwaway ops credentials
+`@@KIT_CONTRACT_TAG_KEY@@` from `gradle.properties` with `.claude/scripts/contract-pin.sh`. It sets throwaway ops credentials
 (`ops` / `local-dev-only`) unless `WEDDING_OPS_USERNAME` / `WEDDING_OPS_PASSWORD` are set.
 
 `check` prints one PASS/FAIL line per step:

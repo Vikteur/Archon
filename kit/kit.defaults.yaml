@@ -3,6 +3,8 @@
 # (.archon/scripts/kit-config.sh). Hand-written: the defaults suit a Spring Boot Gradle project.
 profiles: [core, java, java-spring, openapi-contract]
 base_branch: main
+owner: "" # .archon/stop/policy.json: the name approvals are recorded for (stop-approve.sh record)
+timezone: UTC # .archon/stop/policy.json and park-ticket.sh: the zone of approval ids and parked notes
 gh_accounts: [] # gh-switch-account skill: the gh accounts to switch between, e.g. [alice, alice-work]
 ntfy_topic: "" # notify-owner.sh
 agent_cli: copilot # supervisor/delegator scripts: claude | copilot

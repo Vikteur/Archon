@@ -4,13 +4,20 @@
 # run), holds no test, or shows a failed, errored or skipped one. Run it after the Gradle build.
 # Usage: bash .claude/scripts/pin-proof-check.sh [<repo-root>]   (default: this repository)
 # Exit 0 = ok, 1 = refused (one FAIL line each), 2 = usage.
+# The stack (kit key `stack`, env KIT_STACK, default quarkus) picks the list: quarkus checks the list below; spring has
+# no such list of its own, so it checks the project's file (kit key `pin_proofs`, env KIT_PIN_PROOFS, default
+# .archon/pin-proofs.txt; same `<item>|<module>|<task>|<class>` lines, `#` comments and blank lines skipped) and
+# refuses a missing or empty one, so a spring build never passes with nothing proven.
 set -uo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../../.archon/scripts/kit-config.sh
+. "$here/../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { local e="${3:-}"; printf '%s' "${!e:-$2}"; }
 
 if [ "$#" -gt 1 ] || [[ "${1:-}" == -* ]]; then
   echo "usage: pin-proof-check.sh [<repo-root>]" >&2
   exit 2
 fi
-repo="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+repo="${1:-$(cd "$here/../.." && pwd)}"
 cd "$repo" 2>/dev/null || { echo "FAIL: $repo is not a directory"; exit 1; }
 
 # <item>|<module>|<task>|<class>
@@ -35,6 +42,16 @@ the Quarkus line pinned|application|test|app.rekord.application.FrameworkPinProo
 
 failed=0
 fail() { echo "FAIL: $1"; failed=1; }
+
+if [ "$(kit_get stack quarkus KIT_STACK)" = spring ]; then
+  list="$(kit_get pin_proofs .archon/pin-proofs.txt KIT_PIN_PROOFS)"
+  proofs=""
+  [ -f "$list" ] && proofs="$(tr -d '\r' <"$list" | grep -vE '^[[:space:]]*(#|$)')"
+  if [ -z "$proofs" ]; then
+    echo "FAIL: no pin proofs in $list (spring stack: list each <item>|<module>|<task>|<class> there)"
+    exit 1
+  fi
+fi
 
 if ! compgen -G "*/build/test-results" >/dev/null; then
   fail "no */build/test-results under $repo: run the Gradle build first"

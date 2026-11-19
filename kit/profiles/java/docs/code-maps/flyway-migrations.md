@@ -10,26 +10,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names, tree or version shape. Decision: [memory, 2026-10-14].
-- **One tree:** `application/src/main/resources/db/migration/`, for the whole app. No `ddl/` folder, no tree per
-  adapter: Quarkus scans `db/migration` on every jar of the classpath, so an adapter's own `V…` would collide with or
-  interleave into this sequence.
-- **Baseline:** `V1__baseline.sql` is `schema.sql` of report 44 (`docs/rewrite/analysis/44-target-data-model/`) without the
-  song list kind seed; the seed is the repeatable `R__seed_song_list_kinds.sql` (TASK-4.1).
-- **Later migrations:** `V1.<NNN>__<snake_case_description>.sql`, three digits from `V1.001`, then `V1.002`, …;
-  never `V2__`. Flyway compares each version part as an integer (`1 < 1.001 < 1.002`), so `V1.1__` and `V1.001__`
-  are the same version and Flyway refuses the duplicate: always type the three digits. The template's header has the
-  command that prints the next one. Branches from before the TASK-47 restart still hold a dead `V2__identity.sql`:
-  ignore them.
-- **LF only:** `.gitattributes` has `*.sql text eol=lf`; the Flyway checksum is over the bytes.
-- **Verified with:** Flyway 11.20.3 on PostgreSQL 18.6 (migrate twice, the second a no-op; validate). Which Flyway
-  version Quarkus pins is set by TASK-4.1's build.
-- **A schema test per migration:** every `V*.sql` has a schema test
-  `app.rekord.application.persistence.migration.V<version, dots as _>MigrationTest` declaring its tables, columns
-  (type, nullability) and constraints (`src/test/resources/migration-schema/V<version, dots as _>.txt`); `MigrationTestCoverageTest`
-  fails the `test` task without it. Repeatables need none.
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |

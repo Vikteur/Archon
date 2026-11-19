@@ -10,21 +10,10 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
-These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
-(`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
-
-- **Generator:** openapi-generator `jaxrs-spec` on the rekord-contract spec; packages `app.rekord.api` and
-  `app.rekord.api.model`.
-- **Options:** `interfaceOnly=true`, `useJakartaEe=true`, `returnResponse=false`, `useSwaggerAnnotations=false`,
-  `openApiNullable=false`, `dateLibrary=java8`, `useTags=true`; API and model tests off. `dateLibrary=java8` is
-  load-bearing: `format: date` becomes `LocalDate`, `date-time` becomes `OffsetDateTime`.
-- **Output** under `shared-adapter/build/generated/openapi`, never committed, never hand-edited. A red build on newly
-  generated, not yet implemented interfaces is the expected start (P4).
-- **Version:** openapi-generator **7.25.0**, pinned in `gradle/libs.versions.toml` (plugin `org.openapi.generator`, applied in `shared-adapter` only).
-- **Pin:** `rekordContractTag` in `gradle.properties`, checked out in every CI job that generates code or starts the application by `.claude/scripts/contract-pin.sh contract`. The pin is a tag `v6.1.3` or later (TASK-5.4), checked by `ContractPinTest` from both `gradle.properties` and the bundle's `info.version`; `NotificationSchemaContractTest` and `GeneratedNotificationTest` check the `notification` schema and its generated type.
-- **Spec:** the `contract.spec` Gradle property; default `contract/dist/openapi.yaml` in `gradle.properties`; CI and the Dockerfile pass it explicitly.
-- **Build graph:** `compileJava` depends on `openApiGenerate`; the output's `src/gen/java` is a main source root.
+## This repo
+Fill in this project's own facts for the pattern here: its modules, packages and the rules in force. Until then,
+everything from "Where this pattern lives" down is the pseudonymized worked example: follow its structure, not its
+names.
 
 ## Where this pattern lives (exemplars)
 | Exemplar | What it shows | Layer / module |
@@ -87,7 +76,7 @@ A wrong base case is fixed in the template. Each skill's leaf lists its template
 
 The `package` variable of a Java template is the **base** package: the template appends its layer's suffix itself
 (`.domain`, `.usecase`, `.config`, `.repository`, `.adapter.controller`, `.adapter.repository`; each template header
-and table row names it). So a domain file for `app/rekord/planning/domain/` takes `"package": "app.rekord.planning"`.
+and table row names it). So a domain file for `com/example/orders/domain/` takes `"package": "com.example.orders"`.
 The one exception is adapter/table-test: the `application` module has no layer suffix, so its `package` is the
 file's own package.
 The script refuses a `.java` target whose directory under `src/<set>/java/` is not the package the file would declare,

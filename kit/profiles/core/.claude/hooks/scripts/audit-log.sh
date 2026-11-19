@@ -7,7 +7,7 @@
 # (DOC_SEEN/DOC_LOAD, any docs/**.md; SCOPE lists the docs/code-maps tree) answer whether the
 # code-maps a skill points at are actually read:
 #
-#   SCOPE              (sessionStart)  what was AVAILABLE — the deployed .github/skills/ dirs +
+#   SCOPE              (sessionStart)  what was AVAILABLE — the deployed .claude/skills/ dirs +
 #                                      .claude/rules/ files present in this checkout
 #   *_SEEN             (postToolUse)   what was DISCOVERED — a skill/instruction path that only
 #                                      appeared in a tool RESULT (ls / grep / file-search output
@@ -300,9 +300,9 @@ case "$event" in
     # the deployed skill set + the instruction files. This becomes the "scoped into the
     # worktree" column of the per-agent report.
     sk=(); in_=()
-    if [ -d "$root/.github/skills" ]; then
+    if [ -d "$root/.claude/skills" ]; then
       while IFS= read -r d; do [ -n "$d" ] && sk+=("$d"); done \
-        < <(ls -1 "$root/.github/skills" 2>/dev/null | sort)
+        < <(ls -1 "$root/.claude/skills" 2>/dev/null | sort)
     fi
     for f in "$root/.claude/rules"/*.md; do
       [ -f "$f" ] && in_+=("${f##*/}")
@@ -381,7 +381,7 @@ case "$event" in
       skill="${skill#[\"\']}"; skill="${skill%[\"\']}"
       [ -n "$skill" ] || continue
       found="false"
-      [ -f "$root/.github/skills/${skill##*:}/SKILL.md" ] || [ -f "$root/skills/${skill##*:}/SKILL.md" ] && found="true"
+      [ -f "$root/.claude/skills/${skill##*:}/SKILL.md" ] || [ -f "$root/skills/${skill##*:}/SKILL.md" ] && found="true"
       emit "SKILL_PRELOAD" s:agentName "$agent_evt" s:skill "$skill" r:found "$found"
     done
     ;;
@@ -410,7 +410,7 @@ case "$event" in
     # file-search output) without being opened by this call → *_SEEN. Without jq the two
     # can't be separated, so everything counts as a LOAD (degraded mode, header note).
     for skill in $sk_load; do
-      sp=".github/skills/${skill}/SKILL.md"
+      sp=".claude/skills/${skill}/SKILL.md"
       [ -f "$root/$sp" ] || sp="skills/${skill}/SKILL.md"
       stamp "$sp"
       emit "SKILL_LOAD" s:skill "$skill" s:skillPath "$sp" s:skillCommit "$commit" r:dirty "$dirty"

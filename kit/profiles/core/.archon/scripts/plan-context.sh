@@ -4,8 +4,8 @@
 # Writes Markdown to stdout: the dependency tickets (title, status, final summary), the Gradle modules and what each one
 # depends on, the build-feature nodes, the sections of docs/memory.md with their line numbers, the docs/code-maps
 # leaves, every script's header line and test, the contract operations the ticket names with where they live in the
-# code (scripts/portal-mcp/plan-ops.mjs, docs/mcp/plan.md C2), and the last 10 commits. Run from the root of the run's
-# checkout. The operations need the portal-api server's node_modules and contract/dist/openapi.yaml (mcp-setup.sh); without
+# code (scripts/contract-mcp/plan-ops.mjs, docs/mcp/plan.md C2), and the last 10 commits. Run from the root of the run's
+# checkout. The operations need the @@KIT_CONTRACT_SERVER_NAME@@ server's node_modules and contract/dist/openapi.yaml (mcp-setup.sh); without
 # them, or when the ticket names no operation, that section is left out.
 # The section list is what 16 plan nodes read most (2026-10-18): build-feature.yaml in 15, the build files in 14,
 # docs/memory.md in 13, and a script's header to learn its flags in most.
@@ -120,9 +120,9 @@ done
   [ -z "$test" ] || printf '  test: `%s`\n' "$test"
 done
 
-if [ -f "$ticket" ] && [ -f contract/dist/openapi.yaml ] && [ -d scripts/portal-mcp/node_modules ] \
-  && [ -f scripts/portal-mcp/plan-ops.mjs ]; then
-  if ops=$(node scripts/portal-mcp/plan-ops.mjs "$ticket" . 2>/dev/null) && [ -n "$ops" ]; then
+if [ -f "$ticket" ] && [ -f contract/dist/openapi.yaml ] && [ -d scripts/contract-mcp/node_modules ] \
+  && [ -f scripts/contract-mcp/plan-ops.mjs ]; then
+  if ops=$(node scripts/contract-mcp/plan-ops.mjs "$ticket" . 2>/dev/null) && [ -n "$ops" ]; then
     echo
     printf '%s\n' "$ops"
   fi

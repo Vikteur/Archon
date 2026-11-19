@@ -41,7 +41,7 @@ jobs:
     # every src/*/resources/ folder (the settings tests walk the tree for them), config/ and docs/memory.md. The steps
     # after Gradle run .claude/scripts/ (build-shape-check.sh reads docs/memory.md). The scaffold and workflow suites
     # moved to archon-scripts (2026-10-23), and with them scripts/, docs/code-maps/, docs/scaffold-templates/ and
-    # .claude/agents/ left this list; the codegen and WireMock suites moved to image (2026-10-23), test-set-coverage's
+    # .github/agents/ left this list; the codegen and WireMock suites moved to image (2026-10-23), test-set-coverage's
     # to archon-scripts, and with them .claude/hooks/, scripts/test/ and docs/code-maps/jvm-testing.md left it too.
     # The --audit run of 2026-10-23 found two reads outside it: NoAuthSwitchSettingsTest reads Dockerfile, and generated-untracked-check.sh's git reads .gitignore.
     # .gitattributes is in `always`.

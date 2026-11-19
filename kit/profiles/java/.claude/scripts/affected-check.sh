@@ -8,7 +8,7 @@
 #   - <module>/...: `:<module>:test` for that Gradle module and every module that depends on it. The slow sets are
 #     chosen by JUnit tag, never by class name, with the shared tag rule (.archon/scripts/test-task.sh): a changed test file
 #     tagged `integration`, `quarkus-unit-test` or `resource-test` runs its module's `integrationTest`, `startupTest` or
-#     `resourceTest`; when an
+#     `resourceTest` (the start-up tag only on the quarkus stack, kit key `stack`; a spring build has no startupTest); when an
 #     *-adapter module or application changed, every affected module also runs the slow sets its tests are tagged
 #     for. A root Gradle file (build.gradle.kts, settings.gradle.kts, gradle/, gradlew) changes every module.
 #     gradle.properties turns the configuration cache on, so Gradle runs one module's test sets side by side:
@@ -30,7 +30,7 @@
 #     scripts/test/agent-script-names.test.sh (every script it names exists).
 #   - anything else (docs, backlog, groma, skills): nothing, and the path is printed as "not checked locally: <path>
 #     (<job>)", with the CI job that still checks it. A Gradle change also prints that the image build is not checked.
-# --pre-push (the check before an agent pushes, .claude/agents/github-agent.md) ends with the groma map against the
+# --pre-push (the check before an agent pushes, .github/agents/github-agent.agent.md) ends with the groma map against the
 # base: .claude/scripts/groma-delta.sh HEAD <base>, which fails only on a map failure the base does not have; without that
 # script it prints the map as not checked locally.
 # Usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync] [--pre-push]
@@ -142,7 +142,7 @@ while IFS= read -r f; do
     .claude/scripts/ci-status-grammar.sh) gate_files=1 ;;
   esac
   case "$f" in
-    CLAUDE.md|AGENTS.md|.claude/CLAUDE.md|.claude/rules/*.md|.claude/agents/*.md|.github/skills/*/SKILL.md|\
+    CLAUDE.md|AGENTS.md|.claude/CLAUDE.md|.github/instructions/*.instructions.md|.github/agents/*.agent.md|.github/skills/*/SKILL.md|\
     .archon/workflows/*) add_suite scripts/test/agent-script-names.test.sh ;;
   esac
   case "$f" in

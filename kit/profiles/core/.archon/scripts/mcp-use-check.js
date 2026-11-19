@@ -1,6 +1,6 @@
 // Did the explore and plan nodes ask the MCP servers, or search by hand? (docs/mcp/plan.md, C8; P2: a script, not a
 // model.) Reads the run's Archon log (every tool call of every node) and writes <artifacts-dir>/mcp-use.md: per node,
-// its calls to portal-api and CodeGraph against its Grep, Glob and Bash searches, its contract reads and its whole Java
+// its calls to the contract server and CodeGraph against its Grep, Glob and Bash searches, its contract reads and its whole Java
 // reads, and a verdict. pr-refresh.sh copies the report into the pull request.
 //   node mcp-use-check.js <artifacts-dir> <run-id> [<node>...]   (default nodes: explore plan)
 //   --strict   exit 1 when a node is warned (not yet used: the report mode comes first, as for tool-advice.sh, D5)
@@ -10,19 +10,23 @@
 // limit is a whole Java read. Hand work is the code searches plus the whole Java reads.
 // A node is warned when a server was up (the last "mcp: ..." line of <artifacts-dir>/mcp-status.txt) and the node
 //   - did hand work at least its threshold of times (explore 8, plan 5, any other node 8) and never called CodeGraph, or
-//   - read the contract by hand and never called portal-api.
+//   - read the contract by hand and never called the contract server.
+// The contract server is contract.server_name of .archon/kit.yaml (default @@KIT_CONTRACT_SERVER_NAME@@); the status line names it too.
 // A server that was down, or no status file at all, skips the rules that need it. No log, or a node with no tool call,
 // is reported as such. Exits 0 (2 on a usage error), also when it cannot read the log: it never holds a run.
 const fs = require('fs');
 const path = require('path');
 const { findLog } = require('./run-trace.js');
+const { kitGet } = require('./kit-config.js');
+
+const SERVER = kitGet('contract.server_name', '@@KIT_CONTRACT_SERVER_NAME@@');
 
 const HAND_MIN = { explore: 8, plan: 5 };
 const HAND_MIN_DEFAULT = 8;
 // A Bash command whose first pipeline stage is one of these reads or searches files by hand; `| grep` after another
 // command filters that command's output and is not counted.
 const SEARCH_PROGS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'find', 'sed', 'awk', 'cat', 'head', 'tail', 'less']);
-const MCP_LINE = /^mcp: portal-api (up|down), codegraph (up|down)$/;
+const MCP_LINE = /^mcp: (\S+) (up|down), codegraph (up|down)$/;
 const CONTRACT = /(^|[\s/'"=])contract(\/|$|\s)|openapi\.ya?ml|operationId/;
 const DOCS = /(^|[\s/'"=])docs\/|\.md\b|ARTIFACTS_DIR|\/artifacts\//;
 const kind = text => (CONTRACT.test(text) ? 'contract' : DOCS.test(text) ? 'docs' : 'code');
@@ -31,7 +35,7 @@ function servers(art) {
   let text;
   try { text = fs.readFileSync(path.join(art, 'mcp-status.txt'), 'utf8'); } catch { return null; }
   const m = text.split('\n').map(l => MCP_LINE.exec(l.trim())).filter(Boolean).pop();
-  return m ? { portalApi: m[1] === 'up', codegraph: m[2] === 'up' } : null;
+  return m ? { server: m[1], contract: m[2] === 'up', codegraph: m[3] === 'up' } : null;
 }
 
 // The first pipeline stage of each command of a Bash line, without `VAR=value` prefixes
@@ -44,7 +48,7 @@ function stages(command) {
 const rel = p => String(p || '').replace(/\\/g, '/').replace(/^.*?\/(?:worktrees|runs)\/[^/]+\//, '');
 
 function newCounts() {
-  return { calls: 0, portal: 0, codegraph: 0, grep: 0, glob: 0, bash: 0, contract: 0, whole: 0 };
+  return { calls: 0, server: 0, codegraph: 0, grep: 0, glob: 0, bash: 0, contract: 0, whole: 0 };
 }
 
 // Map<node, counts> over the log's tool calls; a node id matches its own steps and the steps inside it (implement.*)
@@ -61,7 +65,7 @@ function count(text, nodes) {
     const name = String(e.name || '');
     const input = e.rawInput || {};
     c.calls++;
-    if (name.startsWith('mcp__portal-api__')) c.portal++;
+    if (name.startsWith(`mcp__${SERVER}__`)) c.server++;
     else if (name.startsWith('mcp__codegraph__')) c.codegraph++;
     else if (name === 'Grep' || name === 'Glob') {
       // What a search covers: its path and file filter (a Grep's pattern is the text it looks for, not where)
@@ -93,20 +97,20 @@ function verdict(node, c, up) {
   const hand = c.grep + c.glob + c.bash + c.whole;
   const min = HAND_MIN[node] || HAND_MIN_DEFAULT;
   if (up.codegraph && hand >= min && c.codegraph === 0) why.push(`searched or read code by hand ${hand} times (threshold ${min}) and never asked CodeGraph`);
-  if (up.portalApi && c.contract > 0 && c.portal === 0) why.push(`read the contract by hand ${c.contract} times and never asked portal-api`);
+  if (up.contract && c.contract > 0 && c.server === 0) why.push(`read the contract by hand ${c.contract} times and never asked ${up.server}`);
   return why.length ? `WARN: ${why.join('; ')}` : 'ok';
 }
 
 function report(nodes, counts, up, logFound) {
   const L = ['# MCP use per node', ''];
   const state = s => (s ? 'up' : 'down');
-  L.push(up ? `Servers: portal-api ${state(up.portalApi)}, codegraph ${state(up.codegraph)}.` : 'Servers: no MCP status for this run.');
+  L.push(up ? `Servers: ${up.server} ${state(up.contract)}, codegraph ${state(up.codegraph)}.` : 'Servers: no MCP status for this run.');
   if (!logFound) { L.push('', 'No Archon log for this run: nothing counted.', ''); return L.join('\n'); }
-  L.push('', '| Node | portal-api | codegraph | Grep | Glob | Bash searches | Contract reads | Whole Java reads | Verdict |',
+  L.push('', `| Node | ${up ? up.server : SERVER} | codegraph | Grep | Glob | Bash searches | Contract reads | Whole Java reads | Verdict |`,
     '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |');
   for (const n of nodes) {
     const c = counts.get(n);
-    L.push(`| ${n} | ${c.portal} | ${c.codegraph} | ${c.grep} | ${c.glob} | ${c.bash} | ${c.contract} | ${c.whole} | ${verdict(n, c, up)} |`);
+    L.push(`| ${n} | ${c.server} | ${c.codegraph} | ${c.grep} | ${c.glob} | ${c.bash} | ${c.contract} | ${c.whole} | ${verdict(n, c, up)} |`);
   }
   L.push('');
   return L.join('\n');

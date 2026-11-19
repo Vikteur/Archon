@@ -21,7 +21,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 merge_turn=${MERGE_TURN:-$here/merge-turn.sh}
 notify_owner=${NOTIFY_OWNER:-$here/notify-owner.sh}
 
-# The Backlog is finalized on a main checkout (the wedding-portal one), never in a run worktree: the run's branch is
+# The Backlog is finalized on a main checkout (this repo's), never in a run worktree: the run's branch is
 # merged.
 main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
 if [ -z "${BACKLOG_CWD:-}" ]; then

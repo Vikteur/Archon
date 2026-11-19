@@ -35,7 +35,7 @@ layer.
 ## Guardrails (what NOT to do)
 - Don't assert runtime behavior here — fitness rules are static structure (keep them boot-free/fast).
 - Don't weaken a rule to make a part pass; if an exception is real, baseline it explicitly and track it.
-- Don't duplicate what the path-scoped rules (`.claude/rules/*.md`) say as prose — here it is *executable*.
+- Don't duplicate what the path-scoped rules (`.github/instructions/*.instructions.md`) say as prose — here it is *executable*.
 
 ## Definition of done
 - [ ] Each layer invariant has an executable rule with a clear failure message.
