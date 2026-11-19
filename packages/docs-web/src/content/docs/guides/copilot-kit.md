@@ -17,6 +17,50 @@ Copilot counterpart of the Claude setup. You install it once with `archon kit se
 The kit is for projects that use Copilot CLI as the coding agent. It is not a
 separate product. Its files live in the Archon fork (`Vikteur/Archon`, folder `kit/`).
 
+## Install everything with one command
+
+On a new machine, or for another set of repositories, one script does the whole install.
+It assumes Copilot CLI is up to date and logged in. Run it on Linux, macOS or WSL2:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/Vikteur/Archon/local/console/scripts/install-copilot-kit.sh) \
+  --backend ~/code/portal --frontend ~/code/web --contract ~/code/api/openapi.yaml
+```
+
+Use `bash <(curl …)`, not `curl … | bash`: the pipe takes away the terminal, and the
+script then cannot log `gh` in for you.
+
+`scripts/install-copilot-kit.sh` does these steps in order:
+
+1. **Checks the input**: the machine, and the paths you gave. A wrong path stops it before
+   anything is installed. It then asks for `sudo` once.
+2. **Bun**: installs it if it is missing.
+3. **Archon**: clones or updates the fork's `local/console` in `~/archon`, then builds and
+   installs it with `install-local.sh`. It also adds `~/.local/bin` and `~/.bun/bin` to the
+   `PATH` in your shell's rc file.
+4. **The contract**: pulls the contract's repository when that checkout is clean.
+5. **`archon kit setup`**: runs it with your answers (see the next section).
+6. **gh**: runs `gh auth login` if gh is not logged in (only in a terminal).
+7. **`archon kit doctor`**: checks the backend.
+8. **The commit**: commits the kit on a new branch (`chore/archon-kit`) in each repository.
+   It does this only in a repository whose tree was clean before the run, and it never
+   pushes.
+9. **A dry run**: runs a dry run of `build-feature-copilot`.
+
+| Option | Effect |
+|--------|--------|
+| `--frontend <path>` | Leave it out when there is no frontend. |
+| `--backlog` | Use Backlog.md. |
+| `--archon-dir <path>` | Use another folder for the Archon clone (default `~/archon`). |
+| `--branch <name>` | Use another branch name for the commit. |
+| `--no-commit` | Leave the kit uncommitted. |
+| `--no-web` | Do not start the MCP Inspectors. |
+| `--no-smoke` | Skip the dry run of `build-feature-copilot`. |
+| `--dry-run` | Check the paths and print the plan, without changing anything. |
+
+A rerun is safe: it updates what is already there. The script ends with a list of its
+warnings, and writes its log to `~/.archon/logs/install-copilot-kit-<timestamp>.log`.
+
 ## Install with `archon kit setup`
 
 `archon kit setup` is the main way to install the kit. It asks four questions in the
