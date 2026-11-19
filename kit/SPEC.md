@@ -108,12 +108,18 @@ Profiles are installed in this order. When two profiles carry the same path, the
 
 ```yaml
 profiles: [core, java, java-spring, openapi-contract]
+stack: spring                # quarkus | spring: the gates that differ per framework branch on it
 base_branch: main
 gh_accounts: []              # gh-switch-account skill
 ntfy_topic: ""               # notify-owner.sh
 agent_cli: copilot           # supervisor/delegator scripts: claude | copilot
 build_workflow: build-feature-copilot
 java_version: 21
+pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh on spring
+build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
+  modules: "-"               # the settings.gradle.kts modules, space-separated
+  memory_marker: "-"         # a docs/memory.md decision id the build shape must name
+  forbidden: "-"             # a remnant no build file or workflow may name
 framework_packages: ["org.springframework.."]   # arch-fitness: forbidden in domain
 modules:                     # layer globs, used by the .github/instructions applyTo fields and the scope rules
   domain: "**/*-domain/**"
@@ -131,6 +137,7 @@ contract:
   repo: ""                   # owner/repo of the contract hub
   spec_path: contract/dist/openapi.yaml
   tag_key: contractTag       # gradle.properties key that pins the contract
+  checkout_step: "Check out the contract"   # ci-workflow-check.sh: the contract checkout step
   generated_dir: ""          # e.g. shared-adapter/build/generated/openapi/src/main/java/com/acme/api
   api_package: ""            # e.g. com.acme.api
 ```
