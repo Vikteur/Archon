@@ -336,6 +336,7 @@ assert_provider_ids_match
 provider_mock_dir="$tmp_dir/provider-mocks"
 provider_calls="$tmp_dir/provider-calls"
 provider_curl_marker="$tmp_dir/provider-curl-called"
+kit_calls="$tmp_dir/kit-calls"
 mkdir -p "$provider_mock_dir"
 cat >"$provider_mock_dir/curl" <<EOF
 #!/usr/bin/env bash
@@ -353,6 +354,13 @@ cat >"\$output" <<'BINARY'
 #!/usr/bin/env bash
 if [ "\$1" = "version" ]; then
   echo "archon 1.2.3"
+  exit 0
+fi
+if [ "\$1" = "kit" ]; then
+  mode="\$(cat "$provider_mock_dir/kit-mode" 2>/dev/null || true)"
+  [ -n "\$mode" ] || exit 1
+  if [ "\$2" = "--help" ]; then echo "Usage: archon kit <add|\$mode>"; exit 0; fi
+  echo "\$*" >>"$kit_calls"
   exit 0
 fi
 echo "\$*" >>"$provider_calls"
@@ -438,6 +446,42 @@ PATH="$provider_mock_dir:$PATH" ARCHON_CPUINFO_PATH="$avx2_cpuinfo" \
   bash -s -- --providers codex <"$installer" >/dev/null 2>&1 \
   || fail "piped installer with --providers failed"
 assert_equals "provider add codex" "$(provider_calls_made)" "Piped installer passes --providers"
+
+output=$(ARCHON_REPO="Vikteur/Archon" run_provider_install --providers "") || fail "ARCHON_REPO install failed: $output"
+case "$output" in
+  *"github.com/Vikteur/Archon/releases/latest/download/archon-"*) ;;
+  *) fail "ARCHON_REPO does not change the download URL" ;;
+esac
+
+# Kit tools step: feature-detected from `archon kit --help`, opt-out by flag or env.
+kit_calls_made() {
+  if [ -e "$kit_calls" ]; then cat "$kit_calls"; fi
+}
+rm -f "$kit_calls" "$provider_mock_dir/kit-mode"
+output=$(run_provider_install --providers "") || fail "install without a kit command failed: $output"
+assert_equals "" "$(kit_calls_made)" "No kit command runs no kit step"
+case "$output" in
+  *"no 'kit' command"*) ;;
+  *) fail "missing kit command is not reported" ;;
+esac
+
+echo tools >"$provider_mock_dir/kit-mode"
+output=$(run_provider_install --providers "") || fail "install with kit tools failed: $output"
+assert_equals "kit tools" "$(kit_calls_made)" "kit tools runs when the CLI offers it"
+
+rm -f "$kit_calls"
+output=$(run_provider_install --providers "" --no-kit-tools) || fail "--no-kit-tools install failed: $output"
+assert_equals "" "$(kit_calls_made)" "--no-kit-tools skips the kit step"
+
+rm -f "$kit_calls"
+output=$(ARCHON_NO_KIT_TOOLS=1 run_provider_install --providers "") || fail "ARCHON_NO_KIT_TOOLS install failed: $output"
+assert_equals "" "$(kit_calls_made)" "ARCHON_NO_KIT_TOOLS=1 skips the kit step"
+
+rm -f "$kit_calls"
+echo doctor >"$provider_mock_dir/kit-mode"
+output=$(run_provider_install --providers "") || fail "install with kit doctor failed: $output"
+assert_equals "kit doctor" "$(kit_calls_made)" "kit doctor runs when there is no kit tools"
+rm -f "$provider_mock_dir/kit-mode" "$kit_calls"
 
 # The same selection cases for install.ps1, where PowerShell is installed (the Linux CI
 # runner has it). The driver shadows the Invoke-WebRequest cmdlet with a function, so the
