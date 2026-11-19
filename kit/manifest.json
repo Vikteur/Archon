@@ -890,11 +890,11 @@
     {
       "path": ".archon/scripts/test/scaffold-step.test.sh",
       "profile": "core",
-      "mode": "0644",
+      "mode": "0755",
       "template": false,
       "origin": ".archon/scripts/test/scaffold-step.test.sh",
       "kind": "script",
-      "sha256": "db2bf985dfc25bfc36583d7d34a66f7dad63ed4d39c69e3bf221eba335ec0056"
+      "sha256": "bb4ab7c9758ed65600b7b491ef56722b4518072597f268a4df68dcc2fb53e57f"
     },
     {
       "path": ".archon/scripts/test/script-calls.test.sh",

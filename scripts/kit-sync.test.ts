@@ -1194,6 +1194,16 @@ describe('the committed kit', () => {
     });
     expect(r.stdout.toString().trim().split('\n').filter(Boolean)).toEqual([]);
   });
+  test("the scaffold suites bring their own leaf and templates, never the repo's docs/", () => {
+    for (const suite of [
+      'profiles/core/.archon/scripts/test/scaffold-step.test.sh',
+      'profiles/java/scripts/test/scaffold.test.sh',
+    ]) {
+      const text = readFileSync(join(kit, suite), 'utf8');
+      expect(text).not.toMatch(/ln -s "\$top\/docs"/);
+      expect(text).toContain('## Scaffold');
+    }
+  });
   test("the agents that scaffold are told --for offers the repo's own templates", () => {
     for (const agent of ['developer', 'test-writer']) {
       const text = readFileSync(
