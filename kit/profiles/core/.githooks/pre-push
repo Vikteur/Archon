@@ -6,6 +6,7 @@
 # Git does not version .git/hooks; switch this hook on once per clone with: bash scripts/install-hooks.sh
 # Linked worktrees share the clone's git config, so the hook also runs on their pushes.
 # GROMA names the groma CLI (default: groma).
+# A repo without groma/ has not set Groma up: the hook prints a notice and lets the push through.
 set -euo pipefail
 
 # Git passes one line per pushed ref on stdin: <local ref> <local sha> <remote ref> <remote sha>. A delete has an
@@ -17,6 +18,11 @@ done
 [ "$carries_code" = 1 ] || exit 0
 
 cd "$(git rev-parse --show-toplevel)"
+
+if [ ! -d groma ]; then
+  echo "pre-push: Groma is not set up: run groma init (no groma/ folder, so the map check is skipped)." >&2
+  exit 0
+fi
 
 groma_cli="${GROMA:-groma}"
 if ! command -v "$groma_cli" >/dev/null 2>&1; then

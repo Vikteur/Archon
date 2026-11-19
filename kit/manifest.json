@@ -1218,7 +1218,7 @@
       "template": false,
       "origin": ".claude/scripts/groma-check.sh",
       "kind": "script",
-      "sha256": "86de280924524e2da96dd68bb8968fe71a1a61ee6ab5b77f3aaed9bf30b53f72"
+      "sha256": "d5248e9552e42ca3881725db303946209ca70097ec901bf0e7068fd0e0b3a9ca"
     },
     {
       "path": ".claude/scripts/groma-delta.sh",
@@ -1254,7 +1254,7 @@
       "template": false,
       "origin": ".githooks/pre-push",
       "kind": "hook",
-      "sha256": "f66fdc61340600b0f05449a9fc1eb487de41f08eb15a0b64d2929bc636991e96"
+      "sha256": "bf84ce8b6e00587288a1a8cb6e39d3f3fcf604c6bc426334c4d478cbd765ab8c"
     },
     {
       "path": ".github/agents/design-critic.agent.md",
@@ -1767,7 +1767,7 @@
       "template": false,
       "origin": "scripts/test/pre-push.test.sh",
       "kind": "script",
-      "sha256": "9a62094a2e5aea2ae72cb74608ac0534fdc57d1fd0f6b5a03dc6db08faa91403"
+      "sha256": "03fae951840a15e10dfffe612af480dca7a72c49aca6dd172ef1c3a4eb8e2428"
     },
     {
       "path": "scripts/test/run-suites.test.sh",

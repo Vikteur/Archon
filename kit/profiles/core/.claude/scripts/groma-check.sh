@@ -5,6 +5,9 @@
 # scripts/web-uis.sh.)
 # Needs the groma CLI (npm install -g groma.md) and a clean groma/ in the work tree, because it rescans. GROMA names
 # the CLI (default: groma). Whatever the scan leaves in groma/ is undone when the script ends, however it ends.
+# A repo without groma/ has not set Groma up: the script prints a notice (a GitHub Actions ::notice:: in Actions) and
+# passes, so neither the pre-push hook nor CI blocks on a map the project does not keep. `backlog: false` in
+# .archon/kit.yaml (else in kit.defaults.yaml beside it; env KIT_BACKLOG first) drops the two Backlog.md checks.
 # Usage: groma-check.sh
 set -euo pipefail
 
@@ -13,6 +16,21 @@ groma="${GROMA:-groma}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 failures=0
+
+if [[ ! -d groma ]]; then
+  notice="groma-check: not set up: run groma init (no groma/ folder, so the map checks are skipped)"
+  if [[ "${GITHUB_ACTIONS:-}" == true ]]; then echo "::notice::$notice"; else echo "$notice"; fi
+  exit 0
+fi
+
+# Backlog.md is optional (as scripts/install-tools.sh reads it: sed, since yq may not be installed): off drops the
+# ticket checks below.
+use_backlog="${KIT_BACKLOG:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$use_backlog" ]] || break
+  [[ -f "$f" ]] && use_backlog=$(sed -n 's/^backlog:[[:space:]]*["'"'"']\{0,1\}\([a-z01]*\).*/\1/p' "$f" | head -n 1)
+done
+case "$use_backlog" in false | 0 | no | off) use_backlog=0 ;; *) use_backlog=1 ;; esac
 
 fail() {
   echo "FAIL: $1" >&2
@@ -58,10 +76,12 @@ if [[ -d groma ]]; then
 fi
 
 echo "Check: every open ticket is pinned to the map"
+[[ "$use_backlog" == 1 ]] || echo "  skipped: backlog: false (Backlog.md is off)"
 # The board shows a ticket only when its references name a map element id exactly; a ticket that names none is
 # invisible there ("No mapped tasks"). Open means To Do or In Progress; epics (label epic) group tickets and need none.
-if [[ -d backlog/tasks && -d groma ]]; then
-  ids=" $(grep -rh -A1 '^groma:' groma | sed -n 's/^ *id: *//p' | tr -d "\"'\r" | tr '\n' ' ')"
+if [[ "$use_backlog" == 1 && -d backlog/tasks ]]; then
+  # A map with no element yet matches nothing: without `|| true`, set -e and pipefail ended the script here, silently.
+  ids=" $({ grep -rh -A1 '^groma:' groma || true; } | sed -n 's/^ *id: *//p' | tr -d "\"'\r" | tr '\n' ' ')"
   # One awk reads every ticket's front matter itself (getline), and prints the open, non-epic ones whose references
   # name no map id. A shell loop per ticket started several processes each, which took half a minute on Windows.
   while IFS= read -r file; do
@@ -94,7 +114,7 @@ fi
 if ! grep -q 'groma agent-instructions' AGENTS.md 2>/dev/null; then
   fail "AGENTS.md has no Groma block"
 fi
-if ! grep -q 'Backlog.md backlog' AGENTS.md 2>/dev/null; then
+if [[ "$use_backlog" == 1 ]] && ! grep -q 'Backlog.md backlog' AGENTS.md 2>/dev/null; then
   fail "AGENTS.md does not say the tickets live in this repo's Backlog.md backlog"
 fi
 

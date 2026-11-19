@@ -2,7 +2,8 @@
 # Tests the versioned pre-push hook (TASK-37): .githooks/pre-push runs .claude/scripts/groma-check.sh before a push and
 # stops the push when the check fails or the groma CLI is missing; scripts/install-hooks.sh switches it on per clone.
 # It builds throwaway git repos with a stub check script, so it tests the hook, not the real map, and does not depend on
-# whether the real groma CLI is installed.
+# whether the real groma CLI is installed. A repo without groma/ has not set Groma up: the hook and groma-check.sh print
+# a notice and pass. `backlog: false` drops groma-check.sh's Backlog.md checks.
 # Usage: bash scripts/test/pre-push.test.sh
 set -uo pipefail
 # No automatic gc or maintenance in the throwaway repos: a background gc racing the next git call was the suspected
@@ -57,8 +58,8 @@ echo "${GROMA:-unset}" > "$STUB_GROMA_FILE"
 exit "$(cat "$STUB_RC_FILE")"
 '
 
-# new_repo <name>: a work clone with the real hook files and the stub check, plus a bare remote with main pushed.
-# The hook is not switched on yet.
+# new_repo <name> [nomap]: a work clone with the real hook files and the stub check, plus a bare remote with main pushed.
+# It keeps a Groma map (groma/), unless nomap. The hook is not switched on yet.
 new_repo() {
   local dir="$tmp/$1"
   mkdir -p "$dir"
@@ -72,6 +73,10 @@ new_repo() {
   cp "$repo_root/scripts/install-hooks.sh" "$dir/work/scripts/install-hooks.sh"
   printf '%s' "$stub_check" > "$dir/work/.claude/scripts/groma-check.sh"
   chmod +x "$dir/work/.githooks/pre-push" "$dir/work/scripts/install-hooks.sh"
+  if [ "${2:-}" != nomap ]; then
+    mkdir -p "$dir/work/groma"
+    echo '{"scanners": [{"id": "java"}]}' > "$dir/work/groma/scanners.json"
+  fi
   git -C "$dir/work" add -A
   git -C "$dir/work" commit -q -m "initial"
   git -C "$dir/work" remote add origin "$dir/remote.git"
@@ -275,13 +280,13 @@ check "groma/ is restored after a failing scan" test -z "$(git -C "$r" status --
 # Every open, non-epic ticket references a map element id; done tickets and epics need none.
 r="$(new_map_repo mappins)"
 mkdir -p "$r/groma/actors" "$r/backlog/tasks"
-printf -- '---\ntype: C4 Actor\ndescription: x\ngroma:\n  id: couple\n---\n' > "$r/groma/actors/couple.md"
+printf -- '---\ntype: C4 Actor\ndescription: x\ngroma:\n  id: visitor\n---\n' > "$r/groma/actors/visitor.md"
 ticket() { # ticket <file> <status> <label> <ref>
   printf -- "---\nid: %s\nstatus: %s\nlabels:\n  - %s\nreferences:\n  - 'src/A.java:1'\n  - %s\n---\nbody\n" \
     "$1" "$2" "$3" "$4" > "$r/backlog/tasks/$1.md"
 }
-ticket pinned 'To Do' feature couple
-ticket unpinned 'In Progress' feature couple-x
+ticket pinned 'To Do' feature visitor
+ticket unpinned 'In Progress' feature visitor-x
 ticket done Done feature none
 ticket epic 'To Do' epic none
 git -C "$r" add -A && git -C "$r" commit -q -m tickets
@@ -290,6 +295,74 @@ last_err="$tmp/mappins.err"
 check "an open ticket that names no map element fails the check" grep -q 'unpinned.md references no map element' "$tmp/mappins.err"
 check "a ticket that names a map element passes" bash -c '! grep -q "/pinned.md references" "$1"' _ "$tmp/mappins.err"
 check "done tickets and epics need no map element" bash -c '! grep -qE "/(done|epic).md references" "$1"' _ "$tmp/mappins.err"
+
+# --- (j) a repo without groma/ has not set Groma up: the push goes through with a notice, CLI or not
+r="$(new_repo nomap nomap)"
+bash "$r/work/scripts/install-hooks.sh" >/dev/null
+push_from "$r/work" main 1 "groma-cli-that-is-not-installed" "$tmp/nomap.err"
+nomap_rc=$?
+check "without groma/ the push succeeds, although the check would fail and the CLI is missing" test "$nomap_rc" -eq 0
+check "the remote moved to the pushed commit without groma/" \
+  test "$(remote_ref "$r" main)" = "$(git -C "$r/work" rev-parse HEAD)"
+check "without groma/ the hook says to run groma init" grep -q 'not set up: run groma init' "$tmp/nomap.err"
+check "without groma/ the check script does not run" test ! -e "$STUB_RAN_FILE"
+
+# --- (k) groma-check.sh without groma/ (the CI groma job): a notice, exit 0, no groma call
+r="$tmp/nomapcheck"
+mkdir -p "$r/.claude/scripts"
+cp "$repo_root/.claude/scripts/groma-check.sh" "$r/.claude/scripts/groma-check.sh"
+git init -q -b main "$r"
+: > "$STUB_GROMA_LOG"
+(cd "$r" && GROMA="$tmp/map-groma" bash .claude/scripts/groma-check.sh > "$tmp/nomapcheck.out" 2> "$tmp/nomapcheck.err")
+nomapcheck_rc=$?
+last_err="$tmp/nomapcheck.err"
+check "groma-check.sh passes without groma/" test "$nomapcheck_rc" -eq 0
+check "groma-check.sh without groma/ says not set up: run groma init" \
+  grep -q '^groma-check: not set up: run groma init' "$tmp/nomapcheck.out"
+check "groma-check.sh without groma/ calls no groma CLI" test ! -s "$STUB_GROMA_LOG"
+(cd "$r" && GITHUB_ACTIONS=true GROMA="$tmp/map-groma" bash .claude/scripts/groma-check.sh > "$tmp/nomapgh.out" 2>&1)
+check "in GitHub Actions the notice is a ::notice:: annotation" test "$? $(head -c 10 "$tmp/nomapgh.out")" = "0 ::notice::"
+(cd "$r" && GROMA=groma-cli-that-is-not-installed bash .claude/scripts/groma-check.sh > /dev/null 2>&1)
+check "groma-check.sh without groma/ needs no groma CLI" test $? -eq 0
+
+# --- (l) backlog: false drops the Backlog.md checks: an unpinned open ticket and an AGENTS.md without the backlog line
+printf '%s\n' '#!/usr/bin/env bash' 'echo "$*" >> "$STUB_GROMA_LOG"' \
+  '[ "$1" != agent-instructions ] || echo "Groma agent instructions"' > "$tmp/quiet-groma"
+chmod +x "$tmp/quiet-groma"
+backlog_repo() { # backlog_repo <name> <kit.yaml backlog line or -> <kit.defaults.yaml backlog line or ->
+  local d
+  d="$(new_map_repo "$1")"
+  printf 'Run groma agent-instructions.\n' > "$d/AGENTS.md"
+  mkdir -p "$d/backlog/tasks" "$d/.archon"
+  printf -- "---\nid: open\nstatus: To Do\nlabels:\n  - feature\nreferences:\n  - nothing\n---\nbody\n" > "$d/backlog/tasks/open.md"
+  [ "$2" = - ] || printf 'profiles: [core]\n%s\n' "$2" > "$d/.archon/kit.yaml"
+  [ "$3" = - ] || printf '%s\n' "$3" > "$d/.archon/kit.defaults.yaml"
+  git -C "$d" add -A && git -C "$d" commit -q -m backlog
+  echo "$d"
+}
+run_check() { # run_check <repo> <name> [env...]: runs groma-check.sh, prints its exit code
+  local d="$1" n="$2"; shift 2
+  (cd "$d" && env "$@" GROMA="$tmp/quiet-groma" bash .claude/scripts/groma-check.sh > "$tmp/$n.out" 2> "$tmp/$n.err")
+  echo $?
+}
+r="$(backlog_repo blon - -)"
+rc="$(run_check "$r" blon)"; last_err="$tmp/blon.err"
+check "with Backlog.md on, an unpinned open ticket fails the check" grep -q 'open.md references no map element' "$tmp/blon.err"
+check "with Backlog.md on, AGENTS.md must name the Backlog.md backlog" grep -q 'Backlog.md backlog' "$tmp/blon.err"
+check "with Backlog.md on, the check fails" test "$rc" -eq 1
+r="$(backlog_repo bloff 'backlog: false' -)"
+rc="$(run_check "$r" bloff)"; last_err="$tmp/bloff.err"
+check "backlog: false in kit.yaml passes the check" test "$rc" -eq 0
+check "backlog: false says the ticket check is skipped" grep -q 'skipped: backlog: false' "$tmp/bloff.out"
+r="$(backlog_repo bldef - 'backlog: false')"
+rc="$(run_check "$r" bldef)"; last_err="$tmp/bldef.err"
+check "backlog: false in kit.defaults.yaml alone passes the check" test "$rc" -eq 0
+r="$(backlog_repo blover 'backlog: true' 'backlog: false')"
+rc="$(run_check "$r" blover)"; last_err="$tmp/blover.err"
+check "backlog: true in kit.yaml wins over the defaults' false" test "$rc" -eq 1
+r="$(backlog_repo blenv - -)"
+rc="$(run_check "$r" blenv KIT_BACKLOG=0)"; last_err="$tmp/blenv.err"
+check "KIT_BACKLOG=0 switches the Backlog.md checks off" test "$rc" -eq 0
 
 echo "pre-push tests: $passed passed, $failed failed"
 [[ "$failed" -eq 0 ]]
