@@ -119,6 +119,10 @@ export const WORKFLOW_EVENT_TYPES = [
   'workflow_artifact',
   'integration_operation',
   'node_session_resumed',
+  // The prompt an AI node or AI loop iteration sent its provider, as sent
+  // (`dag/node-prompt.ts`). `data` carries `prompt`, `reask`, optional `attemptId`,
+  // `iteration`, and `truncated` + `length` when cut. Absence means the run predates it.
+  'node_prompt',
   // A persisted session the node did not continue because its provider cannot fork it;
   // continuing in place could put two runs into one provider conversation (#2667).
   'node_session_not_continued',

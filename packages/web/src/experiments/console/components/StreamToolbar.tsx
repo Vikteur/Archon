@@ -19,6 +19,10 @@ interface StreamToolbarProps {
   scriptCount: number;
   scriptsOnly: boolean;
   onToggleScriptsOnly: (next: boolean) => void;
+  /** Prompts agents were given; the "Prompts only" switch shows only those. */
+  promptCount: number;
+  promptsOnly: boolean;
+  onTogglePromptsOnly: (next: boolean) => void;
   messageCount: number;
   artifactCount: number | null;
   /** Distinct nodes in the run; empty hides the node filter. */
@@ -80,22 +84,27 @@ function Checkbox({ label, checked, onChange }: CheckboxProps): ReactElement {
   );
 }
 
-/** The amber "Scripts only" switch, styled like the script rows it filters to. */
-function ScriptsOnlyToggle({
+/** A "… only" switch, styled like the rows it filters to. */
+function OnlyToggle({
+  label,
+  title,
+  accent,
   on,
   count,
   onChange,
 }: {
+  label: string;
+  title: string;
+  accent: string;
   on: boolean;
   count: number;
   onChange: (next: boolean) => void;
 }): ReactElement {
-  const accent = 'var(--warning)';
   return (
     <button
       type="button"
       aria-pressed={on}
-      title="Show only the tool calls that ran a script (x)"
+      title={title}
       onClick={() => {
         onChange(!on);
       }}
@@ -111,7 +120,7 @@ function ScriptsOnlyToggle({
         className="h-1.5 w-1.5 rounded-full"
         style={{ background: on ? accent : `color-mix(in oklch, ${accent}, transparent 50%)` }}
       />
-      Scripts only
+      {label}
       <span className="tabular-nums opacity-80">{count.toString()}</span>
     </button>
   );
@@ -159,6 +168,9 @@ export function StreamToolbar({
   scriptCount,
   scriptsOnly,
   onToggleScriptsOnly,
+  promptCount,
+  promptsOnly,
+  onTogglePromptsOnly,
   messageCount,
   artifactCount,
   nodeOptions,
@@ -196,7 +208,8 @@ export function StreamToolbar({
       {isLog ? (
         <span className="font-mono text-[12px] text-text-tertiary md:ml-3">
           {messageCount.toString()} messages · {toolCallCount.toString()} tool calls ·{' '}
-          {scriptCount.toString()} {scriptCount === 1 ? 'script' : 'scripts'}
+          {scriptCount.toString()} {scriptCount === 1 ? 'script' : 'scripts'} ·{' '}
+          {promptCount.toString()} {promptCount === 1 ? 'prompt' : 'prompts'}
         </span>
       ) : null}
 
@@ -224,8 +237,23 @@ export function StreamToolbar({
               </SelectShell>
             </label>
           ) : null}
-          <ScriptsOnlyToggle on={scriptsOnly} count={scriptCount} onChange={onToggleScriptsOnly} />
-          {scriptsOnly ? null : (
+          <OnlyToggle
+            label="Prompts only"
+            title="Show only the prompts agents were given (o)"
+            accent="var(--accent)"
+            on={promptsOnly}
+            count={promptCount}
+            onChange={onTogglePromptsOnly}
+          />
+          <OnlyToggle
+            label="Scripts only"
+            title="Show only the tool calls that ran a script (x)"
+            accent="var(--warning)"
+            on={scriptsOnly}
+            count={scriptCount}
+            onChange={onToggleScriptsOnly}
+          />
+          {scriptsOnly || promptsOnly ? null : (
             <>
               <Checkbox label="Tool calls" checked={showToolCalls} onChange={onToggleToolCalls} />
               <Checkbox label="System" checked={showSystem} onChange={onToggleSystem} />

@@ -4,6 +4,8 @@ import { useStreamContext } from '../lib/stream-context';
 import type { InlineToolCall } from '../primitives/message';
 import { scriptCallOf } from '../lib/script-run';
 import { ScriptRunItem } from './ScriptRunItem';
+import { promptCallOf } from '../lib/prompt-call';
+import { PromptItem } from './PromptItem';
 
 interface ToolCallItemProps {
   call: InlineToolCall;
@@ -44,7 +46,27 @@ export function ToolCallItem({ call, timestamp }: ToolCallItemProps): ReactEleme
       />
     );
   }
+  const subagent = promptCallOf(call);
+  if (subagent !== null) {
+    return (
+      <PromptItem
+        subagent
+        prompt={subagent.prompt}
+        recipient={subagent.agent ?? call.name}
+        note={subagent.description}
+        timestamp={timestamp}
+        result={call.output}
+        status={subagentStatus(call)}
+      />
+    );
+  }
   return <PlainToolCallItem call={call} timestamp={timestamp} />;
+}
+
+function subagentStatus(call: InlineToolCall): 'running' | 'completed' | 'failed' | undefined {
+  if (call.status === 'failed' || call.status === 'cancelled') return 'failed';
+  if (call.status === 'completed') return 'completed';
+  return call.outcomeUnrecorded === true ? undefined : 'running';
 }
 
 function PlainToolCallItem({ call, timestamp }: ToolCallItemProps): ReactElement {

@@ -795,3 +795,45 @@ describe('cleanup warning payload validation', () => {
     }
   );
 });
+
+describe('toRunEvent — node prompts', () => {
+  test('node_prompt maps to a prompt event under its node', () => {
+    expect(
+      toRunEvent(
+        raw({
+          event_type: 'node_prompt',
+          step_name: 'implement',
+          data: { prompt: 'Build it', reask: 1, iteration: 2, attemptId: 'a1' },
+        })
+      )
+    ).toEqual({
+      id: 'e1',
+      runId: 'r1',
+      timestamp: '2026-06-05T10:00:00Z',
+      nodeId: 'implement',
+      kind: 'prompt',
+      prompt: 'Build it',
+      reask: 1,
+      iteration: 2,
+      truncatedFrom: null,
+    });
+  });
+
+  test('a cut prompt keeps its full length', () => {
+    expect(
+      toRunEvent(
+        raw({
+          event_type: 'node_prompt',
+          data: { prompt: 'x', reask: 0, truncated: true, length: 250_000 },
+        })
+      )
+    ).toMatchObject({ kind: 'prompt', iteration: null, truncatedFrom: 250_000 });
+  });
+
+  test('a node_prompt without a prompt falls back to a system row', () => {
+    expect(toRunEvent(raw({ event_type: 'node_prompt', data: { reask: 0 } }))).toMatchObject({
+      kind: 'system',
+      label: 'node_prompt',
+    });
+  });
+});
