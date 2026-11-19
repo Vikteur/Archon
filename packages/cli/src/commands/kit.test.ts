@@ -565,7 +565,7 @@ describe('kit', () => {
       );
       expect(await kitToolsCommand(project)).toBe(0);
       expect(readFileSync(join(project, 'args.txt'), 'utf-8').trim()).toBe('args:');
-      expect(await kitToolsCommand(project, true)).toBe(4);
+      expect(await kitToolsCommand(project, { check: true })).toBe(4);
       expect(readFileSync(join(project, 'args.txt'), 'utf-8').trim()).toBe('args:--check');
     });
     it("without a project installer runs the kit's bundled one from a temp folder it removes", async () => {
@@ -574,11 +574,11 @@ describe('kit', () => {
       kit.files['core/scripts/install-tools.sh'] =
         'echo "args:$* conf:$(cat "$PROJECT_DIR/scripts/tools.conf") home:$PROJECT_DIR" > ran.txt\nexit 0\n';
       kit.files['core/scripts/tools.conf'] = 'jq 1.7\n';
-      expect(await kitToolsCommand(plain, true, kit)).toBe(0);
+      expect(await kitToolsCommand(plain, { check: true, kit })).toBe(0);
       const ran = readFileSync(join(plain, 'ran.txt'), 'utf-8').trim();
       expect(ran).toStartWith('args:--check conf:jq 1.7 home:');
       expect(existsSync(ran.split('home:')[1])).toBe(false);
-      expect(await kitToolsCommand(plain, false, makeKit())).toBe(1);
+      expect(await kitToolsCommand(plain, { kit: makeKit() })).toBe(1);
     });
   });
 

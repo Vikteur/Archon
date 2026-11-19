@@ -304,7 +304,7 @@ export function defaultSetupDeps(cwd: string, env: NodeJS.ProcessEnv = process.e
     ui: interactive ? clackUi : plainUi(),
     run: spawnRunner,
     loadKit: async () => (await import('../bundled-kit')).BUNDLED_KIT,
-    tools: (backend, kit, output) => kitToolsCommand(backend, false, kit, output),
+    tools: (backend, kit, output) => kitToolsCommand(backend, { kit, output }),
     kitAdd: kitAddCommand,
     checkMcp: dir => checkMcpServers(dir),
     which: command => onPath(command, env),

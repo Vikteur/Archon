@@ -429,16 +429,25 @@ export function hasProjectInstaller(targetPath: string): boolean {
  * kit installed yet, as when an installer runs it) runs the kit's own installer and tool list from `kit`,
  * written to a temp folder; its PROJECT_DIR is that folder, so it switches on no project's git hooks.
  */
+export interface KitToolsOptions {
+  /** `--check`: report the tools, install nothing. */
+  check?: boolean;
+  /** The kit whose installer runs when the project has none. */
+  kit?: Kit;
+  /** Where the installer's output goes; unset streams it to the terminal. */
+  output?: OutputSink;
+  /** The installer's environment (default process.env). */
+  env?: NodeJS.ProcessEnv;
+}
+
 export async function kitToolsCommand(
   targetPath: string,
-  check = false,
-  kit?: Kit,
-  output?: OutputSink
+  { check = false, kit, output, env = process.env }: KitToolsOptions = {}
 ): Promise<number> {
   const project = resolve(targetPath);
   const flag = check ? ' --check' : '';
   if (existsSync(join(project, INSTALL_TOOLS))) {
-    return await streamCommand(`bash ${INSTALL_TOOLS}${flag}`, project, process.env, output);
+    return await streamCommand(`bash ${INSTALL_TOOLS}${flag}`, project, env, output);
   }
   const installer = kit?.files[BUNDLED_INSTALLER];
   const toolsConf = kit?.files[BUNDLED_TOOLS_CONF];
@@ -459,7 +468,7 @@ export async function kitToolsCommand(
     return await streamCommand(
       `bash ${shellQuote(join(temp, INSTALL_TOOLS))}${flag}`,
       project,
-      { ...process.env, PROJECT_DIR: temp },
+      { ...env, PROJECT_DIR: temp },
       output
     );
   } finally {
@@ -687,7 +696,7 @@ export async function kitAddCommand(
   const installTools = join(project, 'scripts', 'install-tools.sh');
   if (!options.noTools && !dry && existsSync(installTools)) {
     console.log('\nRunning scripts/install-tools.sh');
-    const code = await kitToolsCommand(project, false, undefined, options.output);
+    const code = await kitToolsCommand(project, { output: options.output });
     if (code !== 0) console.warn(`Warning: scripts/install-tools.sh exited with ${code}`);
   }
 
@@ -1249,10 +1258,10 @@ export async function kitCommand(
   }
   const target = targetArg ? resolve(targetArg) : cwd;
   if (subcommand === 'tools' && hasProjectInstaller(target)) {
-    return await kitToolsCommand(target, options.check);
+    return await kitToolsCommand(target, { check: options.check });
   }
   const { BUNDLED_KIT: kit } = await import('../bundled-kit');
-  if (subcommand === 'tools') return await kitToolsCommand(target, options.check, kit);
+  if (subcommand === 'tools') return await kitToolsCommand(target, { check: options.check, kit });
   if (subcommand === 'list') return kitListCommand(target, kit);
   if (subcommand === 'doctor') return await kitDoctorCommand(target, kit);
   return await kitAddCommand(target, options, kit);
