@@ -81,6 +81,7 @@ nodes:
         what a change to it reaches (every place that writes the state the request changes);
       - `search` and `read` for an operation of the contract, never a Read of contract/.
       Grep stays the tool for text, config, logs and strings; without the tools, read as before.
+      On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
       Map the code this request touches; change nothing. Write $ARTIFACTS_DIR/explore.md once, at the end, at most 120
       lines:
       - the files and symbols involved, each with its layer (domain, usecase, adapter, gateway, platform; see
@@ -121,6 +122,7 @@ nodes:
       - `schema` for a schema's fields; `where` for an operation's controller, stub status and tests;
       - `codegraph_impact` for what a change to a Java symbol reaches.
       Grep stays the tool for text, config, logs and strings; without the tools, read as before.
+      On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
       Write an implementation plan for exactly this request to $ARTIFACTS_DIR/plan.md, once, when the plan is complete:
       do not write a draft and rewrite it.
       Run no Gradle and no test suite. The one exception: for a design question the plan states and the code cannot
@@ -340,6 +342,7 @@ nodes:
             - `where` for an operation's existing HTTP tests and unit tests, to extend them instead of writing a second one;
             - `codegraph_callers` for the existing tests of a class.
             Grep stays the tool for text, config, logs and strings; without the tools, read as before.
+            On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
             Read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its position among the
             plan's checkbox lines (the first checkbox is 1).
             If $ARTIFACTS_DIR/skills-missing.md exists, read it first: an agent of this step never loaded the skills
@@ -432,6 +435,7 @@ nodes:
             - `schema` for the fields a mapper or DTO needs;
             - `codegraph_callers` before you change a shared symbol.
             Grep stays the tool for text, config, logs and strings; without the tools, read as before.
+            On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
             If $ARTIFACTS_DIR/skills-missing.md names `Build skills:`, this step was built without them: load each
             with the skill tool first, check the step's code against them and fix what they change, then go on as
             below (when nothing changed, mark the step and commit nothing).
@@ -541,6 +545,7 @@ nodes:
       - `usedBy` on a changed schema field, for an operation the branch missed;
       - `where` on each operation the branch built, for its status and its tests.
       Grep stays the tool for text, config, logs and strings; without the tools, read as before.
+      On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
       Read $ARTIFACTS_DIR/review-tests.log: the review-tests node ran `AFFECTED_NO_SYNC=1 bash
       .claude/scripts/affected-check.sh` over the branch once, so do not run it again before you fix anything. For a
       changed main class of a domain, usecase or gateway module it ends with the mutation gate (PIT on those classes).
@@ -783,6 +788,7 @@ nodes:
             - `codegraph_callers` and `codegraph_callees` to walk from the failing test to its cause;
             - `codegraph_impact` to bound the suspects; `where` when the failing test is an HTTP test of an operation.
             Grep stays the tool for text, config, logs and strings; without the tools, read as before.
+            On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
             CI is red for the HEAD commit of this branch. It ran locally: `bash .archon/scripts/local-ci-run.sh --logs`
             prints the folder with summary.txt and one <job>.log per job; read the failing job's log there.
             red-triage.sh classified the red jobs in $ARTIFACTS_DIR/red-triage.json (`jobs`: <job>=<class>). Infra

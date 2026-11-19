@@ -89,6 +89,27 @@ KIT_CONTRACT_SERVER_NAME=contract-api gate
 check "5b a configured server's call counts" $(row plan | grep -qF '| plan | 1 | 0 |' && row plan | grep -qF '| ok |'; echo $?)
 check "5b the servers line and header name it" $(grep -qx 'Servers: contract-api up, codegraph up.' "$md" && grep -qF '| Node | contract-api | codegraph |' "$md"; echo $?)
 
+# 5c. The shell fallback counts: the codegraph CLI (after rtk or rtk proxy) and the contract server's cli.mjs, also the
+# kit's renamed form; other codegraph subcommands, other scripts and a mention inside an argument do not.
+fresh; status up up
+call plan Bash '{"command":"codegraph explore \"SignInUseCase\""}'
+call plan Bash '{"command":"rtk codegraph node SignInUseCase"}'
+call plan Bash '{"command":"rtk proxy codegraph callers X && rtk proxy codegraph impact X"}'
+call plan Bash '{"command":"codegraph status"}'
+call plan Bash '{"command":"echo codegraph explore X"}'
+call plan Bash '{"command":"node scripts/contract-mcp/cli.mjs read signIn"}'
+call plan Bash '{"command":"rtk node scripts/contract-mcp/cli.mjs where --status live"}'
+call plan Bash '{"command":"node scripts/contract-mcp/server.mjs"}'
+gate; check "5c the CLI calls count as codegraph and server use" $(row plan | grep -qF '| plan | 2 | 4 | 0 | 0 | 0 | 0 | 0 | ok |'; echo $?)
+fresh; status up up
+times 9 plan Grep '{"pattern":"X"}'
+call plan Bash '{"command":"codegraph query SignIn"}'
+gate; check "5c a codegraph CLI call clears the hand-work warning" $(row plan | grep -qF '| ok |'; echo $?)
+fresh; status up up
+call plan Read '{"file_path":"contract/dist/openapi.yaml"}'
+call plan Bash '{"command":"node scripts/contract-mcp/cli.mjs schema signInRequest"}'
+gate; check "5c a server CLI call clears the contract-by-hand warning" $(row plan | grep -qF '| ok |'; echo $?)
+
 # 6. Nodes: the steps inside a node count for it; other nodes are left out; nodes can be named.
 fresh; status up up
 times 8 implement.build-step Grep '{"pattern":"X"}'

@@ -11,7 +11,14 @@
         "./gradlew check",
         "npm test",
         "npm run test",
-        "scripts/contract-db-parity.sh"
+        "scripts/contract-db-parity.sh",
+        "codegraph explore",
+        "codegraph node",
+        "codegraph callers",
+        "codegraph callees",
+        "codegraph impact",
+        "codegraph query",
+        "node scripts/contract-mcp/cli.mjs"
       ]
     },
     "closeout": {
@@ -100,7 +107,14 @@
         "npm test",
         "npm run test",
         "bash .archon/scripts/ci-by-sha.sh",
-        "bash .archon/scripts/local-ci-run.sh --logs"
+        "bash .archon/scripts/local-ci-run.sh --logs",
+        "codegraph explore",
+        "codegraph node",
+        "codegraph callers",
+        "codegraph callees",
+        "codegraph impact",
+        "codegraph query",
+        "node scripts/contract-mcp/cli.mjs"
       ]
     },
     "design-critic": {
@@ -130,7 +144,14 @@
         "gh run view",
         "bash .claude/scripts/affected-check.sh",
         "bash .archon/scripts/local-ci-run.sh",
-        "bash .archon/scripts/ci-by-sha.sh"
+        "bash .archon/scripts/ci-by-sha.sh",
+        "codegraph explore",
+        "codegraph node",
+        "codegraph callers",
+        "codegraph callees",
+        "codegraph impact",
+        "codegraph query",
+        "node scripts/contract-mcp/cli.mjs"
       ]
     },
     "github-agent": {
@@ -160,7 +181,13 @@
         "bash .claude/scripts/affected-check.sh",
         "gh run view",
         "./gradlew",
-        "npm"
+        "npm",
+        "codegraph explore",
+        "codegraph node",
+        "codegraph callers",
+        "codegraph callees",
+        "codegraph impact",
+        "codegraph query"
       ]
     },
     "delegator": {
@@ -264,7 +291,13 @@
         "./gradlew integrationTest",
         "./gradlew check",
         "npm test",
-        "npm run test"
+        "npm run test",
+        "codegraph explore",
+        "codegraph node",
+        "codegraph callers",
+        "codegraph callees",
+        "codegraph impact",
+        "codegraph query"
       ]
     },
     "test-writer": {
@@ -290,7 +323,14 @@
         "npm run test",
         "bash .claude/scripts/affected-check.sh",
         "bash .archon/scripts/local-ci-run.sh",
-        "bash .archon/scripts/ci-by-sha.sh"
+        "bash .archon/scripts/ci-by-sha.sh",
+        "codegraph explore",
+        "codegraph node",
+        "codegraph callers",
+        "codegraph callees",
+        "codegraph impact",
+        "codegraph query",
+        "node scripts/contract-mcp/cli.mjs"
       ]
     }
   }

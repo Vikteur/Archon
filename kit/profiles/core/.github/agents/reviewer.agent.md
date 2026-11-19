@@ -78,4 +78,5 @@ tool list did not start: fall back to `Read` and `Grep`, and say so in your summ
 
 ## On Copilot CLI
 
-- Claude Code limits this agent's shell to these commands; keep to them: `git diff *`, `git status *`, `gh run view *`, `./gradlew test *`, `./gradlew integrationTest *`, `./gradlew check *`, `npm test *`, `npm run test *`.
+- Claude Code limits this agent's shell to these commands; keep to them: `git diff *`, `git status *`, `gh run view *`, `./gradlew test *`, `./gradlew integrationTest *`, `./gradlew check *`, `npm test *`, `npm run test *`. On Copilot CLI the MCP fallback below adds: `codegraph explore *`, `codegraph node *`, `codegraph callers *`, `codegraph callees *`, `codegraph impact *`, `codegraph query *`.
+- MCP fallback: if these MCP tools are not in your tool list (an organization's MCP registry policy can block the kit's local servers), run the same function through its CLI in the shell instead, written exactly so: for `codegraph/*`, `codegraph explore "<question or names>"`, `codegraph node <symbol>` (`--file <path>` reads a file), `codegraph callers <symbol>`, `codegraph callees <symbol>`, `codegraph impact <symbol>` and `codegraph query <name>` (the search tool), and no other codegraph subcommand.

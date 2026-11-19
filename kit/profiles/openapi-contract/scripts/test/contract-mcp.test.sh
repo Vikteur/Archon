@@ -194,6 +194,52 @@ check "where: an answer stays under 4,000 characters" '[.live,.stub,.second,.cla
 check "schema: an unknown name is an error that points to search" '.noSchema.isError and (.noSchema.value|contains("search"))'
 check "usedBy: an unknown schema is an error" '.noUse.isError'
 
+# cli.mjs, the shell fallback: for each command its stdout is the MCP tool's answer text, byte for byte, with the same
+# exit code (0, or 1 for an isError answer); a wrong command or arguments exit 2, --help exits 0.
+cli="$tool/cli.mjs"
+CLAUDE_PROJECT_DIR="$work" CASES='[
+  ["search", ["search","delete","a","note"], "search", {"query":"delete a note"}],
+  ["search none", ["search","zzqx"], "search", {"query":"zzqx"}],
+  ["read", ["read","deleteNote"], "read", {"operationId":"deleteNote"}],
+  ["read unknown", ["read","noSuchOperation"], "read", {"operationId":"noSuchOperation"}],
+  ["where id", ["where","deleteNote"], "where", {"operationId":"deleteNote"}],
+  ["where unknown", ["where","noSuchOperation"], "where", {"operationId":"noSuchOperation"}],
+  ["where tag", ["where","--tag","projects"], "where", {"tag":"projects"}],
+  ["where status", ["where","--status","stub"], "where", {"status":"stub"}],
+  ["schema unknown", ["schema","nope"], "schema", {"name":"nope"}],
+  ["usedBy unknown", ["usedBy","nope.field"], "usedBy", {"target":"nope.field"}]
+]' node --input-type=module -e "
+  import { Client } from '$tool/node_modules/@modelcontextprotocol/sdk/dist/esm/client/index.js';
+  import { StdioClientTransport } from '$tool/node_modules/@modelcontextprotocol/sdk/dist/esm/client/stdio.js';
+  import { spawnSync } from 'node:child_process';
+  const c = new Client({ name: 'test', version: '0' });
+  await c.connect(new StdioClientTransport({ command: 'node', args: ['$tool/server.mjs'], env: { ...process.env } }));
+  const out = {};
+  for (const [k, argv, name, args] of JSON.parse(process.env.CASES)) {
+    const r = await c.callTool({ name, arguments: args });
+    const p = spawnSync('node', ['$cli', ...argv], { encoding: 'utf8', env: { ...process.env } });
+    out[k] = { same: p.stdout === r.content[0].text + '\\n', exit: p.status, expected: r.isError ? 1 : 0 };
+  }
+  await c.close();
+  console.log(JSON.stringify(out));" >"$out" 2>"$work/err" || bad "the cli comparison runs" "$(head -c 300 "$work/err")"
+for k in $(jq -r 'keys[]|@base64' "$out" 2>/dev/null); do
+  n="$(printf %s "$k" | base64 -d)"
+  check "cli: $n prints the MCP answer and exits as it does" ".[\"$n\"]|.same and .exit==.expected"
+done
+check "cli: an error answer exits 1" '.["read unknown"].exit==1 and .["where unknown"].exit==1'
+cli() { CLAUDE_PROJECT_DIR="$work" node "$cli" "$@" >"$work/cli.out" 2>"$work/cli.err"; echo $?; }
+[ "$(cli --help)" = 0 ] && grep -q 'where --tag <tag>' "$work/cli.out" && grep -q 'Finds where an API operation lives' "$work/cli.out" \
+  && ok "cli: --help exits 0 and lists each command with the tool's description" || bad "cli: --help"
+[ "$(cli)" = 2 ] && grep -q '^Usage:' "$work/cli.err" && ok "cli: no arguments exit 2 with the usage" || bad "cli: no arguments"
+[ "$(cli frobnicate)" = 2 ] && ok "cli: an unknown command exits 2" || bad "cli: unknown command"
+[ "$(cli read)" = 2 ] && ok "cli: a missing argument exits 2" || bad "cli: missing argument"
+[ "$(cli read a b)" = 2 ] && ok "cli: too many arguments exit 2" || bad "cli: too many arguments"
+[ "$(cli where --status bogus)" = 2 ] && ok "cli: a bad status exits 2" || bad "cli: bad status"
+[ "$(cli where --tag)" = 2 ] && ok "cli: a flag without its value exits 2" || bad "cli: flag without value"
+mv "$work/build" "$work/build.off"
+[ "$(cli read deleteNote)" = 1 ] && grep -q "contract-agent-readiness.sh" "$work/cli.err" && ok "cli: without the report it exits 1 and names the check" || bad "cli: without the report"
+mv "$work/build.off" "$work/build"
+
 # plan-ops.mjs, plan-context.sh's section: the operations a ticket names, by operationId or by METHOD and path, in
 # the ticket's order, with where's facts and the readiness verdict.
 printf 'Description:\nRename a note (renameNote), and keep DELETE /notes/{noteId} as it is. Not deleteNotes.\n' >"$work/ticket.md"

@@ -2,7 +2,7 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "d46624ff48a852d7c16eda60a419a684e06a6f7f"
+    "commit": "7dbc8e2a87f7aefc6286c1fdd0f13ba7d6bbebd8"
   },
   "profiles": {
     "core": {
@@ -453,7 +453,7 @@
       "template": true,
       "origin": ".archon/scripts/mcp-use-check.js",
       "kind": "script",
-      "sha256": "2d4553c75575109f998e8539162d876e5138178ba2743038d8bbf0fa6cc1da11"
+      "sha256": "b5bdc33163f1b2901ac930088499312288621a9d6587a6fda4cc10c118c7e33f"
     },
     {
       "path": ".archon/scripts/merge-ledger.sh",
@@ -1821,7 +1821,7 @@
       "template": true,
       "origin": ".archon/scripts/test/mcp-use-check.test.sh",
       "kind": "script",
-      "sha256": "11d85c137dac4c87a0d82e2c1dd161b5fb8a1fc800705c071cb8fdd94b4424ed"
+      "sha256": "b5a342a87f177f9f5ea981c5d245c562473c24a6c7c19bc4c8ff364a4c56fbac"
     },
     {
       "path": ".archon/scripts/test/merge-ledger.test.sh",
@@ -2370,7 +2370,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "9bc3c2a3e7a90cb2c7b244359cfcf6406ea1cfbde14e7505735f11ccb7a7dbc8"
+      "sha256": "6dbe3b537ff7c8864a2dd3815a6a913eb65ce016e2a79c376a3c5dc04aebf323"
     },
     {
       "path": ".archon/workflows/build-feature.yaml",
@@ -2442,7 +2442,7 @@
       "template": false,
       "origin": ".claude/hooks/agent-scopes.json",
       "kind": "hook",
-      "sha256": "61ac7b0e36fcaebbf9cc64b7e4ba2a856b2492a5fe0952d6cc667773921cdc74"
+      "sha256": "978fde70f649506c061008dff8ea59e5232f1a4715df85bf8f800b1f20ea3e68"
     },
     {
       "path": ".claude/hooks/guard-generated.globs",
@@ -2694,7 +2694,7 @@
       "template": false,
       "origin": ".claude/agents/github-agent.md",
       "kind": "agent",
-      "sha256": "10108106b2dc1883f287a58a3be10080197647ec546654e5b74b87d1c94d8112"
+      "sha256": "979ee7cb9a3cfba1eb933f258ce8bfd303189b773321cd18df2d8692eff33da1"
     },
     {
       "path": ".github/agents/retro.agent.md",
@@ -2712,7 +2712,7 @@
       "template": false,
       "origin": ".claude/agents/reviewer.md",
       "kind": "agent",
-      "sha256": "d9e6e7429529db4c7b44433defb952d292b5ce892db1f4ad6fc53a7f6e87f5e7"
+      "sha256": "f3fe885fc8b5082f49852ecdb03e458e32898fc868cf48beb964e7d25718205f"
     },
     {
       "path": ".github/copilot-instructions.md",
@@ -3333,7 +3333,7 @@
       "template": true,
       "origin": ".claude/agents/analyst.md",
       "kind": "agent",
-      "sha256": "e5c8987b5b32a52fd8a2f4f24de04a6d01e9012c3b8b4ea4364ac72ab8e460c9"
+      "sha256": "33f5ede7274ca8d5514bad63e74601255171838e900783a5ab5464a89464bdcd"
     },
     {
       "path": ".github/agents/debugger.agent.md",
@@ -3342,7 +3342,7 @@
       "template": true,
       "origin": ".claude/agents/debugger.md",
       "kind": "agent",
-      "sha256": "6ae2a0b22b889c368c844bf36df2f667b19cd4b5ec341befae2d50e4ee465bce"
+      "sha256": "8bcf33d17885498a7a12f7186d87f00125c97e805307d3b8c0dfc0f922d58221"
     },
     {
       "path": ".github/agents/developer.agent.md",
@@ -3351,7 +3351,7 @@
       "template": true,
       "origin": ".claude/agents/developer.md",
       "kind": "agent",
-      "sha256": "c49bc2603cdbad34e5271309cd7e7bc1f6a67cf55f01d93fb470ef8a6f3a0a10"
+      "sha256": "8c73da7b5a3c464c1e35cb7c6b569a2e6c41a2deb8dc5e78693ae727491f9173"
     },
     {
       "path": ".github/agents/test-writer.agent.md",
@@ -3360,7 +3360,7 @@
       "template": true,
       "origin": ".claude/agents/test-writer.md",
       "kind": "agent",
-      "sha256": "9a07607d7e5d55dd70949284b4bb023fcd90a0efad446f0daa31df5f1e413725"
+      "sha256": "663b00d8fb581f6418e1a7f0c24f42a2b59a9223420cc06b5d3b8efec3b24c68"
     },
     {
       "path": ".github/instructions/adapter.instructions.md",
@@ -5002,6 +5002,15 @@
       "sha256": "81e60a6ddc2d78b0d586d0d078161cfb023af80573c50fade11fdf573f146137"
     },
     {
+      "path": "scripts/contract-mcp/cli.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": true,
+      "origin": "scripts/portal-mcp/cli.mjs",
+      "kind": "script",
+      "sha256": "f177cfe6d63acff52a70c8003ab4987ec9a1b5800463a078337f550d49e91524"
+    },
+    {
       "path": "scripts/contract-mcp/code-index.mjs",
       "profile": "openapi-contract",
       "mode": "0644",
@@ -5062,7 +5071,16 @@
       "template": true,
       "origin": "scripts/portal-mcp/server.mjs",
       "kind": "script",
-      "sha256": "8d23acd583ddd47a29d141466916bf71c803a7e8a7bcfd272e89f2e6b336222b"
+      "sha256": "ce2a4773ed1f4869995e7d0fd0632814b1899be18f771edaf1864f69991f29c2"
+    },
+    {
+      "path": "scripts/contract-mcp/tools.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": true,
+      "origin": "scripts/portal-mcp/tools.mjs",
+      "kind": "script",
+      "sha256": "54ca34f2f6fba6c55ef04956e17473ee4650f4e5fad96b0b337b7ee0919892c5"
     },
     {
       "path": "scripts/test/contract-mcp.test.sh",
@@ -5071,7 +5089,7 @@
       "template": true,
       "origin": "scripts/test/portal-mcp.test.sh",
       "kind": "script",
-      "sha256": "0a94638229d02c0e9a084ed2560884b19bc778c05f06f19a83763655ee00aec6"
+      "sha256": "4f832afbc3ad66feff786d1822974e7ef845673bcac191b75a215767a62d0bda"
     },
     {
       "path": "scripts/test/contract-read-only-check.test.sh",

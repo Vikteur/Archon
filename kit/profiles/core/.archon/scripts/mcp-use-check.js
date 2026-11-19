@@ -8,6 +8,7 @@
 // docs (docs/, a .md file, the run's artifacts: CodeGraph does not index them, so reading them by hand is right), the
 // contract (contract/, openapi.yaml, an operationId) or code (anything else). A Read of a .java file with no offset or
 // limit is a whole Java read. Hand work is the code searches plus the whole Java reads.
+// A Bash call to the codegraph CLI or to scripts/contract-mcp/cli.mjs counts as a call to that server.
 // A node is warned when a server was up (the last "mcp: ..." line of <artifacts-dir>/mcp-status.txt) and the node
 //   - did hand work at least its threshold of times (explore 8, plan 5, any other node 8) and never called CodeGraph, or
 //   - read the contract by hand and never called the contract server.
@@ -29,6 +30,10 @@ const SEARCH_PROGS = new Set(['grep', 'egrep', 'fgrep', 'rg', 'ag', 'find', 'sed
 const MCP_LINE = /^mcp: (\S+) (up|down), codegraph (up|down)$/;
 const CONTRACT = /(^|[\s/'"=])contract(\/|$|\s)|openapi\.ya?ml|operationId/;
 const DOCS = /(^|[\s/'"=])docs\/|\.md\b|ARTIFACTS_DIR|\/artifacts\//;
+// A Bash call that is the shell fallback of an MCP server (Copilot CLI blocks them): the codegraph CLI and the contract
+// server's cli.mjs (contract-mcp, or the kit's renamed contract-mcp), after an optional `rtk ` or `rtk proxy `.
+const CODEGRAPH_CLI = /^(?:rtk\s+(?:proxy\s+)?)?codegraph\s+(?:explore|node|callers|callees|impact|query)\s/;
+const SERVER_CLI = /^(?:rtk\s+(?:proxy\s+)?)?node\s+(?:\.\/)?scripts\/(?:portal|contract)-mcp\/cli\.mjs\s/;
 const kind = text => (CONTRACT.test(text) ? 'contract' : DOCS.test(text) ? 'docs' : 'code');
 
 function servers(art) {
@@ -79,6 +84,8 @@ function count(text, nodes) {
       if (/\.java$/i.test(f) && input.offset === undefined && input.limit === undefined) c.whole++;
     } else if (name === 'Bash') {
       for (const s of stages(input.command)) {
+        if (CODEGRAPH_CLI.test(`${s} `)) { c.codegraph++; continue; }
+        if (SERVER_CLI.test(`${s} `)) { c.server++; continue; }
         const prog = s.split(/\s+/)[0].replace(/^.*\//, '');
         if (!SEARCH_PROGS.has(prog)) continue;
         const k = kind(s);
