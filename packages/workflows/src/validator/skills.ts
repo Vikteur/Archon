@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { access } from 'fs/promises';
 import {
+  copilotSkillSearchRoots,
   findInstalledSkillNames,
   parseSettingSources,
   DEFAULT_SETTING_SOURCES,
@@ -74,17 +75,42 @@ function nodeSkillScope(
         parseSettingSources(config?.assistants?.[provider]?.settingSources) ??
         DEFAULT_SETTING_SOURCES)
       : undefined;
-  const searchRoots = discovery
-    ? declaredSkillRoots(discovery, cwd, {
-        includeProject: sources?.includes('project') ?? true,
-        includeUser: sources?.includes('user') ?? true,
-        env,
-      })
-    : skillSearchRoots(cwd);
-  const projectRoots = discovery
-    ? declaredSkillRoots(discovery, cwd, { includeUser: false, env })
-    : projectSkillSearchRoots(cwd);
-  return { discovery, env, searchRoots, projectRoots };
+  if (discovery) {
+    const searchRoots = declaredSkillRoots(discovery, cwd, {
+      includeProject: sources?.includes('project') ?? true,
+      includeUser: sources?.includes('user') ?? true,
+      env,
+    });
+    const projectRoots = declaredSkillRoots(discovery, cwd, { includeUser: false, env });
+    return { discovery, env, searchRoots, projectRoots };
+  }
+  if (provider === 'copilot') return copilotSkillScope(cwd, config, env);
+  return {
+    discovery,
+    env,
+    searchRoots: skillSearchRoots(cwd),
+    projectRoots: projectSkillSearchRoots(cwd),
+  };
+}
+
+/**
+ * The Copilot provider resolves named skills through copilotSkillSearchRoots
+ * (community/copilot/provider.ts applySkills), which adds `.github/skills` and the
+ * Copilot home's `skills/` to the shared roots. Validation mirrors it, so a skill
+ * that lives only in `.github/skills` is not reported missing. The Copilot home is
+ * the provider's `configDir`, else the run environment's COPILOT_HOME.
+ */
+function copilotSkillScope(
+  cwd: string,
+  config: ResourceValidation['config'],
+  env: Record<string, string> | undefined
+): SkillScope {
+  const configDir = config?.assistants?.copilot?.configDir;
+  const copilotHome =
+    typeof configDir === 'string' && configDir.trim() ? configDir : env?.COPILOT_HOME || undefined;
+  const searchRoots = copilotSkillSearchRoots(cwd, { copilotHome });
+  const projectRoots = [join(cwd, '.github', 'skills'), ...projectSkillSearchRoots(cwd)];
+  return { discovery: undefined, env, searchRoots, projectRoots };
 }
 
 async function validateSkill(

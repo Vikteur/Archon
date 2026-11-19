@@ -1788,6 +1788,77 @@ describe('validateWorkflowResources — skills search roots', () => {
     expect(missingSkillIssues(issues)).toHaveLength(0);
   });
 
+  function copilotSkillsWorkflow(skillName: string): WorkflowDefinition {
+    return makeWorkflow(
+      'test',
+      [
+        {
+          id: 'step1',
+          kind: 'agent',
+          source: { kind: 'inline', prompt: 'do work' },
+          skills: [skillName],
+        } as unknown as DagNode,
+      ],
+      'copilot'
+    );
+  }
+
+  async function stageAt(dir: string, name: string): Promise<void> {
+    await mkdir(join(dir, name), { recursive: true });
+    await writeFile(join(dir, name, 'SKILL.md'), `# ${name}\n`);
+  }
+
+  test('Copilot accepts a skill under <cwd>/.github/skills/, the root its provider reads first', async () => {
+    await stageAt(join(tmpDir, '.github', 'skills'), 'gh-skill');
+    const issues = await validateWorkflowResources(
+      copilotSkillsWorkflow('gh-skill'),
+      tmpDir,
+      providerRegistry
+    );
+    expect(issues.filter(i => i.field === 'skills')).toHaveLength(0);
+  });
+
+  test('Copilot accepts a user skill under the Copilot home, as a host user directory', async () => {
+    await stageAt(join(fakeHome, '.copilot', 'skills'), 'home-skill');
+    const issues = await validateWorkflowResources(
+      copilotSkillsWorkflow('home-skill'),
+      tmpDir,
+      providerRegistry
+    );
+    expect(missingSkillIssues(issues)).toHaveLength(0);
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        level: 'warning',
+        field: 'skills',
+        message: "Skill 'home-skill' is available only in a host user directory",
+      })
+    );
+  });
+
+  test('Copilot names .github/skills first when a skill is on no root at all', async () => {
+    const issues = await validateWorkflowResources(
+      copilotSkillsWorkflow('nowhere-skill'),
+      tmpDir,
+      providerRegistry
+    );
+    const missing = missingSkillIssues(issues);
+    expect(missing).toHaveLength(1);
+    expect(missing[0].level).toBe('warning');
+    expect(missing[0].hint).toContain(
+      join(tmpDir, '.github', 'skills', 'nowhere-skill', 'SKILL.md')
+    );
+  });
+
+  test('Claude still ignores a skill that lives only in .github/skills', async () => {
+    await stageAt(join(tmpDir, '.github', 'skills'), 'gh-only');
+    const issues = await validateWorkflowResources(
+      skillsWorkflow('gh-only'),
+      tmpDir,
+      providerRegistry
+    );
+    expect(missingSkillIssues(issues)).toHaveLength(1);
+  });
+
   test('Codex rejects YAML skills without four-root validation', async () => {
     await stageSkill(tmpDir, '.claude', 'claude-only');
     const workflow = makeWorkflow(
