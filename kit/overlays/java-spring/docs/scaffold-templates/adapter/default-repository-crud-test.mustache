@@ -1,0 +1,139 @@
+{{!
+  Repository spec against the real database: a @DataJpaTest slice on the Testcontainers PostgreSQL (the shared
+  PostgresContainerConfig, @ServiceConnection), schema from the Flyway migrations, each test rolled back by the
+  slice's @Transactional: insert, overwrite, find, delete, and that another organisation's row is never found,
+  overwritten or deleted.
+  The slice needs a @SpringBootConfiguration in a parent package on the test classpath (the shared adapter test
+  application) and the migrations on the classpath or in spring.flyway.locations.
+  Domain values come from the Mother rendered with upsert=true.
+  Target: <capability>-adapter/src/test/java/<package path>/adapter/repository/Default<Name>RepositoryTest.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, name (camelCase of Name), Key,
+          keyExample, unknownKeyExample (domain keys, Java expressions), typedId (optional, domain id type of the key),
+          fixture (Mother method), changedField (Mother builder setter), changedExample (Java literal)
+}}
+package {{package}}.adapter.repository;
+
+import {{basePackage}}.common.adapter.repository.PostgresContainerConfig;
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.*;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({Default{{Name}}Repository.class, PostgresContainerConfig.class})
+@Tag("integration")
+class Default{{Name}}RepositoryTest {
+    private static final OrganisationId ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000001"));
+    private static final OrganisationId OTHER_ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000002"));
+
+    @Autowired
+    Default{{Name}}Repository repository;
+
+    @Autowired
+    EntityManager entityManager;
+
+    @Test
+    void givenNew{{Name}}_whenSave_thenInsertRowOfOrganisation() {
+        var {{name}} = {{Name}}Mother.{{fixture}}();
+        assertThat(findRow()).isNull();
+
+        repository.save(ORGANISATION, {{name}});
+        entityManager.clear();
+
+        assertThat({{Name}}EntityMapper.map(findRow())).isEqualTo({{name}});
+        assertThat(findRow().getOrganisationId()).isEqualTo(ORGANISATION.value());
+    }
+
+    @Test
+    void givenExisting{{Name}}_whenSave_thenOverwriteRow() {
+        persist(ORGANISATION, {{Name}}Mother.{{fixture}}());
+        var updated = {{Name}}Mother.{{Name}}Builder.builder().{{changedField}}({{{changedExample}}}).build();
+
+        repository.save(ORGANISATION, updated);
+        entityManager.clear();
+
+        assertThat({{Name}}EntityMapper.map(findRow())).isEqualTo(updated);
+    }
+
+    @Test
+    void given{{Name}}OfOtherOrganisation_whenSave_thenThrowAndKeepRow() {
+        var {{name}} = {{Name}}Mother.{{fixture}}();
+        persist(OTHER_ORGANISATION, {{name}});
+        var updated = {{Name}}Mother.{{Name}}Builder.builder().{{changedField}}({{{changedExample}}}).build();
+
+        assertThatThrownBy(() -> repository.save(ORGANISATION, updated)).isInstanceOf(IllegalStateException.class);
+        entityManager.clear();
+
+        assertThat({{Name}}EntityMapper.map(findRow())).isEqualTo({{name}});
+        assertThat(findRow().getOrganisationId()).isEqualTo(OTHER_ORGANISATION.value());
+    }
+
+    @Test
+    void givenExisting{{Name}}_whenFindById_thenReturnDomain() {
+        var {{name}} = {{Name}}Mother.{{fixture}}();
+        persist(ORGANISATION, {{name}});
+
+        assertThat(repository.findById(ORGANISATION, {{{keyExample}}})).contains({{name}});
+        assertThat(repository.existsById(ORGANISATION, {{{keyExample}}})).isTrue();
+    }
+
+    @Test
+    void given{{Name}}OfOtherOrganisation_whenFindById_thenReturnEmpty() {
+        persist(OTHER_ORGANISATION, {{Name}}Mother.{{fixture}}());
+
+        assertThat(repository.findById(ORGANISATION, {{{keyExample}}})).isEmpty();
+        assertThat(repository.existsById(ORGANISATION, {{{keyExample}}})).isFalse();
+    }
+
+    @Test
+    void givenUnknown{{Key}}_whenFindById_thenReturnEmpty() {
+        assertThat(repository.findById(ORGANISATION, {{{unknownKeyExample}}})).isEmpty();
+        assertThat(repository.existsById(ORGANISATION, {{{unknownKeyExample}}})).isFalse();
+    }
+
+    @Test
+    void givenExisting{{Name}}_whenDeleteById_thenRemoveRow() {
+        persist(ORGANISATION, {{Name}}Mother.{{fixture}}());
+
+        repository.deleteById(ORGANISATION, {{{keyExample}}});
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(findRow()).isNull();
+    }
+
+    @Test
+    void given{{Name}}OfOtherOrganisation_whenDeleteById_thenKeepRow() {
+        persist(OTHER_ORGANISATION, {{Name}}Mother.{{fixture}}());
+
+        repository.deleteById(ORGANISATION, {{{keyExample}}});
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(findRow()).isNotNull();
+    }
+
+    private {{Name}}Entity findRow() {
+        return entityManager.find({{Name}}Entity.class, {{{keyExample}}}{{#typedId}}.value(){{/typedId}});
+    }
+
+    private void persist(OrganisationId organisationId, {{Name}} {{name}}) {
+        entityManager.persist(new {{Name}}Entity(organisationId, {{name}}));
+        entityManager.flush();
+        entityManager.clear();
+    }
+}

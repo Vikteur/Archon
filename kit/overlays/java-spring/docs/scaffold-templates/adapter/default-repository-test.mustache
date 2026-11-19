@@ -1,0 +1,77 @@
+{{!
+  Repository spec against the real database: a @DataJpaTest slice on the Testcontainers PostgreSQL (the shared
+  PostgresContainerConfig, @ServiceConnection), schema from the Flyway migrations, each test rolled back by the
+  slice's @Transactional. A row of another organisation is never found.
+  The slice needs a @SpringBootConfiguration in a parent package on the test classpath (the shared adapter test
+  application) and the migrations on the classpath or in spring.flyway.locations.
+  Target: <capability>-adapter/src/test/java/<package path>/adapter/repository/Default<Name>RepositoryTest.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, Key, keyExample (domain key, Java expression, equal to
+          the key field's example), fields[name, example, entityExample (optional, the entity's value when it differs,
+          e.g. the UUID of a typed id)]
+}}
+package {{package}}.adapter.repository;
+
+import {{basePackage}}.common.adapter.repository.PostgresContainerConfig;
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.*;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({Default{{Name}}Repository.class, PostgresContainerConfig.class})
+@Tag("integration")
+class Default{{Name}}RepositoryTest {
+    private static final OrganisationId ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000001"));
+    private static final OrganisationId OTHER_ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000002"));
+
+    @Autowired
+    {{Name}}JpaRepository jpaRepository;
+
+    @Autowired
+    Default{{Name}}Repository repository;
+
+    @Test
+    void givenPersisted{{Name}}_whenFindBy{{Key}}_thenReturnDomain() {
+        persist(ORGANISATION);
+
+        assertThat(repository.findBy{{Key}}(ORGANISATION, {{{keyExample}}}))
+                .contains({{Name}}.builder()
+{{#fields}}
+                        .{{name}}({{{example}}})
+{{/fields}}
+                        .build());
+    }
+
+    @Test
+    void given{{Name}}OfOtherOrganisation_whenFindBy{{Key}}_thenReturnEmpty() {
+        persist(OTHER_ORGANISATION);
+
+        assertThat(repository.findBy{{Key}}(ORGANISATION, {{{keyExample}}})).isEmpty();
+    }
+
+    @Test
+    void givenNo{{Name}}_whenFindBy{{Key}}_thenReturnEmpty() {
+        assertThat(repository.findBy{{Key}}(ORGANISATION, {{{keyExample}}})).isEmpty();
+    }
+
+    private void persist(OrganisationId organisationId) {
+        jpaRepository.saveAndFlush({{Name}}Entity.builder()
+                .organisationId(organisationId.value())
+{{#fields}}
+                .{{name}}({{#entityExample}}{{{entityExample}}}{{/entityExample}}{{^entityExample}}{{{example}}}{{/entityExample}})
+{{/fields}}
+                .build());
+    }
+}
