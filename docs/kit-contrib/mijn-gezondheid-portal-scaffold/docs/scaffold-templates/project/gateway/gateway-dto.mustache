@@ -1,0 +1,28 @@
+{{!
+  Gateway DTO: the external service's payload as a record (Jackson binds records); never leaves the gateway and
+  adapter layers, the adapter maps it to the domain (adapter/gateway-to-domain-mapper).
+  Exemplars: captcha-gateway .../response/GatewayCaptchaResponse.java, e-health-gateway .../dto/GatewayTherapeuticExclusion.java
+  Target: <capability>-gateway/src/main/java/<pkg>/Gateway<Name>.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[],
+          fields[type, name, json (optional: the JSON property when it differs), last (true on the final field:
+                 record components are comma-separated and mustache cannot see the end of a list)]
+  Left to you: nested records.
+}}
+package {{{package}}};
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Builder;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record Gateway{{{Name}}}(
+{{#fields}}
+        {{#json}}@JsonProperty("{{{json}}}") {{/json}}{{{type}}} {{{name}}}{{^last}},{{/last}}
+{{/fields}}
+) {
+}

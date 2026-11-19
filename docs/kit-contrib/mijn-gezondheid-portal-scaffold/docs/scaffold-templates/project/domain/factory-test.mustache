@@ -1,0 +1,67 @@
+{{!
+  Factory test: one happy path, plus one "field missing" case per non-primitive field (the builder's last call
+  wins, so each case sets every example and then overrides one field with null).
+  Exemplar: therapeutic-relation-domain src/test .../exclusion/TherapeuticExclusionFactoryTest.java
+  Target: <capability>-domain/src/test/java/<pkg>/<Name>FactoryTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, imports[], fields[type, name, Cap, example (Java expression), notBlank, primitive]
+  Left to you: cases for rules beyond presence (formats, ranges, cross-field).
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}FactoryTest {
+
+    private final {{{Name}}}Factory factory = new {{{Name}}}Factory();
+
+    @Test
+    void givenAllRequiredFieldsAreValid_whenCreate_thenReturnValueWithoutErrors() {
+        // Given
+        var request = validRequest().build();
+
+        // When
+        var creation = factory.create(request);
+
+        // Then
+        assertThat(creation.getNotification().hasErrors()).isFalse();
+{{#fields}}
+        assertThat(creation.getValue().get{{{Cap}}}()).isEqualTo(request.get{{{Cap}}}());
+{{/fields}}
+    }
+{{#fields}}
+{{^primitive}}
+
+    @Test
+    void given{{{Cap}}}IsNull_whenCreate_thenNotification() {
+        // Given
+        var request = validRequest().{{{name}}}(null).build();
+
+        // When
+        var creation = factory.create(request);
+
+        // Then
+        assertThat(creation.getNotification().hasErrors()).isTrue();
+{{#notBlank}}
+        assertThat(creation.getNotification().getErrors()).contains("Field '{{{Name}}}.{{{name}}}' should not be blank");
+{{/notBlank}}
+{{^notBlank}}
+        assertThat(creation.getNotification().getErrors()).contains("Field '{{{Name}}}.{{{name}}}' should not be null");
+{{/notBlank}}
+    }
+{{/primitive}}
+{{/fields}}
+
+    private static Create{{{Name}}}DomainRequest.Create{{{Name}}}DomainRequestBuilder validRequest() {
+        return Create{{{Name}}}DomainRequest.builder()
+{{#fields}}
+                .{{{name}}}({{{example}}})
+{{/fields}}
+                ;
+    }
+}

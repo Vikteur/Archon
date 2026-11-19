@@ -1,0 +1,55 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetAdminController.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "GadgetAdmin",
+  "Api": "OauthAdminApi",
+  "mapper": false,
+  "imports": [
+    "be.mijngezondheid.zzsmoke.usecase.gadget.CreateGadgetUseCase",
+    "be.mijngezondheid.zzsmoke.usecase.gadget.DeleteGadgetUseCase",
+    "be.mijngezondheid.zzsmoke.usecase.gadget.GetGadgetsUseCase",
+    "java.util.List",
+    "java.util.UUID"
+  ],
+  "useCases": [
+    {
+      "type": "CreateGadgetUseCase",
+      "field": "createGadgetUseCase"
+    },
+    {
+      "type": "DeleteGadgetUseCase",
+      "field": "deleteGadgetUseCase"
+    },
+    {
+      "type": "GetGadgetsUseCase",
+      "field": "getGadgetsUseCase"
+    },
+    {
+      "type": "GadgetRequestDTOToDomainMapper",
+      "field": "requestMapper"
+    }
+  ],
+  "operations": [
+    {
+      "method": "createOrUpdateBlockedAudience",
+      "returnType": "NotificationDTO",
+      "params": "BlockedAudienceDTO blockedAudienceDTO",
+      "command": true,
+      "call": "createGadgetUseCase.execute(requestMapper.map(blockedAudienceDTO))"
+    },
+    {
+      "method": "deleteBlockedAudience",
+      "returnType": "NotificationDTO",
+      "params": "String audience",
+      "command": true,
+      "call": "deleteGadgetUseCase.execute(UUID.fromString(audience))"
+    },
+    {
+      "method": "getBlockedAudiences",
+      "returnType": "List<BlockedAudienceDTO>",
+      "params": "",
+      "logAction": "Retrieving gadgets as audiences",
+      "body": "getGadgetsUseCase.execute().stream().map(gadget -> BlockedAudienceDTO.builder().audience(gadget.getDescription()).build()).toList()"
+    }
+  ]
+}

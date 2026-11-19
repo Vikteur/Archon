@@ -1,0 +1,22 @@
+{{!
+  Gateway module build file: a RestClient-based client of one external service, tested with WireMock; shares its
+  DTO Mothers through test-jar-producer.
+  Exemplars: captcha-gateway/build.gradle.kts, e-health-gateway/build.gradle.kts (with authentication-usecase)
+  Target: <capability>-gateway/build.gradle.kts
+  Vars:   capability, authentication (bool: api(project(":authentication-usecase")) for AuthenticatedCivilian)
+  Left to you: an openApiGenerate block when the service publishes a spec (as tolgee-gateway), resilience4j.
+}}
+plugins {
+    id("mijngezondheid.bom-conventions")
+    id("mijngezondheid.test-jar-producer")
+}
+dependencies {
+{{#authentication}}
+    api(project(":authentication-usecase"))
+{{/authentication}}
+    implementation("org.springframework:spring-context")
+    implementation("org.slf4j:slf4j-api")
+    implementation("org.springframework.boot:spring-boot-starter-restclient")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.wiremock:wiremock-standalone")
+}

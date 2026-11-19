@@ -1,0 +1,10 @@
+{
+  "_target": "zzsmoke-domain/src/main/java/be/mijngezondheid/zzsmoke/domain/gadget/GadgetFactory.java",
+  "package": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer"
+}

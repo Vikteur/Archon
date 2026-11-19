@@ -1,0 +1,21 @@
+{{!
+  Read-side port: queries that return projections (read models) instead of aggregates, kept apart from the
+  write-side <Name>Repository.
+  Exemplar: report-usecase .../repository/ReportCollectionQueryRepository.java
+  Target: <capability>-usecase/src/main/java/<pkg>/repository/<Name>QueryRepository.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[], queries[returnType (e.g. List<GadgetSummaryProjection>), method, params]
+  Left to you: the adapter implementing it.
+}}
+package {{{package}}};
+
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+public interface {{{Name}}}QueryRepository {
+{{#queries}}
+
+    {{{returnType}}} {{{method}}}({{{params}}});
+{{/queries}}
+}

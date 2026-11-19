@@ -1,0 +1,16 @@
+{{!
+  Domain module build file: plain Java + Lombok, shares its Mothers through the test-jar-producer plugin.
+  Exemplar: consent-domain/build.gradle.kts
+  Target: <capability>-domain/build.gradle.kts
+  Vars:   capability (module prefix, e.g. therapeutic-relation)
+  Left to you: nothing; a domain module depends on common-domain only (P7, no framework).
+}}
+plugins {
+    id("mijngezondheid.bom-conventions")
+    id("mijngezondheid.test-jar-producer")
+}
+dependencies {
+    api(project(":common-domain"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.assertj:assertj-core")
+}

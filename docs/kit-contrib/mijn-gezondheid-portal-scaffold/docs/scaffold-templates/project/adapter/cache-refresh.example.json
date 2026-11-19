@@ -1,0 +1,13 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/config/GadgetCacheConfig.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.config",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "cache": "gadgets",
+  "key": "item.getExternalId()",
+  "delay": 1,
+  "unit": "DAYS",
+  "jobName": "Gadget cache refresh"
+}

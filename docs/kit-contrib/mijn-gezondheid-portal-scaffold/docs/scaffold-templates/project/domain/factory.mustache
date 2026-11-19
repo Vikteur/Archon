@@ -1,0 +1,20 @@
+{{!
+  Factory: the only production entry point that creates the entity; returns the value with its validation result.
+  Picked up as a bean by the context's <Ctx>BeanConfig (class name contains "Factory"), so no annotation.
+  Exemplar: therapeutic-relation-domain .../exclusion/TherapeuticExclusionFactory.java
+  Target: <capability>-domain/src/main/java/<pkg>/<Name>Factory.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name (camel-case Name)
+  Left to you: cross-field rules that need more than the entity's own validate().
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Creation;
+
+public class {{{Name}}}Factory {
+
+    public Creation<{{{Name}}}> create(Create{{{Name}}}DomainRequest request) {
+        var {{{name}}} = new {{{Name}}}(request);
+        return Creation.of({{{name}}}, {{{name}}}.validate());
+    }
+}

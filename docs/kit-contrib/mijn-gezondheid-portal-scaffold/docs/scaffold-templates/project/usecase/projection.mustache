@@ -1,0 +1,34 @@
+{{!
+  Projection (read model): a flat, Serializable carrier a query port returns; fluent accessors, no behaviour that
+  changes state.
+  Exemplar: access-matrix-usecase .../repository/HealthcarePartyPermissionProjection.java
+  Target: <capability>-usecase/src/main/java/<pkg>/<Name>Projection.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (everything before "Projection"), imports[], fields[type, name]
+  Left to you: derived read-only methods (allPermissionsAllowed, ...).
+}}
+package {{{package}}};
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+import java.io.Serializable;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Builder
+@Getter
+@Accessors(fluent = true)
+@EqualsAndHashCode
+@ToString
+@AllArgsConstructor
+public class {{{Name}}}Projection implements Serializable {
+{{#fields}}
+    private {{{type}}} {{{name}}};
+{{/fields}}
+}

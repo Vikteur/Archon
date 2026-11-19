@@ -1,0 +1,21 @@
+{{!
+  Gateway interface: what the adapter calls; the implementation (gateway/rest-gateway) stays package-private.
+  Exemplar: e-health-gateway .../gateway/TherapeuticExclusionGateway.java
+  Target: <capability>-gateway/src/main/java/<pkg>/<Name>Gateway.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, dtoPackage, bearer (bool: the call carries the citizen's token, AuthenticatedCivilian)
+  Left to you: further operations (one per remote call).
+}}
+package {{{package}}};
+
+{{#bearer}}
+import be.mijngezondheid.authentication.domain.AuthenticatedCivilian;
+{{/bearer}}
+import {{{dtoPackage}}}.Gateway{{{Name}}};
+
+import java.util.List;
+
+public interface {{{Name}}}Gateway {
+
+    List<Gateway{{{Name}}}> get{{{Name}}}s({{#bearer}}AuthenticatedCivilian auth{{/bearer}});
+}

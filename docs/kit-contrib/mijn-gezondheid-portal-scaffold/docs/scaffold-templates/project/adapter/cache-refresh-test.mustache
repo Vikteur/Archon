@@ -1,0 +1,50 @@
+{{!
+  Cache refresh test: a real ConcurrentMapCacheManager, the port mocked; stale entries go, current ones come in.
+  Exemplar: profile-adapter src/test .../config/GeographicRegionCacheConfigTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/config/<Name>CacheConfigTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, fixture, key (Java expression over "item"), imports[]
+  Left to you: a failing-read case (the old cache stays).
+}}
+package {{{package}}};
+
+import {{{domainPackage}}}.{{{Name}}};
+import {{{portPackage}}}.{{{Name}}}Repository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import java.util.List;
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class {{{Name}}}CacheConfigTest {
+
+    @Mock
+    private {{{Name}}}Repository {{{name}}}Repository;
+
+    @Test
+    void givenStoredItems_whenRevokeAndRebuildAllCache_thenCacheHoldsOnlyThem() {
+        // Given
+        var cacheManager = new ConcurrentMapCacheManager({{{Name}}}CacheConfig.CACHE);
+        cacheManager.getCache({{{Name}}}CacheConfig.CACHE).put("stale", "stale");
+        {{{Name}}} item = {{{fixture}}}();
+        when({{{name}}}Repository.findAll()).thenReturn(List.of(item));
+
+        // When
+        new {{{Name}}}CacheConfig({{{name}}}Repository, cacheManager).revokeAndRebuildAllCache();
+
+        // Then
+        var cache = cacheManager.getCache({{{Name}}}CacheConfig.CACHE);
+        assertThat(cache.get("stale")).isNull();
+        assertThat(cache.get({{{key}}}).get()).isEqualTo(item);
+    }
+}

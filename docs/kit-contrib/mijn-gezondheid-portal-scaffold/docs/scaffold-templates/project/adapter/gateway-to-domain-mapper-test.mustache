@@ -1,0 +1,29 @@
+{{!
+  Gateway DTO to domain mapper test: a gateway Mother in, the matching domain Mother out.
+  Exemplar: allergy-intolerance-adapter src/test .../gateway/AllergyIntoleranceFhirGatewayTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/gateway/Gateway<Name>ToDomainMapperTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, domainPackage, dtoPackage, gatewayFixture (Gateway<Name>Mother scenario),
+          fixture (<Name>Mother scenario with the same values)
+          (needs testImplementation(project(":<capability>-gateway", "testArtifacts")))
+  Left to you: cases for incomplete payloads.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static {{{dtoPackage}}}.Gateway{{{Name}}}Mother.{{{gatewayFixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+
+class Gateway{{{Name}}}ToDomainMapperTest {
+
+    @Test
+    void givenGateway{{{Name}}}_whenToDomain_thenReturnDomain{{{Name}}}() {
+        // When
+        var result = Gateway{{{Name}}}ToDomainMapper.toDomain({{{gatewayFixture}}}());
+
+        // Then
+        assertThat(result).isEqualTo({{{fixture}}}());
+    }
+}

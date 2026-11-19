@@ -1,0 +1,28 @@
+{{!
+  Query use case: reads through the repository port and returns domain objects; no mutation.
+  Exemplars: therapeutic-relation-usecase .../exclusion/usecase/GetTherapeuticExclusionsUseCase.java,
+             authentication-usecase .../GetBlockedAudiencesUseCase.java
+  Target: <capability>-usecase/src/main/java/<pkg>/Get<Name>sUseCase.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage
+  Left to you: filtering by caller (AuthenticationFacade), sorting, a Presenter when the adapter shapes the result.
+}}
+package {{{package}}};
+
+import {{{domainPackage}}}.{{{Name}}};
+import {{{portPackage}}}.{{{Name}}}Repository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
+@Transactional
+@RequiredArgsConstructor
+public class Get{{{Name}}}sUseCase {
+
+    private final {{{Name}}}Repository {{{name}}}Repository;
+
+    public List<{{{Name}}}> execute() {
+        return {{{name}}}Repository.findAll();
+    }
+}

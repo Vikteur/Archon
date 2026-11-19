@@ -1,0 +1,27 @@
+{{!
+  Usecase module build file: the domain as api, jakarta.transaction for @Transactional, the domain's Mothers and
+  Mockito for tests.
+  Exemplars: vaccination-usecase/build.gradle.kts, report-usecase/build.gradle.kts (with authentication-usecase)
+  Target: <capability>-usecase/build.gradle.kts
+  Vars:   capability, authentication (bool: add authentication-usecase for AuthenticationFacade)
+          (common-usecase is always there: Presenter)
+  Left to you: dependencies on other contexts' usecase modules.
+}}
+plugins {
+    id("mijngezondheid.bom-conventions")
+    id("mijngezondheid.test-jar-producer")
+}
+dependencies {
+    api(project(":{{{capability}}}-domain"))
+    api(project(":common-domain"))
+    implementation(project(":common-usecase"))
+{{#authentication}}
+    api(project(":authentication-usecase"))
+{{/authentication}}
+    implementation("jakarta.transaction:jakarta.transaction-api")
+    testImplementation(project(":{{{capability}}}-domain", "testArtifacts"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.assertj:assertj-core")
+    testImplementation("org.mockito:mockito-core")
+    testImplementation("org.mockito:mockito-junit-jupiter")
+}

@@ -1,0 +1,34 @@
+{{!
+  Object Mother over the entity's builder, with fixed constants (ids, dates) that tests can assert against and
+  compose with other Mothers. Use it when the entity is reconstituted (has a builder) rather than created
+  through a Factory; otherwise use domain/mother.
+  Exemplar: report-domain src/test .../collection/ReportCollectionMother.java
+  Target: <capability>-domain/src/test/java/<pkg>/<Name>Mother.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (the entity whose builder() it calls), Mother (class name, normally <Name>Mother), imports[],
+          constants[type, constant (e.g. FAVOURITES_ID), value (Java expression)],
+          fixtures[method, values[name, example (Java expression; may use the constants and other Mothers)]]
+  Left to you: overloads that take the varying part as a parameter (withoutId(citizen, name), ...).
+}}
+package {{{package}}};
+
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+public class {{{Mother}}} {
+{{#constants}}
+
+    public static final {{{type}}} {{{constant}}} = {{{value}}};
+{{/constants}}
+{{#fixtures}}
+
+    public static {{{Name}}} {{{method}}}() {
+        return {{{Name}}}.builder()
+{{#values}}
+                .{{{name}}}({{{example}}})
+{{/values}}
+                .build();
+    }
+{{/fixtures}}
+}

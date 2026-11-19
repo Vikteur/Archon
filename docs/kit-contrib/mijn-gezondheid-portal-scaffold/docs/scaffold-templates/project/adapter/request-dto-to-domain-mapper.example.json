@@ -1,0 +1,20 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetRequestDTOToDomainMapper.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "Gadget",
+  "Dto": "BlockedAudienceDTO",
+  "Request": "CreateGadgetRequest",
+  "imports": [
+    "be.mijngezondheid.zzsmoke.usecase.gadget.CreateGadgetRequest"
+  ],
+  "mappings": [
+    {
+      "name": "description",
+      "expr": "dto.getAudience()"
+    },
+    {
+      "name": "countryCode",
+      "expr": "\"BE\""
+    }
+  ]
+}

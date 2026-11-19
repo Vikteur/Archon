@@ -1,0 +1,8 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/config/ZzsmokeBeanConfig.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.config",
+  "Ctx": "Zzsmoke",
+  "ctx": "zzsmoke",
+  "usecaseBasePackage": "be.mijngezondheid.zzsmoke.usecase",
+  "domainBasePackage": "be.mijngezondheid.zzsmoke.domain"
+}

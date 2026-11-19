@@ -1,0 +1,21 @@
+{{!
+  Flyway DDL migration for the context's table, wrapped in the DBCR markers every migration here uses.
+  Migrations live per adapter module under src/main/resources/db/migration/ddl/ and share ONE version sequence
+  across all modules (spring.flyway.out-of-order=true); take the next number after the highest one:
+    ls */src/main/resources/db/migration/*/V*.sql | sed -E 's/.*\/V([0-9.]+)__.*/\1/' | sort -V | tail -1
+  Exemplar: authentication-adapter src/main/resources/db/migration/ddl/V1.077__create_blocked_audience.sql
+  Target: <capability>-adapter/src/main/resources/db/migration/ddl/V1.<NNN>__create_<table>.sql
+  Vars:   table, fields[column, sqlType (e.g. VARCHAR(255), UUID, TIMESTAMP), nullable (bool), unique (bool)]
+  Left to you: indexes, foreign keys, data migrations (db/migration/data).
+}}
+select *
+from schema_chg_user.start_dbcr();
+
+CREATE TABLE {{{table}}}
+(
+    id BIGSERIAL PRIMARY KEY{{#fields}},
+    {{{column}}} {{{sqlType}}}{{^nullable}} NOT NULL{{/nullable}}{{#unique}} UNIQUE{{/unique}}{{/fields}}
+);
+
+select *
+from schema_chg_user.stop_dbcr();

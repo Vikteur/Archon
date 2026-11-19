@@ -1,0 +1,21 @@
+{{!
+  Facade port: an outbound interface for a non-persistence capability (search index, an external service) the use
+  cases call; implemented by an adapter or gateway, never by the use case module.
+  Exemplars: dashboard-usecase .../repository/SearchFacade.java, authentication-usecase .../repository/AuthenticationFacade.java
+  Target: <capability>-usecase/src/main/java/<pkg>/repository/<Name>Facade.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (everything before "Facade"), imports[], methods[returnType, method, params]
+  Left to you: the implementing adapter.
+}}
+package {{{package}}};
+
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+public interface {{{Name}}}Facade {
+{{#methods}}
+
+    {{{returnType}}} {{{method}}}({{{params}}});
+{{/methods}}
+}

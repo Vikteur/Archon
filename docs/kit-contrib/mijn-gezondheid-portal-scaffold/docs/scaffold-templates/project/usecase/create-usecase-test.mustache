@@ -1,0 +1,92 @@
+{{!
+  Create use case test: Mockito, the port and the Factory mocked, the Mother as the created value.
+  Exemplar: therapeutic-relation-usecase src/test .../exclusion/CreateTherapeuticExclusionUseCaseTest.java
+  Target: <capability>-usecase/src/test/java/<pkg>/Create<Name>UseCaseTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, usecasePackage (package of the use case and request),
+          fixture (Mother scenario), imports[], fields[name, example (Java expression)]
+  Left to you: cases for the steps you added (caller resolution, lookups, events).
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Creation;
+import be.mijngezondheid.common.domain.validation.Notification;
+import {{{domainPackage}}}.{{{Name}}}Factory;
+import {{{portPackage}}}.{{{Name}}}Repository;
+import {{{usecasePackage}}}.Create{{{Name}}}Request;
+import {{{usecasePackage}}}.Create{{{Name}}}UseCase;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class Create{{{Name}}}UseCaseTest {
+
+    @Mock
+    private {{{Name}}}Repository {{{name}}}Repository;
+
+    @Mock
+    private {{{Name}}}Factory {{{name}}}Factory;
+
+    @InjectMocks
+    private Create{{{Name}}}UseCase useCase;
+
+    @Test
+    void givenValidRequest_whenExecute_thenSaveAndReturnEmptyNotification() {
+        // Given
+        when({{{name}}}Factory.create(any())).thenReturn(Creation.of({{{fixture}}}(), Notification.empty()));
+
+        // When
+        var result = useCase.execute(validRequest());
+
+        // Then
+        assertThat(result.hasErrors()).isFalse();
+        verify({{{name}}}Repository).save({{{fixture}}}());
+    }
+
+    @Test
+    void givenFactoryReturnsErrors_whenExecute_thenReturnErrorsAndDoNotSave() {
+        // Given
+        when({{{name}}}Factory.create(any())).thenReturn(Creation.empty(Notification.of("invalid")));
+
+        // When
+        var result = useCase.execute(validRequest());
+
+        // Then
+        assertThat(result.getErrors()).containsExactly("invalid");
+        verifyNoInteractions({{{name}}}Repository);
+    }
+
+    @Test
+    void givenEmptyRequest_whenExecute_thenReturnErrorsAndDoNotCallFactory() {
+        // Given
+        var request = Create{{{Name}}}Request.builder().build();
+
+        // When
+        var result = useCase.execute(request);
+
+        // Then
+        assertThat(result.hasErrors()).isTrue();
+        verifyNoInteractions({{{name}}}Factory, {{{name}}}Repository);
+    }
+
+    private static Create{{{Name}}}Request validRequest() {
+        return Create{{{Name}}}Request.builder()
+{{#fields}}
+                .{{{name}}}({{{example}}})
+{{/fields}}
+                .build();
+    }
+}
