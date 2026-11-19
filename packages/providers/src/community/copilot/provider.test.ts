@@ -866,6 +866,78 @@ describe('CopilotProvider kit parity', () => {
     });
   });
 
+  test('agent tools are translated to Copilot tool names', async () => {
+    const { opts } = await runOnce({
+      model: 'gpt-5',
+      nodeConfig: {
+        agents: {
+          reviewer: {
+            description: 'Reviews',
+            prompt: 'Review it.',
+            tools: ['Read', 'Grep', 'Glob', 'mcp__github__get_pull_request', 'custom_tool'],
+          },
+          open: { description: 'Any tool', prompt: 'Go.' },
+        },
+      },
+    });
+    expect(opts.customAgents).toEqual([
+      {
+        name: 'reviewer',
+        description: 'Reviews',
+        prompt: 'Review it.',
+        tools: ['view', 'grep', 'glob', 'github-get_pull_request', 'custom_tool'],
+      },
+      { name: 'open', description: 'Any tool', prompt: 'Go.' },
+    ]);
+  });
+
+  test('an agent tools pattern keeps its tool, with one warning per agent', async () => {
+    const nodeConfig = {
+      allowed_tools: ['Bash(git log *)'],
+      agents: {
+        a: { description: 'A', prompt: 'A.', tools: ['Bash(git log *)', 'mcp__github'] },
+        b: { description: 'B', prompt: 'B.', tools: ['Bash(git log *)'] },
+      },
+    };
+    const firstRun = await runOnce({ model: 'gpt-5', nodeConfig });
+    expect(firstRun.opts.customAgents?.map(agent => agent.tools)).toEqual([
+      ['bash', 'mcp:*'],
+      ['bash'],
+    ]);
+    const agentWarnings = firstRun.chunks.filter(
+      c => (c as { code?: string } | undefined)?.code === 'copilot.agent_tools_widened'
+    );
+    expect(agentWarnings).toEqual([
+      {
+        type: 'warning',
+        code: 'copilot.agent_tools_widened',
+        message: expect.stringContaining(
+          "agent 'a' allow their whole tool: Bash(git log *), mcp__github"
+        ),
+      },
+      {
+        type: 'warning',
+        code: 'copilot.agent_tools_widened',
+        message: expect.stringContaining("agent 'b'"),
+      },
+    ]);
+
+    const secondRun = await runOnce({ model: 'gpt-5', nodeConfig });
+    expect(
+      secondRun.chunks.some(
+        c => (c as { code?: string } | undefined)?.code === 'copilot.agent_tools_widened'
+      )
+    ).toBe(false);
+  });
+
+  test('an explicitly empty agent tools list stays empty (no tools)', async () => {
+    const { opts } = await runOnce({
+      model: 'gpt-5',
+      nodeConfig: { agents: { none: { description: 'N', prompt: 'N.', tools: [] } } },
+    });
+    expect(opts.customAgents?.[0]?.tools).toEqual([]);
+  });
+
   describe('skills', () => {
     const originalHome = process.env.HOME;
     const originalCopilotHome = process.env.COPILOT_HOME;

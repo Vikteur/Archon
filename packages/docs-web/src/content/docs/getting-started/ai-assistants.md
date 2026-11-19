@@ -350,13 +350,13 @@ With `fileHooks: true` (the default), the Copilot runtime runs the project's `.g
 
 Each hook shows up in the run as a hook event (started, then succeeded or failed). A failed hook names its hook file. A blocked call ends as a failed tool call that carries the hook's reason. This is separate from a workflow node's `hooks:` field, which Copilot does not support.
 
-Workflows name tools the Claude way. Archon translates `allowed_tools` and `denied_tools` to Copilot's built-in names: `Read`→`view`, `Write`→`create`, `Edit` and `MultiEdit`→`edit`, `Bash`→`bash`, `BashOutput`→`read_bash`, `KillShell`→`stop_bash`, `Glob`→`glob`, `Grep`→`grep`, `WebFetch`→`web_fetch`, `Agent` and `Task`→`task`, `Skill`→`skill`, `ListAgents`→`list_agents`, `SendMessage`→`write_agent`. An MCP tool `mcp__<server>__<tool>` becomes `<server>-<tool>`. Any other name passes through unchanged, so Copilot's own names work too.
+Workflows name tools the Claude way. Archon translates `allowed_tools`, `denied_tools` and each inline agent's `tools` (under `agents:`) to Copilot's built-in names: `Read`→`view`, `Write`→`create`, `Edit` and `MultiEdit`→`edit`, `Bash`→`bash`, `BashOutput`→`read_bash`, `KillShell`→`stop_bash`, `Glob`→`glob`, `Grep`→`grep`, `WebFetch`→`web_fetch`, `Agent` and `Task`→`task`, `Skill`→`skill`, `ListAgents`→`list_agents`, `SendMessage`→`write_agent`. An MCP tool `mcp__<server>__<tool>` becomes `<server>-<tool>`. Any other name passes through unchanged, so Copilot's own names work too.
 
 Copilot filters tools by name only, so a few entries cannot be translated exactly:
 
 - An argument pattern such as `Bash(git push *)` in `denied_tools` is dropped, so it does not deny all of `bash`. Enforce it with a `preToolUse` hook in `.github/hooks/`.
 - A whole MCP server (`mcp__github` or `mcp__github__*`) in `denied_tools` is dropped too.
-- In `allowed_tools`, a pattern keeps its whole tool (`Bash(git status *)` allows `bash`), and a whole MCP server allows every MCP tool.
+- In `allowed_tools` and an agent's `tools`, a pattern keeps its whole tool (`Bash(git status *)` allows `bash`), and a whole MCP server allows every MCP tool.
 
 Archon warns once per process about each such entry. A non-empty `allowed_tools` never turns into an empty list.
 

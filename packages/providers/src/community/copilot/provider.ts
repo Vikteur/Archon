@@ -87,9 +87,10 @@ export function resetCopilotSingleton(): void {
  */
 const warnedToolEntries = new Set<string>();
 
-function firstSightings(entries: string[]): string[] {
-  const fresh = entries.filter(entry => !warnedToolEntries.has(entry));
-  for (const entry of fresh) warnedToolEntries.add(entry);
+/** `scope` keeps an agent's entries apart from the node's own lists. */
+function firstSightings(entries: string[], scope = ''): string[] {
+  const fresh = entries.filter(entry => !warnedToolEntries.has(`${scope}\0${entry}`));
+  for (const entry of fresh) warnedToolEntries.add(`${scope}\0${entry}`);
   return fresh;
 }
 
@@ -275,6 +276,8 @@ function applySkills(
  * Translate Archon's `nodeConfig.agents` (Record<name, AgentDef>) to
  * Copilot's `SessionConfig.customAgents`. Only the fields Copilot's
  * `CustomAgentConfig` supports pass through (description, prompt, tools).
+ * An agent's `tools` is an allowlist and gets the same Claude-to-Copilot name
+ * translation as `allowed_tools`, widened entries warned about once per agent.
  * Archon agent fields Copilot cannot represent (`model`, `disallowedTools`,
  * `skills`, `maxTurns`) surface as one consolidated warning per agent.
  *
@@ -310,7 +313,7 @@ function applyAgents(
       name,
       description: def.description,
       prompt: def.prompt,
-      ...(def.tools !== undefined ? { tools: def.tools } : {}),
+      ...(def.tools !== undefined ? { tools: agentTools(name, def.tools, warnings) } : {}),
     };
   });
 
@@ -319,6 +322,18 @@ function applyAgents(
     { count: customAgents.length, names: customAgents.map(a => a.name) },
     'copilot.agents_registered'
   );
+}
+
+function agentTools(name: string, tools: string[], warnings: ProviderWarning[]): string[] {
+  const allowed = mapAllowedTools(tools);
+  const fresh = firstSightings(allowed.widened, `agent:${name}`);
+  if (fresh.length > 0) {
+    warnings.push({
+      code: 'copilot.agent_tools_widened',
+      message: `Copilot filters tools by name only, so these tools entries of agent '${name}' allow their whole tool: ${fresh.join(', ')}.`,
+    });
+  }
+  return allowed.tools;
 }
 
 // ─── SessionConfig assembly ─────────────────────────────────────────────────
