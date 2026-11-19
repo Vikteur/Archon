@@ -13,7 +13,8 @@
 #   --target T          bun-linux-x64 | bun-linux-arm64 | bun-darwin-x64 | bun-darwin-arm64
 #                       (default: this machine)
 #   --skip-web          do not build or install the web UI
-#   --skip-tools        do not run the kit tools step afterwards
+#   --skip-tools        do not run the kit tools step afterwards (setup gets --no-tools)
+#   --no-setup          do not start `archon kit setup` afterwards
 #   --dry-run           print the plan, change nothing
 #   -h, --help          this text
 #
@@ -25,6 +26,11 @@
 #   <archon-home>/web-dist/<version>/
 # An existing target is moved to <name>.prev-<timestamp> first; a failed run puts
 # this run's backups back, and a finished one keeps the newest 3 per name.
+#
+# In a terminal (stdin and stdout), a finished install starts `archon kit setup`, the
+# guided install of the kit into a backend and a frontend; it installs the tools itself,
+# so the separate kit tools step is skipped then. Without a terminal, or with
+# --no-setup, the kit tools step runs instead and setup is left to you.
 
 set -euo pipefail
 
@@ -45,6 +51,7 @@ ARCHON_HOME_DIR="${ARCHON_HOME:-${HOME}/.archon}"
 TARGET=""
 SKIP_WEB=false
 SKIP_TOOLS=false
+NO_SETUP=false
 DRY_RUN=false
 
 SUPPORTED_TARGETS="bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64"
@@ -82,6 +89,7 @@ parse_args() {
       --target=*) TARGET="${1#--target=}"; shift ;;
       --skip-web) SKIP_WEB=true; shift ;;
       --skip-tools) SKIP_TOOLS=true; shift ;;
+      --no-setup) NO_SETUP=true; shift ;;
       --dry-run) DRY_RUN=true; shift ;;
       -h | --help) usage; exit 0 ;;
       *) error "Unknown option: $1"; return 1 ;;
@@ -214,6 +222,30 @@ run_kit_tools() {
   rm -rf "$dir"
 }
 
+# Both stdin and stdout are terminals: kit setup may ask its questions.
+is_interactive() { [ -t 0 ] && [ -t 1 ]; }
+
+# Whether this run hands off to kit setup at the end (the CLI's support is checked then).
+setup_wanted() { [ "$NO_SETUP" = false ] && is_interactive; }
+
+# Start `archon kit setup` when the installed CLI has it. Returns 1 when it did not
+# start (the caller then runs the kit tools step); a failing setup is a warning only.
+run_kit_setup() {
+  local bin="$1"
+  setup_wanted || return 1
+  local help_out
+  if ! help_out="$("$bin" kit --help 2>&1)" || ! printf '%s\n' "$help_out" | grep -Eqw 'setup'; then
+    info "This Archon has no 'archon kit setup'; running the kit tools step instead."
+    return 1
+  fi
+  local args=()
+  if [ "$SKIP_TOOLS" = true ]; then args+=(--no-tools); fi
+  echo ""
+  info "Starting the guided kit install: archon kit setup ${args[*]-}"
+  "$bin" kit setup ${args[@]+"${args[@]}"} || warn "'archon kit setup' did not finish; re-run it any time: archon kit setup"
+  return 0
+}
+
 running_servers() {
   command -v pgrep >/dev/null 2>&1 || return 0
   pgrep -af 'archon-server|archon serve' 2>/dev/null | grep -v "install-local" || true
@@ -231,8 +263,17 @@ print_plan() {
     echo "  web          packages/web/dist -> $ARCHON_HOME_DIR/web-dist/$VERSION/"
   fi
   echo "  backups      existing targets move to <name>.prev-<timestamp>; restored if a step fails; newest $KEEP_BACKUPS kept"
+  if [ "$NO_SETUP" = true ]; then
+    echo "  kit setup    skipped (--no-setup)"
+  elif setup_wanted; then
+    echo "  kit setup    archon kit setup in this terminal (it installs the tools too)"
+  else
+    echo "  kit setup    skipped (no terminal); run archon kit setup yourself"
+  fi
   if [ "$SKIP_TOOLS" = true ]; then
     echo "  kit tools    skipped (--skip-tools)"
+  elif setup_wanted; then
+    echo "  kit tools    run by archon kit setup (archon kit tools if the CLI has no setup)"
   else
     echo "  kit tools    archon kit tools in an empty temp folder (the kit's bundled installer), or archon kit doctor, if the CLI has a kit command"
   fi
@@ -324,12 +365,20 @@ main() {
     *) warn "$PREFIX is not on PATH. Add it: export PATH=\"$PREFIX:\$PATH\"" ;;
   esac
 
+  if ARCHON_HOME="$ARCHON_HOME_DIR" run_kit_setup "$PREFIX/archon"; then
+    echo ""
+    echo "Re-run the guided kit install any time: archon kit setup"
+    echo ""
+    return 0
+  fi
   if [ "$SKIP_TOOLS" = false ]; then
     ARCHON_HOME="$ARCHON_HOME_DIR" run_kit_tools "$PREFIX/archon"
   fi
 
   echo ""
-  echo "Next, in a project:"
+  echo "Next, the guided kit install (backend, frontend, contract):"
+  echo "  archon kit setup"
+  echo "Or by hand, in a project:"
   echo "  archon kit add <project> --trust"
   echo "  archon kit doctor <project>"
   echo ""

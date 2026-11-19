@@ -35,6 +35,8 @@ contains "$output" "/p/home/server/$version/archon-server-linux-arm64" "server p
 contains "$output" "/p/home/plugins/archon-provider-claude" "provider path"
 contains "$output" "/p/home/web-dist/$version/" "web path"
 contains "$output" "archon kit tools" "kit step"
+# The tests run without a terminal: no hand-off to kit setup.
+contains "$output" "kit setup    skipped (no terminal)" "no setup without a terminal"
 
 output=$(bash "$script" --dry-run --prefix=/q/bin --archon-home=/q/home --target=bun-darwin-x64 --skip-web --skip-tools) \
   || fail "dry-run with = forms failed"
@@ -42,6 +44,10 @@ contains "$output" "/q/bin/archon" "--prefix= form"
 contains "$output" "skipped (--skip-web)" "--skip-web"
 contains "$output" "skipped (--skip-tools)" "--skip-tools"
 lacks "$output" "web-dist" "--skip-web hides the web path"
+
+output=$(bash "$script" --dry-run --target bun-linux-x64 --no-setup) || fail "dry-run with --no-setup failed"
+contains "$output" "kit setup    skipped (--no-setup)" "--no-setup"
+contains "$output" "archon kit tools" "--no-setup keeps the kit tools step"
 
 output=$(ARCHON_HOME=/env/home bash "$script" --dry-run --target bun-linux-x64) || fail "env home dry-run failed"
 contains "$output" "/env/home/server/" "ARCHON_HOME default"
@@ -102,6 +108,51 @@ trap 'rm -rf "$work"' EXIT
   left="$(cd "$work" && printf "%s " archon.prev-*)"
   [ "$left" = "archon.prev-20250101-000004 archon.prev-20250101-000005 archon.prev-20250101-000006 " ] \
     || fail "prune kept: $left"
+) || exit 1
+
+# The hand-off to kit setup, sourced, with a stub CLI that records its calls.
+# shellcheck disable=SC2034,SC2317 # NO_SETUP and SKIP_TOOLS are the sourced script's; is_interactive is its seam
+(
+  # shellcheck source=/dev/null
+  source "$script"
+  set +e
+  calls="$work/calls"
+  bin="$work/archon-stub"
+  cat > "$bin" <<STUB
+#!/usr/bin/env bash
+if [ "\$1 \$2" = "kit --help" ]; then cat "$work/kit-help"; exit 0; fi
+echo "\$*" >> "$calls"
+STUB
+  chmod +x "$bin"
+  echo "  kit setup [--backend <path> --contract <file>]" > "$work/kit-help"
+
+  is_interactive() { return 1; }
+  : > "$calls"
+  run_kit_setup "$bin" >/dev/null 2>&1 && fail "setup started without a terminal"
+  [ ! -s "$calls" ] || fail "no terminal, yet the CLI ran: $(cat "$calls")"
+
+  is_interactive() { return 0; }
+  NO_SETUP=true
+  run_kit_setup "$bin" >/dev/null 2>&1 && fail "setup started with --no-setup"
+  [ ! -s "$calls" ] || fail "--no-setup, yet the CLI ran: $(cat "$calls")"
+
+  NO_SETUP=false
+  SKIP_TOOLS=false
+  run_kit_setup "$bin" >/dev/null 2>&1 || fail "setup did not start in a terminal"
+  [ "$(cat "$calls")" = "kit setup" ] || fail "setup call: $(cat "$calls")"
+  plan="$(VERSION=0 OS_ARCH=x TARGET=t print_plan)"
+  contains "$plan" "kit setup    archon kit setup in this terminal" "plan names the setup"
+  contains "$plan" "kit tools    run by archon kit setup" "plan leaves the tools to setup"
+
+  : > "$calls"
+  SKIP_TOOLS=true
+  run_kit_setup "$bin" >/dev/null 2>&1 || fail "setup did not start with --skip-tools"
+  [ "$(cat "$calls")" = "kit setup --no-tools" ] || fail "--skip-tools setup call: $(cat "$calls")"
+
+  : > "$calls"
+  echo "  kit add [path]" > "$work/kit-help"
+  run_kit_setup "$bin" >/dev/null 2>&1 && fail "setup started on a CLI without it"
+  [ ! -s "$calls" ] || fail "a CLI without setup ran: $(cat "$calls")"
 ) || exit 1
 
 echo "install-local tests passed"
