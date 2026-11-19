@@ -10,6 +10,8 @@ import { applySuiteNouns, classifySuite, suiteOf, suiteSubject } from './kit-syn
 import {
   applyGlobalRewrites,
   applyRewrites,
+  CODEGRAPH_CLI,
+  CONTRACT_CLI,
   classify,
   convertAgent,
   convertDeny,
@@ -21,6 +23,7 @@ import {
   fencedAgents,
   KIT_MODULES,
   leakCheck,
+  mcpFallbackCommands,
   NEVER_SHIP,
   neverShipRefs,
   parseHookCommand,
@@ -28,6 +31,9 @@ import {
   snapshot,
   sync,
   verifyKit,
+  WORKFLOW_FALLBACK,
+  withMcpFallbackScopes,
+  withWorkflowFallback,
 } from './kit-sync';
 
 const track = trackTempRoots();
@@ -145,7 +151,7 @@ function fixture(): string {
   write(
     root,
     '.claude/hooks/agent-scopes.json',
-    '{"_comment":"fences","agents":{"developer":{}}}\n'
+    '{"_comment":"fences","agents":{"developer":{"commandAllowlist":["git add"]},"retro":{"commandAllowlist":["git log"]}}}\n'
   );
   write(root, '.claude/scripts/contract-pin.sh', 'repo=Vikteur/rekord-contract\n', true);
   write(
@@ -169,6 +175,8 @@ function fixture(): string {
     '---\nkind: worked-example\nserves: [java, resilience4j]\n---\nX.\n'
   );
   write(root, 'scripts/portal-mcp/server.mjs', 'export {};\n');
+  write(root, 'scripts/portal-mcp/tools.mjs', 'export {};\n');
+  write(root, 'scripts/portal-mcp/cli.mjs', "import './tools.mjs';\n");
   write(root, 'README.md', 'outside the scanned roots\n');
   git(root, 'add', '-A');
   git(root, 'commit', '-q', '-m', 'fixture');
@@ -216,6 +224,187 @@ describe('agent conversion', () => {
     expect(() => convertAgent(AGENT.replace('  - Read\n', '  - TeleportTool\n'), 'x')).toThrow(
       /TeleportTool/
     );
+  });
+});
+
+describe('MCP fallback (the kit only)', () => {
+  const ALL = [...CODEGRAPH_CLI, CONTRACT_CLI];
+  const noMcp = AGENT.replace('  - mcp__codegraph__*\n  - mcp__portal-api__search\n', '');
+  const codegraphOnly = AGENT.replace('  - mcp__portal-api__search\n', '');
+  const noShell = AGENT.replace('  - Bash(git add *)\n', '');
+
+  test('the commands follow the MCP tools, and only for an agent with a shell', () => {
+    expect(CODEGRAPH_CLI).toEqual([
+      'codegraph explore',
+      'codegraph node',
+      'codegraph callers',
+      'codegraph callees',
+      'codegraph impact',
+      'codegraph query',
+    ]);
+    expect(CONTRACT_CLI).toBe('node scripts/contract-mcp/cli.mjs');
+    expect(
+      mcpFallbackCommands(['Bash(git add *)', 'mcp__codegraph__*', 'mcp__portal-api__read'])
+    ).toEqual(ALL);
+    expect(mcpFallbackCommands('Read, Bash, mcp__codegraph__codegraph_explore')).toEqual(
+      CODEGRAPH_CLI
+    );
+    expect(mcpFallbackCommands(['Bash(git add *)', 'mcp__portal-api__where'])).toEqual([
+      CONTRACT_CLI,
+    ]);
+    expect(mcpFallbackCommands(['Bash(git add *)', 'Read'])).toEqual([]);
+    expect(mcpFallbackCommands(['Read', 'mcp__codegraph__*'])).toEqual([]);
+  });
+
+  test('an agent with the MCP tools gets the commands on its shell note and the fallback paragraph once', () => {
+    const out = convertAgent(AGENT, 'developer.md');
+    expect(out).toContain(
+      "Claude Code limits this agent's shell to these commands; keep to them: `git add *`. On Copilot CLI the MCP fallback below adds: `codegraph explore *`, `codegraph node *`, `codegraph callers *`, `codegraph callees *`, `codegraph impact *`, `codegraph query *`, `node scripts/contract-mcp/cli.mjs *`."
+    );
+    expect(out.split('MCP fallback:')).toHaveLength(2);
+    expect(out).toContain('`codegraph explore "<question or names>"`');
+    expect(out).toContain(
+      'for `@@KIT_CONTRACT_SERVER_NAME@@/*`, `node scripts/contract-mcp/cli.mjs <tool> <args>`'
+    );
+    expect(out).toContain('no other codegraph subcommand');
+    expect(convertAgent(AGENT, 'developer.md')).toBe(out);
+  });
+
+  test('an agent without the MCP tools, or without a shell, gets none; codegraph alone gets only its part', () => {
+    for (const text of [noMcp, noShell]) {
+      const out = convertAgent(text, 'developer.md');
+      expect(out).not.toContain('MCP fallback');
+      expect(out).not.toContain('codegraph explore');
+    }
+    expect(convertAgent(noShell, 'developer.md')).not.toContain('"execute"');
+    const cg = convertAgent(codegraphOnly, 'developer.md');
+    expect(cg.split('MCP fallback:')).toHaveLength(2);
+    expect(cg).toContain('`codegraph query *`.');
+    expect(cg).not.toContain('cli.mjs');
+  });
+
+  test('agent-scopes.json gets the commands on a fenced allowlist, once, and is untouched otherwise', () => {
+    const json = `${JSON.stringify(
+      {
+        _comment: 'fences',
+        agents: {
+          developer: {
+            allowedFilePaths: ['src/'],
+            commandAllowlist: ['git add', 'codegraph explore'],
+          },
+          reviewer: { commandAllowlist: ['git diff'] },
+          retro: { allowedFilePaths: [] },
+        },
+      },
+      null,
+      2
+    )}\n`;
+    const fallbacks = new Map([
+      ['developer', ALL],
+      ['retro', CODEGRAPH_CLI],
+      ['ghost', ALL],
+    ]);
+    const out = withMcpFallbackScopes(json, fallbacks);
+    const agents = (JSON.parse(out) as { agents: Record<string, Record<string, unknown>> }).agents;
+    expect(agents.developer?.commandAllowlist).toEqual(['git add', ...ALL]);
+    expect(agents.reviewer?.commandAllowlist).toEqual(['git diff']);
+    expect(agents.retro).toEqual({ allowedFilePaths: [] });
+    expect(agents.ghost).toBeUndefined();
+    expect(withMcpFallbackScopes(out, fallbacks)).toBe(out);
+    const compact = '{"agents":{"reviewer":{"commandAllowlist":["git diff"]}}}\n';
+    expect(withMcpFallbackScopes(compact, fallbacks)).toBe(compact);
+  });
+
+  test.skipIf(!Bun.which('jq'))(
+    "the kit's scope-guard lets the fallback commands through, also behind rtk",
+    () => {
+      const root = track(mkdtempSync(join(tmpdir(), 'kit-sync-guard-')));
+      const hooks = join(import.meta.dir, '../kit/profiles/core/.claude/hooks/scripts');
+      for (const f of ['scope-guard.sh', 'payload.sh'])
+        write(root, `.claude/hooks/scripts/${f}`, readFileSync(join(hooks, f), 'utf8'), true);
+      const policy = withMcpFallbackScopes(
+        '{"agents":{"developer":{"commandAllowlist":["git add"]}}}\n',
+        new Map([['developer', ALL]])
+      );
+      write(root, '.claude/hooks/agent-scopes.json', policy);
+      const guard = (command: string): string => {
+        const payload = JSON.stringify({
+          agent_type: 'developer',
+          tool_name: 'Bash',
+          tool_input: { command },
+          cwd: root,
+        });
+        const r = Bun.spawnSync(['bash', '.claude/hooks/scripts/scope-guard.sh'], {
+          cwd: root,
+          stdin: Buffer.from(payload),
+          env: { ...process.env, CLAUDE_PROJECT_DIR: root, KIT_AGENT: '' },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        });
+        expect(r.exitCode).toBe(0);
+        return r.stdout.toString();
+      };
+      for (const ok of [
+        'codegraph explore "how does the vendor cancel work"',
+        'codegraph node CancelVendorUseCase',
+        'codegraph node --file src/a.java',
+        'codegraph callers cancel',
+        'codegraph callees cancel',
+        'codegraph impact cancel',
+        'codegraph query cancel',
+        'node scripts/contract-mcp/cli.mjs search cancel vendor',
+        'node scripts/contract-mcp/cli.mjs where --status stub',
+        'rtk codegraph explore "x"',
+        'rtk node scripts/contract-mcp/cli.mjs read cancelVendor',
+        'git add a && codegraph impact x',
+      ])
+        expect(guard(ok)).toBe('');
+      for (const no of [
+        'codegraph sync',
+        'codegraph index',
+        'codegraph init',
+        'codegraph unlock',
+        'codegraph daemon',
+        'codegraph',
+        'codegraph explorex',
+        'codegraph explore x; codegraph sync',
+        'codegraph explore $(cat /etc/passwd)',
+        'node scripts/contract-mcp/server.mjs',
+        'node scripts/contract-mcp/cli.mjsx',
+        'rtk codegraph sync',
+      ])
+        expect(guard(no)).toContain('"permissionDecision":"deny"');
+    }
+  );
+
+  test('the Copilot workflow gets the CLI sentence after every MCP paragraph, once', () => {
+    const line =
+      'Grep stays the tool for text, config, logs and strings; without the tools, read as before.';
+    const yaml = `a:\n  prompt: |\n      ${line}\n      Next.\nb:\n  prompt: |\n            ${line}\n`;
+    const out = withWorkflowFallback(yaml, 'wf.yaml');
+    expect(out).toBe(
+      `a:\n  prompt: |\n      ${line}\n      ${WORKFLOW_FALLBACK}\n      Next.\nb:\n  prompt: |\n            ${line}\n            ${WORKFLOW_FALLBACK}\n`
+    );
+    expect(withWorkflowFallback(out, 'wf.yaml')).toBe(out);
+    expect(WORKFLOW_FALLBACK).toContain(
+      '`node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`'
+    );
+    expect(() => withWorkflowFallback('a: 1\n', 'wf.yaml')).toThrow(/MCP_PROMPT_END/);
+  });
+
+  test('an agent that names the contract CLI needs it; without openapi-contract that is a known gap', () => {
+    const agent = convertAgent(AGENT, 'developer.md');
+    const lines = depsCheck([
+      { profile: 'java', path: '.github/agents/developer.agent.md', content: agent },
+      { profile: 'openapi-contract', path: 'scripts/contract-mcp/server.mjs', content: '' },
+    ]);
+    expect(lines).toContain(
+      'core,java,openapi-contract: .github/agents/developer.agent.md needs scripts/contract-mcp/cli.mjs (its MCP fallback)'
+    );
+    const r = judgeDeps(lines.filter(l => l.includes('cli.mjs')));
+    expect(r.failures.length).toBeGreaterThan(0);
+    expect(r.failures.every(l => l.includes(',openapi-contract:'))).toBe(true);
+    expect(r.known.some(l => l.startsWith('core,java: ') && l.includes('cli.mjs'))).toBe(true);
   });
 });
 
@@ -649,7 +838,9 @@ describe('sync on a fixture repo', () => {
       'java-quarkus/docs/scaffold-templates/a/resource.mustache',
       'openapi-contract/.claude/scripts/contract-pin.sh',
       'openapi-contract/.github/mcp.json',
+      'openapi-contract/scripts/contract-mcp/cli.mjs',
       'openapi-contract/scripts/contract-mcp/server.mjs',
+      'openapi-contract/scripts/contract-mcp/tools.mjs',
     ]);
     const byKey = new Map(manifest.files.map(f => [`${f.profile}/${f.path}`, f]));
     expect(byKey.get('java-quarkus/.github/skills/run-app/scripts/smoke.sh')?.mode).toBe('0755');
@@ -678,6 +869,17 @@ describe('sync on a fixture repo', () => {
       'utf8'
     );
     expect(agent).toContain('args: ["scripts/contract-mcp/server.mjs"]');
+    expect(agent.split('MCP fallback:')).toHaveLength(2);
+    expect(agent).toContain('`node scripts/contract-mcp/cli.mjs *`');
+    const scopes = JSON.parse(
+      readFileSync(join(out, 'profiles/core/.claude/hooks/agent-scopes.json'), 'utf8')
+    ) as { agents: Record<string, { commandAllowlist: string[] }> };
+    expect(scopes.agents.developer?.commandAllowlist).toEqual([
+      'git add',
+      ...CODEGRAPH_CLI,
+      CONTRACT_CLI,
+    ]);
+    expect(scopes.agents.retro?.commandAllowlist).toEqual(['git log']);
     expect(agent).toContain(
       'command: "env KIT_AGENT=developer bash .github/hooks/dispatch.sh PreToolUse'
     );

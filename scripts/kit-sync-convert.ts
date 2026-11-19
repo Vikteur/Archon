@@ -147,16 +147,112 @@ function agentModel(fm: Record<string, unknown>, where: string): string | undefi
 
 const ticks = (items: string[]): string => items.map(t => `\`${t}\``).join(', ');
 
-function agentNotes(t: AgentTools): string[] {
+// ---------------------------------------------------------------------------------------------------------------
+// MCP fallback (the kit only)
+// ---------------------------------------------------------------------------------------------------------------
+// An organization's Copilot MCP registry policy can block the kit's local MCP servers (codegraph and the contract
+// server). An agent that has their MCP tools and a shell may then run the same functions through their CLIs: the
+// read-only codegraph subcommands, never init/uninit/index/sync/daemon/unlock, and the contract server's cli.mjs. The
+// source's Claude Code agents stay on MCP; the rule is added here, to the converted agents and their scope fences.
+
+/** The read-only codegraph subcommands, as command prefixes (the agent-scopes.json form). */
+export const CODEGRAPH_CLI = ['explore', 'node', 'callers', 'callees', 'impact', 'query'].map(
+  c => `codegraph ${c}`
+);
+/** The contract server's CLI at its kit path (scripts/portal-mcp/ in the source). */
+export const CONTRACT_CLI_PATH = 'scripts/contract-mcp/cli.mjs';
+export const CONTRACT_CLI = `node ${CONTRACT_CLI_PATH}`;
+
+const SHELL_TOOL = /^Bash(?:\(.*\))?$/;
+
+/**
+ * One agent's MCP fallback commands (prefixes, no ` *`) from its Claude Code `tools`: the codegraph ones for an
+ * agent with an `mcp__codegraph__` tool, the contract CLI for one with a contract server tool. None for an agent
+ * without a shell: giving it one would widen it.
+ */
+export function mcpFallbackCommands(rawTools: unknown): string[] {
+  const tools = listOf(rawTools).map(t => t.trim());
+  if (!tools.some(t => SHELL_TOOL.test(t))) return [];
+  const servers = new Set(
+    tools.map(t => /^mcp__(.+?)__/.exec(t)?.[1]).flatMap(s => (s ? [contractName(s)] : []))
+  );
+  return [
+    ...(servers.has('codegraph') ? CODEGRAPH_CLI : []),
+    ...(servers.has(CONTRACT_SERVER) ? [CONTRACT_CLI] : []),
+  ];
+}
+
+/** The body note that names the fallback; it begins with `MCP fallback:`. */
+function fallbackNote(commands: readonly string[]): string[] {
+  const parts: string[] = [];
+  if (commands.includes('codegraph explore'))
+    parts.push(
+      'for `codegraph/*`, `codegraph explore "<question or names>"`, `codegraph node <symbol>` (`--file <path>` reads a file), `codegraph callers <symbol>`, `codegraph callees <symbol>`, `codegraph impact <symbol>` and `codegraph query <name>` (the search tool), and no other codegraph subcommand'
+    );
+  if (commands.includes(CONTRACT_CLI))
+    parts.push(
+      `for \`${CONTRACT_SERVER}/*\`, \`${CONTRACT_CLI} <tool> <args>\` with \`search <words...>\`, \`read <operationId>\`, \`where <operationId>\` (or \`--tag <t>\`, \`--status live|stub|none\`), \`schema <name>\` or \`usedBy <target>\`; it prints the tool's JSON answer and exits 1 on a tool error`
+    );
+  if (!parts.length) return [];
+  return [
+    `MCP fallback: if these MCP tools are not in your tool list (an organization's MCP registry policy can block the kit's local servers), run the same function through its CLI in the shell instead, written exactly so: ${parts.join('; ')}.`,
+  ];
+}
+
+/** `.claude/hooks/agent-scopes.json` with each agent's MCP fallback commands added to its `commandAllowlist`. */
+export function withMcpFallbackScopes(
+  json: string,
+  fallbacks: ReadonlyMap<string, readonly string[]>
+): string {
+  const doc = JSON.parse(json) as { agents?: Record<string, { commandAllowlist?: unknown }> };
+  let changed = false;
+  for (const [name, commands] of fallbacks) {
+    const list = doc.agents?.[name]?.commandAllowlist;
+    if (!Array.isArray(list)) continue;
+    for (const c of commands)
+      if (!list.includes(c)) {
+        list.push(c);
+        changed = true;
+      }
+  }
+  return changed ? `${JSON.stringify(doc, null, 2)}\n` : json;
+}
+
+/** The build workflow's MCP paragraph ends on this line; the Copilot workflow adds the CLI fallback after it. */
+const MCP_PROMPT_END =
+  /^( *)Grep stays the tool for text, config, logs and strings; without the tools, read as before\.$/gm;
+export const WORKFLOW_FALLBACK = `On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try \`codegraph explore|node|callers|callees|impact|query <args>\` (no other codegraph subcommand) and \`${CONTRACT_CLI} search|read|where|schema|usedBy <args>\`.`;
+
+/** Adds WORKFLOW_FALLBACK after every MCP paragraph of the Copilot workflow (once); none to add it to fails. */
+export function withWorkflowFallback(yaml: string, where: string): string {
+  let found = 0;
+  const out = yaml.replace(MCP_PROMPT_END, (line: string, indent: string, at: number) => {
+    found++;
+    const next = `\n${indent}${WORKFLOW_FALLBACK}`;
+    return yaml.startsWith(next, at + line.length) ? line : `${line}${next}`;
+  });
+  if (!found)
+    throw new Error(
+      `${where}: no MCP prompt paragraph to add the CLI fallback to; update MCP_PROMPT_END in scripts/kit-sync-convert.ts`
+    );
+  return out;
+}
+
+function agentNotes(t: AgentTools, fallback: readonly string[]): string[] {
   const notes: string[] = [];
   if (t.dropped.length)
     notes.push(
       `Claude Code gives this agent tools that Copilot CLI does not have: ${ticks(t.dropped)}. Where these instructions use one, go without it and say so in your report.`
     );
-  if (t.bash.length)
+  if (t.bash.length) {
+    const extra = fallback.length
+      ? ` On Copilot CLI the MCP fallback below adds: ${ticks(fallback.map(c => `${c} *`))}.`
+      : '';
     notes.push(
-      `Claude Code limits this agent's shell to these commands; keep to them: ${ticks(t.bash)}.`
+      `Claude Code limits this agent's shell to these commands; keep to them: ${ticks(t.bash)}.${extra}`
     );
+  }
+  notes.push(...fallbackNote(fallback));
   if (t.delegates.length) notes.push(`Delegate only to these agents: ${ticks(t.delegates)}.`);
   return notes;
 }
@@ -225,7 +321,10 @@ export function convertAgent(
   const skills = Array.isArray(fm.skills) ? (fm.skills as unknown[]).map(String) : [];
   if (skills.length)
     body = `Load these skills first: ${skills.join(', ')}.\n\n${body.replace(/^\s+/, '')}`;
-  return front.join('\n') + withTrailingSection(body, onCopilotSection(agentNotes(tools)));
+  const fallback = mcpFallbackCommands(fm.tools);
+  return (
+    front.join('\n') + withTrailingSection(body, onCopilotSection(agentNotes(tools, fallback)))
+  );
 }
 
 const SKILL_KEEP = ['name', 'description', 'license', 'allowed-tools'];

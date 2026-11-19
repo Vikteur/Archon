@@ -34,9 +34,12 @@ import {
   DISPATCH_SH,
   fencedAgents,
   KIT_MODULES,
+  mcpFallbackCommands,
   mcpJson,
   parseYaml,
   splitFrontmatter,
+  withMcpFallbackScopes,
+  withWorkflowFallback,
 } from './kit-sync-convert';
 import { depsCheck, judgeDeps } from './kit-sync-deps';
 import {
@@ -351,17 +354,41 @@ function checkRewriteTargets(src: Source, rewrites: Record<string, Rewrite[]>): 
       throw new Error(`${p}: has rewrites in scripts/kit-sync-lists.ts but is not in the source`);
 }
 
+/** What the conversion of one file needs to know of the other agents. */
+interface AgentContext {
+  /** The agents agent-scopes.json fences. */
+  fenced: ReadonlySet<string>;
+  /** Each agent's MCP fallback commands (mcpFallbackCommands), for agent-scopes.json. */
+  fallbacks: ReadonlyMap<string, readonly string[]>;
+}
+
+/** Each shipped source agent's MCP fallback commands, by its frontmatter name; an agent with none is left out. */
+function agentFallbacks(src: Source, tracked: ReadonlySet<string>): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const f of src.files.values()) {
+    if (!/^\.claude\/agents\/[^/]+\.md$/.test(f.path)) continue;
+    const text = textOf(f);
+    if (classify(f.path, text, tracked).exclude) continue;
+    const fm = frontmatterOf(text);
+    const commands = mcpFallbackCommands(fm.tools);
+    if (commands.length && fm.name) out.set(String(fm.name), commands);
+  }
+  return out;
+}
+
 function convertText(
   f: SourceFile,
   raw: string,
   convert: Assignment & { exclude?: false },
   rewrites: Rewrite[],
-  fenced: ReadonlySet<string>
+  ctx: AgentContext
 ): string {
   let text = applyRewrites(f.path, raw, rewrites);
   if (/^docs\/code-maps\/[^/]+\.md$/.test(f.path))
     text = genericThisRepo(f.path, convert.profile, text);
-  if (convert.convert === 'agent') text = convertAgent(text, f.path, fenced);
+  if (f.path === AGENT_SCOPES) text = withMcpFallbackScopes(text, ctx.fallbacks);
+  if (f.path === COPILOT_WORKFLOW) text = withWorkflowFallback(text, f.path);
+  if (convert.convert === 'agent') text = convertAgent(text, f.path, ctx.fenced);
   else if (convert.convert === 'rule')
     text = convertRule(basename(f.path, '.md'), text, KIT_MODULES);
   else if (convert.convert === 'skill' && basename(f.path) === 'SKILL.md')
@@ -376,7 +403,10 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
   const out: KitFile[] = [];
   const tracked = new Set(src.files.keys());
   const scopes = src.files.get(AGENT_SCOPES);
-  const fenced = fencedAgents(scopes && textOf(scopes));
+  const ctx: AgentContext = {
+    fenced: fencedAgents(scopes && textOf(scopes)),
+    fallbacks: agentFallbacks(src, tracked),
+  };
   for (const f of [...src.files.values()].sort((a, b) => (a.path < b.path ? -1 : 1))) {
     const raw = textOf(f);
     const a = classify(f.path, raw, tracked);
@@ -388,7 +418,7 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
         profile: a.profile,
         mode: f.gitMode === '100755' ? '0755' : '0644',
         origin: f.path,
-        content: convertText(f, raw, a, rewrites[f.path] ?? [], fenced),
+        content: convertText(f, raw, a, rewrites[f.path] ?? [], ctx),
       })
     );
   }
@@ -397,10 +427,13 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
 
 function copilotWorkflow(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[] {
   if (src.files.has(COPILOT_WORKFLOW) || !src.files.has(BUILD_WORKFLOW)) return [];
-  const text = applyRewrites(
-    COPILOT_WORKFLOW,
-    copilotWorkflowFromScript(src),
-    rewrites[COPILOT_WORKFLOW] ?? []
+  const text = withWorkflowFallback(
+    applyRewrites(
+      COPILOT_WORKFLOW,
+      copilotWorkflowFromScript(src),
+      rewrites[COPILOT_WORKFLOW] ?? []
+    ),
+    COPILOT_WORKFLOW
   );
   const content = applyGlobalRewrites(text, COPILOT_WORKFLOW);
   return [

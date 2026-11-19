@@ -3,6 +3,7 @@
  * hold the files its shipped scripts read. scripts/kit-sync.ts runs it in --verify (it fails) and in a sync (it
  * reports).
  */
+import { CONTRACT_CLI, CONTRACT_CLI_PATH } from './kit-sync-convert';
 import { EXCLUSIVE, PROFILE_META, PROFILES, type Profile } from './kit-sync-lists';
 
 export interface DepFile {
@@ -54,6 +55,11 @@ function needsOf(f: DepFile): { needs: string; why: string }[] {
   if (/^\.github\/agents\/[^/]+\.agent\.md$/.test(f.path))
     for (const m of f.content.matchAll(AGENT_SERVER_ARG))
       out.push({ needs: m[1] ?? '', why: 'its mcp-servers entry' });
+  if (
+    /^\.github\/agents\/[^/]+\.agent\.md$/.test(f.path) &&
+    f.content.includes(`\`${CONTRACT_CLI} *\``)
+  )
+    out.push({ needs: CONTRACT_CLI_PATH, why: 'its MCP fallback' });
   if (f.path === '.github/workflows/ci.yml')
     for (const m of f.content.matchAll(CI_SUITE))
       out.push({ needs: m[1] ?? '', why: 'a CI step runs it' });
@@ -73,9 +79,9 @@ export const KNOWN_GAPS: { match: RegExp; reason: string }[] = [
   },
   {
     match:
-      /^core,java(,java-quarkus|,java-spring)?: \.github\/agents\/\S+ needs scripts\/contract-mcp\/server\.mjs/,
+      /^core,java(,java-quarkus|,java-spring)?: \.github\/agents\/\S+ needs scripts\/contract-mcp\/(server|cli)\.mjs/,
     reason:
-      'the java agents name the contract server inline; without openapi-contract it cannot start, install that profile',
+      'the java agents name the contract server inline and its CLI as their MCP fallback; without openapi-contract neither runs, install that profile',
   },
   {
     match:
