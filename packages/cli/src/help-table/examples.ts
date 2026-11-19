@@ -73,6 +73,7 @@ export const orderedExamples: ExampleHelp[] = [
     text: 'archon skill add /path/to/project',
     owner: { command: 'skill', subcommand: 'add' },
   },
+  { text: 'archon kit setup', owner: { command: 'kit', subcommand: 'setup' } },
   {
     text: 'archon kit add --profile core,java --dry-run',
     owner: { command: 'kit', subcommand: 'add' },

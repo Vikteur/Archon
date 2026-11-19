@@ -26,6 +26,23 @@ const kitAddFlags: FlagHelp[] = [
   { spec: '--set <key=value>', description: 'Override a kit.yaml key (dot keys, repeatable)' },
 ];
 
+const kitSetupFlags: FlagHelp[] = [
+  { spec: '--backend <path>', description: 'Backend git repository (gets the kit)' },
+  {
+    spec: '--frontend <path>',
+    description: 'Frontend git repository (gets the codegraph MCP server; absent skips it)',
+  },
+  { spec: '--contract <file>', description: 'OpenAPI contract (.yaml, .yml or .json)' },
+  {
+    spec: '--profile <a,b,c>',
+    description: 'Kit profiles (default: last run, then core,java,java-spring,openapi-contract)',
+  },
+  { spec: '--yes', description: 'Skip the confirmation' },
+  { spec: '--no-tools', description: 'Skip the tool installer' },
+  { spec: '--no-rtk', description: 'Skip the rtk hooks' },
+  { spec: '--no-web', description: 'Do not start the web views' },
+];
+
 export const installHelp: HelpGroup = {
   entries: [
     {
@@ -35,7 +52,11 @@ export const installHelp: HelpGroup = {
     },
     ...attachmentHelp('skill'),
     ...attachmentHelp('kit').map(entry =>
-      entry.subcommand === 'add' ? { ...entry, scopedFlags: kitAddFlags } : entry
+      entry.subcommand === 'add'
+        ? { ...entry, scopedFlags: kitAddFlags }
+        : entry.subcommand === 'setup'
+          ? { ...entry, scopedFlags: kitSetupFlags }
+          : entry
     ),
     ...attachmentHelp('provider'),
     ...attachmentHelp('plugin'),

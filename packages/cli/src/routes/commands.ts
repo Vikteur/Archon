@@ -543,12 +543,14 @@ export async function runKit({
     subcommand !== 'add' &&
     subcommand !== 'doctor' &&
     subcommand !== 'list' &&
+    subcommand !== 'setup' &&
     subcommand !== 'tools'
   ) {
     const problem =
       subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`;
-    return await fail(json, `${problem}\nAvailable: add, doctor, list, tools`);
+    return await fail(json, `${problem}\nAvailable: add, doctor, list, setup, tools`);
   }
+  if (subcommand === 'setup') return await runKitSetup(positionals, values, cwd, json);
   if (positionals.length > 3) return await fail(json, `Usage: archon kit ${subcommand} [path]`);
   const { kitCommand } = await loadRoute(() => import('../commands/kit'), { providers: false });
   const profile = typeof values.profile === 'string' ? values.profile : '';
@@ -566,6 +568,37 @@ export async function runKit({
     userHooks: values['user-hooks'] === true,
     set: Array.isArray(values.set) ? (values.set as string[]) : [],
   });
+}
+
+async function runKitSetup(
+  positionals: string[],
+  values: CliRouteContext['values'],
+  cwd: string,
+  json: boolean | undefined
+): Promise<number> {
+  const { KIT_SETUP_USAGE, defaultSetupDeps, kitSetupCommand } = await loadRoute(
+    () => import('../commands/kit-setup'),
+    { providers: false }
+  );
+  if (positionals.length > 2) return await fail(json, KIT_SETUP_USAGE);
+  const text = (name: string): string | undefined =>
+    typeof values[name] === 'string' ? (values[name] as string) : undefined;
+  return await kitSetupCommand(
+    {
+      backend: text('backend'),
+      frontend: text('frontend'),
+      contract: text('contract'),
+      profiles: (text('profile') ?? '')
+        .split(',')
+        .map(name => name.trim())
+        .filter(Boolean),
+      yes: values.yes === true,
+      noTools: values['no-tools'] === true,
+      noRtk: values['no-rtk'] === true,
+      noWeb: values['no-web'] === true,
+    },
+    defaultSetupDeps(cwd)
+  );
 }
 
 export async function runUnknownCommand({ command, json }: CliRouteContext): Promise<number> {

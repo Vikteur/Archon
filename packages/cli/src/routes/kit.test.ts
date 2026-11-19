@@ -44,3 +44,20 @@ test('an unknown kit subcommand still fails', async () => {
   roots.push(project);
   expect(await runKit(context('nope', project))).toBe(1);
 });
+
+test('archon kit setup takes no path', async () => {
+  const project = mkdtempSync(join(tmpdir(), 'archon-kit-route-'));
+  roots.push(project);
+  expect(await runKit(context('setup', project))).toBe(1);
+});
+
+test.skipIf(process.stdin.isTTY === true && process.stdout.isTTY === true)(
+  'archon kit setup without a terminal and without --backend and --contract exits 2',
+  async () => {
+    const project = mkdtempSync(join(tmpdir(), 'archon-kit-route-'));
+    roots.push(project);
+    const ctx = context('setup', project);
+    ctx.positionals = ['kit', 'setup'];
+    expect(await runKit(ctx)).toBe(2);
+  }
+);

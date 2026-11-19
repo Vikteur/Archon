@@ -11,6 +11,11 @@ export const attachmentCommands = {
     },
   },
   kit: {
+    setup: {
+      args: '[--backend <path> --contract <file>]',
+      description:
+        'Guided install of the kit into a backend and frontend (tools, contract, CodeGraph, rtk, web views)',
+    },
     add: {
       args: '[path]',
       description:

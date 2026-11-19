@@ -260,6 +260,8 @@ Commands:
   complete <branch> [...]    Remove worktree and local branch; retain remote branch
   serve                      Start the web UI server (binary installs download server and UI on first run)
   skill add [path]           Add archon-cli into .claude/skills and .agents/skills
+  kit setup [--backend <path> --contract <file>]
+                             Guided install of the kit into a backend and frontend (tools, contract, CodeGraph, rtk, web views)
   kit add [path]             Install the Copilot kit (profiles, kit.yaml, aliases, hooks) into a git project
   kit doctor [path]          Check kit tools, Copilot auth and trust, MCP servers, hooks and file drift
   kit tools [path] [--check] Run the project scripts/install-tools.sh (--check only verifies)
@@ -373,6 +375,7 @@ Examples:
   archon workflow run archon-review --adopt <run-id> "Review the changes"
   archon skill add
   archon skill add /path/to/project
+  archon kit setup
   archon kit add --profile core,java --dry-run
   archon kit doctor
   archon plugin add coleam00/Archon/plugins/forge-github

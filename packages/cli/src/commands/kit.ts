@@ -4,6 +4,8 @@
  * `archon kit add`    writes the kit's profile files, kit.yaml and model aliases
  * `archon kit doctor` checks tools, auth, trust, MCP servers, hooks and drift
  * `archon kit list`   shows the profiles and which are installed
+ * `archon kit tools`  installs the tools the kit needs
+ * `archon kit setup`  the guided install of all of it (kit-setup.ts)
  *
  * The kit object is injected into every function so tests use a fixture kit.
  * The real one (`BUNDLED_KIT`) loads lazily, like the bundled skill, because it
@@ -1241,7 +1243,7 @@ export async function kitCommand(
     subcommand !== 'tools'
   ) {
     console.error(
-      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, tools`
+      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, setup, tools`
     );
     return 1;
   }

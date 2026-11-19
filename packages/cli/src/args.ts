@@ -92,6 +92,12 @@ export const cliArgOptions: CliArgOptions = {
   check: { type: 'boolean' },
   trust: { type: 'boolean' },
   'user-hooks': { type: 'boolean' },
+  // `archon kit setup`.
+  backend: { type: 'string' },
+  frontend: { type: 'string' },
+  contract: { type: 'string' },
+  'no-rtk': { type: 'boolean' },
+  'no-web': { type: 'boolean' },
   stubs: { type: 'string' },
   'stubs-init': { type: 'string' },
   'default-stubs': { type: 'boolean' },
