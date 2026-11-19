@@ -23,6 +23,10 @@ interface StreamToolbarProps {
   promptCount: number;
   promptsOnly: boolean;
   onTogglePromptsOnly: (next: boolean) => void;
+  /** Calls to an MCP server's tools; the "MCP only" switch shows only those. */
+  mcpCount: number;
+  mcpOnly: boolean;
+  onToggleMcpOnly: (next: boolean) => void;
   messageCount: number;
   artifactCount: number | null;
   /** Distinct nodes in the run; empty hides the node filter. */
@@ -171,6 +175,9 @@ export function StreamToolbar({
   promptCount,
   promptsOnly,
   onTogglePromptsOnly,
+  mcpCount,
+  mcpOnly,
+  onToggleMcpOnly,
   messageCount,
   artifactCount,
   nodeOptions,
@@ -209,7 +216,8 @@ export function StreamToolbar({
         <span className="font-mono text-[12px] text-text-tertiary md:ml-3">
           {messageCount.toString()} messages · {toolCallCount.toString()} tool calls ·{' '}
           {scriptCount.toString()} {scriptCount === 1 ? 'script' : 'scripts'} ·{' '}
-          {promptCount.toString()} {promptCount === 1 ? 'prompt' : 'prompts'}
+          {promptCount.toString()} {promptCount === 1 ? 'prompt' : 'prompts'} ·{' '}
+          {mcpCount.toString()} MCP {mcpCount === 1 ? 'call' : 'calls'}
         </span>
       ) : null}
 
@@ -246,6 +254,14 @@ export function StreamToolbar({
             onChange={onTogglePromptsOnly}
           />
           <OnlyToggle
+            label="MCP only"
+            title="Show only the calls to an MCP server's tools (m)"
+            accent="var(--brand-teal)"
+            on={mcpOnly}
+            count={mcpCount}
+            onChange={onToggleMcpOnly}
+          />
+          <OnlyToggle
             label="Scripts only"
             title="Show only the tool calls that ran a script (x)"
             accent="var(--warning)"
@@ -253,7 +269,7 @@ export function StreamToolbar({
             count={scriptCount}
             onChange={onToggleScriptsOnly}
           />
-          {scriptsOnly || promptsOnly ? null : (
+          {scriptsOnly || promptsOnly || mcpOnly ? null : (
             <>
               <Checkbox label="Tool calls" checked={showToolCalls} onChange={onToggleToolCalls} />
               <Checkbox label="System" checked={showSystem} onChange={onToggleSystem} />

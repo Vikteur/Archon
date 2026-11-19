@@ -33,6 +33,9 @@ import type { ArtifactFile } from '../skills/runs';
 
 type RunDetailView = Awaited<ReturnType<typeof skill.getRun>>;
 
+/** The "only" switches of the log: each shows one kind of row. */
+type OnlyKind = 'scripts' | 'prompts' | 'mcp';
+
 /**
  * Run detail — the "logs" page, promoted out of a hidden tab.
  *
@@ -53,6 +56,7 @@ const TOGGLE_KEYS = {
   system: 'archon.console.showSystem',
   scriptsOnly: 'archon.console.scriptsOnly',
   promptsOnly: 'archon.console.promptsOnly',
+  mcpOnly: 'archon.console.mcpOnly',
   view: 'archon.console.detailView',
   node: 'archon.console.runNodeFilter',
 } as const;
@@ -134,6 +138,7 @@ interface RunDetailKeymap {
   toggleSystem: () => void;
   toggleScriptsOnly: () => void;
   togglePromptsOnly: () => void;
+  toggleMcpOnly: () => void;
 }
 
 function useRunDetailKeymap({
@@ -144,6 +149,7 @@ function useRunDetailKeymap({
   toggleSystem,
   toggleScriptsOnly,
   togglePromptsOnly,
+  toggleMcpOnly,
 }: RunDetailKeymap): void {
   const bindings = useMemo<readonly Binding[]>(
     () => [
@@ -172,6 +178,7 @@ function useRunDetailKeymap({
       { keys: ['s'], label: 'Toggle system', run: toggleSystem },
       { keys: ['x'], label: 'Toggle scripts only', run: toggleScriptsOnly },
       { keys: ['o'], label: 'Toggle prompts only', run: togglePromptsOnly },
+      { keys: ['m'], label: 'Toggle MCP calls only', run: toggleMcpOnly },
       {
         keys: ['a'],
         label: 'Approve',
@@ -195,6 +202,7 @@ function useRunDetailKeymap({
       toggleSystem,
       toggleScriptsOnly,
       togglePromptsOnly,
+      toggleMcpOnly,
     ]
   );
   useKeymap({ bindings });
@@ -370,6 +378,12 @@ export function RunDetailPage(): ReactElement {
   const [promptsOnly, setPromptsOnly] = useState<boolean>(
     () => readToggle(TOGGLE_KEYS.promptsOnly, false) && !readToggle(TOGGLE_KEYS.scriptsOnly, false)
   );
+  const [mcpOnly, setMcpOnly] = useState<boolean>(
+    () =>
+      readToggle(TOGGLE_KEYS.mcpOnly, false) &&
+      !readToggle(TOGGLE_KEYS.scriptsOnly, false) &&
+      !readToggle(TOGGLE_KEYS.promptsOnly, false)
+  );
   const [view, setView] = useState<DetailView>(() => readView());
   const [selectedNodeId, setSelectedNodeId] = useState<string>(() => readNodeFilter());
 
@@ -540,30 +554,46 @@ export function RunDetailPage(): ReactElement {
       return next;
     });
   }, []);
-  // "Scripts only" and "Prompts only" each show one kind of row: turning one on turns
-  // the other off.
-  const applyScriptsOnly = useCallback((next: boolean): void => {
-    setScriptsOnly(next);
-    writeToggle(TOGGLE_KEYS.scriptsOnly, next);
-    if (next) {
-      setPromptsOnly(false);
-      writeToggle(TOGGLE_KEYS.promptsOnly, false);
-    }
+  // "Scripts only", "Prompts only" and "MCP only" each show one kind of row: turning one
+  // on turns the others off.
+  const applyOnly = useCallback((kind: OnlyKind, next: boolean): void => {
+    const apply = (mine: OnlyKind, key: string, setter: (v: boolean) => void): void => {
+      if (kind !== mine && !next) return;
+      const on = kind === mine && next;
+      setter(on);
+      writeToggle(key, on);
+    };
+    apply('scripts', TOGGLE_KEYS.scriptsOnly, setScriptsOnly);
+    apply('prompts', TOGGLE_KEYS.promptsOnly, setPromptsOnly);
+    apply('mcp', TOGGLE_KEYS.mcpOnly, setMcpOnly);
   }, []);
-  const applyPromptsOnly = useCallback((next: boolean): void => {
-    setPromptsOnly(next);
-    writeToggle(TOGGLE_KEYS.promptsOnly, next);
-    if (next) {
-      setScriptsOnly(false);
-      writeToggle(TOGGLE_KEYS.scriptsOnly, false);
-    }
-  }, []);
+  const applyScriptsOnly = useCallback(
+    (next: boolean): void => {
+      applyOnly('scripts', next);
+    },
+    [applyOnly]
+  );
+  const applyPromptsOnly = useCallback(
+    (next: boolean): void => {
+      applyOnly('prompts', next);
+    },
+    [applyOnly]
+  );
+  const applyMcpOnly = useCallback(
+    (next: boolean): void => {
+      applyOnly('mcp', next);
+    },
+    [applyOnly]
+  );
   const toggleScriptsOnly = useCallback((): void => {
     applyScriptsOnly(!scriptsOnly);
   }, [applyScriptsOnly, scriptsOnly]);
   const togglePromptsOnly = useCallback((): void => {
     applyPromptsOnly(!promptsOnly);
   }, [applyPromptsOnly, promptsOnly]);
+  const toggleMcpOnly = useCallback((): void => {
+    applyMcpOnly(!mcpOnly);
+  }, [applyMcpOnly, mcpOnly]);
   useRunDetailKeymap({
     isPaused,
     goBack,
@@ -572,6 +602,7 @@ export function RunDetailPage(): ReactElement {
     toggleSystem,
     toggleScriptsOnly,
     togglePromptsOnly,
+    toggleMcpOnly,
   });
 
   if (runId === undefined) {
@@ -605,6 +636,7 @@ export function RunDetailPage(): ReactElement {
     count: toolCallCount,
     scriptCount,
     promptCallCount,
+    mcpCount,
   } = runToolCalls(messageList, providerEvents);
   const promptCount = runPromptCount(events, promptCallCount);
 
@@ -629,6 +661,9 @@ export function RunDetailPage(): ReactElement {
       promptCount={promptCount}
       promptsOnly={promptsOnly}
       onTogglePromptsOnly={applyPromptsOnly}
+      mcpCount={mcpCount}
+      mcpOnly={mcpOnly}
+      onToggleMcpOnly={applyMcpOnly}
       messageCount={messageList.length}
       artifactCount={artifactFiles?.length ?? null}
       nodeOptions={nodeOptions}
@@ -680,6 +715,7 @@ export function RunDetailPage(): ReactElement {
                         showSystem={showSystem}
                         scriptsOnly={scriptsOnly}
                         promptsOnly={promptsOnly}
+                        mcpOnly={mcpOnly}
                         selectedNodeId={selectedNodeId}
                       />
                     </div>
