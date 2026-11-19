@@ -10,12 +10,16 @@
 #                       An empty value installs none. Without it, the installer asks.
 #                       Releases up to 0.11.1 bundle their providers and have no
 #                       `archon provider`; pin one with `--providers=`.
+#   --no-kit-tools    - Skip the kit tools step (`archon kit tools`, else `archon kit doctor`,
+#                       run only when this Archon has a `kit` command).
 #
 # Options (via environment variables):
 #   VERSION          - Specific version to install (default: latest)
 #   INSTALL_DIR      - Installation directory (default: /usr/local/bin)
 #   SKIP_CHECKSUM    - Set to "true" to skip checksum verification (not recommended)
 #   ARCHON_PROVIDERS - Same as --providers; the flag wins
+#   ARCHON_REPO      - GitHub owner/repo to download from (default: coleam00/Archon)
+#   ARCHON_NO_KIT_TOOLS - Set to "1" to skip the kit tools step (same as --no-kit-tools)
 #
 # Examples:
 #   # Install latest
@@ -37,7 +41,7 @@
 set -euo pipefail
 
 # Configuration
-REPO="coleam00/Archon"
+REPO="${ARCHON_REPO:-coleam00/Archon}"
 BINARY_NAME="archon"
 VERSION="${VERSION:-latest}"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
@@ -273,9 +277,31 @@ install_providers() {
   success "Providers installed: $providers"
 }
 
+# Install the tools the Copilot kit needs. Feature-detected: `archon kit tools`,
+# else `archon kit doctor`, else nothing (older Archon without a `kit` command).
+# A failing step is a warning, never an install failure.
+install_kit_tools() {
+  local archon="$1" help_out
+  if ! help_out=$("$archon" kit --help 2>&1); then
+    info "This Archon has no 'kit' command; skipping the kit tools step."
+    return 0
+  fi
+  if printf '%s\n' "$help_out" | grep -Eqw 'tools'; then
+    info "Installing kit tools: archon kit tools"
+    "$archon" kit tools || warn "'archon kit tools' failed; re-run it by hand."
+  elif printf '%s\n' "$help_out" | grep -Eqw 'doctor'; then
+    info "No 'archon kit tools'; running: archon kit doctor"
+    "$archon" kit doctor || warn "'archon kit doctor' reported problems."
+  else
+    info "'archon kit' has neither 'tools' nor 'doctor'; skipping the kit tools step."
+  fi
+}
+
 # Main installation
 main() {
   local providers_arg="" providers_given=false
+  local kit_tools=true
+  [ "${ARCHON_NO_KIT_TOOLS:-}" = "1" ] && kit_tools=false
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --providers)
@@ -287,6 +313,10 @@ main() {
       --providers=*)
         providers_arg="${1#--providers=}"
         providers_given=true
+        shift
+        ;;
+      --no-kit-tools)
+        kit_tools=false
         shift
         ;;
       *)
@@ -432,6 +462,10 @@ main() {
       || info "No terminal to ask which providers to add; adding none."
   fi
   install_providers "$INSTALL_DIR/$BINARY_NAME" "$providers"
+
+  if [ "$kit_tools" = true ]; then
+    install_kit_tools "$INSTALL_DIR/$BINARY_NAME"
+  fi
 
   echo ""
   echo "Get started:"

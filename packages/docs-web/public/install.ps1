@@ -14,6 +14,8 @@
 #   $env:INSTALL_DIR      - Installation directory (default: $env:USERPROFILE\.archon\bin)
 #   $env:SKIP_CHECKSUM    - Set to "true" to skip checksum verification (not recommended)
 #   $env:ARCHON_PROVIDERS - Same as -Providers; the parameter wins
+#   $env:ARCHON_REPO      - GitHub owner/repo to download from (default: coleam00/Archon)
+#   $env:ARCHON_NO_KIT_TOOLS - Set to "1" to skip the kit tools step (same as -NoKitTools)
 #
 # Examples:
 #   # Install latest
@@ -29,7 +31,7 @@
 #   & ([scriptblock]::Create((irm https://archon.diy/install.ps1))) -Providers codex
 
 #Requires -Version 5.1
-param([string]$Providers)
+param([string]$Providers, [switch]$NoKitTools)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -37,7 +39,7 @@ $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-$REPO         = "coleam00/Archon"
+$REPO         = if ($env:ARCHON_REPO) { $env:ARCHON_REPO } else { "coleam00/Archon" }
 $BINARY_NAME  = "archon"
 $VERSION      = if ($env:VERSION)     { $env:VERSION }     else { "latest" }
 $INSTALL_DIR  = if ($env:INSTALL_DIR) { $env:INSTALL_DIR } else { "$env:USERPROFILE\.archon\bin" }
@@ -274,6 +276,28 @@ function Install-Providers {
     Write-Ok "Providers installed: $($Ids -join ' ')"
 }
 
+# Install the tools the Copilot kit needs. Feature-detected: `archon kit tools`,
+# else `archon kit doctor`, else nothing. A failing step is a warning only.
+function Install-KitTools {
+    param([string]$Archon)
+    $helpOut = & $Archon kit --help 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Info "This Archon has no 'kit' command; skipping the kit tools step."
+        return
+    }
+    if ($helpOut -match '\btools\b') {
+        Write-Info "Installing kit tools: archon kit tools"
+        & $Archon kit tools
+        if ($LASTEXITCODE -ne 0) { Write-Warn "'archon kit tools' failed; re-run it by hand." }
+    } elseif ($helpOut -match '\bdoctor\b') {
+        Write-Info "No 'archon kit tools'; running: archon kit doctor"
+        & $Archon kit doctor
+        if ($LASTEXITCODE -ne 0) { Write-Warn "'archon kit doctor' reported problems." }
+    } else {
+        Write-Info "'archon kit' has neither 'tools' nor 'doctor'; skipping the kit tools step."
+    }
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -391,6 +415,11 @@ function Main {
             }
         }
         Install-Providers -Archon $destBinary -Ids $providerIds
+
+        # --- Kit tools ---
+        if (-not $NoKitTools -and $env:ARCHON_NO_KIT_TOOLS -ne "1") {
+            Install-KitTools -Archon $destBinary
+        }
 
         # --- Getting started ---
         Write-Host ""
