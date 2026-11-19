@@ -4,7 +4,8 @@
 # With RUN_ID, the run is listed as ready (ready-runs.sh) for as long as this waits.
 # Prints one JSON line {"state": "merged|closed", "merge": "...", "head": "...", "branch": "...", "ci": "...",
 # "backlog": "..."}: the merge commit, the head SHA and branch of the pull request, the CI state of that head SHA, and
-# the main checkout whose backlog/ the ticket is finalized in (BACKLOG_CWD overrides).
+# the main checkout whose backlog/ the ticket is finalized in (BACKLOG_CWD overrides; without a backlog/, the run's main
+# checkout).
 # The merge is the approval for closing the ticket out (UD-21.c; since 2026-10-18 the delegator or the owner merges). A merge whose head SHA is not green by CI
 # fails the node, so nothing is finalized, committed or deleted (P5). The CI state is local CI's (local-ci-status.sh;
 # LOCAL_CI_STATUS overrides): green, red, or none for anything that is not a verdict.
@@ -29,9 +30,11 @@ if [ -z "${BACKLOG_CWD:-}" ]; then
     if [ -f "$dir/backlog/config.yml" ]; then BACKLOG_CWD=$(cd "$dir" && pwd); break; fi
   done
 fi
+# A project without Backlog.md (backlog: false in .archon/kit.yaml) has no backlog/: the main checkout is the home, and
+# a run without a TASK id finalizes and commits nothing there.
 if [ -z "${BACKLOG_CWD:-}" ]; then
-  echo "No backlog/ found beside $main; set BACKLOG_CWD to the checkout that holds backlog/." >&2
-  exit 1
+  BACKLOG_CWD=$main
+  echo "No backlog/ beside $main: the main checkout is the close-out home (no ticket to finalize)." >&2
 fi
 
 # While it waits the run is still running, so `archon workflow wait` does not return and the run is not in the

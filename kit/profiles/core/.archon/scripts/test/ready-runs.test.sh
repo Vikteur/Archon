@@ -151,13 +151,13 @@ check "12 the line names the full id" $([ "$(field "$out" run)" = "$A" ]; echo $
 
 # 13. A prefix that matches two ready records, or two runs archon knows, exits 2 and says so.
 reset; ids "$A" "$B"; rr mark "$A" "$U/150"; rr mark "$B" "$U/151"; rr wait 37e12149 --timeout 3
-check "13 an ambiguous prefix among the records exits 2" $([ "$rc" -eq 2 ] && printf '%s' "$err" | grep -q ambiguous; echo $?)
+check "13 an ambiguous prefix among the records exits 2" $([ "$rc" -eq 2 ] && grep -q ambiguous <<< "$err"; echo $?)
 reset; ids "$A" "$B"; rr wait 37e12149 --timeout 3
 check "13 an ambiguous prefix archon refuses exits 2" $([ "$rc" -eq 2 ]; echo $?)
 
 # 14. An unknown id exits 2 at once, never a silent wait into a timeout.
 reset; ids "$A"; rr wait ffffff99 --timeout 3
-check "14 an unknown id exits 2" $([ "$rc" -eq 2 ] && printf '%s' "$err" | grep -q "unknown run id ffffff99"; echo $?)
+check "14 an unknown id exits 2" $([ "$rc" -eq 2 ] && grep -q "unknown run id ffffff99" <<< "$err"; echo $?)
 
 # 15. resolve prints the full id; full and short ids mix in one wait.
 reset; ids "$A" "$C"; rr resolve 4b33311d

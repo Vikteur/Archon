@@ -33,7 +33,7 @@ while read -r run facts st sig action step code nb; do
   check "$name: action $action" $([ "$(field action)" = "$action" ]; echo $?)
   check "$name: step $step" $([ "$(field step)" = "$step" ]; echo $?)
   [ -z "$nb" ] || check "$name: not_before $nb" $([ "$(field not_before)" = "$nb" ]; echo $?)
-  check "$name: no home path or user folder" $(! printf '%s' "$out" | grep -qE '/home/|Users'; echo $?)
+  check "$name: no home path or user folder" $(! grep -qE '/home/|Users' <<< "$out"; echo $?)
   check "$name: the state is not written" $([ "$st" != - ] || [ -z "$(ls -A "$RECOVERY_DIR")" ]; echo $?)
   seen="$seen $sig"
 done < "$fx/cases.txt"
@@ -41,7 +41,7 @@ done < "$fx/cases.txt"
 # Every signature has at least one case.
 for i in $(seq -w 1 24); do
   out="signatures seen:$seen"
-  check "S$i has a fixture" $(printf '%s' "$seen" | grep -qw "S$i"; echo $?)
+  check "S$i has a fixture" $(grep -qw "S$i" <<< "$seen"; echo $?)
 done
 
 # Every signature in the table is unique, and S20 is the catch-all at the end.
@@ -76,7 +76,7 @@ out=$(node "$script" x --bogus 2>&1); rc=$?
 check "unknown option: exit 2" $([ "$rc" -eq 2 ]; echo $?)
 out=$(node "$script" --json-file "$root/missing.json" --facts-file "$fx/facts-none.json" 2>&1); rc=$?
 check "unreadable run: exit 1" $([ "$rc" -eq 1 ]; echo $?)
-check "unreadable run: no home path" $(! printf '%s' "$out" | grep -qE '/home/|Users'; echo $?)
+check "unreadable run: no home path" $(! grep -qE '/home/|Users' <<< "$out"; echo $?)
 
 echo "classify-failure: $pass passed, $fail failed ($n corpus cases)"
 [ "$fail" -eq 0 ]

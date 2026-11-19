@@ -19,6 +19,8 @@
 #   AGENT_CLI                 claude | copilot: the agent CLI this project runs (default: agent_cli in .archon/kit.yaml,
 #                             else in .archon/kit.defaults.yaml, else claude). Of the two agent CLIs in tools.conf only
 #                             that one is installed or checked; INSTALL_TOOLS_ALL=1 takes both.
+#   INSTALL_TOOLS_BACKLOG     0 | 1: Backlog.md (the backlog tool) off or on (default: backlog: false|true in
+#                             .archon/kit.yaml, else in .archon/kit.defaults.yaml, else on)
 # Plain bash 3.2 on purpose: a fresh Mac has no newer one. Exit 1 when an install failed (including one that left the
 # tool at a version that does not fit), when a package manager is missing, or when the OS is not supported.
 set -o pipefail
@@ -123,20 +125,31 @@ for f in "$project/.archon/kit.yaml" "$project/.archon/kit.defaults.yaml"; do
   [ -f "$f" ] && agent_cli=$(sed -n 's/^agent_cli:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
 done
 agent_cli=${agent_cli:-claude}
-if [ "${INSTALL_TOOLS_ALL:-0}" != 1 ]; then
-  keep=()
-  for i in "${!names[@]}"; do
-    case "${names[i]}" in claude | copilot) [ "${names[i]}" = "$agent_cli" ] || continue ;; esac
-    keep+=("$i")
+# Backlog.md (the task board) is optional: INSTALL_TOOLS_BACKLOG=0|1, else `backlog: false|true` in kit.yaml, then in
+# kit.defaults.yaml, else on.
+use_backlog=${INSTALL_TOOLS_BACKLOG:-}
+for f in "$project/.archon/kit.yaml" "$project/.archon/kit.defaults.yaml"; do
+  [ -z "$use_backlog" ] || break
+  [ -f "$f" ] && use_backlog=$(sed -n 's/^backlog:[[:space:]]*["'"'"']\{0,1\}\([a-z01]*\).*/\1/p' "$f" | head -n 1)
+done
+case "$use_backlog" in false | 0 | no | off) use_backlog=0 ;; *) use_backlog=1 ;; esac
+keep=(); agent_dropped=0
+for i in "${!names[@]}"; do
+  case "${names[i]}" in
+    claude | copilot)
+      if [ "${INSTALL_TOOLS_ALL:-0}" != 1 ] && [ "${names[i]}" != "$agent_cli" ]; then agent_dropped=1; continue; fi ;;
+    backlog) [ "$use_backlog" = 1 ] || continue ;;
+  esac
+  keep+=("$i")
+done
+[ "$agent_dropped" = 0 ] || echo "Agent CLI: $agent_cli (the other one is left out; INSTALL_TOOLS_ALL=1 takes both)"
+[ "$use_backlog" = 1 ] || echo "Backlog.md: off (backlog: false in .archon/kit.yaml, or INSTALL_TOOLS_BACKLOG=0), not installed"
+if [ "${#keep[@]}" -ne "${#names[@]}" ]; then
+  n2=(); s2=(); k2=(); w2=(); m2=(); c2=()
+  for i in "${keep[@]}"; do
+    n2+=("${names[i]}"); s2+=("${specs[i]}"); k2+=("${kinds[i]}"); w2+=("${wins[i]}"); m2+=("${macs[i]}"); c2+=("${checks[i]}")
   done
-  if [ "${#keep[@]}" -ne "${#names[@]}" ]; then
-    n2=(); s2=(); k2=(); w2=(); m2=(); c2=()
-    for i in "${keep[@]}"; do
-      n2+=("${names[i]}"); s2+=("${specs[i]}"); k2+=("${kinds[i]}"); w2+=("${wins[i]}"); m2+=("${macs[i]}"); c2+=("${checks[i]}")
-    done
-    names=("${n2[@]}"); specs=("${s2[@]}"); kinds=("${k2[@]}"); wins=("${w2[@]}"); macs=("${m2[@]}"); checks=("${c2[@]}")
-    echo "Agent CLI: $agent_cli (the other one is left out; INSTALL_TOOLS_ALL=1 takes both)"
-  fi
+  names=("${n2[@]}"); specs=("${s2[@]}"); kinds=("${k2[@]}"); wins=("${w2[@]}"); macs=("${m2[@]}"); checks=("${c2[@]}")
 fi
 
 installed=(); skipped=(); failed=(); notes=()

@@ -2,7 +2,7 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "2ad86609b35c17c79e844b180040c1304dadfa2e"
+    "commit": "2a7346b97ff5c4649ecaee519bebcd5d0b76fc46"
   },
   "profiles": {
     "core": {
@@ -948,7 +948,7 @@
       "template": false,
       "origin": ".archon/scripts/test/classify-failure.test.sh",
       "kind": "script",
-      "sha256": "afbbfd6d3419cc74118b0f5eda176cbd24e454d26089dcc3ce643448131c7336"
+      "sha256": "f3fca752649739ee5e5adcb29a88d06820a2df66f8be2473319e59f855f02f12"
     },
     {
       "path": ".archon/scripts/test/cleanup-merged.test.sh",
@@ -1929,7 +1929,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-spike.test.sh",
       "kind": "script",
-      "sha256": "03289023a1d96a3e316b8c0f1a6d997e72db0838d823b0079c0d6f102d3382f9"
+      "sha256": "0c357e0d68017eb3ddf0115f37c3fe65a6e03aa2bdc094d32b7937724d699ad4"
     },
     {
       "path": ".archon/scripts/test/pr-refresh.test.sh",
@@ -1965,7 +1965,7 @@
       "template": false,
       "origin": ".archon/scripts/test/ready-runs.test.sh",
       "kind": "script",
-      "sha256": "a5a0a081f8c38aabac553c486401b7ef8a8078e13ff7991764205c9428d74ddc"
+      "sha256": "7f39067b3934b52a105da117343f5aa87ac41df8989852bd59399d5d0a62120d"
     },
     {
       "path": ".archon/scripts/test/rebase-and-resume.test.sh",
@@ -2262,7 +2262,7 @@
       "template": false,
       "origin": ".archon/scripts/test/wait-merge.test.sh",
       "kind": "script",
-      "sha256": "f2fce809f61eba2b787205ece6bf946983d90c9c02a88a3b0adc8618de091ca1"
+      "sha256": "e4c10959681d73d3e18f912e07ca9e1472f1d25a9826dfa521628c7c53fdce31"
     },
     {
       "path": ".archon/scripts/test/workflow-contracts.test.sh",
@@ -2307,7 +2307,7 @@
       "template": false,
       "origin": ".archon/scripts/wait-merge.sh",
       "kind": "script",
-      "sha256": "0b5318cd41839b236eca5c797533c377cd9eb4b06c9fa6075a4f23d1cf15d943"
+      "sha256": "0424c63a5cfc9c5c386795be202bfe26ce8395252c4253d3f4b5f6d654270936"
     },
     {
       "path": ".archon/stop/approvals/_template.json",
@@ -3072,7 +3072,7 @@
       "template": false,
       "origin": "scripts/install-tools.sh",
       "kind": "script",
-      "sha256": "2d2ee1377dd56255e3b4d8f2a4f8c78f5992d8f02a2fa5ae238a30cbf3c7b764"
+      "sha256": "eb6fd6182755006ee3720a48aba477f8469b5fb7b6af5182d712c24644b8b2e0"
     },
     {
       "path": "scripts/test/archon-suites.test.sh",
@@ -3180,7 +3180,7 @@
       "template": false,
       "origin": "scripts/test/install-tools.test.sh",
       "kind": "script",
-      "sha256": "5909b8d6998f77bdd8ea26ecf07cad573a8ec4373cbff752c8d7c8c051e6bcb5"
+      "sha256": "2066727c654f3940552e0167152bf30e0e9b4425bffcbe1aaaa0bc0dc11045a4"
     },
     {
       "path": "scripts/test/pre-push.test.sh",

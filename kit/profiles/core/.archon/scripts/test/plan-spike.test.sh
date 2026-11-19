@@ -76,7 +76,7 @@ block=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /^    i
 denied=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /denied_tools:/ { d = 1 } p && d { print } p && d && /\]/ { exit }' "$wf")
 for want in '*gradlew*' '*affected-check*' '*build-shape-check*' '*mutation-gate*' '*step-gate*' '*ci-local*' '*local-ci-run*' \
   'bash *.test.sh*' 'sh *.test.sh*' './*.test.sh*' 'scripts/test/*.test.sh*' '.archon/scripts/test/*.test.sh*'; do
-  printf '%s' "$denied" | grep -qF "\"Bash($want)\""; check "plan denies Bash($want)" $?
+  grep -qF "\"Bash($want)\"" <<< "$denied"; check "plan denies Bash($want)" $?
 done
 grep -q 'plan-spike' <<< "$denied"; [ $? -ne 0 ]; check "plan-spike.sh is not denied" $?
 
@@ -101,7 +101,7 @@ mention_only=(
 for f in $(cd "$top" && git ls-files -- '*.sh' '*.js' '*.mjs' | grep -v '/test/' | xargs grep -l 'gradlew' 2>/dev/null); do
   base=$(basename "$f"); base="${base%.*}"
   if printf '%s\n' "${mention_only[@]}" | grep -qx "$f"; then continue; fi
-  printf '%s' "$denied" | grep -qF "\"Bash(*$base*)\""; check "$f runs Gradle and is denied to the plan" $?
+  grep -qF "\"Bash(*$base*)\"" <<< "$denied"; check "$f runs Gradle and is denied to the plan" $?
 done
 
 echo "plan-spike: $pass passed, $fail failed"

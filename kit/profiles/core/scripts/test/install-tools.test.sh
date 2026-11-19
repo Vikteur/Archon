@@ -380,6 +380,29 @@ check "L4 AGENT_CLI wins over kit.yaml" listed claude
 run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-none" INSTALL_TOOLS_ALL=1
 check "L4 INSTALL_TOOLS_ALL=1: both" listed copilot
 check "L4 INSTALL_TOOLS_ALL=1: both (claude)" listed claude
+
+# L5: Backlog.md is optional: INSTALL_TOOLS_BACKLOG, else backlog: in kit.yaml, then kit.defaults.yaml, else on.
+cat > "$root/backlog.conf" <<'CONF'
+tool-a  | -  | pkg | tool-a | tool-a | tool-a --version
+backlog | -  | pkg | backlog | backlog | backlog --version
+CONF
+mkdir -p "$root/p-nob/.archon" "$root/p-nobdef/.archon"
+printf 'backlog: false   # no task board\n' > "$root/p-nob/.archon/kit.yaml"
+printf 'stack: spring\n' > "$root/p-nobdef/.archon/kit.yaml"; printf 'backlog: false\n' > "$root/p-nobdef/.archon/kit.defaults.yaml"
+run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-none"
+check "L5 no setting: backlog is checked" listed backlog
+check "L5 no setting: no off line" nosaid "Backlog.md: off"
+run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-nob"
+check "L5 kit.yaml backlog: false: backlog is left out" nolisted backlog
+check "L5 kit.yaml backlog: false: says so" said "Backlog.md: off"
+check "L5 kit.yaml backlog: false: the other tools stay" listed tool-a
+check "L5 no agent CLI dropped: no Agent CLI line" nosaid "Agent CLI:"
+run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-nobdef"
+check "L5 kit.defaults.yaml backlog: false: left out" nolisted backlog
+run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-nob" INSTALL_TOOLS_BACKLOG=1
+check "L5 INSTALL_TOOLS_BACKLOG=1 wins over kit.yaml" listed backlog
+run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-none" INSTALL_TOOLS_BACKLOG=0
+check "L5 INSTALL_TOOLS_BACKLOG=0: left out" nolisted backlog
 script_args=
 
 # R: the rtk row of tools.conf: winget on Windows, its pinned install script (OSS edition, checksum left on) elsewhere.

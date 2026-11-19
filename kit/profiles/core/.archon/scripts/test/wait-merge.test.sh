@@ -72,5 +72,13 @@ check "5 closed" $([ "$(field state)" = closed ] && [ "$rc" -eq 0 ]; echo $?)
 # The poll is 15 s (owner decision 2026-10-23): a 60 s poll put a minute's floor under every run's merged node.
 check "6 polls every 15 s by default" $(grep -qF 'POLL=${MERGE_POLL_SECONDS:-15}' "$script"; echo $?)
 
+# 7. A project without Backlog.md: no backlog/ anywhere, the main checkout is the home and the node still passes.
+nob="$root/solo/repo"; mkdir -p "$nob"; git -C "$nob" init -q
+out=$(cd "$nob" && env PATH="$root/bin:$PATH" GH_LOG="$log" HEAD_SHA="$HEAD_SHA" MERGE_SHA="$MERGE_SHA" \
+  LOCAL_CI_STATUS="$root/status" MERGE_POLL_SECONDS=0 bash "$script" https://github.com/o/repo/pull/7 2> "$root/err")
+rc=$?; err=$(cat "$root/err")
+check "7 no backlog/: merged, the main checkout is the home" $([ "$rc" -eq 0 ] && [ "$(field state)" = merged ] \
+  && [ "$(cd "$(field backlog)" && pwd -P)" = "$(cd "$nob" && pwd -P)" ] && echo "$err" | grep -q "No backlog/ beside"; echo $?)
+
 echo "wait-merge tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
