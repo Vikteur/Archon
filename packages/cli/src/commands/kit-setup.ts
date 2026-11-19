@@ -10,12 +10,10 @@
  * Every external effect goes through `KitSetupDeps`, so the tests stub the runner, the tool installer and the
  * MCP probe and never spawn a real tool.
  */
-import { spawn } from 'child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { extname, join, resolve } from 'path';
 import { format } from 'util';
-import * as clack from '@clack/prompts';
 import { getArchonHome } from '@archon/paths';
 import { parse as parseYaml, parseDocument } from 'yaml';
 import {
@@ -33,6 +31,16 @@ import {
   type Kit,
   type OutputSink,
 } from './kit';
+import { clackUi, plainUi, spawnRunner, type Runner, type SetupUi } from './kit-setup-ui';
+
+export {
+  clackUi,
+  plainUi,
+  spawnRunner,
+  type Runner,
+  type SetupSpinner,
+  type SetupUi,
+} from './kit-setup-ui';
 
 export const DEFAULT_SETUP_PROFILES = ['core', 'java', 'java-spring', 'openapi-contract'];
 const CONTRACT_EXTENSIONS = new Set(['.yaml', '.yml', '.json']);
@@ -255,101 +263,8 @@ export function mergeMcpServer(
 }
 
 // ---------------------------------------------------------------------------
-// The terminal, the runner and the other seams
+// The options and the seams (the terminal and the runner are in kit-setup-ui)
 // ---------------------------------------------------------------------------
-
-export interface SetupSpinner {
-  start(message: string): void;
-  stop(message: string): void;
-  error(message: string): void;
-}
-
-export interface SetupUi {
-  intro(title: string): void;
-  outro(message: string): void;
-  note(message: string, title: string): void;
-  info(message: string): void;
-  warn(message: string): void;
-  text(options: {
-    message: string;
-    placeholder?: string;
-    initialValue?: string;
-    validate: (value: string | undefined) => string | undefined;
-  }): Promise<string | symbol | undefined>;
-  confirm(options: { message: string }): Promise<boolean | symbol>;
-  isCancel(value: unknown): value is symbol;
-  cancel(message: string): void;
-  spinner(): SetupSpinner;
-}
-
-export const clackUi: SetupUi = {
-  intro: title => clack.intro(title),
-  outro: message => clack.outro(message),
-  note: (message, title) => clack.note(message, title),
-  info: message => clack.log.info(message),
-  warn: message => clack.log.warn(message),
-  text: options => clack.text(options),
-  confirm: options => clack.confirm(options),
-  isCancel: (value): value is symbol => clack.isCancel(value),
-  cancel: message => clack.cancel(message),
-  spinner: () => clack.spinner(),
-};
-
-/** Plain lines for a run without a terminal: no animation, no prompts. */
-export function plainUi(write: (line: string) => void = line => console.log(line)): SetupUi {
-  const noPrompt = (): never => {
-    throw new Error('kit setup cannot ask without a terminal');
-  };
-  return {
-    intro: title => write(title),
-    outro: message => write(message),
-    note: (message, title) => write(`${title}\n${message}`),
-    info: message => write(message),
-    warn: message => write(`Warning: ${message}`),
-    text: noPrompt,
-    confirm: noPrompt,
-    isCancel: (value): value is symbol => typeof value === 'symbol',
-    cancel: message => write(message),
-    spinner: () => ({
-      start: () => undefined,
-      stop: message => write(`ok  ${message}`),
-      error: message => write(`FAIL ${message}`),
-    }),
-  };
-}
-
-/** Runs one program (no shell); its output goes to `output`, its stdin is closed. Resolves its exit code. */
-export type Runner = (
-  command: string,
-  args: string[],
-  options: { cwd: string; env: NodeJS.ProcessEnv; output: OutputSink }
-) => Promise<number>;
-
-export const spawnRunner: Runner = (command, args, { cwd, env, output }) =>
-  new Promise(done => {
-    let finished = false;
-    const finish = (code: number): void => {
-      if (finished) return;
-      finished = true;
-      done(code);
-    };
-    const child = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
-    child.stdout.on('data', chunk => output(String(chunk)));
-    child.stderr.on('data', chunk => output(String(chunk)));
-    child.on('error', err => {
-      output(`${err.message}\n`);
-      finish(127);
-    });
-    child.on('close', code => finish(code ?? 1));
-    // A background process the command started may hold its pipes open: its exit ends the step a moment later.
-    child.on('exit', code => {
-      setTimeout(() => {
-        child.stdout.destroy();
-        child.stderr.destroy();
-        finish(code ?? 1);
-      }, 1000).unref();
-    });
-  });
 
 export interface KitSetupOptions {
   backend?: string;
@@ -497,23 +412,32 @@ function flagAnswers(options: KitSetupOptions, cwd: string, home: string): Answe
   return { backend: backend.path, frontend, contract: contract.path };
 }
 
-export async function kitSetupCommand(
-  options: KitSetupOptions,
-  deps: KitSetupDeps
-): Promise<number> {
+function pickProfiles(options: KitSetupOptions, saved: SetupDefaults): string[] {
+  if (options.profiles && options.profiles.length > 0) return options.profiles;
+  if (saved.profiles && saved.profiles.length > 0) return saved.profiles;
+  return DEFAULT_SETUP_PROFILES;
+}
+
+interface Prepared {
+  answers: Answers;
+  profiles: string[];
+  kit: Kit;
+  archonHome: string;
+}
+
+/** The kit, the profiles and the answers (from the flags or the dialog), or the exit code to end with. */
+async function prepare(options: KitSetupOptions, deps: KitSetupDeps): Promise<Prepared | number> {
   const { ui, env } = deps;
   const home = env.HOME ?? homedir();
   const archonHome = getArchonHome(env);
   const saved = readSetupDefaults(archonHome);
   const fromFlags = Boolean(options.backend?.trim()) && Boolean(options.contract?.trim());
-
   if (!deps.interactive && !fromFlags) {
     deps.stderr(
       `archon kit setup needs a terminal, or --backend and --contract.\n\n${KIT_SETUP_USAGE}`
     );
     return 2;
   }
-
   let kit: Kit;
   try {
     kit = await deps.loadKit();
@@ -521,155 +445,175 @@ export async function kitSetupCommand(
     deps.stderr(`Error: could not load the kit: ${(err as Error).message}`);
     return 1;
   }
-  const profiles =
-    options.profiles && options.profiles.length > 0
-      ? options.profiles
-      : saved.profiles && saved.profiles.length > 0
-        ? saved.profiles
-        : DEFAULT_SETUP_PROFILES;
+  const profiles = pickProfiles(options, saved);
   try {
     resolveProfiles(kit, profiles);
   } catch (err) {
     deps.stderr(`Error: ${(err as Error).message}`);
     return 2;
   }
-
   if (deps.interactive) ui.intro('archon kit setup');
-  let answers: Answers;
   if (fromFlags) {
     const result = flagAnswers(options, deps.cwd, home);
     if (typeof result === 'string') {
       deps.stderr(`Error: ${result}\n\n${KIT_SETUP_USAGE}`);
       return 2;
     }
-    answers = result;
-  } else {
-    const asked = await askAnswers(options, saved, deps, home);
-    if (asked === null) {
-      ui.cancel('Setup cancelled. Nothing changed.');
-      return 0;
-    }
-    answers = asked;
+    return { answers: result, profiles, kit, archonHome };
   }
-  const { backend, frontend, contract } = answers;
-
-  const skipped = (flag: boolean, name: string): string => (flag ? ` (skipped: ${name})` : '');
-  ui.note(
-    [
-      `Backend:   ${backend}`,
-      `Frontend:  ${frontend ?? '(skipped)'}`,
-      `Contract:  ${contract}`,
-      `Profiles:  ${profiles.join(', ')}`,
-      '',
-      `Steps: tools${skipped(options.noTools === true, '--no-tools')}, kit, contract, codegraph,` +
-        ` frontend MCP${frontend === null ? ' (skipped: no frontend)' : ''}, rtk hooks${skipped(options.noRtk === true, '--no-rtk')},` +
-        ` servers check, web views${skipped(options.noWeb === true, '--no-web')}`,
-    ].join('\n'),
-    'Setup'
-  );
-  if (deps.interactive && options.yes !== true) {
-    const go = await ui.confirm({ message: 'Install and wire everything?' });
-    if (ui.isCancel(go) || go !== true) {
-      ui.cancel('Setup cancelled. Nothing changed.');
-      return 0;
-    }
+  const asked = await askAnswers(options, saved, deps, home);
+  if (asked === null) {
+    ui.cancel('Setup cancelled. Nothing changed.');
+    return 0;
   }
-  saveSetupDefaults(archonHome, { backend, frontend: frontend ?? '', contract, profiles });
+  return { answers: asked, profiles, kit, archonHome };
+}
 
+function summary(options: KitSetupOptions, answers: Answers, profiles: string[]): string {
+  const skipped = (flag: boolean | undefined, why: string): string =>
+    flag === true ? ` (skipped: ${why})` : '';
+  const steps = [
+    `tools${skipped(options.noTools, '--no-tools')}`,
+    'kit',
+    'contract',
+    'codegraph',
+    `frontend MCP${skipped(answers.frontend === null, 'no frontend')}`,
+    `rtk hooks${skipped(options.noRtk, '--no-rtk')}`,
+    'servers check',
+    `web views${skipped(options.noWeb, '--no-web')}`,
+  ];
+  return [
+    `Backend:   ${answers.backend}`,
+    `Frontend:  ${answers.frontend ?? '(skipped)'}`,
+    `Contract:  ${answers.contract}`,
+    `Profiles:  ${profiles.join(', ')}`,
+    '',
+    `Steps: ${steps.join(', ')}`,
+  ].join('\n');
+}
+
+/** Show the summary; in a terminal, ask (unless --yes). False: cancelled. */
+async function confirmed(
+  options: KitSetupOptions,
+  deps: KitSetupDeps,
+  prepared: Prepared
+): Promise<boolean> {
+  const { ui } = deps;
+  ui.note(summary(options, prepared.answers, prepared.profiles), 'Setup');
+  if (!deps.interactive || options.yes === true) return true;
+  const go = await ui.confirm({ message: 'Install and wire everything?' });
+  return !ui.isCancel(go) && go === true;
+}
+
+/** What the steps share while they run. */
+interface SetupRun extends Answers {
+  options: KitSetupOptions;
+  deps: KitSetupDeps;
+  kit: Kit;
+  profiles: string[];
+  /** [name, path] of the backend and, when given, the frontend. */
+  repos: [string, string][];
+  logPath: string;
+  log: OutputSink;
+  failed: string[];
+}
+
+function startRun(options: KitSetupOptions, deps: KitSetupDeps, prepared: Prepared): SetupRun {
+  const { answers, kit, profiles, archonHome } = prepared;
   const logDir = join(archonHome, 'logs');
   mkdirSync(logDir, { recursive: true });
   const logPath = join(logDir, `kit-setup-${stamp(deps.now())}.log`);
   const log: OutputSink = text => appendFileSync(logPath, text);
-  log(`archon kit setup\nbackend ${backend}\nfrontend ${frontend ?? '-'}\ncontract ${contract}\n`);
+  log(
+    `archon kit setup\nbackend ${answers.backend}\nfrontend ${answers.frontend ?? '-'}\ncontract ${answers.contract}\n`
+  );
+  const repos: [string, string][] = [['backend', answers.backend]];
+  if (answers.frontend !== null) repos.push(['frontend', answers.frontend]);
+  return { ...answers, options, deps, kit, profiles, repos, logPath, log, failed: [] };
+}
 
-  const failed: string[] = [];
-  const step = async (title: string, body: () => Promise<string>): Promise<boolean> => {
-    log(`\n=== ${title} ===\n`);
-    const spin = ui.spinner();
-    spin.start(title);
-    try {
-      const detail = await body();
-      log(`=== ${title}: ok (${detail})\n`);
-      spin.stop(`${title}: ${detail}`);
-      return true;
-    } catch (err) {
-      const message = (err as Error).message;
-      log(`=== ${title}: FAILED: ${message}\n`);
-      spin.error(`${title}: failed (${message}); see ${logPath}`);
-      failed.push(title);
-      return false;
-    }
-  };
-  const skip = (title: string, reason: string): void => {
-    log(`\n=== ${title}: skipped (${reason})\n`);
-    ui.info(`${title}: skipped (${reason})`);
-  };
-  /** Run in `cwd`; a nonzero exit throws. `also` sees the output too. */
-  const run = async (
-    cwd: string,
-    command: string,
-    args: string[],
-    also?: OutputSink
-  ): Promise<void> => {
-    log(`$ ${[command, ...args].join(' ')}   (in ${cwd})\n`);
-    const code = await deps.run(command, args, {
-      cwd,
-      env,
-      output: text => {
-        log(text);
-        also?.(text);
-      },
-    });
-    if (code !== 0) throw new Error(`${command} ${args.join(' ')} exited with ${code}`);
-  };
-  const repos: [string, string][] = [['backend', backend]];
-  if (frontend !== null) repos.push(['frontend', frontend]);
-  /** Run the body for each repo; every repo is tried, the failures are thrown together. */
-  const eachRepo = async (body: (dir: string) => Promise<void>): Promise<string> => {
-    const problems: string[] = [];
-    for (const [name, dir] of repos) {
-      try {
-        await body(dir);
-      } catch (err) {
-        problems.push(`${name}: ${(err as Error).message}`);
-      }
-    }
-    if (problems.length > 0) throw new Error(problems.join('; '));
-    return repos.map(([name]) => name).join(' and ');
-  };
-
-  // 1. Tools.
-  if (options.noTools) skip('Tools', '--no-tools');
-  else {
-    await step('Tools', async () => {
-      const code = await deps.tools(backend, kit, log);
-      if (code !== 0) throw new Error(`the tool installer exited with ${code}`);
-      return 'installed';
-    });
+/** One step under a spinner: its body returns the detail line, a throw marks it failed. */
+async function step(run: SetupRun, title: string, body: () => Promise<string>): Promise<void> {
+  run.log(`\n=== ${title} ===\n`);
+  const spin = run.deps.ui.spinner();
+  spin.start(title);
+  try {
+    const detail = await body();
+    run.log(`=== ${title}: ok (${detail})\n`);
+    spin.stop(`${title}: ${detail}`);
+  } catch (err) {
+    const message = (err as Error).message;
+    run.log(`=== ${title}: FAILED: ${message}\n`);
+    spin.error(`${title}: failed (${message}); see ${run.logPath}`);
+    run.failed.push(title);
   }
+}
 
-  // 2. The kit into the backend (the contract path goes in with it, so its post-install steps see it).
-  await step('Kit', async () => {
-    const code = await withConsoleTo(log, () =>
-      deps.kitAdd(
-        backend,
-        {
-          profiles,
-          trust: true,
-          noTools: true,
-          env,
-          output: log,
-          set: [`contract.spec_path=${contract}`],
-        },
-        kit
-      )
-    );
-    if (code !== 0) throw new Error(`kit add exited with ${code}`);
-    return `profiles ${profiles.join(', ')}`;
+function skip(run: SetupRun, title: string, reason: string): void {
+  run.log(`\n=== ${title}: skipped (${reason})\n`);
+  run.deps.ui.info(`${title}: skipped (${reason})`);
+}
+
+/** Run a program in `cwd` into the log (and `also`); a nonzero exit throws. */
+async function runIn(
+  run: SetupRun,
+  cwd: string,
+  command: string,
+  args: string[],
+  also?: OutputSink
+): Promise<void> {
+  run.log(`$ ${[command, ...args].join(' ')}   (in ${cwd})\n`);
+  const output: OutputSink = text => {
+    run.log(text);
+    also?.(text);
+  };
+  const code = await run.deps.run(command, args, { cwd, env: run.deps.env, output });
+  if (code !== 0) throw new Error(`${command} ${args.join(' ')} exited with ${code}`);
+}
+
+/** The body for each repository; every one is tried, and the failures are thrown together. */
+async function eachRepo(run: SetupRun, body: (dir: string) => Promise<void>): Promise<string> {
+  const problems: string[] = [];
+  for (const [name, dir] of run.repos) {
+    try {
+      await body(dir);
+    } catch (err) {
+      problems.push(`${name}: ${(err as Error).message}`);
+    }
+  }
+  if (problems.length > 0) throw new Error(problems.join('; '));
+  return run.repos.map(([name]) => name).join(' and ');
+}
+
+async function toolsStep(run: SetupRun): Promise<void> {
+  if (run.options.noTools) return skip(run, 'Tools', '--no-tools');
+  await step(run, 'Tools', async () => {
+    const code = await run.deps.tools(run.backend, run.kit, run.log);
+    if (code !== 0) throw new Error(`the tool installer exited with ${code}`);
+    return 'installed';
   });
+}
 
-  // 3. Contract.
-  await step('Contract', async () => {
+/** The kit into the backend; the contract path goes in with it, so its post-install steps see it. */
+async function kitStep(run: SetupRun): Promise<void> {
+  await step(run, 'Kit', async () => {
+    const options = {
+      profiles: run.profiles,
+      trust: true,
+      noTools: true,
+      env: run.deps.env,
+      output: run.log,
+      set: [`contract.spec_path=${run.contract}`],
+    };
+    const code = await withConsoleTo(run.log, () => run.deps.kitAdd(run.backend, options, run.kit));
+    if (code !== 0) throw new Error(`kit add exited with ${code}`);
+    return `profiles ${run.profiles.join(', ')}`;
+  });
+}
+
+async function contractStep(run: SetupRun): Promise<void> {
+  await step(run, 'Contract', async () => {
+    const { backend, contract, kit, profiles } = run;
     writeKitYaml(
       backend,
       applySetOverrides(kitYamlText(backend, kit, profiles), [`contract.spec_path=${contract}`])
@@ -683,107 +627,143 @@ export async function kitSetupCommand(
         `contract.spec_path set, but the backend has no ${CONTRACT_SETUP_SCRIPTS[0]}`
       );
     }
-    await run(backend, 'bash', [script]);
+    await runIn(run, backend, 'bash', [script]);
     return `contract.spec_path ${contract}`;
   });
+}
 
-  // 4. CodeGraph indexes.
-  await step('CodeGraph index', async () => {
-    if (!existsSync(join(backend, CODEGRAPH_SETUP)))
+async function codegraphStep(run: SetupRun): Promise<void> {
+  await step(run, 'CodeGraph index', async () => {
+    if (!existsSync(join(run.backend, CODEGRAPH_SETUP))) {
       throw new Error(`the backend has no ${CODEGRAPH_SETUP}`);
-    return `${await eachRepo(dir => run(backend, 'bash', [CODEGRAPH_SETUP, dir]))} indexed`;
+    }
+    const done = await eachRepo(run, dir =>
+      runIn(run, run.backend, 'bash', [CODEGRAPH_SETUP, dir])
+    );
+    return `${done} indexed`;
   });
+}
 
-  // 5. The frontend's MCP server, trust and the backend's extra project.
-  if (frontend === null) skip('Frontend MCP', 'no frontend');
-  else {
-    await step('Frontend MCP', async () => {
-      const entry = codegraphServerEntry(backend, kit);
-      const file = join(frontend, MCP_JSON);
-      const merged = mergeMcpServer(
-        existsSync(file) ? readFileSync(file, 'utf-8') : null,
-        'codegraph',
-        entry
-      );
-      mkdirSync(join(frontend, '.github'), { recursive: true });
-      writeFileSync(file, merged);
-      log(`wrote ${file}\n`);
-      const config = join(copilotHome(env), 'config.json');
-      log(`trust ${frontend} in ${config}: ${trustFolder(config, frontend)}\n`);
-      writeKitYaml(backend, addExtraProject(kitYamlText(backend, kit, profiles), frontend));
-      log(`codegraph.extra_projects += ${frontend}\n`);
-      return '.github/mcp.json codegraph, trusted, codegraph.extra_projects';
-    });
-  }
+/** The frontend's codegraph MCP server, its folder trust and the backend's extra project. */
+async function frontendStep(run: SetupRun): Promise<void> {
+  const { frontend } = run;
+  if (frontend === null) return skip(run, 'Frontend MCP', 'no frontend');
+  await step(run, 'Frontend MCP', async () => {
+    const { backend, kit, profiles, log, deps } = run;
+    const file = join(frontend, MCP_JSON);
+    const existing = existsSync(file) ? readFileSync(file, 'utf-8') : null;
+    const merged = mergeMcpServer(existing, 'codegraph', codegraphServerEntry(backend, kit));
+    mkdirSync(join(frontend, '.github'), { recursive: true });
+    writeFileSync(file, merged);
+    log(`wrote ${file}\n`);
+    const config = join(copilotHome(deps.env), 'config.json');
+    log(`trust ${frontend} in ${config}: ${trustFolder(config, frontend)}\n`);
+    writeKitYaml(backend, addExtraProject(kitYamlText(backend, kit, profiles), frontend));
+    log(`codegraph.extra_projects += ${frontend}\n`);
+    return '.github/mcp.json codegraph, trusted, codegraph.extra_projects';
+  });
+}
 
-  // 6. rtk hooks, per repository (never the global ones).
-  if (options.noRtk) skip('rtk hooks', '--no-rtk');
-  else if (!deps.which('rtk')) skip('rtk hooks', 'rtk is not on PATH');
-  else {
-    await step('rtk hooks', async () => {
-      return `${await eachRepo(dir => run(dir, 'rtk', ['init', '--copilot']))}`;
-    });
-  }
+/** rtk's Copilot hooks, per repository (never the global ones). */
+async function rtkStep(run: SetupRun): Promise<void> {
+  if (run.options.noRtk) return skip(run, 'rtk hooks', '--no-rtk');
+  if (!run.deps.which('rtk')) return skip(run, 'rtk hooks', 'rtk is not on PATH');
+  await step(run, 'rtk hooks', () =>
+    eachRepo(run, dir => runIn(run, dir, 'rtk', ['init', '--copilot']))
+  );
+}
 
-  // 7. Every MCP server starts and lists its tools.
-  await step('Servers check', async () => {
+/** Every MCP server of each repository starts and lists its tools. */
+async function serversStep(run: SetupRun): Promise<void> {
+  await step(run, 'Servers check', async () => {
     const lines: string[] = [];
     const problems: string[] = [];
-    for (const [name, dir] of repos) {
-      const checks = await deps.checkMcp(dir);
-      for (const check of checks) {
-        log(`${name} ${check.status} ${check.name}: ${check.detail}\n`);
-        if (check.status === 'fail') problems.push(`${name} ${check.name}: ${check.detail}`);
-        else lines.push(`${name} ${check.name.replace(/^mcp /, '')} ${check.detail}`);
+    for (const [name, dir] of run.repos) {
+      for (const check of await run.deps.checkMcp(dir)) {
+        run.log(`${name} ${check.status} ${check.name}: ${check.detail}\n`);
+        const line = `${name} ${check.name.replace(/^mcp /, '')} ${check.detail}`;
+        (check.status === 'fail' ? problems : lines).push(line);
       }
     }
     if (problems.length > 0) throw new Error(problems.join('; '));
     return lines.join(', ') || 'no servers';
   });
+}
 
-  // 8. The web views.
+/** Start the web views; resolves the lines of their output that name a URL. */
+async function webStep(run: SetupRun): Promise<string[]> {
   const urls: string[] = [];
-  if (options.noWeb) skip('Web views', '--no-web');
-  else {
-    await step('Web views', async () => {
-      if (!existsSync(join(backend, WEB_UIS))) throw new Error(`the backend has no ${WEB_UIS}`);
-      let pending = '';
-      const collect: OutputSink = text => {
-        pending += text;
-        const lines = pending.split('\n');
-        pending = lines.pop() ?? '';
-        for (const line of lines) if (line.includes('http://')) urls.push(line.trim());
-      };
-      try {
-        await run(backend, 'bash', [WEB_UIS, 'start', '--open'], collect);
-      } finally {
-        if (pending.includes('http://')) urls.push(pending.trim());
-      }
-      return `${urls.length} started`;
-    });
+  if (run.options.noWeb) {
+    skip(run, 'Web views', '--no-web');
+    return urls;
   }
+  await step(run, 'Web views', async () => {
+    if (!existsSync(join(run.backend, WEB_UIS))) throw new Error(`the backend has no ${WEB_UIS}`);
+    let pending = '';
+    const collect: OutputSink = text => {
+      const lines = (pending + text).split('\n');
+      pending = lines.pop() ?? '';
+      urls.push(...lines.filter(line => line.includes('http://')).map(line => line.trim()));
+    };
+    try {
+      await runIn(run, run.backend, 'bash', [WEB_UIS, 'start', '--open'], collect);
+    } finally {
+      if (pending.includes('http://')) urls.push(pending.trim());
+    }
+    return `${urls.length} started`;
+  });
+  return urls;
+}
 
-  // 9. What next.
+/** The closing screen; resolves the exit code. */
+function finish(run: SetupRun, urls: string[]): number {
+  const { ui } = run.deps;
+  const web = run.options.noWeb
+    ? []
+    : urls.length > 0
+      ? [
+          'Web views:',
+          ...urls.map(url => `  ${url}`),
+          `Stop them: cd ${run.backend} && bash ${WEB_UIS} stop`,
+        ]
+      : ['Web views: none started'];
   const next = [
-    ...(options.noWeb
-      ? []
-      : urls.length > 0
-        ? [
-            'Web views:',
-            ...urls.map(url => `  ${url}`),
-            `Stop them: cd ${backend} && bash ${WEB_UIS} stop`,
-          ]
-        : ['Web views: none started']),
-    `Log: ${logPath}`,
+    ...web,
+    `Log: ${run.logPath}`,
     '',
     'Copilot login: run `copilot`, then `/login`, and finish it in a browser signed in as the GitHub',
     'account that has Copilot (it may differ from your gh account).',
   ];
   ui.note(next.join('\n'), 'Next');
-  if (failed.length > 0) {
-    ui.outro(`${failed.length} step(s) failed: ${failed.join(', ')}. Log: ${logPath}`);
+  if (run.failed.length > 0) {
+    ui.outro(`${run.failed.length} step(s) failed: ${run.failed.join(', ')}. Log: ${run.logPath}`);
     return 1;
   }
   ui.outro('Setup done.');
   return 0;
+}
+
+export async function kitSetupCommand(
+  options: KitSetupOptions,
+  deps: KitSetupDeps
+): Promise<number> {
+  const prepared = await prepare(options, deps);
+  if (typeof prepared === 'number') return prepared;
+  if (!(await confirmed(options, deps, prepared))) {
+    deps.ui.cancel('Setup cancelled. Nothing changed.');
+    return 0;
+  }
+  const { answers, profiles, archonHome } = prepared;
+  saveSetupDefaults(archonHome, { ...answers, frontend: answers.frontend ?? '', profiles });
+
+  const run = startRun(options, deps, prepared);
+  await toolsStep(run);
+  await kitStep(run);
+  await contractStep(run);
+  await codegraphStep(run);
+  await frontendStep(run);
+  await rtkStep(run);
+  await serversStep(run);
+  const urls = await webStep(run);
+  return finish(run, urls);
 }
