@@ -2,7 +2,7 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "6669d406890f3dbab6a7b1eff4a4ba8afda57dea"
+    "commit": "2ad86609b35c17c79e844b180040c1304dadfa2e"
   },
   "profiles": {
     "core": {
@@ -3207,7 +3207,7 @@
       "template": true,
       "origin": "scripts/test/web-uis.test.sh",
       "kind": "script",
-      "sha256": "35b5f74d2e7766b0964953853b1fbd832fef58f47c78a501256f54d99580a73a"
+      "sha256": "ac748a9425729b9fce61803fe35154bc428dde537db4c451d349424663faaa2d"
     },
     {
       "path": "scripts/tokenomics/commit-reports.sh",
@@ -3243,7 +3243,7 @@
       "template": false,
       "origin": "scripts/web-uis.sh",
       "kind": "script",
-      "sha256": "2b2964f4acf5a4afc25f9f7101461d8fdc74952b3b7b74152a882c15ac35c656"
+      "sha256": "d0f848c8537ee1a5aa88b5c6f5b4e8cedded2de2b2a5e455341c432d623710db"
     },
     {
       "path": ".claude/scripts/affected-check.sh",

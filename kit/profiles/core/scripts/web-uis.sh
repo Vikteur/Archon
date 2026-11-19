@@ -10,7 +10,8 @@
 # The MCP view: one Inspector process per MCP server of .github/mcp.json (Copilot, key mcpServers), else .mcp.json,
 # of MAP_DIR, plus one codegraph-<folder> server per absolute path in .archon/kit.yaml codegraph.extra_projects (the
 # codegraph server's command and env with `--path <that folder>`). Each process shows only its one server, on its
-# own ports (the web port, +1 the MCP Apps sandbox, +4 the app origin; the next server 10 higher), bound to 127.0.0.1,
+# own ports (the web port, +1 the MCP Apps sandbox, +4 the app origin; the next server 10 higher, and a slot another
+# process holds is passed over), bound to 127.0.0.1,
 # with the Inspector's API-token auth ON: a new random token per start, which is part of the printed URL:
 #   mcp-<name>: http://127.0.0.1:<port>/?MCP_INSPECTOR_API_TOKEN=<token>
 # `status` prints the same line for every running one (kept in $STATE_DIR/mcp-<name>.url next to its pid). The view is
@@ -72,6 +73,13 @@ status_one() { # status_one <name> <port>
 mcp_scrub=(-u DANGEROUSLY_OMIT_AUTH -u DANGEROUSLY_BIND_ALL_INTERFACES -u MCP_PROXY_AUTH_TOKEN -u ALLOWED_ORIGINS
   -u MCP_CATALOG_PATH -u MCP_INSPECTOR_ALLOWED_HOSTS -u INSPECTOR_TLS_KEY_PATH -u INSPECTOR_TLS_CERT_PATH)
 
+port_open() { # port_open <port>: something listens on 127.0.0.1:<port>
+  (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null
+}
+slot_busy() { # slot_busy <port>: the web port, the sandbox (+1) or the app origin (+4) is taken
+  port_open "$1" || port_open $(($1 + 1)) || port_open $(($1 + 4))
+}
+
 new_token() { # 32 hex characters from the OS random source
   if command -v openssl >/dev/null 2>&1; then openssl rand -hex 16; else od -An -N16 -tx1 /dev/urandom | tr -d ' \n'; fi
 }
@@ -111,14 +119,19 @@ start_mcp() { # start_mcp: one Inspector per server; prints one "mcp-<name>: <ur
   [ -n "$names" ] || { echo "mcp: skipped, no MCP servers in the mcp.json of $map"; return 0; }
   while IFS= read -r name; do
     safe="mcp-$(printf '%s' "$name" | tr -c 'A-Za-z0-9._\n-' '_')"
-    port=$((mcp_base + n * 10)); n=$((n + 1))
     if running "$safe" && [ -s "$state/$safe.url" ]; then
       url="$(cat "$state/$safe.url")"
       echo "mcp-$name: $url"; urls+=("$url"); continue
     fi
-    if curl -s -o /dev/null --max-time 1 "http://127.0.0.1:$port"; then
-      echo "mcp-$name: port $port is already in use (started elsewhere?): set MCP_PORT_BASE"; continue
-    fi
+    # The next slot whose three ports are free: a port someone else holds (an Inspector started by hand) moves this
+    # server 10 higher, up to 20 slots, rather than costing it its view.
+    port=""
+    while [ "$n" -lt 20 ]; do
+      p=$((mcp_base + n * 10)); n=$((n + 1))
+      if slot_busy "$p"; then echo "mcp-$name: port $p or $((p + 1))/$((p + 4)) is in use, trying $((p + 10))"; continue; fi
+      port=$p; break
+    done
+    [ -n "$port" ] || { echo "mcp-$name: skipped, no free port slot from $mcp_base on: set MCP_PORT_BASE"; continue; }
     token="$(new_token)"
     cfgfile="$state/$safe.config.json"
     ( umask 077; jq --arg n "$name" '{mcpServers: {($n): .[$n]}}' <<<"$servers" > "$cfgfile" )

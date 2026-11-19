@@ -154,6 +154,15 @@ out="$(WEB_UIS_OPEN="$tmp/mcpbin/fake-open" runm start --open)"; sleep 0.5
 check "--open opened the board and the three MCP URLs: $(cat "$tmp/open.log" 2>/dev/null)" '[ "$(wc -l < "$tmp/open.log")" -eq 4 ] && grep -q "^http://127.0.0.1:7101$" "$tmp/open.log" && grep -q "^http://127.0.0.1:7201/?MCP_INSPECTOR_API_TOKEN=" "$tmp/open.log" && grep -q "^http://127.0.0.1:7221/?MCP_INSPECTOR_API_TOKEN=" "$tmp/open.log"'
 runm stop >/dev/null
 
+# A slot another process holds (here its app-origin port, base+4) is passed over: every server moves one slot up.
+(cd "$tmp" && exec "$py" -m http.server 7205 --bind 127.0.0.1 >/dev/null 2>&1) & srv=$!
+for _ in $(seq 1 25); do curl -s -o /dev/null "http://127.0.0.1:7205" && break; sleep 0.2; done
+: > "$tmp/inspector.log"
+out="$(runm start)"; msettle 3
+check "a busy slot is passed over, with a line: $out" '[[ "$out" == *"mcp-codegraph: port 7201 or 7202/7205 is in use, trying 7211"* ]] && [[ "$(sed -n "s/^mcp-codegraph: http/http/p" <<<"$out")" == "http://127.0.0.1:7211/?"* ]] && [[ "$(sed -n "s/^mcp-codegraph-app: //p" <<<"$out")" == "http://127.0.0.1:7231/?"* ]] && alive mcp-codegraph'
+runm stop >/dev/null
+kill "$srv" 2>/dev/null; wait "$srv" 2>/dev/null
+
 # No kit.yaml: no extra server; .mcp.json is the fallback when there is no .github/mcp.json.
 rm -f "$tmp/project/.archon/kit.yaml"; mv "$tmp/project/.github/mcp.json" "$tmp/project/.mcp.json"
 out="$(runm start)"
