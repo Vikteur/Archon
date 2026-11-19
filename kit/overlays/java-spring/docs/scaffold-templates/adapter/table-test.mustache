@@ -1,0 +1,120 @@
+{{!
+  Table spec against the real database: a @DataJpaTest slice on the Testcontainers PostgreSQL (the shared
+  PostgresContainerConfig, @ServiceConnection), the schema from the Flyway migrations. The test methods run without
+  the slice's rolled-back transaction (NOT_SUPPORTED): each row goes in through the context's rows helper in its own
+  transaction, so a refused row names the constraint that refused it; @AfterEach deletes what the tests left.
+  Exemplar: application ordering OrderLineTableTest.
+  Target: application/src/test/java/<package path>/persistence/<context>/<Name>TableTest.java
+  Package: "package" is the file's own package (an application test has no layer suffix: com.example.application.
+          persistence.ordering renders package com.example.application.persistence.ordering). scripts/scaffold.sh
+          refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, Rows (the context's rows helper with insert(em, entity),
+          constraintOf(thrown) and deleteAll(em), each running in the caller's transaction), about (optional, the
+          class comment: what the table holds to), imports (the entity classes, fully qualified), parents[type, name,
+          row] (rows @BeforeEach inserts first, in order; row is a Java expression), refusals[test, first (optional, a
+          row inserted before), row, constraint] (a row the database refuses, and the constraint that refuses it),
+          readBack (optional) {test, Entity, row, key (the find key, a Java expression over stored),
+          columns[getter, expected]}
+  Expressions use triple braces so generics and quotes are not HTML-escaped.
+}}
+package {{package}};
+
+import static org.assertj.core.api.Assertions.assertThat;
+{{#refusals.length}}
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+{{/refusals.length}}
+
+{{#imports}}
+import {{.}};
+{{/imports}}
+import {{basePackage}}.common.adapter.repository.PostgresContainerConfig;
+import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.AfterEach;
+{{#parents.length}}
+import org.junit.jupiter.api.BeforeEach;
+{{/parents.length}}
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+{{#about}}
+/** {{{about}}} */
+{{/about}}
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(PostgresContainerConfig.class)
+@Transactional(propagation = Propagation.NOT_SUPPORTED)
+@Tag("integration")
+class {{Name}}TableTest {
+
+    @Autowired
+    EntityManager em;
+
+    @Autowired
+    PlatformTransactionManager transactionManager;
+{{#parents.length}}
+
+{{/parents.length}}
+{{#parents}}
+    private {{{type}}} {{name}};
+{{/parents}}
+{{#parents.length}}
+
+    @BeforeEach
+    void persistTheParentRows() {
+{{#parents}}
+        {{name}} = {{{row}}};
+        insert({{name}});
+{{/parents}}
+    }
+{{/parents.length}}
+
+    @AfterEach
+    void clean() {
+        requiringNew().executeWithoutResult(status -> {{Rows}}.deleteAll(em));
+    }
+{{#refusals}}
+
+    @Test
+    void {{test}}() {
+{{#first}}
+        insert({{{first}}});
+
+{{/first}}
+        assertThatThrownBy(() -> insert({{{row}}}))
+                .satisfies(thrown -> assertThat({{Rows}}.constraintOf(thrown)).isEqualTo("{{constraint}}"));
+    }
+{{/refusals}}
+{{#readBack}}
+
+    @Test
+    void {{test}}() {
+        {{Entity}} stored = {{{row}}};
+        insert(stored);
+
+        {{Entity}} read = requiringNew().execute(status -> em.find({{Entity}}.class, {{{key}}}));
+
+{{#columns}}
+        assertThat(read.{{getter}}()).isEqualTo({{{expected}}});
+{{/columns}}
+    }
+{{/readBack}}
+
+    private void insert(Object row) {
+        requiringNew().executeWithoutResult(status -> {{Rows}}.insert(em, row));
+    }
+
+    private TransactionTemplate requiringNew() {
+        var template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return template;
+    }
+}

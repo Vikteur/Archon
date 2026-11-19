@@ -1,0 +1,39 @@
+{{!
+  Versioned, forward-only Flyway migration, applied at startup by Spring Boot's Flyway auto-configuration
+  (flyway-core + flyway-database-postgresql on the classpath; spring.jpa.hibernate.ddl-auto=validate or none, so
+  Hibernate never touches the schema).
+  STOP item: a migration is a one-way door on production data, get a human decision before adding one.
+  Never edit a migration that has been merged; write a new one.
+  Version: one migration tree for the whole app; after V1__baseline every migration is V1.<NNN>, three digits
+  from 001, never V2__. Take the highest NNN in it, on every remote branch made since the TASK-47 restart
+  (3e1f400; older branches hold a dead V2), plus one, zero-padded; this prints the next one (001 when none):
+    git fetch origin; git for-each-ref --contains 3e1f400 --format='%(refname)' refs/remotes/origin | while read r; do git ls-tree --name-only $r application/src/main/resources/db/migration/; done | sed -nE 's#.*/V1\.([0-9]+)__.*#\1#p' | sort -n | tail -1 | awk '{n=$1+0} END {printf "V1.%03d\n", n+1}'
+  ADD COLUMN ... NOT NULL on a table that has rows needs a default, or the migration fails at startup.
+  Target: application/src/main/resources/db/migration/V1.<NNN>__<snake_case_description>.sql
+  Vars:   purpose (one line: why this change),
+          createTable (optional: table, columns[name, sqlType, primaryKey, notNull, default, references, last]),
+          addColumns  (optional: table, columns[name, sqlType, notNull, default, last]),
+          statements  (optional: raw SQL for data changes, each ending in ;)
+          references = "other_table(column)"; default = SQL literal, e.g. 'NONE' or FALSE
+}}
+-- {{{purpose}}}
+{{#createTable}}
+
+CREATE TABLE {{{table}}}
+(
+{{#columns}}
+    {{{name}}} {{{sqlType}}}{{#primaryKey}} PRIMARY KEY{{/primaryKey}}{{#notNull}} NOT NULL{{/notNull}}{{#default}} DEFAULT {{{default}}}{{/default}}{{#references}} REFERENCES {{{references}}}{{/references}}{{^last}},{{/last}}
+{{/columns}}
+);
+{{/createTable}}
+{{#addColumns}}
+
+ALTER TABLE {{{table}}}
+{{#columns}}
+    ADD COLUMN {{{name}}} {{{sqlType}}}{{#notNull}} NOT NULL{{/notNull}}{{#default}} DEFAULT {{{default}}}{{/default}}{{#last}};{{/last}}{{^last}},{{/last}}
+{{/columns}}
+{{/addColumns}}
+{{#statements}}
+
+{{{statements}}}
+{{/statements}}
