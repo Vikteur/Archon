@@ -35,7 +35,7 @@
     "derivedFrom": ".claude/skills/run-wedding-portal/SKILL.md",
     "sourceSha256": "443983360722853108e859dda6aaebfaf400de1d8dba5e3e644ac999685b55ea"
   },
-  ".github/skills/run-app/scripts/smoke.sh": {
+  ".github/skills/run-app/smoke.sh": {
     "derivedFrom": ".claude/skills/run-wedding-portal/smoke.sh",
     "sourceSha256": "f42171d25d255889d6d14f26bfcc60790ce66f049fdb6d706ae6becaf155bd14"
   },

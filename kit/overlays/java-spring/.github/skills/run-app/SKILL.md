@@ -3,7 +3,7 @@ name: run-app
 description: Start, run, smoke-test and stop the Spring Boot backend (`./gradlew bootRun` with a docker compose PostgreSQL). Use when asked to run, start, launch or boot the app or backend, check that it comes up, hit its endpoints, look at its local database, or stop it.
 ---
 
-The backend is a Spring Boot server; drive it with `.github/skills/run-app/scripts/smoke.sh`, which starts `bootRun` in
+The backend is a Spring Boot server; drive it with `.github/skills/run-app/smoke.sh`, which starts `bootRun` in
 the background, waits until actuator health says UP, and checks it with `curl` and `psql`. All paths are relative to
 the repo root (the main checkout or a worktree). The project's own facts (module, port, compose file, extra routes to
 check) live in `docs/code-maps/run-app.md`; the script reads its `KEY: value` lines when the file exists.
@@ -22,10 +22,10 @@ docker compose version
 ## Run (agent path)
 
 ```bash
-bash .github/skills/run-app/scripts/smoke.sh          # start (or reuse) + check; exit 0 = all PASS
-bash .github/skills/run-app/scripts/smoke.sh check    # checks only, against a running instance
-bash .github/skills/run-app/scripts/smoke.sh status
-bash .github/skills/run-app/scripts/smoke.sh stop
+bash .github/skills/run-app/smoke.sh          # start (or reuse) + check; exit 0 = all PASS
+bash .github/skills/run-app/smoke.sh check    # checks only, against a running instance
+bash .github/skills/run-app/smoke.sh status
+bash .github/skills/run-app/smoke.sh stop
 ```
 
 `start` makes sure the database is there first. When the app module depends on `spring-boot-docker-compose`
