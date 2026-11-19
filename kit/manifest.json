@@ -1155,7 +1155,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-cost.sh",
       "kind": "script",
-      "sha256": "edfe86f9b859585767cf50a6761b4afb7583737f623a1e2ba855301887de4362"
+      "sha256": "c21d2b49b5175fa9a45ea2eceb33639438f93a09d742feef6b30f4b2cb23aa8e"
     },
     {
       "path": ".claude/scripts/ci-ledger.sh",
@@ -1686,7 +1686,7 @@
       "template": false,
       "origin": "scripts/test/ci-cost.test.sh",
       "kind": "script",
-      "sha256": "f45fc28e410d89ff7e85af1168438e8e8e2fb8ee554da26d87b5f8b46ac99e4d"
+      "sha256": "9bf6d32425c3b8deef2c75fda79d52da25caad2fb9e628c7a12403b92bc0ac99"
     },
     {
       "path": "scripts/test/ci-ledger.test.sh",
@@ -1848,7 +1848,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-workflow-check.sh",
       "kind": "script",
-      "sha256": "c2fe2af5aacbe1fe6e3b16e8efc153006abe4db07b9e1670d3e737052c4d8b42"
+      "sha256": "087570bfe12a233071a7040b17e199126b13c5f1e798c6548b9482930b8f10f2"
     },
     {
       "path": ".claude/scripts/class-version-check.sh",
@@ -2669,6 +2669,15 @@
       "origin": "scripts/test/affected-check.test.sh",
       "kind": "script",
       "sha256": "2060f4d6a6adc3ad5c3bae403c206a174fd35fc82ba1df7c04025fc3b1f68766"
+    },
+    {
+      "path": "scripts/test/ci-workflow-scope.test.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "6a4693364c7a6890699935e36443c80763b8f5a9d4da4b70a17cd97aa7ae431d"
     },
     {
       "path": "scripts/test/fixtures/mutation-gate/killed.xml",

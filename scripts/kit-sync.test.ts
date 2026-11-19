@@ -1204,6 +1204,22 @@ describe('the committed kit', () => {
       expect(text).toContain('## Scaffold');
     }
   });
+  test('ci-cost aligns its table without column(1); ci-workflow-check fails only kit-owned workflows', () => {
+    const cost = readFileSync(join(kit, 'profiles/core/.claude/scripts/ci-cost.sh'), 'utf8');
+    expect(cost).not.toContain('else cat; fi');
+    expect(cost).toContain("awk -F '\\t'");
+    const rules = readFileSync(
+      join(kit, 'profiles/java/.claude/scripts/ci-workflow-check.sh'),
+      'utf8'
+    );
+    expect(rules).toContain('lock=.archon/kit.lock.json');
+    expect(rules).toContain('for place in buildSrc build-logic; do');
+    const scope = readFileSync(
+      join(kit, 'profiles/java/scripts/test/ci-workflow-scope.test.sh'),
+      'utf8'
+    );
+    expect(scope).toContain('BASELINE: .github/workflows/release.yml');
+  });
   test("the agents that scaffold are told --for offers the repo's own templates", () => {
     for (const agent of ['developer', 'test-writer']) {
       const text = readFileSync(

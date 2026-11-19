@@ -168,7 +168,15 @@ jq -s --slurpfile facts "$tmp/facts" --arg since "$since" --argjson growth "$gro
 if [ -n "$json" ]; then
   cat "$tmp/report"
 else
-  table() { if command -v column > /dev/null; then column -t -s $'\t'; else cat; fi; }
+  # Aligns the tab-separated rows into space-padded columns. awk, not column(1): util-linux's column is missing from
+  # Git Bash and from slim images, and the tab-separated fallback printed a table no reader (or test) could line up.
+  table() {
+    awk -F '\t' '{ for (i = 1; i <= NF; i++) { cell[NR, i] = $i; if (length($i) > w[i]) w[i] = length($i) }
+        if (NF > nf) nf = NF; n = NR }
+      END { for (r = 1; r <= n; r++) { line = ""
+          for (i = 1; i <= nf; i++) line = line (i < nf ? sprintf("%-" (w[i] + 2) "s", cell[r, i]) : cell[r, i])
+          print line } }'
+  }
   jq -r '"ci-cost: local CI from the ledger" + (if .since then " since \(.since)" else "" end)
       + (if .skipped_lines > 0 then " (\(.skipped_lines) unreadable line(s) skipped)" else "" end)' "$tmp/report"
   for section in by_day:day by_ticket:ticket; do

@@ -109,6 +109,15 @@ check "1 the first green run is not avoidable" "$(is '.by_ticket["TASK-1"].avoid
 run --ledger "$L" --repo "$repo"
 check "1 the table names every class" "$([ "$rc" -eq 0 ] && said 'same-tree' && said 'rebase-only' && said 'bookkeeping' \
   && said 'red-tail' && grep -qE '^TASK-1 +3 +21 ' <<< "$out" && grep -qE '^2024-10-05 +3 +12 ' <<< "$out"; echo $?)"
+# Without column(1) (Git Bash, slim images) the table lines up the same way: a PATH that holds every tool but column.
+nocol="$tmp/nocol"; mkdir -p "$nocol"
+IFS=: read -ra dirs <<< "$PATH"
+for d in "${dirs[@]}"; do
+  for f in "$d"/*; do n=${f##*/}; [ "$n" = column ] || [ -e "$nocol/$n" ] || ln -s "$f" "$nocol/$n" 2> /dev/null; done
+done
+out=$(PATH="$nocol" bash "$script" --ledger "$L" --repo "$repo" 2>&1); rc=$?
+check "1 ... and without column(1) installed" "$([ "$rc" -eq 0 ] && ! PATH="$nocol" command -v column > /dev/null \
+  && said 'red-tail' && grep -qE '^TASK-1 +3 +21 ' <<< "$out" && grep -qE '^2024-10-05 +3 +12 ' <<< "$out"; echo $?)"
 run --ledger "$L" --repo "$repo" --since 2024-10-05 --json
 check "1 --since keeps the later days only" "$(is '[.total.runs, (.by_day | keys)]' '[3,["2024-10-05"]]'; echo $?)"
 check "1 ... with the credits of those days" "$(is .total.avoidable_total_min 9; echo $?)"

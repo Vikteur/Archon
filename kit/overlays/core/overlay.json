@@ -7,6 +7,10 @@
     "derivedFrom": ".claude/CLAUDE.md",
     "sourceSha256": "d4ba4b1e2304da7634040228f3982beb4f512f09ceefee0c34a28c4503c6fa72"
   },
+  ".claude/scripts/ci-cost.sh": {
+    "derivedFrom": ".claude/scripts/ci-cost.sh",
+    "sourceSha256": "edfe86f9b859585767cf50a6761b4afb7583737f623a1e2ba855301887de4362"
+  },
   ".claude/scripts/groma-check.sh": {
     "derivedFrom": ".claude/scripts/groma-check.sh",
     "sourceSha256": "447fe2ef797a4acce182656b7680cd1bd5d43191151c175e749ad5733c20a7cb"
@@ -14,6 +18,10 @@
   ".githooks/pre-push": {
     "derivedFrom": ".githooks/pre-push",
     "sourceSha256": "f66fdc61340600b0f05449a9fc1eb487de41f08eb15a0b64d2929bc636991e96"
+  },
+  "scripts/test/ci-cost.test.sh": {
+    "derivedFrom": "scripts/test/ci-cost.test.sh",
+    "sourceSha256": "f45fc28e410d89ff7e85af1168438e8e8e2fb8ee554da26d87b5f8b46ac99e4d"
   },
   "scripts/test/pre-push.test.sh": {
     "derivedFrom": "scripts/test/pre-push.test.sh",
