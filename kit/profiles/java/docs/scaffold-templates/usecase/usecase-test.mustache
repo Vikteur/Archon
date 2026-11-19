@@ -1,0 +1,48 @@
+{{!
+  Use-case spec: ports mocked, domain values from a Mother, the scenario in the method name.
+  Exemplar: invoice-usecase GetInvoicesUseCaseTest.
+  Target: <capability>-usecase/src/test/java/<package path>/usecase/<Name>UseCaseTest.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   same as usecase.mustache, plus name (camelCase of Name), Domain (the Mother's type),
+          expected (Java expression built from the fixture, e.g. List.of(GadgetMother.standardGadget())),
+          fixtureImports (optional, extra import lines such as java.util.List)
+}}
+package {{package}}.usecase;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.{{Domain}}Mother;
+import {{package}}.repository.{{Repository}};
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.UUID;
+{{#fixtureImports}}
+import {{.}};
+{{/fixtureImports}}
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class {{Name}}UseCaseTest {
+    private static final OrganisationId ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000001"));
+
+    @Mock
+    private {{Repository}} {{repository}};
+
+    @InjectMocks
+    private {{Name}}UseCase {{name}}UseCase;
+
+    @Test
+    void givenExisting{{Domain}}_when{{Name}}_thenReturnIt() {
+        var expected = {{{expected}}};
+        when({{repository}}.{{method}}(ORGANISATION)).thenReturn(expected);
+
+        assertThat({{name}}UseCase.execute(ORGANISATION)).isEqualTo(expected);
+    }
+}

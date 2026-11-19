@@ -1,0 +1,109 @@
+{{!
+  JPA entity, separate from the domain type. Exemplar: account-adapter SalesRegionEntity.
+  The key, one of:
+    (none)        a database-generated serial Long id.
+    naturalKey    one @Id column, e.g. a caller-assigned UUID id ({type: UUID, name: id, column: id}) or a text code.
+                  With a typed id (domain/id), type is UUID and typedId names the domain id type: the entity stores its
+                  value().
+    compositeKey  several @Id columns by @IdClass, with a nested record Key; mark the last item with last.
+  organisationColumn: the column holding the row's organisation (org_id, organisation_id), mapped to the field
+  organisationId that the repository templates query; the domain type does not carry it, the port passes it in.
+  Omit it for a table without one (reference data, users, organisations themselves).
+  fromDomain: adds a <Name>Entity([OrganisationId, ]<Name>) constructor, needed by default-repository-crud (which also
+  needs organisationColumn). Combine it with a key, otherwise every save of a rebuilt entity INSERTs a new row.
+  A field is NOT NULL unless it sets nullable; readOnly maps a column the database fills (generated, default now()).
+  A new table needs a Flyway migration: that is a STOP item, get a human decision first.
+  Target: <capability>-adapter/src/main/java/<package path>/adapter/repository/<Name>Entity.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, table, organisationColumn (optional), fromDomain (bool),
+          naturalKey (optional: type, name, pascal, column, typedId (optional, domain id type)),
+          compositeKey (optional: [type, name, pascal, column, last]),
+          fields[type, name, pascal, column, nullable (bool), readOnly (bool)]  (non-key columns; pascal only needed
+          with fromDomain)
+}}
+package {{package}}.adapter.repository;
+
+{{#fromDomain}}
+{{#organisationColumn}}
+import {{basePackage}}.common.domain.OrganisationId;
+{{/organisationColumn}}
+import {{package}}.domain.{{Name}};
+{{/fromDomain}}
+import jakarta.persistence.*;
+import lombok.*;
+
+{{#compositeKey.length}}
+import java.io.Serializable;
+{{/compositeKey.length}}
+import java.util.UUID;
+
+@Getter
+@Builder
+@Entity
+@Table(name = "{{table}}")
+{{#compositeKey.length}}
+@IdClass({{Name}}Entity.Key.class)
+{{/compositeKey.length}}
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+public class {{Name}}Entity {
+
+{{^naturalKey}}
+{{^compositeKey.length}}
+    @Id
+    @Column(name = "id", columnDefinition = "serial")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+{{/compositeKey.length}}
+{{/naturalKey}}
+{{#naturalKey}}
+    @Id
+    @Column(name = "{{column}}")
+    private {{{type}}} {{name}};
+{{/naturalKey}}
+{{#compositeKey}}
+    @Id
+    @Column(name = "{{column}}", nullable = false)
+    private {{{type}}} {{name}};
+{{^last}}
+
+{{/last}}
+{{/compositeKey}}
+{{#organisationColumn}}
+
+    @Column(name = "{{organisationColumn}}", nullable = false)
+    private UUID organisationId;
+{{/organisationColumn}}
+{{#fields}}
+
+    @Column(name = "{{column}}"{{^nullable}}, nullable = false{{/nullable}}{{#readOnly}}, insertable = false, updatable = false{{/readOnly}})
+    private {{{type}}} {{name}};
+{{/fields}}
+{{#fromDomain}}
+
+    {{Name}}Entity({{#organisationColumn}}OrganisationId organisationId, {{/organisationColumn}}{{Name}} domain) {
+{{#naturalKey}}
+        this.{{name}} = domain.get{{pascal}}(){{#typedId}}.value(){{/typedId}};
+{{/naturalKey}}
+{{#compositeKey}}
+        this.{{name}} = domain.get{{pascal}}();
+{{/compositeKey}}
+{{#organisationColumn}}
+        this.organisationId = organisationId.value();
+{{/organisationColumn}}
+{{#fields}}
+{{^readOnly}}
+        this.{{name}} = domain.get{{pascal}}();
+{{/readOnly}}
+{{/fields}}
+    }
+{{/fromDomain}}
+{{#compositeKey.length}}
+
+    /** The primary key ({{#compositeKey}}{{column}}{{^last}}, {{/last}}{{/compositeKey}}). */
+    public record Key({{#compositeKey}}{{{type}}} {{name}}{{^last}}, {{/last}}{{/compositeKey}}) implements Serializable {
+    }
+{{/compositeKey.length}}
+}

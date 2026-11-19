@@ -1,0 +1,10 @@
+{
+  "build": ["ticket", "explore", "plan", "plan-check", "mcp-use",
+    "stop-route", "implement", "step-base", "scaffold-tests", "write-tests", "tests-blocked",
+    "tests-skills", "tests-check", "scaffold-build", "build-step", "step-skills", "step-blocked", "step-check", "skill-check", "scaffold-check", "review-base", "review-tests", "review",
+    "tdd-check", "map-scan", "map-curate", "map-check", "map-links", "rebase-main", "pr-text", "open-pr"],
+  "ci": ["ci", "triage", "ci-fix", "red-head", "diagnose", "fix", "fix-made", "fix-ci", "ready"],
+  "gate": ["auto-merge", "gate", "github-agent"],
+  "merged": ["merged"],
+  "post": ["main-ci", "ticket-files", "finalize", "close-out"]
+}

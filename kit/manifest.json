@@ -1,0 +1,3173 @@
+{
+  "version": 1,
+  "source": {
+    "name": "wedding-portal",
+    "commit": "4a2906f863ff893027090dd59bcdb8c0e07286c6"
+  },
+  "profiles": {
+    "core": {
+      "requires": [],
+      "description": "Archon run tooling (delegator, STOP policy, merge, CI by SHA, retro, run observability), hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks and the Copilot instructions."
+    },
+    "java": {
+      "requires": [
+        "core"
+      ],
+      "description": "Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/PIT/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents."
+    },
+    "java-quarkus": {
+      "requires": [
+        "java"
+      ],
+      "description": "The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus scaffold templates, the CI workflow and run-app."
+    },
+    "java-spring": {
+      "requires": [
+        "java"
+      ],
+      "description": "The java-quarkus paths rewritten for Spring Boot, from the hand-written kit/overlays/java-spring."
+    },
+    "openapi-contract": {
+      "requires": [
+        "core"
+      ],
+      "description": "The contract-api MCP server, contract-agent-readiness, contract-pin, contract-db-parity and the contract-agent."
+    }
+  },
+  "exclusive": [
+    [
+      "java-quarkus",
+      "java-spring"
+    ]
+  ],
+  "files": [
+    {
+      "path": ".agents/skills/archon-cli/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/SKILL.md",
+      "kind": "skill",
+      "sha256": "c8cec1a86700d509ece072c175aba208f22bf81fc18076df8ac214884101c14c"
+    },
+    {
+      "path": ".agents/skills/archon-cli/authoring/authoring-workflows.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/authoring/authoring-workflows.md",
+      "kind": "skill",
+      "sha256": "843da3950a8b6b58ad095d9372b461254c5ab87ee07da277fc087715e0d710ef"
+    },
+    {
+      "path": ".agents/skills/archon-cli/authoring/node-reference.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/authoring/node-reference.md",
+      "kind": "skill",
+      "sha256": "4feb3558e198654e9150ed41abc846b3f114336349e7a7cc958892ee7920364f"
+    },
+    {
+      "path": ".agents/skills/archon-cli/authoring/prompting-mistakes.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/authoring/prompting-mistakes.md",
+      "kind": "skill",
+      "sha256": "8890d0a8f3b901ca1218b99e7dd2eec12a51e2ac0f1b599fd8dea263df0082e9"
+    },
+    {
+      "path": ".agents/skills/archon-cli/authoring/variables.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/authoring/variables.md",
+      "kind": "skill",
+      "sha256": "5d1388fd4822d82aa5097453d988b6921bba1c777c1fe9feead17854f22fe9a2"
+    },
+    {
+      "path": ".agents/skills/archon-cli/operate/managing-runs.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/operate/managing-runs.md",
+      "kind": "skill",
+      "sha256": "0eb4fa53e0762856e53fc24c648f2bf068e17e12785f2f88872dde4aaa63cf2d"
+    },
+    {
+      "path": ".agents/skills/archon-cli/operate/queues.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/operate/queues.md",
+      "kind": "skill",
+      "sha256": "c9fdc6874afef1235033746bb1d8df7dad188d6149199564ba77d813206256d2"
+    },
+    {
+      "path": ".agents/skills/archon-cli/operate/running.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/operate/running.md",
+      "kind": "skill",
+      "sha256": "6fdfc290cc6a194093f9c063b0ef4423d4b41bccbc7dfb2aa6c37aeee798d08d"
+    },
+    {
+      "path": ".agents/skills/archon-cli/operate/troubleshooting.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/operate/troubleshooting.md",
+      "kind": "skill",
+      "sha256": "3d89a92254df5921dcc1bfbc3db95bc2a36eff820ba106f2514699fe56872a12"
+    },
+    {
+      "path": ".agents/skills/archon-cli/setup/setup-and-config.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".agents/skills/archon-cli/setup/setup-and-config.md",
+      "kind": "skill",
+      "sha256": "5eca5b0bd312230253167c5bf49429af36b63351e084c19fcede3bf9b8ee4f18"
+    },
+    {
+      "path": ".archon/config.yaml",
+      "profile": "core",
+      "mode": "0644",
+      "template": true,
+      "origin": ".archon/config.yaml",
+      "kind": "config",
+      "sha256": "ed28aca4235cc605cd4441061676128029c0d67197184bdd60177f341d2da413"
+    },
+    {
+      "path": ".archon/copilot/README.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/copilot/README.md",
+      "kind": "doc",
+      "sha256": "6c0147566b4cbb819ed99520c6963e1f570b9851bd4750ff20675cbaa90f3a2d"
+    },
+    {
+      "path": ".archon/copilot/deny.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/settings.json",
+      "kind": "config",
+      "sha256": "d9f8734a7fce741e7e55dee1c05f4467bce7ad2092ba38ce933ffe20fcdff9b4"
+    },
+    {
+      "path": ".archon/copilot/hooks/run-guard.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/copilot/hooks/run-guard.sh",
+      "kind": "hook",
+      "sha256": "b074fa5a5ccdebbb54c00d7354ea8f288b9f3fb9c9d5d7a751c88eb9ec9dd025"
+    },
+    {
+      "path": ".archon/copilot/tools.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/copilot/tools.json",
+      "kind": "config",
+      "sha256": "e78d55181320d34324fc5f755179ea8de5181d802f22da197839a1b66e928aba"
+    },
+    {
+      "path": ".archon/githooks/commit-msg",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/githooks/commit-msg",
+      "kind": "hook",
+      "sha256": "56ca71f32f763beae03e4be92f7c8c7db88f311ab92f0a354717e2db99716e66"
+    },
+    {
+      "path": ".archon/githooks/pre-push",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/githooks/pre-push",
+      "kind": "hook",
+      "sha256": "58b964bfe45e0e5cdfdece27ef4306674e787488d28aa505d6beeda8ae515036"
+    },
+    {
+      "path": ".archon/notify/ntfy.env.example",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/notify/ntfy.env.example",
+      "kind": "config",
+      "sha256": "1cab039cabed6f466811003d55650195882e92a093a8d6e1eda7c9865bfd93cb"
+    },
+    {
+      "path": ".archon/red-triage/flaky.tsv",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/red-triage/flaky.tsv",
+      "kind": "config",
+      "sha256": "c1f7ee7454249c3f8d039713c5615fa2d42bbbeef78c38b0f52fe5397f56fc8d"
+    },
+    {
+      "path": ".archon/red-triage/infra.tsv",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/red-triage/infra.tsv",
+      "kind": "config",
+      "sha256": "1ec1028f1642b65ff31afa2573fb6b4fa3397b31531192135e2c5f32fe42b3bc"
+    },
+    {
+      "path": ".archon/schemas/delegator-decision.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/schemas/delegator-decision.json",
+      "kind": "config",
+      "sha256": "e2005cc0b4d981c7e5ca5af00c6f3e36efca5ce69d621b21aa17fff530304a9a"
+    },
+    {
+      "path": ".archon/scripts/answer-blocked.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/answer-blocked.sh",
+      "kind": "script",
+      "sha256": "3e1055ee05cfe845c0632a2f286c89cc29f101802fd3013d3722f00d44580bd5"
+    },
+    {
+      "path": ".archon/scripts/auto-merge.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/auto-merge.sh",
+      "kind": "script",
+      "sha256": "09f653500edf172c38501cc9ce2c3b41ffb1403b87cda36dfafc16b966d5bd6e"
+    },
+    {
+      "path": ".archon/scripts/blocked-stop.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/blocked-stop.sh",
+      "kind": "script",
+      "sha256": "9095aa3d48991fba57d27149fab60c5c706ad28b23cc39d72773ddfb729aa7d6"
+    },
+    {
+      "path": ".archon/scripts/ci-by-sha.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/ci-by-sha.sh",
+      "kind": "script",
+      "sha256": "4c8172d9a1d210a0dd868f1eaa2c38e18b282201cab824f600c7e453b8d6942c"
+    },
+    {
+      "path": ".archon/scripts/ci-skip.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/ci-skip.sh",
+      "kind": "script",
+      "sha256": "19d7b7803c882b759dd9b34e7f06c3388e4a65e867d84d7858083ba2aab18c23"
+    },
+    {
+      "path": ".archon/scripts/classify-failure.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/classify-failure.js",
+      "kind": "script",
+      "sha256": "98a867c9aae7787792730200abca56fd96cbd1c9b811c37dfaa043faccc8062f"
+    },
+    {
+      "path": ".archon/scripts/classify-failure.signatures.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/classify-failure.signatures.json",
+      "kind": "config",
+      "sha256": "523b187cfd1dfb2917db418d601637b14b52adaf48323e83d00ae7cbbf77ab1c"
+    },
+    {
+      "path": ".archon/scripts/cleanup-merged.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/cleanup-merged.sh",
+      "kind": "script",
+      "sha256": "9b575b106a9dc53e47df61738f09e6753b7f79531dcb207377f86d64035f8808"
+    },
+    {
+      "path": ".archon/scripts/close-out.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/close-out.sh",
+      "kind": "script",
+      "sha256": "81139e74ca262ab7d0622f9228dd04dc71add6679004777b31c563534ee48056"
+    },
+    {
+      "path": ".archon/scripts/codegraph-setup.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/codegraph-setup.sh",
+      "kind": "script",
+      "sha256": "29d75e3b1a8247fca576e3df54d4cfe45e7fd9df34c371169938c3bdc72a728b"
+    },
+    {
+      "path": ".archon/scripts/commit-tickets.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/commit-tickets.sh",
+      "kind": "script",
+      "sha256": "e4190f00d3dad694684f152ec05b3503d7c773bee73c30b9506e2818b0551890"
+    },
+    {
+      "path": ".archon/scripts/copilot-audit.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/copilot-audit.js",
+      "kind": "script",
+      "sha256": "d1345a87224241fde78e2aa4d38409bbd71f2b02b7b38ccddc6a9888112dc918"
+    },
+    {
+      "path": ".archon/scripts/copilot-workflow.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/copilot-workflow.js",
+      "kind": "script",
+      "sha256": "addb0c5507cc07ee744071a02e83d2b000b6eed7778fcc1e00cbfe700b469e37"
+    },
+    {
+      "path": ".archon/scripts/delegator-session.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/delegator-session.sh",
+      "kind": "script",
+      "sha256": "c3b38d5214312b7089e84af0a5f04ba119984ac9e3bcc13ea8af501853bb042e"
+    },
+    {
+      "path": ".archon/scripts/delegator-start.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/delegator-start.sh",
+      "kind": "script",
+      "sha256": "80382a3a8fe8e3c213568eae9eee63c44185f9296ce42e849717c6b3c2850d9f"
+    },
+    {
+      "path": ".archon/scripts/groma-links.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/groma-links.sh",
+      "kind": "script",
+      "sha256": "663dfec68f41e6e09e07d6e570bf83c31197440d014d231a80617135ebcd2928"
+    },
+    {
+      "path": ".archon/scripts/groma-sync.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/groma-sync.sh",
+      "kind": "script",
+      "sha256": "1229acf61681a436c1eb3560a15191af116bbff3ca1789b0ef03d999d2c243b5"
+    },
+    {
+      "path": ".archon/scripts/kit-config.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/kit-config.js",
+      "kind": "script",
+      "sha256": "ac59b70ae671cdbc72d3841d05f990f47ce8d6206a7dd719c3d4c9328e37b178"
+    },
+    {
+      "path": ".archon/scripts/kit-config.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/kit-config.sh",
+      "kind": "script",
+      "sha256": "7107190033f5e041621966304f57da6a09e192858fedffc61dc8e6be5246b2d9"
+    },
+    {
+      "path": ".archon/scripts/launch-run.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/launch-run.sh",
+      "kind": "script",
+      "sha256": "0b105e54f32064d6a9d965e8c5ce8332770d13ce73aa507932f6b99da724bf9e"
+    },
+    {
+      "path": ".archon/scripts/local-ci-run.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/local-ci-run.sh",
+      "kind": "script",
+      "sha256": "707e102054319df576e16a22e52d9790efd745540488c971ba88d29e9d22ecba"
+    },
+    {
+      "path": ".archon/scripts/local-ci-status.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/local-ci-status.sh",
+      "kind": "script",
+      "sha256": "9b8d008d235a2c940b66878ac54eadd738196910eb1e0e0e8c94131d1f9dc991"
+    },
+    {
+      "path": ".archon/scripts/main-ci.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/main-ci.sh",
+      "kind": "script",
+      "sha256": "568103762243bea1aafa9650813102f038a29e838ecc1c80f5cf82053fbe732e"
+    },
+    {
+      "path": ".archon/scripts/mcp-setup.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/mcp-setup.sh",
+      "kind": "script",
+      "sha256": "1176b190a8c37f5002169b51d9852778652921d0abce474fba0d0705b95931eb"
+    },
+    {
+      "path": ".archon/scripts/mcp-use-check.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/mcp-use-check.js",
+      "kind": "script",
+      "sha256": "66b6829f3b440c89edfa8b8881b60f13bd081ab5604b22334027b2cae2adfdb2"
+    },
+    {
+      "path": ".archon/scripts/merge-ledger.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/merge-ledger.sh",
+      "kind": "script",
+      "sha256": "1118b33e7de2bbbaf155e827b19dec5e9c540fe087a36ca309b15769b7ed0652"
+    },
+    {
+      "path": ".archon/scripts/merge-ready.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/merge-ready.sh",
+      "kind": "script",
+      "sha256": "4b86f6fe2e31045d70b42b1503bb70f06d9669c86c213de98eb965d49467e619"
+    },
+    {
+      "path": ".archon/scripts/merge-turn.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/merge-turn.sh",
+      "kind": "script",
+      "sha256": "5774c8b8ac66617c8554911cd098b841b0cb283929b63c9d62dfe6f15109ec40"
+    },
+    {
+      "path": ".archon/scripts/notify-owner.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/notify-owner.sh",
+      "kind": "script",
+      "sha256": "ab1b7bf82421acec7e960efbb165ece419e814a05dd6c9d364ec1107f0a5afd9"
+    },
+    {
+      "path": ".archon/scripts/open-pr.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/open-pr.sh",
+      "kind": "script",
+      "sha256": "b4924222f0378a3fb9bbdee35b022cbf464befe39b648caee507a8a8c15a49b3"
+    },
+    {
+      "path": ".archon/scripts/park-ticket.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/park-ticket.sh",
+      "kind": "script",
+      "sha256": "e2cc74f617ada59e701070f87d39585ecf00a2b696ac28e91d7c4453b870338d"
+    },
+    {
+      "path": ".archon/scripts/pick-tickets.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/pick-tickets.js",
+      "kind": "script",
+      "sha256": "f1b51474c11e141b432e3a53bb41c8092457b9a614b0d01f41bec90f347da630"
+    },
+    {
+      "path": ".archon/scripts/plan-context.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/plan-context.sh",
+      "kind": "script",
+      "sha256": "f6e8a31f2924b55d193c764c33bbb04e6c4fbe25d230f5d5a497f7355c4c8e8d"
+    },
+    {
+      "path": ".archon/scripts/plan-order.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/plan-order.js",
+      "kind": "script",
+      "sha256": "d9a9bf80143c509a33c6103c864de76022655358baa9d4b0e0d9e45d78c7644c"
+    },
+    {
+      "path": ".archon/scripts/plan-spike.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/plan-spike.sh",
+      "kind": "script",
+      "sha256": "dd61070c1674c186359dbcff71ebb200ad863a3a69132fa99a1d3f2fe2a1e178"
+    },
+    {
+      "path": ".archon/scripts/pr-refresh.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/pr-refresh.sh",
+      "kind": "script",
+      "sha256": "a59e7cb788add341b8c0efc4778e95cbafe42d4f57d7eed2237e9961ea43b1bf"
+    },
+    {
+      "path": ".archon/scripts/push-guard.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/push-guard.sh",
+      "kind": "script",
+      "sha256": "480647966ae5edbccdfe9440932eca4d40a55c2e3af953fac98baa0468573d34"
+    },
+    {
+      "path": ".archon/scripts/ready-runs.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/ready-runs.sh",
+      "kind": "script",
+      "sha256": "51b8e422e16b154be8e2497e63d57245cab7b93fa9248fe65daf5e73a875e590"
+    },
+    {
+      "path": ".archon/scripts/rebase-and-resume.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/rebase-and-resume.sh",
+      "kind": "script",
+      "sha256": "8aca90cf262e8ad941cde69724f913e403fe61cea4aa9d94b69232cbc9f84de5"
+    },
+    {
+      "path": ".archon/scripts/rebase-behind.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/rebase-behind.sh",
+      "kind": "script",
+      "sha256": "5dad7ad0924d8b8fa9e2aad6d99428a4d22b0f1f02c9088a5f8fe8b725606782"
+    },
+    {
+      "path": ".archon/scripts/rebase-main.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/rebase-main.sh",
+      "kind": "script",
+      "sha256": "f00273ef4ba08afa0d26a98bf10b2b89cfd05d042b0cb3778e94ecd7c424396d"
+    },
+    {
+      "path": ".archon/scripts/recover-run.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/recover-run.sh",
+      "kind": "script",
+      "sha256": "df56cdae2a0db6ccbd4e617d8c58ee236c5760b1cff2496fa42a0ac9495e0f24"
+    },
+    {
+      "path": ".archon/scripts/recovery-state.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/recovery-state.js",
+      "kind": "script",
+      "sha256": "0f310b6724b7a7548f0c6e29f08a084e7f49f0738393bf95c50e9e2ce397d0b3"
+    },
+    {
+      "path": ".archon/scripts/red-triage.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/red-triage.sh",
+      "kind": "script",
+      "sha256": "efb7082107c1617e1ce0b341ad4af086f692f67de9be0b2017ee7e1c4597309a"
+    },
+    {
+      "path": ".archon/scripts/retro-commit.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/retro-commit.sh",
+      "kind": "script",
+      "sha256": "98b67927489770454bd8ce5de9766381b171fcc8aacc0bdf649da849c339dc98"
+    },
+    {
+      "path": ".archon/scripts/retro-digest.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/retro-digest.sh",
+      "kind": "script",
+      "sha256": "7d8806915cb6b813a25568e5da3e9053c8ada59717b7fbf6eed4d670627d26db"
+    },
+    {
+      "path": ".archon/scripts/retro-evidence.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/retro-evidence.sh",
+      "kind": "script",
+      "sha256": "ef41e052005519d34016087251e54603c794d3fc2588d46e6a05b08f60dd3272"
+    },
+    {
+      "path": ".archon/scripts/retro-stopped.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/retro-stopped.sh",
+      "kind": "script",
+      "sha256": "f243e528e4e8a759e3a27a3a166b8bcf31268c91e5afba4d7e5c8489979a1285"
+    },
+    {
+      "path": ".archon/scripts/retro-umbrella.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/retro-umbrella.sh",
+      "kind": "script",
+      "sha256": "aa27535d67c59a5b88d174801ebd7b1bf28d5560d83d8b03d148fe4b7642e248"
+    },
+    {
+      "path": ".archon/scripts/retro.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/retro.js",
+      "kind": "script",
+      "sha256": "005e6e82bdf909d1221c7fa13df80e3a2881052ae2a52de1743021242baa2b58"
+    },
+    {
+      "path": ".archon/scripts/run-buckets.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/run-buckets.json",
+      "kind": "config",
+      "sha256": "1546ed7124e16650926115a7b58931f4f49b531f3441166879d502ea73b25300"
+    },
+    {
+      "path": ".archon/scripts/run-label.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/run-label.js",
+      "kind": "script",
+      "sha256": "76b01542d8547ad2549f0b305958d1556fc1151d607045f1db05f1448f7cfb23"
+    },
+    {
+      "path": ".archon/scripts/run-log.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/run-log.js",
+      "kind": "script",
+      "sha256": "513c80ab3028ae727fab5b5267a135224cfe5ef5d3af19bf2b5a59f0ca154153"
+    },
+    {
+      "path": ".archon/scripts/run-metrics.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/run-metrics.js",
+      "kind": "script",
+      "sha256": "bddebba7e5978800a9761ac30e43e6958d18fa4cbd130c9aa4f95c8abba825d6"
+    },
+    {
+      "path": ".archon/scripts/run-trace.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/run-trace.js",
+      "kind": "script",
+      "sha256": "8890e9957aa18a3c4543e4f1be871d6b7e7cbd2f2d32d921bf6206ed0a9d4227"
+    },
+    {
+      "path": ".archon/scripts/run-watch.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/run-watch.js",
+      "kind": "script",
+      "sha256": "fdda393de388a09f7dcd3250824d6c743f4e082673db3ddf63c9c885c22a826e"
+    },
+    {
+      "path": ".archon/scripts/scaffold-check.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/scaffold-check.js",
+      "kind": "script",
+      "sha256": "ab56570ac3871f127cd2625ca59b935c71163a213453a18c4a827b7bfdadb636"
+    },
+    {
+      "path": ".archon/scripts/scaffold-step.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/scaffold-step.js",
+      "kind": "script",
+      "sha256": "641a47bf28075db2bd6b1998c19b4997f87f35dc88a49cbd3e55d5605bab0d76"
+    },
+    {
+      "path": ".archon/scripts/skill-check.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/skill-check.js",
+      "kind": "script",
+      "sha256": "5cc2295384b2858f5740383de55aeca356ab1b815c59e7b76595e061eb35e534"
+    },
+    {
+      "path": ".archon/scripts/step-check.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/step-check.js",
+      "kind": "script",
+      "sha256": "179d8e10c86a157d3094dc52e6f276c8d144050ca69298755829ccebc2b17bcb"
+    },
+    {
+      "path": ".archon/scripts/stop-approve.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/stop-approve.sh",
+      "kind": "script",
+      "sha256": "a04a841076ac8e1f027b16ae21166cf403d49eaf4a252531ac27fbb4d1aaf10a"
+    },
+    {
+      "path": ".archon/scripts/stop-check.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/stop-check.sh",
+      "kind": "script",
+      "sha256": "7bc11e7dc3c0641028eb31544487ec9e386763ed9cfd846d92725388c76fdbce"
+    },
+    {
+      "path": ".archon/scripts/stop-lib.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/stop-lib.js",
+      "kind": "script",
+      "sha256": "7c0bd292a1b4600df6c55f74184c12a086bd3a4ad155dee85d2b63e7827f15eb"
+    },
+    {
+      "path": ".archon/scripts/stop-round.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/stop-round.sh",
+      "kind": "script",
+      "sha256": "64f69306658b0d11cddeabf558cf364fffd9be21b9cba6e72bc9c09a40ff1b92"
+    },
+    {
+      "path": ".archon/scripts/stop-run.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/stop-run.sh",
+      "kind": "script",
+      "sha256": "aafd7bb481ec2d2f28ba4eabcefba1f7f441073758a128d9f13957057dc3ee7b"
+    },
+    {
+      "path": ".archon/scripts/stop-scan.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/stop-scan.js",
+      "kind": "script",
+      "sha256": "6051efdd1e9ce071c65f0655e38673051662a5ee243fad7de74c382f230b7cfe"
+    },
+    {
+      "path": ".archon/scripts/supervisor-ctl.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/supervisor-ctl.sh",
+      "kind": "script",
+      "sha256": "48fb510c5e0c3a191b16511bc6b233caaaec68282c07786d7ea0781e9f0127c4"
+    },
+    {
+      "path": ".archon/scripts/supervisor-jobs.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/supervisor-jobs.sh",
+      "kind": "script",
+      "sha256": "4128a5b6a150c9451f20486303c0142a992614533d810f072561b7c40b333a50"
+    },
+    {
+      "path": ".archon/scripts/supervisor-judge.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/supervisor-judge.sh",
+      "kind": "script",
+      "sha256": "65d9d492f2a31c544d4cb4dd292408d7041ce3fdf540c4865f921a01010c5abe"
+    },
+    {
+      "path": ".archon/scripts/supervisor-tick.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/supervisor-tick.sh",
+      "kind": "script",
+      "sha256": "af537f5ac5f9e4a91de414902a6fe037ae2e1f289150b3dcf4b3dcf6624b3f08"
+    },
+    {
+      "path": ".archon/scripts/sync-main.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/sync-main.sh",
+      "kind": "script",
+      "sha256": "1025ae16b95dcb97ad3a19f13c8a93a0a87c1a5dfb583b11744686e7108667aa"
+    },
+    {
+      "path": ".archon/scripts/tdd-check.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/tdd-check.sh",
+      "kind": "script",
+      "sha256": "660e52c4282569cfe04d9a66f8d8f646f89f9e4e6fdc7ad2768dc0e0f2747c1c"
+    },
+    {
+      "path": ".archon/scripts/test-task.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/test-task.sh",
+      "kind": "script",
+      "sha256": "a3006e8329956de99053a4f42f455d75894bac9bd3cbef6d10b068075073f6b2"
+    },
+    {
+      "path": ".archon/scripts/ticket-files.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/ticket-files.sh",
+      "kind": "script",
+      "sha256": "d47fc04071beff11aed02eb22c3e203860494ded59460b537b0eda0fa341da78"
+    },
+    {
+      "path": ".archon/scripts/ticket.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/ticket.sh",
+      "kind": "script",
+      "sha256": "0737a3aed5b9e1d10abe91e3fd919c0fcbf509f067817321fa330a16c6a0bc64"
+    },
+    {
+      "path": ".archon/scripts/verify-fixes.js",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".archon/scripts/verify-fixes.js",
+      "kind": "script",
+      "sha256": "c58c0072816d172962f719baeaa3fcf9a6ff84ce91b82100292289c00fd8809c"
+    },
+    {
+      "path": ".archon/scripts/wait-merge.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/wait-merge.sh",
+      "kind": "script",
+      "sha256": "bd85b09123cdac66da373b04e4c5074939842a90a8b170f831b417e9ba68a8b7"
+    },
+    {
+      "path": ".archon/stop/approvals/_template.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/stop/approvals/_template.json",
+      "kind": "config",
+      "sha256": "196773f3ab06e5bd1b8f7ee92f83b74f8e1ec75f0c43ce83451a5c4f1eca20ab"
+    },
+    {
+      "path": ".archon/stop/policy.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/stop/policy.json",
+      "kind": "config",
+      "sha256": "aa43aa551c589012e74c896eaf18fab63254a8665e16763967e8ec9a8441ef2d"
+    },
+    {
+      "path": ".archon/systemd/delegator-supervisor.service",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/systemd/delegator-supervisor.service",
+      "kind": "config",
+      "sha256": "9e446f919401d727fc850f0e8ffa24f2a7a3b8b56c1f8966139f1355eb6c3915"
+    },
+    {
+      "path": ".archon/systemd/delegator-supervisor.timer",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/systemd/delegator-supervisor.timer",
+      "kind": "config",
+      "sha256": "8e33b596ac22e121fbeb7e08a9846c1398c4bcf588abf12a5a8fc61365b31dfb"
+    },
+    {
+      "path": ".archon/systemd/notify-digest.service",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/systemd/notify-digest.service",
+      "kind": "config",
+      "sha256": "1debbd0ca53d67401ecd7840dda0eec0bbf293387aa020d0a60c888e3f2d5fc9"
+    },
+    {
+      "path": ".archon/systemd/notify-digest.timer",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/systemd/notify-digest.timer",
+      "kind": "config",
+      "sha256": "92e26170fb019ffe52afdfea94c46826f86f2d14eb8ecd1c1e40ea065138a07b"
+    },
+    {
+      "path": ".archon/workflows/build-feature-copilot.yaml",
+      "profile": "core",
+      "mode": "0644",
+      "template": true,
+      "origin": ".archon/workflows/build-feature-copilot.yaml",
+      "kind": "workflow",
+      "sha256": "6bff054907f153b2b085a93c70c0ffa52ed8e8449895e3cdc4a5f2bde6cc4918"
+    },
+    {
+      "path": ".archon/workflows/build-feature.yaml",
+      "profile": "core",
+      "mode": "0644",
+      "template": true,
+      "origin": ".archon/workflows/build-feature.yaml",
+      "kind": "workflow",
+      "sha256": "42cbffda1aeced502c394c0cdcfc832fb1202f3c7a98ccf65b24d860c92db730"
+    },
+    {
+      "path": ".archon/workflows/portal-metrics.yaml",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/workflows/portal-metrics.yaml",
+      "kind": "workflow",
+      "sha256": "bd4dba0f04b7e8f4dfb850a0da318b78db001a70946cd2bf0889e807d3fc3a5b"
+    },
+    {
+      "path": ".archon/workflows/sdlc/.shared/metric-views.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/workflows/sdlc/.shared/metric-views.json",
+      "kind": "workflow",
+      "sha256": "3bb38063015968df5b85a51eaec28c967ce20aa03edbfd0466c090eaa52ccf63"
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/CLAUDE.md",
+      "kind": "instructions",
+      "sha256": "d4ba4b1e2304da7634040228f3982beb4f512f09ceefee0c34a28c4503c6fa72"
+    },
+    {
+      "path": ".claude/delegator.settings.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/delegator.settings.json",
+      "kind": "config",
+      "sha256": "d0445fb568a99cf90aa401bc06ef8bfc49215301ffa9c4fd99db862476810fee"
+    },
+    {
+      "path": ".claude/hooks/.gitattributes",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/.gitattributes",
+      "kind": "hook",
+      "sha256": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9"
+    },
+    {
+      "path": ".claude/hooks/README.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/README.md",
+      "kind": "doc",
+      "sha256": "fd094736df06937610c9d3abff39af20cf80587eb14cdc2a2116398522def773"
+    },
+    {
+      "path": ".claude/hooks/agent-scopes.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/agent-scopes.json",
+      "kind": "hook",
+      "sha256": "61ac7b0e36fcaebbf9cc64b7e4ba2a856b2492a5fe0952d6cc667773921cdc74"
+    },
+    {
+      "path": ".claude/hooks/guard-generated.globs",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/guard-generated.globs",
+      "kind": "hook",
+      "sha256": "1cd097ddb7ef906ba14f91d682b222dfc208190122e7683eddb51b3b7c09ba5c"
+    },
+    {
+      "path": ".claude/hooks/hooks.env",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/hooks.env",
+      "kind": "hook",
+      "sha256": "4baa39afa35d205321d72ee01a4e218ecee7af658bf233bc19b1b95f98c6ba8b"
+    },
+    {
+      "path": ".claude/hooks/scripts/arch-fitness.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/arch-fitness.sh",
+      "kind": "hook",
+      "sha256": "8b0ded3a19e0c3533e74eda57613061104fd1b4ccc62cce57311b3451c7157b1"
+    },
+    {
+      "path": ".claude/hooks/scripts/audit-log.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/audit-log.sh",
+      "kind": "hook",
+      "sha256": "29cabae0022c82afe2df8f88d251ad81ad34b12a2640603bb258364f22bef8e0"
+    },
+    {
+      "path": ".claude/hooks/scripts/gate-common.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/gate-common.sh",
+      "kind": "hook",
+      "sha256": "434572028da7f1486ffcfdd3e389526f47de4a022420530f8467153be6b245bf"
+    },
+    {
+      "path": ".claude/hooks/scripts/guard-generated.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/guard-generated.sh",
+      "kind": "hook",
+      "sha256": "22928b3328d31af159452fa4fc7a991086a240ad6490816837a95e58ed2ccba5"
+    },
+    {
+      "path": ".claude/hooks/scripts/lint-format.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/lint-format.sh",
+      "kind": "hook",
+      "sha256": "43097e5fb7a01fd72d2a806f60c43fac7e59fe6cb2bb954fc9d2e97bf5eed38e"
+    },
+    {
+      "path": ".claude/hooks/scripts/payload.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/payload.sh",
+      "kind": "hook",
+      "sha256": "47f301ed4017d514f7097629a09ab4067647ee59570ac3671f7c4bc30f752f97"
+    },
+    {
+      "path": ".claude/hooks/scripts/scope-guard.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/scope-guard.sh",
+      "kind": "hook",
+      "sha256": "dcd32fbf3587384f668f38ca107988c6c6e3949a74b8eb65aa3d4591e92d84bf"
+    },
+    {
+      "path": ".claude/hooks/scripts/tool-advice.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/tool-advice.sh",
+      "kind": "hook",
+      "sha256": "4653cf67ad8e3dca154712e03c9e688b0c4738723a10a7e180884fb436de9830"
+    },
+    {
+      "path": ".claude/hooks/scripts/verify-claims.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/hooks/scripts/verify-claims.sh",
+      "kind": "hook",
+      "sha256": "dd91180ba144a7751ce41b529997e5130632b8c66201cf668b1d2fccaefe23d3"
+    },
+    {
+      "path": ".claude/scripts/archon-suites.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/archon-suites.sh",
+      "kind": "script",
+      "sha256": "5f410283699f14d97bb3a9974f90b89ec11a6e8d5ed782205947f8855cae0c5d"
+    },
+    {
+      "path": ".claude/scripts/ci-audit.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/ci-audit.sh",
+      "kind": "script",
+      "sha256": "1778d9a6e494ad8d8d8978da9db7aae1ecd0c76742de57e218f959b58654adb2"
+    },
+    {
+      "path": ".claude/scripts/ci-cost.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/ci-cost.sh",
+      "kind": "script",
+      "sha256": "edfe86f9b859585767cf50a6761b4afb7583737f623a1e2ba855301887de4362"
+    },
+    {
+      "path": ".claude/scripts/ci-ledger.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/ci-ledger.sh",
+      "kind": "script",
+      "sha256": "01408b4c5bf0ddcfac1642d79c131d276be47f04135176d50abc9b9935e1c2f3"
+    },
+    {
+      "path": ".claude/scripts/ci-local.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/ci-local.sh",
+      "kind": "script",
+      "sha256": "80878ef73e2272295535ec7ba68ef8608d2dd7f77fd57cf57f6796d514ab8457"
+    },
+    {
+      "path": ".claude/scripts/ci-plan.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": true,
+      "origin": ".claude/scripts/ci-plan.sh",
+      "kind": "script",
+      "sha256": "7f5cf271683ad68ec25ea66cef99d50a6874bcffc40c64b357fc2c1c454dd9f5"
+    },
+    {
+      "path": ".claude/scripts/ci-queue.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/ci-queue.sh",
+      "kind": "script",
+      "sha256": "d13fe73a02b23f2f6cbfe8600e0a6a48b10f62a5a918a2028d000182f5cb06d2"
+    },
+    {
+      "path": ".claude/scripts/ci-status-grammar.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/ci-status-grammar.sh",
+      "kind": "script",
+      "sha256": "b080a7cbeb860f56336d5b53d2ba33de82853dad1c33a1e990b885727d603b7c"
+    },
+    {
+      "path": ".claude/scripts/gate-change-check.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/gate-change-check.sh",
+      "kind": "script",
+      "sha256": "aff40301a933b47a1c5fd4e019250a8ce7dc138a8e64ff630e600e300ec579db"
+    },
+    {
+      "path": ".claude/scripts/groma-check.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/groma-check.sh",
+      "kind": "script",
+      "sha256": "447fe2ef797a4acce182656b7680cd1bd5d43191151c175e749ad5733c20a7cb"
+    },
+    {
+      "path": ".claude/scripts/groma-delta.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/groma-delta.sh",
+      "kind": "script",
+      "sha256": "2bfb11fe622bc667c908fb82fe56e55f847e82e1e3c4d93343b8e4323bfc486a"
+    },
+    {
+      "path": ".claude/scripts/run-suites.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/run-suites.sh",
+      "kind": "script",
+      "sha256": "89cd63c809c8e6fb05be55f85e8c668a8e0ad1f8c25887e786575e4c4b087322"
+    },
+    {
+      "path": ".githooks/commit-msg",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".githooks/commit-msg",
+      "kind": "hook",
+      "sha256": "b156884fac0d80cf8043eddb1d306ce02e8ec681d412b1d8363841a13b9982ae"
+    },
+    {
+      "path": ".githooks/pre-push",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".githooks/pre-push",
+      "kind": "hook",
+      "sha256": "f66fdc61340600b0f05449a9fc1eb487de41f08eb15a0b64d2929bc636991e96"
+    },
+    {
+      "path": ".github/agents/delegator.agent.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/agents/delegator.md",
+      "kind": "agent",
+      "sha256": "f7aa7c86abb1f7504288dd8458989206959468597adef4aa86e1f2cfeb52c7d8"
+    },
+    {
+      "path": ".github/agents/design-critic.agent.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/agents/design-critic.md",
+      "kind": "agent",
+      "sha256": "edb7b4fd4bc6e5be7828954003e764c84fdf78291bca114e8588249819197ae9"
+    },
+    {
+      "path": ".github/agents/github-agent.agent.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/agents/github-agent.md",
+      "kind": "agent",
+      "sha256": "1cd96df268b8b301bb479dcb04140f998aaa19b953bb021ab54643d3d876a63b"
+    },
+    {
+      "path": ".github/agents/retro.agent.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/agents/retro.md",
+      "kind": "agent",
+      "sha256": "ab2f751f7f92ce697167b674efbe151aca4711af88cdb26a1b93723c1084b105"
+    },
+    {
+      "path": ".github/agents/reviewer.agent.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/agents/reviewer.md",
+      "kind": "agent",
+      "sha256": "ce0f3cf878c7f07329e306a79e99409221bf23a48ab39d6e9992593db1f51411"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".github/copilot-instructions.md",
+      "kind": "instructions",
+      "sha256": "7e29ae128e1fb10549069944a4f4377727868400cfbd93436758d079e7336bbf"
+    },
+    {
+      "path": ".github/hooks/archon-run-guard.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".github/hooks/archon-run-guard.json",
+      "kind": "hook",
+      "sha256": "b543a2894b2d9d41e58955cc31f20727ca9858ede6d292b6f9add3360a18306b"
+    },
+    {
+      "path": ".github/hooks/dispatch.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "hook",
+      "sha256": "7195bafe0f7136832ae71671654acd6af9910b9b4522df1a2f2a5a7df5dfeec7"
+    },
+    {
+      "path": ".github/hooks/kit.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/settings.json",
+      "kind": "hook",
+      "sha256": "e6a7c5798e8fe4fe566795046900ea3156fdee437b95ffbc70bddcd0a78db5d9"
+    },
+    {
+      "path": ".github/instructions/general.instructions.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/rules/general.md",
+      "kind": "instructions",
+      "sha256": "5c77e64b4572baa3b8380d7e9984871f6eddef172a6a4990c71088553666213b"
+    },
+    {
+      "path": ".github/mcp.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "mcp",
+      "sha256": "a3a028995f62a55cb10878a7662843750f0fd8a237c77aab6b03977c5eaea4cf"
+    },
+    {
+      "path": ".github/skills/clean-architecture/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/clean-architecture/SKILL.md",
+      "kind": "skill",
+      "sha256": "7b22f720114750303076314473346db04fac107429fd58cb601da1862be5336b"
+    },
+    {
+      "path": ".github/skills/clean-code/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/clean-code/SKILL.md",
+      "kind": "skill",
+      "sha256": "34a6eb3882b4ab74c493ccdf17b3dc8a6b840e1bb8525effeb69a628c577ff61"
+    },
+    {
+      "path": ".github/skills/code-generation/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/code-generation/SKILL.md",
+      "kind": "skill",
+      "sha256": "1dddd5433b1122fc42dc44dab62feb3b04209c9317c28817332f78b26a430118"
+    },
+    {
+      "path": ".github/skills/code-review-process/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/code-review-process/SKILL.md",
+      "kind": "skill",
+      "sha256": "cc75244a1b8f83031bd7feba3a9a8f433ffebee6987f17946f3e5178be8ee5d7"
+    },
+    {
+      "path": ".github/skills/conventional-commits/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/conventional-commits/SKILL.md",
+      "kind": "skill",
+      "sha256": "a6e4fd38d9f79e3e36bf5dfaa7215e03976adee6ffa2601710944ac4fa73c263"
+    },
+    {
+      "path": ".github/skills/design-review/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/design-review/SKILL.md",
+      "kind": "skill",
+      "sha256": "d6fb723ff74254e95eb8b650e3e56a79bc6e715beca9db984b7a3f66ac720cc7"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/skills/gh-git-ops/SKILL.md",
+      "kind": "skill",
+      "sha256": "a49bdc9983e4d052eb373f3c525a34350a1c4e0876947eb5fbc7c8efa34770b8"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/_common.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/_common.sh",
+      "kind": "skill",
+      "sha256": "5d99b6ff5776a9cb9f1b410e99b3e1da98bac103761edacfafa73000f5a96636"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/create-pr.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/create-pr.sh",
+      "kind": "skill",
+      "sha256": "abc54e104189822bd2c4c029e4cf4c532b43aa9be0948cc2c1b8b598c5aa0788"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/delete-branch.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/delete-branch.sh",
+      "kind": "skill",
+      "sha256": "393f8915bd500c7cb6e660191e56a490555a7f0d4c875d1ed81cdf22f8303fe2"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/force-push.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/force-push.sh",
+      "kind": "skill",
+      "sha256": "60c81b2b7850891d1afe49a4d0475a22d228a594ee33f9b2d1b1a4b57c496e63"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/post-comment.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/post-comment.sh",
+      "kind": "skill",
+      "sha256": "ba65f50d21dfff5485b2d90d22bbbc5005ed018d9e2e0334ee02d3e48eaa9c34"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/push.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/push.sh",
+      "kind": "skill",
+      "sha256": "a89b4dacdcb008b7c5401283e37fc7ea732fafd486356dd4005f6e6f0a25db8e"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/request-changes.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/request-changes.sh",
+      "kind": "skill",
+      "sha256": "b62ac268c6f775a3332b78288243fc1af18e6d71a14c42090deef66a309d8860"
+    },
+    {
+      "path": ".github/skills/gh-git-ops/scripts/review.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-git-ops/scripts/review.sh",
+      "kind": "skill",
+      "sha256": "aef8e9f6852183b5df633429808dcbcaa969b2199e639646a4a444d670d057bd"
+    },
+    {
+      "path": ".github/skills/gh-switch-account/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/skills/gh-switch-account/SKILL.md",
+      "kind": "skill",
+      "sha256": "944e55702a63edcf4125e16631ce58481479c6fed784584fc1687bf8008b3b07"
+    },
+    {
+      "path": ".github/skills/gh-switch-account/scripts/gh-switch.ps1",
+      "profile": "core",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/skills/gh-switch-account/scripts/gh-switch.ps1",
+      "kind": "skill",
+      "sha256": "b8cb4e1707ed6cad97632844338ba8a1866125084b72905303abb435c97a3024"
+    },
+    {
+      "path": ".github/skills/gh-switch-account/scripts/gh-switch.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/skills/gh-switch-account/scripts/gh-switch.sh",
+      "kind": "skill",
+      "sha256": "e9cdfd06bf8369ed789d87e4db3583feddd1d3dad146f558f3717c594359f398"
+    },
+    {
+      "path": ".github/skills/grill-plan/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/grill-plan/SKILL.md",
+      "kind": "skill",
+      "sha256": "953b49b8fa3c33cea6ad289622d4e1a1f804feaaa3da0f5fa444d8e63dfbad96"
+    },
+    {
+      "path": ".github/skills/grill-plan/references/builder-check.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/grill-plan/references/builder-check.md",
+      "kind": "skill",
+      "sha256": "1ae29f29c8cbc30340fcdeb450cbb78ccf7d64d246485de590109113fd059335"
+    },
+    {
+      "path": ".github/skills/grill-plan/references/learning-log.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/grill-plan/references/learning-log.md",
+      "kind": "skill",
+      "sha256": "501d9f5bd09a0149487ca4fd10cea8677b3479dd0739ed5d9bce5c3be60041ba"
+    },
+    {
+      "path": ".github/skills/grill-pr/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/grill-pr/SKILL.md",
+      "kind": "skill",
+      "sha256": "91ebe4ebe6db04851d6f9518dc96a569a37f3e9fc1913375b163208bb60b9fe2"
+    },
+    {
+      "path": ".github/skills/grill-pr/references/learning-log.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/grill-pr/references/learning-log.md",
+      "kind": "skill",
+      "sha256": "501d9f5bd09a0149487ca4fd10cea8677b3479dd0739ed5d9bce5c3be60041ba"
+    },
+    {
+      "path": ".github/skills/grill-pr/references/review-passes.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/grill-pr/references/review-passes.md",
+      "kind": "skill",
+      "sha256": "ac7e07458b0c2bb52c0a8b42dbb44e088d957a17a8c3ef441386820a9a3572ba"
+    },
+    {
+      "path": ".github/skills/release-changelog/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/release-changelog/SKILL.md",
+      "kind": "skill",
+      "sha256": "643f6f8b16b8b314c1464cdd1f9fb1f47a6282d1986a7a60a5ee447c0420a4bf"
+    },
+    {
+      "path": ".github/skills/retro/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/retro/SKILL.md",
+      "kind": "skill",
+      "sha256": "7056c9b0c4088d2219d5114f60b5eea29e2645b808ad72bd1133d38eb843d2a6"
+    },
+    {
+      "path": ".github/skills/tdd-loop/SKILL.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/tdd-loop/SKILL.md",
+      "kind": "skill",
+      "sha256": "8a7744740fe642174f59325149fa07bb6c59ad285f41917eab9ceea139d1d32f"
+    },
+    {
+      "path": "docs/code-maps/README.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/README.md",
+      "kind": "doc",
+      "sha256": "dd54fd02c3ed8c5e794434b9596550b010285b15bc01222df70f4b153f847af7"
+    },
+    {
+      "path": "docs/code-maps/clean-architecture.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/clean-architecture.md",
+      "kind": "doc",
+      "sha256": "f600391ec08e1727278d26d3f964dba8cee3e37a0d927fbde4044e804f559ac6"
+    },
+    {
+      "path": "docs/code-maps/clean-code.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/clean-code.md",
+      "kind": "doc",
+      "sha256": "a67d98df256789f8fe86308e3560892aa137f3db2d5de77b07a83202c7af1286"
+    },
+    {
+      "path": "docs/code-maps/code-generation.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/code-generation.md",
+      "kind": "doc",
+      "sha256": "1702dc42d2942e0dbdfa371e226625b759b4705cafebe7647395af8348683bd2"
+    },
+    {
+      "path": "docs/code-maps/design-review.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/design-review.md",
+      "kind": "doc",
+      "sha256": "7fb35c9660bedde5015e3c08ba123bd8bd985d04366063d4f68f81646c6f6740"
+    },
+    {
+      "path": "scripts/install-hooks.sh",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": "scripts/install-hooks.sh",
+      "kind": "script",
+      "sha256": "8fbadb4e71fd7709925e82783bd480e3d91d16651df478db535fea228803ba13"
+    },
+    {
+      "path": "scripts/install-tools.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/install-tools.sh",
+      "kind": "script",
+      "sha256": "38604f5260cff41347d61faef45b6940e3c2a5e794b7428a7a46487a33a02b05"
+    },
+    {
+      "path": "scripts/tokenomics/commit-reports.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/tokenomics/commit-reports.sh",
+      "kind": "script",
+      "sha256": "42d5a968c208b08d8a376a2b375255e4c1c9b82e7808df6ce0427ac9150ec86e"
+    },
+    {
+      "path": "scripts/tokenomics/tokenomics.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/tokenomics/tokenomics.js",
+      "kind": "script",
+      "sha256": "152171a68aa20f860e43537cdb736e4082747f3f4efff68fb88a317d798f4698"
+    },
+    {
+      "path": "scripts/tools.conf",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/tools.conf",
+      "kind": "config",
+      "sha256": "2b9c30c6acad9a5a65cac032dc8b45feb826debb738b478d4111ae52d00c364f"
+    },
+    {
+      "path": "scripts/web-uis.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/web-uis.sh",
+      "kind": "script",
+      "sha256": "f26f731dc382ee859fd440869cee8748cb43b5de7cab6517a75a5108f738bf6f"
+    },
+    {
+      "path": ".claude/scripts/affected-check.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/affected-check.sh",
+      "kind": "script",
+      "sha256": "406579bba5bdcea51ec34a2b50f006d586465874aee3ac71642c8912d37d7e41"
+    },
+    {
+      "path": ".claude/scripts/class-version-check.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/class-version-check.sh",
+      "kind": "script",
+      "sha256": "a857d8bf1c44ceb276edc683da0fe57c4e67d985452c21ce966cace1785ddf0e"
+    },
+    {
+      "path": ".claude/scripts/mutation-gate.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/mutation-gate.sh",
+      "kind": "script",
+      "sha256": "ccc31867c4ad8d74d3d1d6bbe3a080f9a3398d5d4b8421541fe5fc483224a689"
+    },
+    {
+      "path": ".claude/scripts/test-set-coverage.java",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/test-set-coverage.java",
+      "kind": "script",
+      "sha256": "120c4af0b411319378e2273dc4ddb61c4ed14d1c9e148d092904821dbb3fe4d3"
+    },
+    {
+      "path": ".claude/scripts/test-set-coverage.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/test-set-coverage.sh",
+      "kind": "script",
+      "sha256": "944b1857a17ae39b658d1379c8c0c2db40961bfe7a3dd63d409ff83a5a073e0e"
+    },
+    {
+      "path": ".github/agents/analyst.agent.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/agents/analyst.md",
+      "kind": "agent",
+      "sha256": "1e30dbe3a064b1754a1bef6c9ca519b00becb3a067fd44471edfc54f050e57e8"
+    },
+    {
+      "path": ".github/agents/debugger.agent.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/agents/debugger.md",
+      "kind": "agent",
+      "sha256": "c227ccd1b68d182898dafb83d14184f8589430d1aaa47cc502fad8c030c0daeb"
+    },
+    {
+      "path": ".github/agents/developer.agent.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/agents/developer.md",
+      "kind": "agent",
+      "sha256": "d98e735f9f1acb1ed549cfc3d50c2c06ea6570f8741ea0a338a23d2113790cee"
+    },
+    {
+      "path": ".github/agents/test-writer.agent.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/agents/test-writer.md",
+      "kind": "agent",
+      "sha256": "a494e3dcc3ac945b2cae1d89971eadeee678bdb8e76ee81ccd35ae3e28426bce"
+    },
+    {
+      "path": ".github/instructions/adapter.instructions.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/rules/adapter.md",
+      "kind": "instructions",
+      "sha256": "695fcc54bbd5ac6809da6cb9a587cd41ff0e4c1c09be50d78a4aa1e369e2e214"
+    },
+    {
+      "path": ".github/instructions/domain.instructions.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/rules/domain.md",
+      "kind": "instructions",
+      "sha256": "7f3f94b78b68186fa513fc65b23f0752e19c1216a25ea152f71b006df138bff0"
+    },
+    {
+      "path": ".github/instructions/gateway.instructions.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/rules/gateway.md",
+      "kind": "instructions",
+      "sha256": "d356cfd3ea25f1cb8dacfd21c03f5eba7f85c9068337a1c0ba323ecffe447d25"
+    },
+    {
+      "path": ".github/instructions/platform.instructions.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/rules/platform.md",
+      "kind": "instructions",
+      "sha256": "33faca62c615b6df7a59004bc1d03a0d954d3fc9e0400642e7bcbc3e28b24870"
+    },
+    {
+      "path": ".github/instructions/usecase.instructions.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/rules/usecase.md",
+      "kind": "instructions",
+      "sha256": "95b20d10f13a9bbab67b8f405bb761357e6baba1cea59b51cd22e114a926f59c"
+    },
+    {
+      "path": ".github/skills/archunit-fitness/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/archunit-fitness/SKILL.md",
+      "kind": "skill",
+      "sha256": "ddc94ab07b0434b9f50046147ded1861cbe8b267f1edc6399119606af93d9b95"
+    },
+    {
+      "path": ".github/skills/domain-dto-mapper/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/domain-dto-mapper/SKILL.md",
+      "kind": "skill",
+      "sha256": "aeb77c54f938a8b58c84793f465575d6b0547a3115a4ec40756695d6b3b632ef"
+    },
+    {
+      "path": ".github/skills/domain-events/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/domain-events/SKILL.md",
+      "kind": "skill",
+      "sha256": "0199f2f929f150a86f86a0cb0b96a5612a811ba7d2463b619b879d745122f9e8"
+    },
+    {
+      "path": ".github/skills/domain-modeling/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/domain-modeling/SKILL.md",
+      "kind": "skill",
+      "sha256": "7ca5de774d2a33a749e4be05493d5ed2582d70c15210faf1eba849e89dcd96e9"
+    },
+    {
+      "path": ".github/skills/domain-to-dto-mapper-tests/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/domain-to-dto-mapper-tests/SKILL.md",
+      "kind": "skill",
+      "sha256": "4618ce7ba6e379ecd98f23a5dc1991c0b5651aa673eb44afcb567fd64a214061"
+    },
+    {
+      "path": ".github/skills/flyway-migrations/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/flyway-migrations/SKILL.md",
+      "kind": "skill",
+      "sha256": "bca6060e67bb9df42abacae98a2e048771aea3649eb7e21a08aff9b3a7c2d480"
+    },
+    {
+      "path": ".github/skills/java/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/java/SKILL.md",
+      "kind": "skill",
+      "sha256": "9660c455c725f520fe2c4403680d5ca5573cc6a7e829789a137ff451d4396097"
+    },
+    {
+      "path": ".github/skills/jpa-entity-mapping/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/jpa-entity-mapping/SKILL.md",
+      "kind": "skill",
+      "sha256": "95f315acabea257ab1079a9c34f150c5086b510bafe47366eefc786efe6f0caf"
+    },
+    {
+      "path": ".github/skills/jvm-testing/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/jvm-testing/SKILL.md",
+      "kind": "skill",
+      "sha256": "1eb61a2af67f95040570eb0737ed65fdd6cde4e4662c4e4dbff2e99e8e4bde78"
+    },
+    {
+      "path": ".github/skills/object-mother-builders/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/object-mother-builders/SKILL.md",
+      "kind": "skill",
+      "sha256": "856d37fb938ab84be3f157deeb6a621c434b3167842726ce2d327620c17ca034"
+    },
+    {
+      "path": ".github/skills/openapi-rest-client-codegen/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/openapi-rest-client-codegen/SKILL.md",
+      "kind": "skill",
+      "sha256": "553800632acc6a763713cafb621aca0de6b342a4bf9e29192341bb991f53d371"
+    },
+    {
+      "path": ".github/skills/usecase-bdd-spec/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/usecase-bdd-spec/SKILL.md",
+      "kind": "skill",
+      "sha256": "30b5a701318309f1a56f33a42d449fb089453a581c138907b6193dda1fc52754"
+    },
+    {
+      "path": ".github/skills/usecase-orchestration/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/usecase-orchestration/SKILL.md",
+      "kind": "skill",
+      "sha256": "257aff81ec884996b1d00110b629266dad378c1ae6b278c75729d32be4143176"
+    },
+    {
+      "path": ".github/skills/validation-notification-result/SKILL.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/validation-notification-result/SKILL.md",
+      "kind": "skill",
+      "sha256": "b8cffcd9cf3f891b1b0ae1933589fc6222d817ba04d954c7323cc743818d798a"
+    },
+    {
+      "path": "docs/code-maps/archunit-fitness.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/archunit-fitness.md",
+      "kind": "doc",
+      "sha256": "685d36abaa4a9154f008710ced67dcabe872bfd63ce559e52847f06ea47a984a"
+    },
+    {
+      "path": "docs/code-maps/domain-dto-mapper.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/domain-dto-mapper.md",
+      "kind": "doc",
+      "sha256": "ea42bfcdb29b02945dcd86e6045d3614c8d97f0975d127ef8b8e1758a06fde52"
+    },
+    {
+      "path": "docs/code-maps/domain-events.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/domain-events.md",
+      "kind": "doc",
+      "sha256": "6529ab5133fe1512e224eb54fca866b8c1df2f288eebf5c19ddb7dc3eb61cca4"
+    },
+    {
+      "path": "docs/code-maps/domain-modeling.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/domain-modeling.md",
+      "kind": "doc",
+      "sha256": "11721df045a9160d2ed6e8f43e48c9fd35269171de1363b4b3acabcbb244855e"
+    },
+    {
+      "path": "docs/code-maps/domain-to-dto-mapper-tests.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/domain-to-dto-mapper-tests.md",
+      "kind": "doc",
+      "sha256": "4e59bbe4a43c24c17fc93321a147c5afc68b68dba21e5885e376d3dea8813bc6"
+    },
+    {
+      "path": "docs/code-maps/exemplars/create-or-update-static-page-usecase.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/create-or-update-static-page-usecase.md",
+      "kind": "doc",
+      "sha256": "4a4b86b5c139cb6e3034a0ef6b536188e6778e24b1165a0f44d84007367ef0fd"
+    },
+    {
+      "path": "docs/code-maps/exemplars/get-invoices-usecase-test.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/get-invoices-usecase-test.md",
+      "kind": "doc",
+      "sha256": "ea6a3f5f617c0402c86cdd7d6441bf1d28c82191c610d0619f1acd80e8041e09"
+    },
+    {
+      "path": "docs/code-maps/exemplars/get-invoices-usecase.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/get-invoices-usecase.md",
+      "kind": "doc",
+      "sha256": "507aa86988eb9f8b842491cd7ab5e030c5a87b79ef1139153ce676eec723d9e9"
+    },
+    {
+      "path": "docs/code-maps/exemplars/index-page-event-listener.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/index-page-event-listener.md",
+      "kind": "doc",
+      "sha256": "732c12f1358f3129bb372eea5de7800e813be239a4d20860ad5cf85dbaea6c3f"
+    },
+    {
+      "path": "docs/code-maps/exemplars/java-conventions-plugin.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/java-conventions-plugin.md",
+      "kind": "doc",
+      "sha256": "c725064084540d77582f5b09d2b31e2227b6370057f202e0c19ffbb7abd979d2"
+    },
+    {
+      "path": "docs/code-maps/exemplars/notification.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/notification.md",
+      "kind": "doc",
+      "sha256": "1eead87c406b6ac674db9348c4b00040ae62e11ecc239260ac58652c63e8d8ef"
+    },
+    {
+      "path": "docs/code-maps/exemplars/order-code.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/order-code.md",
+      "kind": "doc",
+      "sha256": "5b54cbcb4ee7218b2c3e99314d74d1953a35ebf3512154964fdb221b6d9f404e"
+    },
+    {
+      "path": "docs/code-maps/exemplars/order-mother.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/order-mother.md",
+      "kind": "doc",
+      "sha256": "a78b14e12e3ab4fd897b8c3f4e201943786998e441121d5e5819ad18c69c449c"
+    },
+    {
+      "path": "docs/code-maps/exemplars/registry-mapper-test.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/registry-mapper-test.md",
+      "kind": "doc",
+      "sha256": "748cb1a75b554874131a151d0fcc2d4a1ecea64c9875f1ae99dd4db1bc4accf9"
+    },
+    {
+      "path": "docs/code-maps/exemplars/registry-mapper.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/registry-mapper.md",
+      "kind": "doc",
+      "sha256": "3ebfa3c68dba6c031529978f44125f11dc6b768c6f3eb8805a19dd6bb5f8c0a6"
+    },
+    {
+      "path": "docs/code-maps/exemplars/sales-region-entity.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/sales-region-entity.md",
+      "kind": "doc",
+      "sha256": "859714feaa6d9fe3ee0d40f11336c2ed8295136a3fda3008e9c07bee91bcb18d"
+    },
+    {
+      "path": "docs/code-maps/exemplars/tolgee-gateway-client.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/tolgee-gateway-client.md",
+      "kind": "doc",
+      "sha256": "5c53a666cb66ccafd69c9164a79f33535344d5bd61a50d8ee0a6a690aa910171"
+    },
+    {
+      "path": "docs/code-maps/exemplars/topics-delegation-migration.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/topics-delegation-migration.md",
+      "kind": "doc",
+      "sha256": "581345cd19e1dff6c2290fc3e717aa6088284ae0e166e06128bff26f4b010108"
+    },
+    {
+      "path": "docs/code-maps/exemplars/transactional-convention-test.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/transactional-convention-test.md",
+      "kind": "doc",
+      "sha256": "549f58e44f5863e2a1c58de33112d33232a63bce9263725f813d3d7600e9092b"
+    },
+    {
+      "path": "docs/code-maps/flyway-migrations.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/flyway-migrations.md",
+      "kind": "doc",
+      "sha256": "174142e68d582e975423a826502501ae4a6fb7a88ce81df65781ef0b8c4a570e"
+    },
+    {
+      "path": "docs/code-maps/java.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/java.md",
+      "kind": "doc",
+      "sha256": "2dc40978bb739ec38901f52d29ec84be63cc6deb9ceccb769f2d16cff31af0c5"
+    },
+    {
+      "path": "docs/code-maps/jpa-entity-mapping.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/jpa-entity-mapping.md",
+      "kind": "doc",
+      "sha256": "29c9e917f067ebc5582c74b8cb0e8a07de802e9d5f804512cf5146c825521f04"
+    },
+    {
+      "path": "docs/code-maps/junit-tests.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/junit-tests.md",
+      "kind": "doc",
+      "sha256": "41ed6171ea8173bd93b1cb2382c6e12b0b7e96b3d418dbedadcfb2251e716b2d"
+    },
+    {
+      "path": "docs/code-maps/jvm-testing.worked-example.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/jvm-testing.worked-example.md",
+      "kind": "doc",
+      "sha256": "f77bb71e32da77bd663a072ea1b5fe00a0fdaec3dd9d78c99d68473d9f1c1653"
+    },
+    {
+      "path": "docs/code-maps/object-mother-builders.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/object-mother-builders.md",
+      "kind": "doc",
+      "sha256": "bda0dc4ee4ffe5f3b47445c139a334ee7807de86a065c6bd8cead4077e0c73e8"
+    },
+    {
+      "path": "docs/code-maps/openapi-rest-client-codegen.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/openapi-rest-client-codegen.md",
+      "kind": "doc",
+      "sha256": "810fd2d15c562a1ae630c0f9612cb90cd38cae30d456870af55edaba04d50601"
+    },
+    {
+      "path": "docs/code-maps/usecase-bdd-spec.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/usecase-bdd-spec.md",
+      "kind": "doc",
+      "sha256": "5c666fabb650873e6e0e0f9f1c31251008724233de9700eb26ab641ca8c67c09"
+    },
+    {
+      "path": "docs/code-maps/usecase-orchestration.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/usecase-orchestration.md",
+      "kind": "doc",
+      "sha256": "45c001261fcffa8eb1669611be26691879c4ccfbc903265ae180ccf73aa5625c"
+    },
+    {
+      "path": "docs/code-maps/validation-notification-result.md",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/validation-notification-result.md",
+      "kind": "doc",
+      "sha256": "63edd1b3cd43cf607f233ff4ad2aeb85afaea3a3adca90b7ad02c94c1311e3a9"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/controller-command.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/controller-command.mustache",
+      "kind": "template",
+      "sha256": "a9fe65c586671235e02b1b92ea25ae0e56c4168081719dc5bc1dabfd8b242916"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/controller.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/controller.mustache",
+      "kind": "template",
+      "sha256": "c9aa350eb82bcd9e54bc20bdb964f27bc05be551cdaecd7ccc27c11a044a730e"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/entity-mapper.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/entity-mapper.mustache",
+      "kind": "template",
+      "sha256": "34b7533fc3de889c75c43203732c60854d825f9c3cd32da78e882ac00da74ea7"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/flyway-migration.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/flyway-migration.mustache",
+      "kind": "template",
+      "sha256": "7afdd0fd5b9c34ba7ac2f8f97e735544c75eb40110391b9a3399293a3e5ba019"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/jpa-entity.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/jpa-entity.mustache",
+      "kind": "template",
+      "sha256": "9b139fcfa33829b469c62521796fd867fa7794b16d7f0f337fce93bc8f5a7753"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/request-dto-to-domain-mapper.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/request-dto-to-domain-mapper.mustache",
+      "kind": "template",
+      "sha256": "70360461e133f6b89140eca0556382e3a9e68c6d7bcf380c75f73e323fa0bffa"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/to-dto-mapper-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/to-dto-mapper-test.mustache",
+      "kind": "template",
+      "sha256": "55b081b47f91c66132c5dedad01ca570daf90c16168e6c793d7c957087902f10"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/to-dto-mapper.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/to-dto-mapper.mustache",
+      "kind": "template",
+      "sha256": "2179e750ee9f72c1f9db6188249a626d46cf9ed66ba4dfef0b11cebf6e77f868"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/behaviour-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/behaviour-test.mustache",
+      "kind": "template",
+      "sha256": "187239f86394fe0d0212fd86a63eb17a3a7b0cabbe1a644bbb4b386db203739c"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/create-or-update-request.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/create-or-update-request.mustache",
+      "kind": "template",
+      "sha256": "afda39b77b5fe4af019a9fadc026bf1f9e3ef2e7270673475585087023f7bfd5"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/create-request.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/create-request.mustache",
+      "kind": "template",
+      "sha256": "96cb6092cdda5d048f6bd5715514f8129bddf70724b1a6da550906f14f414692"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/entity-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/entity-test.mustache",
+      "kind": "template",
+      "sha256": "d3ff4cc153fbd8dbd5d70ad097c4701ca91322276cc1e3288bde43a6f4b8957b"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/entity.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/entity.mustache",
+      "kind": "template",
+      "sha256": "20a1105c90efdbf8afa5ffcde06f8e7b6ed4924750c649c8b0157ecd7b32d6fe"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/factory-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/factory-test.mustache",
+      "kind": "template",
+      "sha256": "f8806a2958b7c3400bb6686cde9bdcb11f90765a4e3d0338442051ab0c1ec819"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/factory.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/factory.mustache",
+      "kind": "template",
+      "sha256": "ed7fb1564a2b5644cd22e024a461e822f26409a103a6997a31c0246c1786b0b0"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/id.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/id.mustache",
+      "kind": "template",
+      "sha256": "9e8e8faaeab99946a04676463a804f800574a44c5a936734c7ac7074bea87d74"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/mother.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/mother.mustache",
+      "kind": "template",
+      "sha256": "7d0e60d6330da1911f847c15c1e56a53d6604cd0a3a4d7627b284c5b72e9d709"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/record.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/record.mustache",
+      "kind": "template",
+      "sha256": "7a6fd4c6a3e150b1b27ca98bdacde3d4d92eb8ab01632e45f67ff51998cfe0a0"
+    },
+    {
+      "path": "docs/scaffold-templates/domain/value-object.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/domain/value-object.mustache",
+      "kind": "template",
+      "sha256": "b73d273ceaa33c8942bdaa70f0ca4dd6aae5c67fe52d8a3143093632823ae4f3"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/command.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/command.mustache",
+      "kind": "template",
+      "sha256": "500db237800821870474f782d39fcbab51857fd2784f9b9112b3a1ba5c012632"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/outcome.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/outcome.mustache",
+      "kind": "template",
+      "sha256": "674b33479014dd5de1688646c8002bb3609cca948950766cb777782a9b0bfb92"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/repository-port-crud.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/repository-port-crud.mustache",
+      "kind": "template",
+      "sha256": "b26abebf09429a6f918d80d32a163e03cf028418e420dbb38ada6a81a984923f"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/repository-port.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/repository-port.mustache",
+      "kind": "template",
+      "sha256": "6b55ad0d58b90430de221e71e7f158e936ea335fa4e0d966700593cfbf109164"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/usecase-create-or-update-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/usecase-create-or-update-test.mustache",
+      "kind": "template",
+      "sha256": "0b79f5c2c0360d5fd5b97826bfaa6f0b81d14fa89ca28d72154520289bf4ba2b"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/usecase-delete-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/usecase-delete-test.mustache",
+      "kind": "template",
+      "sha256": "4a0a689ea31f95a871650b99ebc22da98b143da02b349b0976714796c259b4c2"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/usecase-test.mustache",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/usecase-test.mustache",
+      "kind": "template",
+      "sha256": "7a26a7b59913a7fbfaaf031e10abffe87d393603b04093b5cd319cd0f57891e4"
+    },
+    {
+      "path": "scripts/scaffold.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": "scripts/scaffold.sh",
+      "kind": "script",
+      "sha256": "85db59cfbc101132915dc0100ee3967ff84c5446f0ebb18d3b65f9f3517cc5a0"
+    },
+    {
+      "path": "scripts/scaffold/for.js",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/scaffold/for.js",
+      "kind": "script",
+      "sha256": "22bbf55b9196fff5b4a38aa07c23938b09899cff9e31d9b4d08763db1cc669a4"
+    },
+    {
+      "path": "scripts/scaffold/package-lock.json",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/scaffold/package-lock.json",
+      "kind": "config",
+      "sha256": "73da5c378b38584e89af5022f6351d1a5fcb9aea6100c461e60b4318364850d7"
+    },
+    {
+      "path": "scripts/scaffold/package.json",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/scaffold/package.json",
+      "kind": "config",
+      "sha256": "2aff3a50caf10e17774c64ee79026bbfb5b4aa0d0f5a6e8a5683c05a8feb9403"
+    },
+    {
+      "path": "scripts/scaffold/targets.js",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/scaffold/targets.js",
+      "kind": "script",
+      "sha256": "5d81ff45a4401408db3789c642ea518aa542e98a5028140b57ce95a6d8137fad"
+    },
+    {
+      "path": ".claude/scripts/build-shape-check.sh",
+      "profile": "java-quarkus",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/build-shape-check.sh",
+      "kind": "script",
+      "sha256": "8a699fd1484a9692d5571e999698c1de9e244b0424b13b1e99f0bd0e4a0655bf"
+    },
+    {
+      "path": ".claude/scripts/ci-workflow-check.sh",
+      "profile": "java-quarkus",
+      "mode": "0755",
+      "template": true,
+      "origin": ".claude/scripts/ci-workflow-check.sh",
+      "kind": "script",
+      "sha256": "51db7dee174130ff85debeb39eee08756e79bc73a572e176ddf41f946c483620"
+    },
+    {
+      "path": ".claude/scripts/image-check.sh",
+      "profile": "java-quarkus",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/image-check.sh",
+      "kind": "script",
+      "sha256": "164d2843b56fd21afb9dbfed2ddd274036b5de5d59759e72898304f6afe5ddb4"
+    },
+    {
+      "path": ".claude/scripts/pin-proof-check.sh",
+      "profile": "java-quarkus",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/pin-proof-check.sh",
+      "kind": "script",
+      "sha256": "0e0269c6b135131267f003eb2e42981e310b5b9cba6dd7a4bfaafad8ddb06afc"
+    },
+    {
+      "path": ".github/ci-inputs.yml",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".github/ci-inputs.yml",
+      "kind": "config",
+      "sha256": "5c8996f160e9beac718e6ed1b99053025236780393877b5ac915c09fd53f8dfd"
+    },
+    {
+      "path": ".github/skills/api-first-controller/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/api-first-controller/SKILL.md",
+      "kind": "skill",
+      "sha256": "4fcdd8ff1830ca82138c3899cbc9eea260aa74d3b8c54e1995328b3e989163ca"
+    },
+    {
+      "path": ".github/skills/bean-config-di/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/bean-config-di/SKILL.md",
+      "kind": "skill",
+      "sha256": "0e8b8804cc157f409f20b6281a8253d254eace2a22697cc8924beb880e51551e"
+    },
+    {
+      "path": ".github/skills/exception-to-http/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/exception-to-http/SKILL.md",
+      "kind": "skill",
+      "sha256": "b720eb5f6e5237431bcdbcbaf8c76cd0155ac4d8f0ec8edfd5bfd23e51546a31"
+    },
+    {
+      "path": ".github/skills/persistence-repository/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/persistence-repository/SKILL.md",
+      "kind": "skill",
+      "sha256": "14cf65a54fd4e6e851b5e62d38bf29f6e6598ddca97e39a87635295ed5518cb8"
+    },
+    {
+      "path": ".github/skills/resilience4j/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/resilience4j/SKILL.md",
+      "kind": "skill",
+      "sha256": "0bdaa5361dba4d297ca2abbe6e8b70f91785e610b21cddfd25546ba8991d8d9c"
+    },
+    {
+      "path": ".github/skills/run-app/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/skills/run-wedding-portal/SKILL.md",
+      "kind": "skill",
+      "sha256": "44df56207a9e3a2c26e0fb867fc2a9851d428a7e7ab906d925aa7b217c9e54b3"
+    },
+    {
+      "path": ".github/skills/run-app/smoke.sh",
+      "profile": "java-quarkus",
+      "mode": "0755",
+      "template": true,
+      "origin": ".claude/skills/run-wedding-portal/smoke.sh",
+      "kind": "skill",
+      "sha256": "213c03e612bc17c56c0bab8f4c5b00c8c5273df8f61619cf8f19fa86c66a0caa"
+    },
+    {
+      "path": ".github/skills/testcontainers/SKILL.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/testcontainers/SKILL.md",
+      "kind": "skill",
+      "sha256": "0f734e4f04e795569f79bc25ca8d9ffd5c526b5d686aeaa658e368cf862d144d"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": true,
+      "origin": ".github/workflows/ci.yml",
+      "kind": "config",
+      "sha256": "364dab94a0e2e591ae5f98970dda4d22c3975655df25d70c768965d8faebfa44"
+    },
+    {
+      "path": "docs/code-maps/api-first-controller.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/api-first-controller.md",
+      "kind": "doc",
+      "sha256": "5284802412769246ec6e3e27c10c1a7d60510dda3ffcc9d33008cd270a6c0a9a"
+    },
+    {
+      "path": "docs/code-maps/bean-config-di.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/bean-config-di.md",
+      "kind": "doc",
+      "sha256": "7a4c01c74eee595f486f293be47189c3a9c45e114873544ffa838da94b9bfe9c"
+    },
+    {
+      "path": "docs/code-maps/exception-to-http.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exception-to-http.md",
+      "kind": "doc",
+      "sha256": "dda19ab873f6cff29342d7e81f4b837889fa80b84498a3456222e2d6dd33a9dd"
+    },
+    {
+      "path": "docs/code-maps/exemplars/customer-controller.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/customer-controller.md",
+      "kind": "doc",
+      "sha256": "da39324580562a3c259c6483ced2b411253ce8482b4cfdad07b0048bec337c03"
+    },
+    {
+      "path": "docs/code-maps/exemplars/default-registry-gateway.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/default-registry-gateway.md",
+      "kind": "doc",
+      "sha256": "a9d792ffe26bd1c630ea3f1ae45b7c9ac46f2323ec60e532f829ef778023150b"
+    },
+    {
+      "path": "docs/code-maps/exemplars/rest-exception-handler.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/rest-exception-handler.md",
+      "kind": "doc",
+      "sha256": "50c55eb6f06dd6433f400d68941b578534c6c48bca9ce91071c8251df324c95c"
+    },
+    {
+      "path": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
+      "kind": "doc",
+      "sha256": "c90833311910df432d1b793b7d6a3b9680e4fef7bec33f7a778da729ccd1343a"
+    },
+    {
+      "path": "docs/code-maps/exemplars/web-service-config.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/exemplars/web-service-config.md",
+      "kind": "doc",
+      "sha256": "95f4360dad935558a6bcb7cf37d6bc7707322a6fb9ef8871fef7b03f554bd868"
+    },
+    {
+      "path": "docs/code-maps/persistence-repository.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/persistence-repository.md",
+      "kind": "doc",
+      "sha256": "62efa1f19ea13ed6f11789b76a305ef62b65683ac1bcb228750d150479b104ef"
+    },
+    {
+      "path": "docs/code-maps/resilience4j.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/resilience4j.md",
+      "kind": "doc",
+      "sha256": "c57ecdaad002e02b3cf18733335e5b04412b318317ffa7e366df03c4ba2171a8"
+    },
+    {
+      "path": "docs/code-maps/testcontainers.md",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/code-maps/testcontainers.md",
+      "kind": "doc",
+      "sha256": "d77aa6f7a2ad009ede6d20f8ec3400e4900158f0a42dd539a7d9b1217269c586"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/controller-command-test.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/controller-command-test.mustache",
+      "kind": "template",
+      "sha256": "22cf2e07affa468613165604ea976220bf558867ead1273a1b1a1ec6ed206615"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/controller-test.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/controller-test.mustache",
+      "kind": "template",
+      "sha256": "41b8e60f29b0e021aaa8db999c00af362d3e11e28995e2a59f7409c0b292e5b0"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/default-repository-crud-test.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/default-repository-crud-test.mustache",
+      "kind": "template",
+      "sha256": "0738df2fcbf1d3913b6c9a7d044551cbd6a557c142d30b8f587ee9a1b66a9110"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/default-repository-crud.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/default-repository-crud.mustache",
+      "kind": "template",
+      "sha256": "bc5f9c67346fdbb7839982854817012f0f5c3b953b2a297c37b358cc1a13b7a7"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/default-repository-test.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/default-repository-test.mustache",
+      "kind": "template",
+      "sha256": "f6b7f6ac199369917bfaba8e65718674ef72a1922fe25cbea80b7c70efdc91d8"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/default-repository.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/default-repository.mustache",
+      "kind": "template",
+      "sha256": "b04748472a872a72cfbae2815dd7f28b8d8ef300b4e7e2b7e0ad48e19719bc70"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/panache-repository.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/panache-repository.mustache",
+      "kind": "template",
+      "sha256": "20f3905f3cdf29a6c669cf2e637cba3e014a448a0745476fe5181249bee63d9b"
+    },
+    {
+      "path": "docs/scaffold-templates/adapter/table-test.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/adapter/table-test.mustache",
+      "kind": "template",
+      "sha256": "e4e1c84683e418ccb1b962c2a9eb8ac105f7ef87aa557b9a1b27ee1c9aa490e2"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/domain-config.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/domain-config.mustache",
+      "kind": "template",
+      "sha256": "aec17e8bcfa6df6ddd6eec1905cdd64c9424a929ceec3684d8c566f696b53fe2"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/usecase-create-or-update.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/usecase-create-or-update.mustache",
+      "kind": "template",
+      "sha256": "9697e67899e6e9b569d58b9f4a7eb3b674230f65d2dc01831907cc2e914f1c60"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/usecase-delete.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/usecase-delete.mustache",
+      "kind": "template",
+      "sha256": "c167f767511b97879bdfa3bcde7c53f41f631f6f8100130e61ee20cfe029f53a"
+    },
+    {
+      "path": "docs/scaffold-templates/usecase/usecase.mustache",
+      "profile": "java-quarkus",
+      "mode": "0644",
+      "template": false,
+      "origin": "docs/scaffold-templates/usecase/usecase.mustache",
+      "kind": "template",
+      "sha256": "38af8237d2f9ac885be7fa7af0517a35c3783a1650bf0a467e0cfe9b33dbcb91"
+    },
+    {
+      "path": ".archon/scripts/portal-mcp-setup.sh",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": true,
+      "origin": ".archon/scripts/portal-mcp-setup.sh",
+      "kind": "script",
+      "sha256": "6031a892d752a6ff3473377bf8674703037ffa0f0c9b202e2478f637469a6e14"
+    },
+    {
+      "path": ".claude/scripts/contract-pin.sh",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": true,
+      "origin": ".claude/scripts/contract-pin.sh",
+      "kind": "script",
+      "sha256": "77dfebdc76dbc93aa3ec2345e791c13fbced8dac0a6dcf0fde6a0cc25397a3be"
+    },
+    {
+      "path": ".claude/scripts/contract-read-only-check.sh",
+      "profile": "openapi-contract",
+      "mode": "0755",
+      "template": false,
+      "origin": ".claude/scripts/contract-read-only-check.sh",
+      "kind": "script",
+      "sha256": "f34bd8b4512a51aef665c6371acc666157c2e451a86d97c4a39ebfac1bb00668"
+    },
+    {
+      "path": ".claude/scripts/generated-untracked-check.sh",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/scripts/generated-untracked-check.sh",
+      "kind": "script",
+      "sha256": "c8a55d6437be87a148accc2f13555ef52d9fb3b65d0e62e90031016b8da76fb8"
+    },
+    {
+      "path": ".github/agents/contract-agent.agent.md",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/agents/contract-agent.md",
+      "kind": "agent",
+      "sha256": "7f94cc9561a7c5dfcbb52115446c99e1db92d2048c857a4be1d4f637eed750ca"
+    },
+    {
+      "path": ".github/mcp.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": true,
+      "origin": null,
+      "kind": "mcp",
+      "sha256": "2b8b96cf97b922f04658eca58768a3ebee85af0ec516fe257225341e5efe9496"
+    },
+    {
+      "path": ".github/skills/contract-agent-readiness/SKILL.md",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/contract-agent-readiness/SKILL.md",
+      "kind": "skill",
+      "sha256": "fe918b7aefe973dd6b270f4c37a49544770d89b739d669d135e661d272446782"
+    },
+    {
+      "path": ".github/skills/contract-db-parity/SKILL.md",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/contract-db-parity/SKILL.md",
+      "kind": "skill",
+      "sha256": "fbd59dd5453c4b143bc9cf49c898f13ceb2103c3113286fea3272165669d59ad"
+    },
+    {
+      "path": ".github/skills/contract-slice/SKILL.md",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": ".claude/skills/contract-slice/SKILL.md",
+      "kind": "skill",
+      "sha256": "70fc21113759aa9940e46ac4d689155b01673c594ace469455064987685988a5"
+    },
+    {
+      "path": "scripts/contract-agent-readiness.sh",
+      "profile": "openapi-contract",
+      "mode": "0755",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness.sh",
+      "kind": "script",
+      "sha256": "b0114eb510f8214b2f6e0fc485ef656f616158d66efaf1461bde4557d50d5e7c"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/check.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/check.mjs",
+      "kind": "script",
+      "sha256": "48c054806ddd4d1fc66cd88945915188337cd1d125317fe47031801e53b221af"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/findability.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/findability.mjs",
+      "kind": "script",
+      "sha256": "f077dc15c0c6a6772ec4bdcabbb233f48997cb3a71cc5b0b91e636955046616f"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/package-lock.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/package-lock.json",
+      "kind": "config",
+      "sha256": "e115822060faeba7b2f071708f4b46d19d203fc797541da1e70d50b422950e73"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/package.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/package.json",
+      "kind": "config",
+      "sha256": "93e007597b3974f4fa839f60b9b437db853bb54be4e1ae500fbc456e66f553fd"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/pointer-check.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/pointer-check.mjs",
+      "kind": "script",
+      "sha256": "3a8dc060359ea0ac7dbedd3264d5031a4539923048ecf97db6baaf64a5dd22b8"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/ratchet.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/ratchet.mjs",
+      "kind": "script",
+      "sha256": "51513b2d0e5771ea91c822e72052238cd71204aa6a65b8031e2dfad352893df7"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/read.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/read.mjs",
+      "kind": "script",
+      "sha256": "822bd894b070e6110bc5de8d81e09b9053fdd48fa49bccf71757bc7b4476e1bf"
+    },
+    {
+      "path": "scripts/contract-agent-readiness/render.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-agent-readiness/render.mjs",
+      "kind": "script",
+      "sha256": "b27a4afe82898ace91c3366474f39de12079358cab7bd55a48a1bac9e5edba8e"
+    },
+    {
+      "path": "scripts/contract-db-parity.sh",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-db-parity.sh",
+      "kind": "script",
+      "sha256": "b08e84d466457b5e57ff94a77987eac8b47c8dc7e6de1a978a28eacedbcae500"
+    },
+    {
+      "path": "scripts/contract-db-parity/compare.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-db-parity/compare.mjs",
+      "kind": "script",
+      "sha256": "a1310067e80069b871d51e6da2e66d518ad3ed3c80f86225b4c2a5cb6b9aa3ba"
+    },
+    {
+      "path": "scripts/contract-db-parity/db-schema.sql",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-db-parity/db-schema.sql",
+      "kind": "script",
+      "sha256": "ef19c318350108e1920d53964bb221f50b8f7fe0be9876dcaeb0b047857aac48"
+    },
+    {
+      "path": "scripts/contract-db-parity/extract-contract.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-db-parity/extract-contract.mjs",
+      "kind": "script",
+      "sha256": "3d2ea74086c4e7a5caece3019222b00eb7cf8923189bfc7e4696c6648ecdaca3"
+    },
+    {
+      "path": "scripts/contract-db-parity/package-lock.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-db-parity/package-lock.json",
+      "kind": "config",
+      "sha256": "394132f1b18aeda000b8e7e2ff68ad836fbff8750bb592df92752b70d1ff93bd"
+    },
+    {
+      "path": "scripts/contract-db-parity/package.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/contract-db-parity/package.json",
+      "kind": "config",
+      "sha256": "81e60a6ddc2d78b0d586d0d078161cfb023af80573c50fade11fdf573f146137"
+    },
+    {
+      "path": "scripts/portal-mcp/code-index.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/portal-mcp/code-index.mjs",
+      "kind": "script",
+      "sha256": "28c6a7bf2e0dc9ee098eb08e5feefd2bf806eeff7364cd08d5236b842c269d3a"
+    },
+    {
+      "path": "scripts/portal-mcp/kit-config.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": true,
+      "origin": "scripts/portal-mcp/kit-config.mjs",
+      "kind": "script",
+      "sha256": "ac854717554d2eb0acf2f2032d454d6ce4f8d69e4884341be1ea702fef97ad85"
+    },
+    {
+      "path": "scripts/portal-mcp/package-lock.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/portal-mcp/package-lock.json",
+      "kind": "config",
+      "sha256": "fee5cae3006bc8c877703056a44aa7c6b39f735ac7f3ad18ec051b46db4efe14"
+    },
+    {
+      "path": "scripts/portal-mcp/package.json",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/portal-mcp/package.json",
+      "kind": "config",
+      "sha256": "f9fa9550a5a1437534ce60cc492c7cad47804f3c4154f63633c08746de5a5032"
+    },
+    {
+      "path": "scripts/portal-mcp/plan-ops.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/portal-mcp/plan-ops.mjs",
+      "kind": "script",
+      "sha256": "174f78bb9a9466054e8f595cd44773adfbee537f4b31f2b100c2f12fe4ca6ef3"
+    },
+    {
+      "path": "scripts/portal-mcp/schema-graph.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/portal-mcp/schema-graph.mjs",
+      "kind": "script",
+      "sha256": "e59ac232ab877243d3643c84ee82aed2cdbcc0804a66e7c1e711bab9f00d965e"
+    },
+    {
+      "path": "scripts/portal-mcp/server.mjs",
+      "profile": "openapi-contract",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/portal-mcp/server.mjs",
+      "kind": "script",
+      "sha256": "3d49f8715b64f8be1a963526ce1f8dc19d7616b2817d1829dca4cf06560c7f55"
+    }
+  ],
+  "aliases": {
+    "@analyse-copilot": {
+      "provider": "copilot",
+      "model": "claude-opus-5.5"
+    },
+    "@build-copilot": {
+      "provider": "copilot",
+      "model": "claude-sonnet-5.5"
+    },
+    "@scout-copilot": {
+      "provider": "copilot",
+      "model": "claude-haiku-5.5"
+    }
+  },
+  "postInstall": [
+    {
+      "profile": "core",
+      "run": "bash scripts/install-hooks.sh",
+      "optional": true
+    },
+    {
+      "profile": "core",
+      "run": "bash .archon/scripts/codegraph-setup.sh",
+      "optional": true
+    },
+    {
+      "profile": "openapi-contract",
+      "run": "npm ci --prefix scripts/portal-mcp",
+      "optional": false
+    },
+    {
+      "profile": "openapi-contract",
+      "run": "bash .archon/scripts/portal-mcp-setup.sh",
+      "optional": true
+    },
+    {
+      "profile": "core",
+      "run": "bash .archon/scripts/mcp-setup.sh",
+      "optional": true
+    }
+  ]
+}

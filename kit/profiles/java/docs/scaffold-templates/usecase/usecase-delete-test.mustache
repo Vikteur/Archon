@@ -1,0 +1,55 @@
+{{!
+  Delete use-case spec: existing key is deleted, unknown key returns NOT_FOUND and deletes nothing.
+  Target: <capability>-usecase/src/test/java/<package path>/usecase/Delete<Name>UseCaseTest.java
+  Package: "package" is the base package, without the ".usecase" this template appends (com.example.guest renders
+          package com.example.guest.usecase); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   same as usecase-delete.mustache, plus Key (PascalCase of key), keyExample (Java literal)
+}}
+package {{package}}.usecase;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{basePackage}}.common.domain.validation.ErrorCode;
+import {{package}}.domain.*;
+import {{package}}.repository.{{Name}}Repository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class Delete{{Name}}UseCaseTest {
+    private static final OrganisationId ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000001"));
+
+    @Mock
+    private {{Name}}Repository {{name}}Repository;
+    @InjectMocks
+    private Delete{{Name}}UseCase useCase;
+
+    @Test
+    void givenExisting{{Key}}_whenExecute_thenDelete() {
+        when({{name}}Repository.existsById(ORGANISATION, {{{keyExample}}})).thenReturn(true);
+
+        var notification = useCase.execute(ORGANISATION, {{{keyExample}}});
+
+        assertThat(notification.hasErrors()).isFalse();
+        verify({{name}}Repository).deleteById(ORGANISATION, {{{keyExample}}});
+    }
+
+    @Test
+    void givenUnknown{{Key}}_whenExecute_thenReturnNotFoundWithoutDeleting() {
+        when({{name}}Repository.existsById(ORGANISATION, {{{keyExample}}})).thenReturn(false);
+
+        var notification = useCase.execute(ORGANISATION, {{{keyExample}}});
+
+        assertThat(notification.getCode()).isEqualTo(ErrorCode.NOT_FOUND);
+        verify({{name}}Repository, never()).deleteById(any(), any());
+    }
+}

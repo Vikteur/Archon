@@ -1,0 +1,73 @@
+{{!
+  Repository spec against the real database: @QuarkusTest with Dev Services (Testcontainers), schema
+  from the Flyway migrations, each test rolled back by @TestTransaction. A row of another organisation is never found.
+  Target: <capability>-adapter/src/test/java/<package path>/adapter/repository/Default<Name>RepositoryTest.java
+  Package: "package" is the base package, without the ".adapter.repository" this template appends (com.example.guest
+          renders package com.example.guest.adapter.repository); <package path> is that base as a path.
+          scripts/scaffold.sh refuses a target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, Key, keyExample (domain key, Java expression, equal to
+          the key field's example), fields[name, example, entityExample (optional, the entity's value when it differs,
+          e.g. the UUID of a typed id)]
+}}
+package {{package}}.adapter.repository;
+
+import {{basePackage}}.common.domain.OrganisationId;
+import {{package}}.domain.*;
+import io.quarkus.test.TestTransaction;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@QuarkusTest
+@Tag("integration")
+class Default{{Name}}RepositoryTest {
+    private static final OrganisationId ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000001"));
+    private static final OrganisationId OTHER_ORGANISATION = OrganisationId.of(UUID.fromString("00000000-0000-4000-8000-000000000002"));
+
+    @Inject
+    {{Name}}PanacheRepository panacheRepository;
+
+    @Inject
+    Default{{Name}}Repository repository;
+
+    @Test
+    @TestTransaction
+    void givenPersisted{{Name}}_whenFindBy{{Key}}_thenReturnDomain() {
+        persist(ORGANISATION);
+
+        assertThat(repository.findBy{{Key}}(ORGANISATION, {{{keyExample}}}))
+                .contains({{Name}}.builder()
+{{#fields}}
+                        .{{name}}({{{example}}})
+{{/fields}}
+                        .build());
+    }
+
+    @Test
+    @TestTransaction
+    void given{{Name}}OfOtherOrganisation_whenFindBy{{Key}}_thenReturnEmpty() {
+        persist(OTHER_ORGANISATION);
+
+        assertThat(repository.findBy{{Key}}(ORGANISATION, {{{keyExample}}})).isEmpty();
+    }
+
+    @Test
+    @TestTransaction
+    void givenNo{{Name}}_whenFindBy{{Key}}_thenReturnEmpty() {
+        assertThat(repository.findBy{{Key}}(ORGANISATION, {{{keyExample}}})).isEmpty();
+    }
+
+    private void persist(OrganisationId organisationId) {
+        panacheRepository.persist({{Name}}Entity.builder()
+                .organisationId(organisationId.value())
+{{#fields}}
+                .{{name}}({{#entityExample}}{{{entityExample}}}{{/entityExample}}{{^entityExample}}{{{example}}}{{/entityExample}})
+{{/fields}}
+                .build());
+    }
+}

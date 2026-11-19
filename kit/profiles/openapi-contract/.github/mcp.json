@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "codegraph": {
+      "type": "local",
+      "command": "codegraph",
+      "args": [
+        "serve",
+        "--mcp"
+      ],
+      "env": {
+        "CODEGRAPH_MCP_TOOLS": "explore,node,search,callers,callees,impact"
+      },
+      "tools": [
+        "*"
+      ]
+    },
+    "@@KIT_CONTRACT_SERVER_NAME@@": {
+      "type": "local",
+      "command": "node",
+      "args": [
+        "scripts/portal-mcp/server.mjs"
+      ],
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{{!
+  Aggregate built from a Create-request and validated into a Notification (never throws).
+  Exemplar: authentication-domain BlockedAudience. Pair with create-request + factory.
+  upsert=true: built from CreateOrUpdate<Name>Request (create-or-update-request) and gains a public
+  update() that re-applies every non-identity field and re-validates.
+  Render factory, mother and factory-test with the same upsert value.
+  Target: <capability>-domain/src/main/java/<package path>/domain/<Name>.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, basePackage (root holding common/), Name, upsert (bool),
+          fields[type, name, pascal, identity (bool, the key field)]
+  Use StringValidator.notBlank instead of ObjectValidator.notNull for String fields.
+}}
+package {{package}}.domain;
+
+import {{basePackage}}.common.domain.validation.Notification;
+import {{basePackage}}.common.domain.validation.ObjectValidator;
+import lombok.*;
+
+import java.io.Serializable;
+
+@Getter
+@Builder
+@EqualsAndHashCode
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+public class {{Name}} implements Serializable {
+{{#fields}}
+    private {{#identity}}final {{/identity}}{{^identity}}{{^upsert}}final {{/upsert}}{{/identity}}{{{type}}} {{name}};
+{{/fields}}
+
+    {{Name}}({{#upsert}}CreateOrUpdate{{/upsert}}{{^upsert}}Create{{/upsert}}{{Name}}Request request) {
+{{#fields}}
+        this.{{name}} = request.get{{pascal}}();
+{{/fields}}
+    }
+{{#upsert}}
+
+    public Notification update(CreateOrUpdate{{Name}}Request request) {
+{{#fields}}
+{{^identity}}
+        this.{{name}} = request.get{{pascal}}();
+{{/identity}}
+{{/fields}}
+        return validate();
+    }
+{{/upsert}}
+
+    Notification validate() {
+        var notification = Notification.empty();
+{{#fields}}
+        ObjectValidator.notNull("{{name}}", {{name}}, notification);
+{{/fields}}
+        return notification;
+    }
+}

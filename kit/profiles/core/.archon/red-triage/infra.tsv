@@ -1,0 +1,12 @@
+# Infrastructure signatures for red-triage.sh (CI plan C17, owner decision D5 2026-10-20): a red job whose log matches
+# one gets one script-decided rerun of that job. One per line: <id><TAB><extended regex, grep -E>. Add one only for a
+# failure of the machine, never of the code under test; a signature that also matches a real test failure would buy
+# that failure a rerun. Lines starting with # are comments.
+docker-daemon	Cannot connect to the Docker daemon|Could not find a valid Docker environment|error during connect: .*docker
+port-in-use	Address already in use|port is already allocated
+network	Could not resolve host|Temporary failure in name resolution|Connection reset by peer|TLS handshake timeout|unable to access 'https://
+docker-pull	toomanyrequests: |net/http: request canceled while waiting for connection
+disk-full	No space left on device
+gradle-daemon	Gradle build daemon disappeared unexpectedly|Could not connect to the Gradle daemon|Timeout waiting to lock (build|journal|file hash) cache
+wsl	The Windows Subsystem for Linux instance has terminated|Wsl/Service/
+gh-rate-limit	API rate limit exceeded

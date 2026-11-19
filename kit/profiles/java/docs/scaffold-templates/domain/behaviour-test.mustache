@@ -1,0 +1,52 @@
+{{!
+  Spec for any domain type's behaviour, one Given-When-Then test per case: a record's factory or derivation, a value
+  object, a stateful algorithm, a static function. For an aggregate rendered with entity.mustache upsert=true, its
+  update() spec is entity-test instead.
+  Each case is a method name, optional given statements (one string or a list of lines, ending in ;), a when Java
+  expression, and one outcome:
+    expected  Java expression the when result equals (isEqualTo)
+    error     text the error message of the Notification the when expression returns contains
+    throws    exception class the when expression throws (assertThatThrownBy)
+  Target: <capability>-domain/src/test/java/<package path>/domain/<Name>Test.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, Name, imports (optional, fully qualified classes), cases[name, given (optional), when, expected |
+          error | throws]
+}}
+package {{package}}.domain;
+
+{{#imports}}
+import {{.}};
+{{/imports}}
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class {{Name}}Test {
+{{#cases}}
+
+    @Test
+    void {{name}}() {
+{{#given}}
+        {{{.}}}
+{{/given}}
+{{#given.length}}
+
+{{/given.length}}
+{{#expected}}
+        assertThat({{{when}}}).isEqualTo({{{expected}}});
+{{/expected}}
+{{#error}}
+        var notification = {{{when}}};
+
+        assertThat(notification.hasErrors()).isTrue();
+        assertThat(notification.errorMessage()).contains("{{error}}");
+{{/error}}
+{{#throws}}
+        assertThatThrownBy(() -> {{{when}}}).isInstanceOf({{{throws}}}.class);
+{{/throws}}
+    }
+{{/cases}}
+}

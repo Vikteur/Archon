@@ -1,0 +1,26 @@
+{{!
+  Typed id of an aggregate: a UUID wrapped in its own type, so ids of different aggregates never mix
+  (owner decision 2026-10-17). Use it as the key type (keyType) of the aggregate and its ports; the adapter
+  stores the UUID (jpa-entity naturalKey.type = UUID, typedId = <Name>Id on the adapter templates).
+  Target: <capability>-domain/src/main/java/<package path>/domain/<Name>Id.java
+  Package: "package" is the base package, without the ".domain" this template appends (com.example.guest renders
+          package com.example.guest.domain); <package path> is that base as a path. scripts/scaffold.sh refuses a
+          target outside the directory of the package the file declares.
+  Vars:   package, Name (aggregate, e.g. Wedding renders WeddingId)
+}}
+package {{package}}.domain;
+
+import java.io.Serializable;
+import java.util.Objects;
+import java.util.UUID;
+
+public record {{Name}}Id(UUID value) implements Serializable {
+
+    public {{Name}}Id {
+        Objects.requireNonNull(value, "value");
+    }
+
+    public static {{Name}}Id of(UUID value) {
+        return new {{Name}}Id(value);
+    }
+}
