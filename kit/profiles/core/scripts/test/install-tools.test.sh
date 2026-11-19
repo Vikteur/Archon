@@ -226,8 +226,13 @@ check "I10 a skip line says so" said "install-hooks.sh not found"
 # I11: the manual steps are printed at the end.
 check "I11 gh auth login" said "  1. gh auth login          sign in to GitHub"
 check "I11 launch claude once" said "  2. claude                 start Claude Code once and log in, then exit"
+check "I11 no Copilot login for a Claude project" nosaid "2. copilot"
 check "I11 start Docker Desktop" said "  3. Docker Desktop         start it once so the daemon runs"
 check "I11 the steps come after the summary" [ "$(grep -n 'gh auth login' <<< "$out" | head -1 | cut -d: -f1)" -gt "$(grep -n 'Installed:' <<< "$out" | head -1 | cut -d: -f1)" ]
+fresh i11b
+run PROJECT_DIR="$root/project-without" AGENT_CLI=copilot
+check "I11 a Copilot project is told to /login in copilot" said "  2. copilot                run it once, type /login"
+check "I11 a Copilot project is not told to start Claude Code" nosaid "start Claude Code once"
 
 # I16: a trailing-dot spec (tools.conf's "1." for jq, "4." for yq) is a major prefix: 1.7.1 fits, 17.0.0 does not.
 printf '%s

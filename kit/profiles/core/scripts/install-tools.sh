@@ -336,12 +336,12 @@ if [ "${#notes[@]}" -gt 0 ]; then
   printf '  Note: %s\n' "${notes[@]}"
 fi
 
-cat <<'STEPS'
-
-Still to do by hand (they need you):
-  1. gh auth login          sign in to GitHub
-  2. claude                 start Claude Code once and log in, then exit
-  3. Docker Desktop         start it once so the daemon runs
-STEPS
+if [ "$agent_cli" = copilot ]; then
+  login="  2. copilot                run it once, type /login and finish it in a browser signed in as the GitHub account that has Copilot"
+else
+  login="  2. claude                 start Claude Code once and log in, then exit"
+fi
+printf '\nStill to do by hand (they need you):\n%s\n%s\n%s\n' \
+  "  1. gh auth login          sign in to GitHub" "$login" "  3. Docker Desktop         start it once so the daemon runs"
 
 [ "${#failed[@]}" -eq 0 ]
