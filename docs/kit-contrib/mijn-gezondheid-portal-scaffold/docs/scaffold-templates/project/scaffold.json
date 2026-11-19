@@ -1,0 +1,95 @@
+{
+  "_comment": "What the kit's scripts/scaffold/new-context.sh and scripts/scaffold/smoke.sh do in this repo; their headers give the form.",
+  "projectOnly": true,
+  "context": {
+    "modules": ["domain", "usecase", "adapter"],
+    "flags": { "gateway": ["gateway"] },
+    "args": ["apis", "models"],
+    "help": [
+      "e.g. scripts/scaffold/new-context.sh therapeutic-relation TherapeuticRelation be.mijngezondheid.therapeuticrelation \\",
+      "     TherapeuticRelation \"therapeuticRelation,therapeuticExclusion\"",
+      "<apis>/<models>: the openApiConventions globalProperties of the adapter (contract tags and generated models).",
+      "--gateway: also a <capability>-gateway module (RestClient + WireMock tests) that the adapter depends on."
+    ],
+    "files": [
+      {
+        "template": "project/module/domain-build",
+        "target": "{{capability}}-domain/build.gradle.kts",
+        "vars": { "capability": "{{capability}}" }
+      },
+      {
+        "template": "project/module/usecase-build",
+        "target": "{{capability}}-usecase/build.gradle.kts",
+        "vars": { "capability": "{{capability}}", "authentication": false }
+      },
+      {
+        "template": "project/module/adapter-build",
+        "target": "{{capability}}-adapter/build.gradle.kts",
+        "vars": {
+          "capability": "{{capability}}",
+          "gateway": "{{gateway}}",
+          "apiPackage": "{{basePackage}}.adapter.controller",
+          "apis": "{{apis}}",
+          "models": "{{models}}"
+        }
+      },
+      {
+        "template": "project/adapter/bean-config",
+        "target": "{{capability}}-adapter/src/main/java/{{path}}/adapter/config/{{Ctx}}BeanConfig.java",
+        "vars": {
+          "package": "{{basePackage}}.adapter.config",
+          "Ctx": "{{Ctx}}",
+          "ctx": "{{ctx}}",
+          "usecaseBasePackage": "{{basePackage}}.usecase",
+          "domainBasePackage": "{{basePackage}}.domain"
+        }
+      },
+      {
+        "template": "project/module/abstract-repository-test",
+        "target": "{{capability}}-adapter/src/test/java/{{path}}/adapter/repository/AbstractRepositoryTest.java",
+        "vars": { "package": "{{basePackage}}.adapter.repository" }
+      },
+      {
+        "template": "project/module/test-application-properties",
+        "target": "{{capability}}-adapter/src/test/resources/application.properties"
+      },
+      { "copy": "init_postgres.sql", "target": "{{capability}}-adapter/src/test/resources/init_postgres.sql" },
+      {
+        "when": "gateway",
+        "template": "project/module/gateway-build",
+        "target": "{{capability}}-gateway/build.gradle.kts",
+        "vars": { "capability": "{{capability}}", "authentication": true }
+      },
+      {
+        "when": "gateway",
+        "template": "project/module/gateway-test-config",
+        "target": "{{capability}}-gateway/src/test/java/{{path}}/gateway/TestConfig.java",
+        "vars": {
+          "package": "{{basePackage}}.gateway",
+          "gatewayPackage": "{{basePackage}}.gateway",
+          "restClient": "{{ctx}}RestClient"
+        }
+      }
+    ],
+    "register": { "settings": "settings.gradle.kts", "dependents": { "application/build.gradle.kts": ["adapter"] } }
+  },
+  "smoke": {
+    "context": [
+      "--gateway",
+      "zzsmoke",
+      "Zzsmoke",
+      "be.mijngezondheid.zzsmoke",
+      "Vaccination,OauthAdmin",
+      "vaccinations,vaccination,vaccinationCode,contextEnum,blockedAudience,notification"
+    ],
+    "gradle": [
+      ":zzsmoke-domain:test",
+      ":zzsmoke-usecase:test",
+      ":zzsmoke-gateway:test",
+      ":zzsmoke-adapter:test",
+      ":application:test",
+      "--tests",
+      "be.mijngezondheid.architecture.*"
+    ]
+  }
+}

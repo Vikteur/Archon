@@ -1038,7 +1038,7 @@
       "template": false,
       "origin": ".claude/hooks/agent-scopes.json",
       "kind": "hook",
-      "sha256": "3d723a260b89681488106e4d7e38764d4ba575db5b49ff2bf53afda8ac3151d5"
+      "sha256": "0522a2cbc6101adb93c98e8fb3686b45e305318535361381288769294de70e43"
     },
     {
       "path": ".claude/hooks/guard-generated.globs",
@@ -1299,7 +1299,7 @@
       "template": false,
       "origin": ".claude/agents/reviewer.md",
       "kind": "agent",
-      "sha256": "fe7f89cf90ea8dd4264a77ab88a2cd16087a409c12f8a46a48a6a66199e887f7"
+      "sha256": "a1ba179285700fb5a115f1f51ca3ce6cb617ba7ba5fbc255fb514fcc45fda113"
     },
     {
       "path": ".github/copilot-instructions.md",
@@ -1920,7 +1920,7 @@
       "template": true,
       "origin": ".claude/agents/analyst.md",
       "kind": "agent",
-      "sha256": "538aaff7565173284cb30cf1e044d8c16308b4f9413fbff1bb4798f115b55b70"
+      "sha256": "b5d0976f6baa622a3452420aac6e45c4562ca25d4a5b55fb517c7404cc6bc33c"
     },
     {
       "path": ".github/agents/debugger.agent.md",
@@ -1938,7 +1938,7 @@
       "template": true,
       "origin": ".claude/agents/developer.md",
       "kind": "agent",
-      "sha256": "bfaabcf35728fdf5b1af416e58346770598323320a2fabe5546c834ecec80c04"
+      "sha256": "828dd3566ad2324c66efa945130cafc91eb0a49f6d56c2133c83682376e16e04"
     },
     {
       "path": ".github/agents/test-writer.agent.md",
@@ -1947,7 +1947,7 @@
       "template": true,
       "origin": ".claude/agents/test-writer.md",
       "kind": "agent",
-      "sha256": "1878129c5d3530bf1925510927d3b702e89138dcfff3a782e5726bd7f1ab1438"
+      "sha256": "48fb14295b35474544d856fd9247dea338e6640940216712c494abf3fe9e51b2"
     },
     {
       "path": ".github/instructions/adapter.instructions.md",
@@ -2644,6 +2644,24 @@
       "sha256": "22bbf55b9196fff5b4a38aa07c23938b09899cff9e31d9b4d08763db1cc669a4"
     },
     {
+      "path": "scripts/scaffold/new-context.js",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "8a15bfba75f63a86dbb27f4fd209ae7e5bae4df6ee06f1f420cc6ba15520ae2b"
+    },
+    {
+      "path": "scripts/scaffold/new-context.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "97e21c485821f46b585f1e14cec2bab81f3bd7af54575583a9be5d2e5006c025"
+    },
+    {
       "path": "scripts/scaffold/package-lock.json",
       "profile": "java",
       "mode": "0644",
@@ -2660,6 +2678,15 @@
       "origin": "scripts/scaffold/package.json",
       "kind": "config",
       "sha256": "2aff3a50caf10e17774c64ee79026bbfb5b4aa0d0f5a6e8a5683c05a8feb9403"
+    },
+    {
+      "path": "scripts/scaffold/smoke.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "59bec663a2ad0c0a462126c2eebb48fbfe994fcf275f80151a500e0396762eff"
     },
     {
       "path": "scripts/scaffold/targets.js",
@@ -2723,6 +2750,24 @@
       "origin": "scripts/test/pin-proof-check.test.sh",
       "kind": "script",
       "sha256": "d03fa842707b4a05fe25941a7956d7365d3fd1b93c8d6a8651ced3aeacf3a783"
+    },
+    {
+      "path": "scripts/test/scaffold-project.test.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "f67f9b93025d13deb4f21312f9161829bb43363091c015d01b69834cf451a8b3"
+    },
+    {
+      "path": "scripts/test/scaffold-wiring.test.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "f3e625b8a7de05a9f5768547613b1ba16b1dca03b9fc5e5016b1d03c4d0892ee"
     },
     {
       "path": "scripts/test/scaffold.test.sh",

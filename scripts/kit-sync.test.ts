@@ -245,23 +245,12 @@ describe('scaffold scripts (the kit only)', () => {
     text.replace('name: developer', `name: ${name}`);
 
   test('each agent that writes, plans or checks new files gets its scaffold commands, only with a shell', () => {
+    const wiring = ['scripts/test/scaffold.test.sh', 'scripts/test/scaffold-wiring.test.sh'];
     expect(SCAFFOLD_COMMANDS).toEqual({
-      developer: [
-        'scripts/scaffold/new-context.sh',
-        'scripts/scaffold/smoke.sh',
-        'scripts/test/scaffold.test.sh',
-      ],
-      'test-writer': ['scripts/scaffold/smoke.sh --render-only', 'scripts/test/scaffold.test.sh'],
-      analyst: [
-        'scripts/scaffold.sh --for',
-        'scripts/scaffold/smoke.sh --render-only',
-        'scripts/test/scaffold.test.sh',
-      ],
-      reviewer: [
-        'scripts/scaffold.sh --for',
-        'scripts/scaffold/smoke.sh --render-only',
-        'scripts/test/scaffold.test.sh',
-      ],
+      developer: ['scripts/scaffold/new-context.sh', 'scripts/scaffold/smoke.sh', ...wiring],
+      'test-writer': ['scripts/scaffold/smoke.sh --render-only', ...wiring],
+      analyst: ['scripts/scaffold.sh --for', 'scripts/scaffold/smoke.sh --render-only', ...wiring],
+      reviewer: ['scripts/scaffold.sh --for', 'scripts/scaffold/smoke.sh --render-only', ...wiring],
     });
     expect(scaffoldCommands('developer', tools)).toEqual(SCAFFOLD_COMMANDS.developer);
     expect(scaffoldCommands('reviewer', 'Read, Bash')).toEqual(SCAFFOLD_COMMANDS.reviewer);
@@ -272,14 +261,17 @@ describe('scaffold scripts (the kit only)', () => {
   test('the shell note names them and a Scaffold scripts note says when to run them, once', () => {
     const dev = convertAgent(AGENT, 'developer.md');
     expect(dev).toContain(
-      "The kit's scaffold scripts add: `scripts/scaffold/new-context.sh *`, `scripts/scaffold/smoke.sh *`, `scripts/test/scaffold.test.sh *`."
+      "The kit's scaffold scripts add: `scripts/scaffold/new-context.sh *`, `scripts/scaffold/smoke.sh *`, `scripts/test/scaffold.test.sh *`, `scripts/test/scaffold-wiring.test.sh *`."
     );
     expect(dev.split('Scaffold scripts:')).toHaveLength(2);
     expect(dev).toContain('docs/scaffold-templates/project/');
+    expect(dev).toContain('its `scaffold.json` there tells');
+    expect(dev).toContain('`bash scripts/test/scaffold-wiring.test.sh` checks the wiring');
+    expect(dev).not.toContain('A script the repo does not have');
     expect(dev).toContain('run `scripts/scaffold/new-context.sh`');
     const rev = convertAgent(as('reviewer'), 'reviewer.md');
     expect(rev).toContain(
-      "The kit's scaffold scripts add: `scripts/scaffold.sh --for *`, `scripts/scaffold/smoke.sh --render-only *`, `scripts/test/scaffold.test.sh *`."
+      "The kit's scaffold scripts add: `scripts/scaffold.sh --for *`, `scripts/scaffold/smoke.sh --render-only *`, `scripts/test/scaffold.test.sh *`, `scripts/test/scaffold-wiring.test.sh *`."
     );
     expect(rev).not.toContain('run `scripts/scaffold/new-context.sh`');
     expect(convertAgent(as('retro'), 'retro.md')).not.toContain('Scaffold scripts:');
@@ -336,6 +328,9 @@ describe('scaffold scripts (the kit only)', () => {
         ['reviewer', 'scripts/scaffold.sh --for a; rm -rf x', 'deny'],
         ['reviewer', 'bash scripts/test/scaffold.test.sh', 'allow'],
         ['test-writer', 'scripts/test/scaffold.test.sh', 'allow'],
+        ['analyst', 'bash scripts/test/scaffold-wiring.test.sh', 'allow'],
+        ['developer', 'scripts/test/scaffold-wiring.test.sh', 'allow'],
+        ['reviewer', 'bash scripts/test/scaffold-wiring.test.shx', 'deny'],
         ['reviewer', 'bash scripts/test/other.test.sh', 'deny'],
       ];
       for (const [agent, command, want] of cases)

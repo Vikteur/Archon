@@ -221,27 +221,29 @@ export function withMcpFallbackScopes(
 // ---------------------------------------------------------------------------------------------------------------
 // Scaffold scripts (the kit only)
 // ---------------------------------------------------------------------------------------------------------------
-// A repo keeps its own templates in docs/scaffold-templates/project/ and, beside scripts/scaffold.sh, two scripts of
-// its own that use them: scripts/scaffold/new-context.sh renders a new module set from them, scripts/scaffold/smoke.sh
-// renders every one with its <name>.example.json in a throwaway copy and builds it (--render-only stops after the
-// render). The kit ships neither (they carry the repo's module names); its agents may run them where they exist, and
-// scripts/test/scaffold.test.sh, the wiring check (the kit's, or the repo's own in its place: kit add keeps a project
-// file it did not write), which renders to a temp folder only. An
-// agent that writes production code may scaffold and smoke-build; one that writes tests, plans or reviews may only
-// ask which template fits (--for, read-only) and check that the templates still render.
+// A repo keeps its own templates in docs/scaffold-templates/project/; the java profile ships the scripts that use
+// them, generic, reading what the repo's module set is from docs/scaffold-templates/project/scaffold.json, the repo's
+// own: scripts/scaffold/new-context.sh renders a new module set from them, scripts/scaffold/smoke.sh renders every one
+// with its <name>.example.json in a throwaway copy and builds it (--render-only stops after the render), and
+// scripts/test/scaffold-wiring.test.sh checks they are linked and reachable without a build. kit add keeps a repo's
+// own copy of a script it did not write. scripts/test/scaffold.test.sh is the kit's renderer check (or a repo's own
+// wiring check in its place); both checks render to a temp folder only. An agent that writes production code may
+// scaffold and smoke-build; one that writes tests, plans or reviews may only ask which template fits (--for,
+// read-only) and check that the templates still render.
 
 const SCAFFOLD_FOR = 'scripts/scaffold.sh --for';
 const NEW_CONTEXT = 'scripts/scaffold/new-context.sh';
 const SMOKE = 'scripts/scaffold/smoke.sh';
 const SMOKE_RENDER = `${SMOKE} --render-only`;
 const WIRING = 'scripts/test/scaffold.test.sh';
+const PROJECT_WIRING = 'scripts/test/scaffold-wiring.test.sh';
 
 /** The scaffold command prefixes the kit adds to each agent's shell allowlist (agent-scopes.json form). */
 export const SCAFFOLD_COMMANDS: Readonly<Record<string, readonly string[]>> = {
-  developer: [NEW_CONTEXT, SMOKE, WIRING],
-  'test-writer': [SMOKE_RENDER, WIRING],
-  analyst: [SCAFFOLD_FOR, SMOKE_RENDER, WIRING],
-  reviewer: [SCAFFOLD_FOR, SMOKE_RENDER, WIRING],
+  developer: [NEW_CONTEXT, SMOKE, WIRING, PROJECT_WIRING],
+  'test-writer': [SMOKE_RENDER, WIRING, PROJECT_WIRING],
+  analyst: [SCAFFOLD_FOR, SMOKE_RENDER, WIRING, PROJECT_WIRING],
+  reviewer: [SCAFFOLD_FOR, SMOKE_RENDER, WIRING, PROJECT_WIRING],
 };
 
 /** One agent's kit scaffold commands; none for an agent without a shell (giving it one would widen it). */
@@ -271,12 +273,12 @@ function scaffoldNote(commands: readonly string[]): string[] {
     when.push(
       `\`${SMOKE_RENDER}\` checks that every one of the repo's templates still renders with its example, without touching this checkout`
     );
-  if (commands.includes(WIRING))
+  if (commands.includes(PROJECT_WIRING))
     when.push(
-      `after a template or a \`## Scaffold\` row changes, \`bash ${WIRING}\` checks the wiring (every template linked from a row, \`--for\` and the build's scaffold step find it) without a build`
+      `after a template or a \`## Scaffold\` row changes, \`bash ${PROJECT_WIRING}\` checks the wiring (every template linked from a row, \`--for\` and the build's scaffold step find it) without a build, and \`bash ${WIRING}\` the renderer`
     );
   return [
-    `Scaffold scripts: a repo keeps its own templates in docs/scaffold-templates/project/ (preferred over the kit's, see that folder's README.md) and may keep \`${NEW_CONTEXT}\` (a new module set from them) and \`${SMOKE}\` (every template rendered with its \`<name>.example.json\` in a throwaway copy, then built; \`--render-only\` stops after the render) beside \`scripts/scaffold.sh\`. Where the repo has them: ${when.join('; ')}. A script the repo does not have is not there to run; say so in your report.`,
+    `Scaffold scripts: a repo keeps its own templates in docs/scaffold-templates/project/ (preferred over the kit's, see that folder's README.md), and its \`scaffold.json\` there tells \`${NEW_CONTEXT}\` (a new module set from them) and \`${SMOKE}\` (every template rendered with its \`<name>.example.json\` in a throwaway copy, then built; \`--render-only\` stops after the render) what a module set is and what to build. ${when.join('; ').replace(/^./, c => c.toUpperCase())}. Without that folder or without \`scaffold.json\` a script says what is missing and stops; say so in your report.`,
   ];
 }
 
