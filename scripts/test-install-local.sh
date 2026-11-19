@@ -49,6 +49,11 @@ output=$(bash "$script" --dry-run --target bun-linux-x64 --no-setup) || fail "dr
 contains "$output" "kit setup    skipped (--no-setup)" "--no-setup"
 contains "$output" "archon kit tools" "--no-setup keeps the kit tools step"
 
+output=$(bash "$script" --dry-run --target bun-linux-x64 --no-setup --no-backlog) || fail "dry-run with --no-backlog failed"
+contains "$output" "backlog      left out of kit tools (--no-backlog)" "--no-backlog plan line"
+output=$(bash "$script" --dry-run --target bun-linux-x64 --no-setup) || fail "dry-run without --no-backlog failed"
+lacks "$output" "left out of kit tools" "no --no-backlog keeps Backlog.md"
+
 output=$(ARCHON_HOME=/env/home bash "$script" --dry-run --target bun-linux-x64) || fail "env home dry-run failed"
 contains "$output" "/env/home/server/" "ARCHON_HOME default"
 
@@ -153,6 +158,39 @@ STUB
   echo "  kit add [path]" > "$work/kit-help"
   run_kit_setup "$bin" >/dev/null 2>&1 && fail "setup started on a CLI without it"
   [ ! -s "$calls" ] || fail "a CLI without setup ran: $(cat "$calls")"
+) || exit 1
+
+# The kit tools step, sourced: --no-backlog reaches the CLI as a flag (when its help has it)
+# and as INSTALL_TOOLS_BACKLOG=0; without it, neither.
+# shellcheck disable=SC2034 # NO_BACKLOG is the sourced script's
+(
+  # shellcheck source=/dev/null
+  source "$script"
+  set +e
+  calls="$work/tool-calls"
+  bin="$work/archon-tools-stub"
+  cat > "$bin" <<STUB
+#!/usr/bin/env bash
+if [ "\$1 \$2" = "kit --help" ]; then cat "$work/kit-help"; exit 0; fi
+echo "\$1 \$2 \${3:+<dir>} \$4 backlog=\${INSTALL_TOOLS_BACKLOG:-unset}" >> "$calls"
+STUB
+  chmod +x "$bin"
+  echo "  kit tools [path] [--check] [--no-backlog]" > "$work/kit-help"
+
+  : > "$calls"
+  NO_BACKLOG=false
+  run_kit_tools "$bin" >/dev/null 2>&1
+  [ "$(cat "$calls")" = "kit tools <dir>  backlog=unset" ] || fail "default tools call: $(cat "$calls")"
+
+  : > "$calls"
+  NO_BACKLOG=true
+  run_kit_tools "$bin" >/dev/null 2>&1
+  [ "$(cat "$calls")" = "kit tools <dir> --no-backlog backlog=0" ] || fail "--no-backlog tools call: $(cat "$calls")"
+
+  : > "$calls"
+  echo "  kit tools [path] [--check]" > "$work/kit-help"
+  run_kit_tools "$bin" >/dev/null 2>&1
+  [ "$(cat "$calls")" = "kit tools <dir>  backlog=0" ] || fail "older CLI --no-backlog call: $(cat "$calls")"
 ) || exit 1
 
 echo "install-local tests passed"

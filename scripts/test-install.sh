@@ -360,6 +360,10 @@ if [ "\$1" = "kit" ]; then
   mode="\$(cat "$provider_mock_dir/kit-mode" 2>/dev/null || true)"
   [ -n "\$mode" ] || exit 1
   if [ "\$2" = "--help" ]; then echo "Usage: archon kit <add|\$mode>"; exit 0; fi
+  if [ -n "\${INSTALL_TOOLS_BACKLOG:-}" ]; then
+    echo "\$* backlog=\$INSTALL_TOOLS_BACKLOG" >>"$kit_calls"
+    exit 0
+  fi
   echo "\$*" >>"$kit_calls"
   exit 0
 fi
@@ -476,6 +480,17 @@ assert_equals "" "$(kit_calls_made)" "--no-kit-tools skips the kit step"
 rm -f "$kit_calls"
 output=$(ARCHON_NO_KIT_TOOLS=1 run_provider_install --providers "") || fail "ARCHON_NO_KIT_TOOLS install failed: $output"
 assert_equals "" "$(kit_calls_made)" "ARCHON_NO_KIT_TOOLS=1 skips the kit step"
+
+rm -f "$kit_calls"
+output=$(run_provider_install --providers "" --no-backlog) || fail "--no-backlog install failed: $output"
+assert_equals "kit tools backlog=0" "$(kit_calls_made)" "--no-backlog runs kit tools without Backlog.md"
+
+rm -f "$kit_calls"
+echo "tools no-backlog" >"$provider_mock_dir/kit-mode"
+output=$(ARCHON_NO_BACKLOG=1 run_provider_install --providers "") || fail "ARCHON_NO_BACKLOG install failed: $output"
+assert_equals "kit tools --no-backlog backlog=0" "$(kit_calls_made)" \
+  "ARCHON_NO_BACKLOG=1 passes --no-backlog to a CLI that has it"
+echo tools >"$provider_mock_dir/kit-mode"
 
 rm -f "$kit_calls"
 echo doctor >"$provider_mock_dir/kit-mode"

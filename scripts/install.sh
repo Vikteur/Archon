@@ -12,6 +12,8 @@
 #                       `archon provider`; pin one with `--providers=`.
 #   --no-kit-tools    - Skip the kit tools step (`archon kit tools`, else `archon kit doctor`,
 #                       run only when this Archon has a `kit` command).
+#   --no-backlog      - The kit tools step leaves Backlog.md out (`archon kit tools --no-backlog`;
+#                       kit setup asks about it itself, and leaves it out by default).
 #   --no-setup        - Do not start `archon kit setup`, the guided kit install. In a terminal,
 #                       an Archon that has it starts it at the end (it installs the kit tools
 #                       itself, so the kit tools step is skipped then).
@@ -24,6 +26,7 @@
 #   ARCHON_REPO      - GitHub owner/repo to download from (default: coleam00/Archon)
 #   ARCHON_NO_KIT_TOOLS - Set to "1" to skip the kit tools step (same as --no-kit-tools)
 #   ARCHON_NO_SETUP  - Set to "1" to not start `archon kit setup` (same as --no-setup)
+#   ARCHON_NO_BACKLOG - Set to "1" to leave Backlog.md out of the kit tools step (same as --no-backlog)
 #
 # Examples:
 #   # Install latest
@@ -283,16 +286,25 @@ install_providers() {
 
 # Install the tools the Copilot kit needs. Feature-detected: `archon kit tools`,
 # else `archon kit doctor`, else nothing (older Archon without a `kit` command).
-# A failing step is a warning, never an install failure.
+# A failing step is a warning, never an install failure. With no_backlog=true the tool
+# installer leaves Backlog.md out: INSTALL_TOOLS_BACKLOG=0, and --no-backlog when the CLI has it.
 install_kit_tools() {
-  local archon="$1" help_out
+  local archon="$1" no_backlog="${2:-false}" help_out
   if ! help_out=$("$archon" kit --help 2>&1); then
     info "This Archon has no 'kit' command; skipping the kit tools step."
     return 0
   fi
   if printf '%s\n' "$help_out" | grep -Eqw 'tools'; then
-    info "Installing kit tools: archon kit tools"
-    "$archon" kit tools || warn "'archon kit tools' failed; re-run it by hand."
+    local args=(tools)
+    if [ "$no_backlog" = true ] && printf '%s\n' "$help_out" | grep -q 'no-backlog'; then
+      args+=(--no-backlog)
+    fi
+    info "Installing kit tools: archon kit ${args[*]}"
+    if [ "$no_backlog" = true ]; then
+      INSTALL_TOOLS_BACKLOG=0 "$archon" kit "${args[@]}" || warn "'archon kit tools' failed; re-run it by hand."
+    else
+      "$archon" kit "${args[@]}" || warn "'archon kit tools' failed; re-run it by hand."
+    fi
   elif printf '%s\n' "$help_out" | grep -Eqw 'doctor'; then
     info "No 'archon kit tools'; running: archon kit doctor"
     "$archon" kit doctor || warn "'archon kit doctor' reported problems."
@@ -327,6 +339,8 @@ main() {
   [ "${ARCHON_NO_KIT_TOOLS:-}" = "1" ] && kit_tools=false
   local kit_setup=true
   [ "${ARCHON_NO_SETUP:-}" = "1" ] && kit_setup=false
+  local no_backlog=false
+  [ "${ARCHON_NO_BACKLOG:-}" = "1" ] && no_backlog=true
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --providers)
@@ -346,6 +360,10 @@ main() {
         ;;
       --no-setup)
         kit_setup=false
+        shift
+        ;;
+      --no-backlog)
+        no_backlog=true
         shift
         ;;
       *)
@@ -497,7 +515,7 @@ main() {
   if [ "$kit_setup" = true ] && run_kit_setup "$INSTALL_DIR/$BINARY_NAME" "$no_tools"; then
     :
   elif [ "$kit_tools" = true ]; then
-    install_kit_tools "$INSTALL_DIR/$BINARY_NAME"
+    install_kit_tools "$INSTALL_DIR/$BINARY_NAME" "$no_backlog"
   fi
 
   echo ""

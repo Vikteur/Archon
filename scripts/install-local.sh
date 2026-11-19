@@ -15,6 +15,7 @@
 #   --skip-web          do not build or install the web UI
 #   --skip-tools        do not run the kit tools step afterwards (setup gets --no-tools)
 #   --no-setup          do not start `archon kit setup` afterwards
+#   --no-backlog        the kit tools step leaves Backlog.md out (kit setup asks itself, default off)
 #   --dry-run           print the plan, change nothing
 #   -h, --help          this text
 #
@@ -52,6 +53,7 @@ TARGET=""
 SKIP_WEB=false
 SKIP_TOOLS=false
 NO_SETUP=false
+NO_BACKLOG=false
 DRY_RUN=false
 
 SUPPORTED_TARGETS="bun-linux-x64 bun-linux-arm64 bun-darwin-x64 bun-darwin-arm64"
@@ -90,6 +92,7 @@ parse_args() {
       --skip-web) SKIP_WEB=true; shift ;;
       --skip-tools) SKIP_TOOLS=true; shift ;;
       --no-setup) NO_SETUP=true; shift ;;
+      --no-backlog) NO_BACKLOG=true; shift ;;
       --dry-run) DRY_RUN=true; shift ;;
       -h | --help) usage; exit 0 ;;
       *) error "Unknown option: $1"; return 1 ;;
@@ -202,7 +205,8 @@ check_bun() {
 # Feature-detect what the installed CLI offers: `archon kit tools`, else
 # `archon kit doctor`, else nothing. It runs in an empty temp folder, never in this
 # checkout: a folder without scripts/install-tools.sh makes `kit tools` run the kit's
-# bundled installer. A failing tools step is a warning only.
+# bundled installer. A failing tools step is a warning only. --no-backlog runs it with
+# INSTALL_TOOLS_BACKLOG=0, and passes --no-backlog when the CLI has it.
 run_kit_tools() {
   local bin="$1" help_out dir
   if ! help_out="$("$bin" kit --help 2>&1)"; then
@@ -211,8 +215,16 @@ run_kit_tools() {
   fi
   dir="$(mktemp -d "${TMPDIR:-/tmp}/archon-kit-tools.XXXXXX")"
   if printf '%s\n' "$help_out" | grep -Eqw 'tools'; then
-    info "Installing kit tools: archon kit tools (the kit's bundled installer)"
-    (cd "$dir" && "$bin" kit tools "$dir") || warn "'archon kit tools' failed; re-run it by hand."
+    local args=(tools "$dir")
+    if [ "$NO_BACKLOG" = true ] && printf '%s\n' "$help_out" | grep -q 'no-backlog'; then
+      args+=(--no-backlog)
+    fi
+    info "Installing kit tools: archon kit ${args[*]} (the kit's bundled installer)"
+    if [ "$NO_BACKLOG" = true ]; then
+      (cd "$dir" && INSTALL_TOOLS_BACKLOG=0 "$bin" kit "${args[@]}") || warn "'archon kit tools' failed; re-run it by hand."
+    else
+      (cd "$dir" && "$bin" kit "${args[@]}") || warn "'archon kit tools' failed; re-run it by hand."
+    fi
   elif printf '%s\n' "$help_out" | grep -Eqw 'doctor'; then
     info "No 'archon kit tools'; running: archon kit doctor"
     (cd "$dir" && "$bin" kit doctor "$dir") || warn "'archon kit doctor' reported problems."
@@ -276,6 +288,7 @@ print_plan() {
     echo "  kit tools    run by archon kit setup (archon kit tools if the CLI has no setup)"
   else
     echo "  kit tools    archon kit tools in an empty temp folder (the kit's bundled installer), or archon kit doctor, if the CLI has a kit command"
+    if [ "$NO_BACKLOG" = true ]; then echo "  backlog      left out of kit tools (--no-backlog)"; fi
   fi
 }
 
