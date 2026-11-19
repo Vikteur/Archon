@@ -32,8 +32,14 @@ separate product. Its files live in the Archon fork (`Vikteur/Archon`, folder `k
 | Scripts | `.archon/scripts/`, `scripts/` | Delegator, STOP policy, merge, CI-by-SHA and tool installer scripts. |
 | Scaffold templates | Mustache templates in the kit (`java` profile and its overlays) | Starter code for new layers, rendered from `.archon/kit.yaml`. |
 
-The kit also writes `.archon/kit.yaml` (the project's settings) and `.archon/kit.lock.json`
-(the record of what the kit wrote). Both are described below.
+The kit also writes `.archon/kit.yaml` (the project's settings), `.archon/kit.defaults.yaml`
+(the kit defaults, beside it) and `.archon/kit.lock.json` (the record of what the kit wrote).
+They are described below.
+
+In `.archon/config.yaml`, `kit add` adds the kit's command aliases and sets
+`assistants.copilot.fileHooks: true`, so Archon's Copilot runs load the kit's
+`.github/hooks/*.json`. It keeps your other keys and comments, and a `fileHooks` value you set
+yourself.
 
 ## Profiles
 
@@ -64,7 +70,8 @@ read the same file at run time with `yq`. Nested keys are flattened with `_`, so
 
 A key that is missing from an existing `kit.yaml` takes the kit default. The kit does not
 rewrite your file to add new keys. This means a kit upgrade can add a key without
-touching your values.
+touching your values. At run time the scripts read such a key from
+`.archon/kit.defaults.yaml`, which `kit add` keeps up to date like any other kit file.
 
 The defaults below suit a Spring Boot Gradle project.
 
@@ -119,6 +126,11 @@ of what the kit wrote. On a rerun, `kit add` compares each file with the lock:
 
 - A file that still holds what the kit wrote is updated to the newer kit.
 - A file the project edited is kept. The command lists it as `kept (differs)`.
+- A file that differs and has no lock entry (it predates the lock, or the project wrote it) is
+  kept too. One line counts them; review them and rerun with `--force` to take the kit's version.
+- Line ends do not count: a CRLF checkout of an unedited file is still the kit's.
+- A destination that is a symlink, or lies in a folder linked outside the project, is never
+  written through. The command lists it as `skipped`.
 - `--force` overwrites the edited files too. It does not overwrite create-only starter
   files, such as `docs/memory.md`. Those always belong to the project.
 

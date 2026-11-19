@@ -7,8 +7,10 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   statSync,
+  symlinkSync,
   writeFileSync,
   realpathSync,
 } from 'fs';
@@ -20,6 +22,11 @@ import {
   kitToolsCommand,
   applySetOverrides,
   checkMcpServers,
+  checkTrust,
+  coerceScalar,
+  enableFileHooks,
+  shellQuote,
+  unsafeManifestPath,
   computeDrift,
   existingFileState,
   flattenKitConfig,
@@ -84,6 +91,25 @@ function makeKit(): Kit {
     files,
   };
 }
+
+function addFile(kit: Kit, profile: string, path: string, content: string): void {
+  kit.files[`${profile}/${path}`] = content;
+  kit.manifest.files.push({
+    path,
+    profile,
+    mode: '0644',
+    template: false,
+    origin: null,
+    kind: 'config',
+    sha256: sha(content),
+  });
+}
+
+/** The kit's real dispatch.sh, which the user hook runs. */
+const DISPATCH_SH = readFileSync(
+  resolve(dirname(import.meta.path), '../../../../kit/profiles/core/.github/hooks/dispatch.sh'),
+  'utf-8'
+);
 
 function gitRepo(dir: string): string {
   const r = Bun.spawnSync(['git', 'init', '-q', dir]);
@@ -301,6 +327,203 @@ describe('kit', () => {
     });
   });
 
+  describe('user hooks', () => {
+    const DENY_GUARD =
+      '#!/usr/bin/env bash\ncat >/dev/null\necho "no way from the guard" >&2\nexit 2\n';
+    const guardKit = (withDispatch: boolean): Kit => {
+      const kit = makeKit();
+      addFile(kit, 'core', '.archon/copilot/hooks/run-guard.sh', DENY_GUARD);
+      if (withDispatch) addFile(kit, 'core', '.github/hooks/dispatch.sh', DISPATCH_SH);
+      return kit;
+    };
+    const runHook = (command: string, cwd: string) => {
+      const { CLAUDE_PROJECT_DIR: _drop, ...rest } = process.env;
+      const r = Bun.spawnSync(['bash', '-c', command], {
+        cwd,
+        env: rest,
+        stdin: Buffer.from(
+          JSON.stringify({
+            toolName: 'bash',
+            toolArgs: { command: 'git push' },
+            cwd,
+          })
+        ),
+      });
+      return {
+        code: r.exitCode,
+        out: r.stdout.toString(),
+        err: r.stderr.toString(),
+      };
+    };
+    const hookCommand = (): string =>
+      (
+        JSON.parse(readFileSync(join(home, 'hooks', 'archon-kit-run-guard.json'), 'utf-8')) as {
+          hooks: { preToolUse: { bash: string }[] };
+        }
+      ).hooks.preToolUse[0].bash;
+
+    it('the written user hook runs the guard through dispatch.sh, from any folder, and its deny comes out', async () => {
+      project = gitRepo(join(root, "it's proj"));
+      expect(await add({ userHooks: true }, guardKit(true))).toBe(0);
+      const outside = mkdtempSync(join(root, 'elsewhere-'));
+      const result = runHook(hookCommand(), outside);
+      expect(result.code).toBe(0);
+      const decision = JSON.parse(result.out.trim()) as Record<string, string>;
+      expect(decision.permissionDecision).toBe('deny');
+      expect(decision.permissionDecisionReason).toContain('no way from the guard');
+    });
+    it('without dispatch.sh the guard runs itself and its exit 2 comes out', async () => {
+      expect(await add({ userHooks: true }, guardKit(false))).toBe(0);
+      const result = runHook(hookCommand(), root);
+      expect(result.code).toBe(2);
+      expect(result.err).toContain('no way from the guard');
+    });
+    it('a guard that is gone allows', async () => {
+      expect(await add({ userHooks: true }, guardKit(true))).toBe(0);
+      Bun.spawnSync(['rm', join(project, '.archon/copilot/hooks/run-guard.sh')]);
+      expect(runHook(hookCommand(), root)).toMatchObject({ code: 0, out: '' });
+    });
+    it('shellQuote keeps a quote inside one word', () => {
+      const r = Bun.spawnSync(['bash', '-c', `printf %s ${shellQuote("a'b c")}`]);
+      expect(r.stdout.toString()).toBe("a'b c");
+    });
+  });
+
+  describe('kit defaults file', () => {
+    it('kit add writes the kit defaults beside kit.yaml, lock-tracked', async () => {
+      expect(await add()).toBe(0);
+      const kit = makeKit();
+      expect(readFileSync(join(project, '.archon/kit.defaults.yaml'), 'utf-8')).toBe(kit.defaults);
+      expect(readKitLock(project)['.archon/kit.defaults.yaml']).toBe(sha(kit.defaults));
+    });
+    it('a rerun updates an unedited copy and keeps an edited one', async () => {
+      expect(await add()).toBe(0);
+      const newer = makeKit();
+      newer.defaults = `${newer.defaults}agent_cli: copilot\n`;
+      expect(await add({}, newer)).toBe(0);
+      const dest = join(project, '.archon/kit.defaults.yaml');
+      expect(readFileSync(dest, 'utf-8')).toBe(newer.defaults);
+      writeFileSync(dest, 'mine: 1\n');
+      const newest = makeKit();
+      newest.defaults = `${newest.defaults}agent_cli: claude\n`;
+      expect(await add({}, newest)).toBe(0);
+      expect(readFileSync(dest, 'utf-8')).toBe('mine: 1\n');
+    });
+  });
+
+  describe('project config', () => {
+    it('kit add turns the Copilot file hooks on in .archon/config.yaml, keeping the rest', async () => {
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      const cfg = join(project, '.archon/config.yaml');
+      writeFileSync(cfg, '# mine\nassistants:\n  copilot:\n    model: gpt-5 # pinned\nother: 1\n');
+      expect(await add()).toBe(0);
+      const text = readFileSync(cfg, 'utf-8');
+      expect(text).toContain('# mine');
+      expect(text).toContain('model: gpt-5 # pinned');
+      expect(text).toContain('other: 1');
+      const parsed = Bun.YAML.parse(text) as {
+        assistants: { copilot: { fileHooks: boolean; model: string } };
+      };
+      expect(parsed.assistants.copilot).toEqual({
+        model: 'gpt-5',
+        fileHooks: true,
+      });
+    });
+    it('a fileHooks the project set itself is kept', () => {
+      expect(enableFileHooks('assistants:\n  copilot:\n    fileHooks: false\n')).toMatchObject({
+        state: 'off',
+      });
+      expect(enableFileHooks('assistants:\n  copilot:\n    fileHooks: true\n').state).toBe(
+        'present'
+      );
+      expect(enableFileHooks('').text).toContain('fileHooks: true');
+    });
+  });
+
+  describe('path safety', () => {
+    it('refuses absolute, drive, .. and its own paths', () => {
+      expect(unsafeManifestPath('/etc/passwd')).not.toBeNull();
+      expect(unsafeManifestPath('C:/x')).not.toBeNull();
+      expect(unsafeManifestPath('c:x')).not.toBeNull();
+      expect(unsafeManifestPath('a/../../x')).not.toBeNull();
+      expect(unsafeManifestPath('a\\..\\x')).not.toBeNull();
+      expect(unsafeManifestPath('.archon/kit.lock.json')).not.toBeNull();
+      expect(unsafeManifestPath('./.archon/kit.yaml')).not.toBeNull();
+      expect(unsafeManifestPath('.archon/workflows/x.yaml')).toBeNull();
+      expect(unsafeManifestPath('a..b/c')).toBeNull();
+    });
+    it('kit add refuses a kit with a traversal path and writes nothing', async () => {
+      const kit = makeKit();
+      addFile(kit, 'core', '../escaped.txt', 'x\n');
+      expect(await add({}, kit)).toBe(1);
+      expect(existsSync(join(root, 'escaped.txt'))).toBe(false);
+      expect(existsSync(join(project, 'README.md'))).toBe(false);
+      expect(logs.join('\n')).toContain('a .. segment');
+    });
+    it('never writes through a symlink, nor into a linked folder outside the project', async () => {
+      const outsideFile = join(root, 'outside.txt');
+      writeFileSync(outsideFile, 'precious\n');
+      symlinkSync(outsideFile, join(project, 'README.md'));
+      const outsideDir = join(root, 'outside-dir');
+      mkdirSync(outsideDir);
+      symlinkSync(outsideDir, join(project, 'scripts'));
+      expect(await add()).toBe(0);
+      expect(readFileSync(outsideFile, 'utf-8')).toBe('precious\n');
+      expect(readdirSync(outsideDir)).toEqual([]);
+      const out = logs.join('\n');
+      expect(out).toContain('skipped (symlink)  README.md');
+      expect(out).toContain('skipped (outside)  scripts/run.sh');
+      expect(readKitLock(project)['README.md']).toBeUndefined();
+    });
+  });
+
+  describe('line ends and the lock', () => {
+    it('a CRLF checkout of an unedited file is the kit own: updated, and not drift', async () => {
+      await add({ profiles: ['java'] });
+      const kit = makeKit();
+      writeFileSync(join(project, 'src.txt'), 'java file\r\n');
+      expect(computeDrift(project, kit, resolveProfiles(kit, ['java'])).modified).toEqual([]);
+      expect(existingFileState(join(project, 'src.txt'), 'java file\n', false)).toBe('unchanged');
+      const newer = makeKit();
+      newer.files['java/src.txt'] = 'newer kit\n';
+      for (const f of newer.manifest.files) f.sha256 = sha(newer.files[`${f.profile}/${f.path}`]);
+      expect(await add({ profiles: ['java'] }, newer)).toBe(0);
+      expect(readFileSync(join(project, 'src.txt'), 'utf-8')).toBe('newer kit\n');
+    });
+    it('says once that files from before the lock differ', async () => {
+      writeFileSync(join(project, 'README.md'), 'mine\n');
+      mkdirSync(join(project, 'scripts'));
+      writeFileSync(join(project, 'scripts/run.sh'), 'mine\n');
+      expect(await add()).toBe(0);
+      const lines = logs.filter(l => l.includes('predate the kit lock'));
+      expect(lines).toEqual([
+        "2 files predate the kit lock and differ from the kit; review them and rerun with --force to take the kit's version",
+      ]);
+    });
+  });
+
+  describe('--set', () => {
+    it('keeps numbers-looking values as strings; coerces only booleans and lists', () => {
+      expect(coerceScalar('20.10')).toBe('20.10');
+      expect(coerceScalar('010')).toBe('010');
+      expect(coerceScalar('true')).toBe(true);
+      expect(coerceScalar('false')).toBe(false);
+      expect(coerceScalar('[a, b]')).toEqual(['a', 'b']);
+      expect(coerceScalar('null')).toBe('null');
+      expect(applySetOverrides('node: x\n', ['node=20.10'])).toMatch(/node: "20\.10"/);
+    });
+    it('--set profiles= picks the profiles of the same run', async () => {
+      expect(await add({ set: ['profiles=[java]'] })).toBe(0);
+      expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# java wins\n');
+      const yaml = Bun.YAML.parse(readFileSync(join(project, '.archon/kit.yaml'), 'utf-8')) as {
+        profiles: string[];
+      };
+      expect(yaml.profiles).toEqual(['core', 'java']);
+      expect(await add({ profiles: ['core'], set: ['profiles=java'] })).toBe(1);
+      expect(logs.join('\n')).toContain('not both');
+    });
+  });
+
   describe('trust', () => {
     it('merges trustedFolders and preserves other keys', () => {
       mkdirSync(home, { recursive: true });
@@ -312,6 +535,16 @@ describe('kit', () => {
         theme: 'dark',
         trustedFolders: ['/a', '/b'],
       });
+    });
+    it('an empty trustedFolders does not hide trusted_folders, and the write leaves no temp file', () => {
+      mkdirSync(home, { recursive: true });
+      writeFileSync(
+        join(home, 'config.json'),
+        JSON.stringify({ trustedFolders: [], trusted_folders: [project] })
+      );
+      expect(checkTrust(project, env).status).toBe('ok');
+      expect(trustFolder(join(home, 'config.json'), '/c')).toBe('added');
+      expect(readdirSync(home)).toEqual(['config.json']);
     });
     it('--trust creates the file under COPILOT_HOME', async () => {
       await add({ trust: true });
@@ -334,6 +567,18 @@ describe('kit', () => {
       expect(readFileSync(join(project, 'args.txt'), 'utf-8').trim()).toBe('args:');
       expect(await kitToolsCommand(project, true)).toBe(4);
       expect(readFileSync(join(project, 'args.txt'), 'utf-8').trim()).toBe('args:--check');
+    });
+    it("without a project installer runs the kit's bundled one from a temp folder it removes", async () => {
+      const plain = mkdtempSync(join(root, 'no-kit-'));
+      const kit = makeKit();
+      kit.files['core/scripts/install-tools.sh'] =
+        'echo "args:$* conf:$(cat "$PROJECT_DIR/scripts/tools.conf") home:$PROJECT_DIR" > ran.txt\nexit 0\n';
+      kit.files['core/scripts/tools.conf'] = 'jq 1.7\n';
+      expect(await kitToolsCommand(plain, true, kit)).toBe(0);
+      const ran = readFileSync(join(plain, 'ran.txt'), 'utf-8').trim();
+      expect(ran).toStartWith('args:--check conf:jq 1.7 home:');
+      expect(existsSync(ran.split('home:')[1])).toBe(false);
+      expect(await kitToolsCommand(plain, false, makeKit())).toBe(1);
     });
   });
 
@@ -366,7 +611,15 @@ describe('kit', () => {
       const drift = computeDrift(project, kit, resolveProfiles(kit, ['java']));
       expect(drift.modified).toEqual(['README.md']);
       expect(drift.missing).toEqual(['src.txt']);
-      expect(drift.checked).toBe(3);
+      expect(drift.checked).toBe(4);
+    });
+    it('reports the defaults file beside kit.yaml as drift once edited', async () => {
+      await add({ profiles: ['java'] });
+      const kit = makeKit();
+      writeFileSync(join(project, '.archon/kit.defaults.yaml'), 'edited: 1\n');
+      expect(computeDrift(project, kit, resolveProfiles(kit, ['java'])).modified).toEqual([
+        '.archon/kit.defaults.yaml',
+      ]);
     });
   });
 });

@@ -23,7 +23,8 @@
 #   <archon-home>/server/<version>/archon-server-<os>-<arch>
 #   <archon-home>/plugins/archon-provider-claude        (+ installed/.../receipt.json)
 #   <archon-home>/web-dist/<version>/
-# An existing target is moved to <name>.prev-<timestamp> first.
+# An existing target is moved to <name>.prev-<timestamp> first; a failed run puts
+# this run's backups back, and a finished one keeps the newest 3 per name.
 
 set -euo pipefail
 
@@ -93,17 +94,82 @@ parse_args() {
     *" $TARGET "*) ;;
     *) error "Unsupported target '$TARGET'. Choose from: $SUPPORTED_TARGETS"; return 1 ;;
   esac
+  # main cds to the checkout, so a relative path is read against the caller's folder now.
+  PREFIX="$(abs_path "$PREFIX")"
+  ARCHON_HOME_DIR="$(abs_path "$ARCHON_HOME_DIR")"
+}
+
+# An absolute path for $1, read against the current folder; the folder need not exist.
+abs_path() {
+  case "$1" in
+    /*) printf '%s\n' "$1" ;;
+    *) printf '%s\n' "${PWD%/}/${1#./}" ;;
+  esac
 }
 
 timestamp() { date +%Y%m%d-%H%M%S; }
 
-# Move an existing path aside; print what happened.
+# What this run replaced, in order: "<target>|<backup>" (backup empty when the target was new).
+TOUCHED=()
+KEEP_BACKUPS=3
+
+# Move an existing path aside; print what happened. Records the target for restore_backups.
 backup_existing() {
-  local path="$1" backup
+  local path="$1" backup=""
   if [ -e "$path" ] || [ -L "$path" ]; then
     backup="${path}.prev-${STAMP}"
     mv "$path" "$backup"
     info "Backed up $path -> $backup"
+  fi
+  TOUCHED+=("${path}|${backup}")
+}
+
+# Copy an existing folder aside (it is updated in place, not replaced). Records it like backup_existing.
+backup_copy() {
+  local path="$1" backup=""
+  if [ -e "$path" ]; then
+    backup="${path}.prev-${STAMP}"
+    cp -R "$path" "$backup"
+    info "Backed up $path -> $backup"
+  fi
+  TOUCHED+=("${path}|${backup}")
+}
+
+# Undo this run: newest first, drop what it put at each target and move the backup back.
+restore_backups() {
+  local i entry path backup
+  for ((i = ${#TOUCHED[@]} - 1; i >= 0; i--)); do
+    entry="${TOUCHED[$i]}"
+    path="${entry%%|*}"
+    backup="${entry#*|}"
+    rm -rf "$path"
+    if [ -n "$backup" ] && { [ -e "$backup" ] || [ -L "$backup" ]; }; then
+      mv "$backup" "$path"
+      warn "Restored $path from $backup"
+    fi
+  done
+  TOUCHED=()
+}
+
+# Keep the newest $KEEP_BACKUPS <path>.prev-* (the stamp sorts by time), remove the rest.
+prune_backups() {
+  local path="$1" old
+  local -a backups=()
+  for old in "${path}".prev-*; do
+    { [ -e "$old" ] || [ -L "$old" ]; } && backups+=("$old")
+  done
+  [ "${#backups[@]}" -gt "$KEEP_BACKUPS" ] || return 0
+  while IFS= read -r old; do
+    rm -rf "$old"
+  done < <(printf '%s\n' "${backups[@]}" | sort -r | tail -n +"$((KEEP_BACKUPS + 1))")
+}
+
+# EXIT trap while installing: a failed step puts every backup of this run back.
+on_install_exit() {
+  local status="$1"
+  if [ "$status" -ne 0 ] && [ "${#TOUCHED[@]}" -gt 0 ]; then
+    error "Install failed (exit $status); restoring the previous install"
+    restore_backups
   fi
 }
 
@@ -126,22 +192,26 @@ check_bun() {
 }
 
 # Feature-detect what the installed CLI offers: `archon kit tools`, else
-# `archon kit doctor`, else nothing. A failing tools step is a warning only.
+# `archon kit doctor`, else nothing. It runs in an empty temp folder, never in this
+# checkout: a folder without scripts/install-tools.sh makes `kit tools` run the kit's
+# bundled installer. A failing tools step is a warning only.
 run_kit_tools() {
-  local bin="$1" help_out
+  local bin="$1" help_out dir
   if ! help_out="$("$bin" kit --help 2>&1)"; then
     info "This Archon has no 'kit' command; skipping the kit tools step."
     return 0
   fi
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/archon-kit-tools.XXXXXX")"
   if printf '%s\n' "$help_out" | grep -Eqw 'tools'; then
-    info "Installing kit tools: archon kit tools"
-    "$bin" kit tools || warn "'archon kit tools' failed; re-run it by hand."
+    info "Installing kit tools: archon kit tools (the kit's bundled installer)"
+    (cd "$dir" && "$bin" kit tools "$dir") || warn "'archon kit tools' failed; re-run it by hand."
   elif printf '%s\n' "$help_out" | grep -Eqw 'doctor'; then
     info "No 'archon kit tools'; running: archon kit doctor"
-    "$bin" kit doctor || warn "'archon kit doctor' reported problems."
+    (cd "$dir" && "$bin" kit doctor "$dir") || warn "'archon kit doctor' reported problems."
   else
     info "'archon kit' has neither 'tools' nor 'doctor'; skipping the kit tools step."
   fi
+  rm -rf "$dir"
 }
 
 running_servers() {
@@ -160,11 +230,11 @@ print_plan() {
   else
     echo "  web          packages/web/dist -> $ARCHON_HOME_DIR/web-dist/$VERSION/"
   fi
-  echo "  backups      existing targets move to <name>.prev-<timestamp>"
+  echo "  backups      existing targets move to <name>.prev-<timestamp>; restored if a step fails; newest $KEEP_BACKUPS kept"
   if [ "$SKIP_TOOLS" = true ]; then
     echo "  kit tools    skipped (--skip-tools)"
   else
-    echo "  kit tools    archon kit tools (or archon kit doctor), if the CLI has a kit command"
+    echo "  kit tools    archon kit tools in an empty temp folder (the kit's bundled installer), or archon kit doctor, if the CLI has a kit command"
   fi
 }
 
@@ -214,10 +284,13 @@ main() {
   # The set goes in together: server first, CLI last, so a half-finished install
   # never leaves a CLI whose embedded server hash matches nothing.
   info "Installing to $ARCHON_HOME_DIR and $PREFIX"
+  trap 'on_install_exit $?' EXIT
   install_file "$server" "$ARCHON_HOME_DIR/server/$VERSION/archon-server-${OS_ARCH}"
 
   # Provider plugin: binary plus receipt, written by the repo's own installer code.
-  # Move an existing binary aside so the receipt writer can claim the name.
+  # Move an existing binary aside so the receipt writer can claim the name; the
+  # receipts are rewritten in place, so they are copied aside.
+  backup_copy "$ARCHON_HOME_DIR/plugins/installed"
   backup_existing "$ARCHON_HOME_DIR/plugins/archon-provider-claude"
   ARCHON_HOME="$ARCHON_HOME_DIR" bun scripts/install-local-provider.ts claude "$provider"
 
@@ -230,6 +303,12 @@ main() {
   fi
 
   install_file "$cli" "$PREFIX/archon"
+  trap - EXIT
+  local entry
+  for entry in "${TOUCHED[@]}"; do
+    prune_backups "${entry%%|*}"
+  done
+  TOUCHED=()
   success "Installed $PREFIX/archon (v$VERSION)"
 
   if [ -n "$servers" ]; then

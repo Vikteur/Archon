@@ -61,4 +61,47 @@ output=$(bash "$script" --prefix 2>&1) || status=$?
 [ "$status" -ne 0 ] || fail "accepted --prefix without a value"
 contains "$output" "--prefix needs a value" "missing value"
 
+# A relative --prefix/--archon-home is read against the caller's folder, not the checkout.
+output=$(cd /tmp && bash "$script" --dry-run --prefix rel/bin --archon-home=./rel/home --target bun-linux-x64) \
+  || fail "relative dry-run failed"
+contains "$output" "/tmp/rel/bin/archon" "relative --prefix"
+contains "$output" "/tmp/rel/home/server/" "relative --archon-home"
+contains "$output" "empty temp folder" "kit tools runs outside the checkout"
+
+# The helpers, sourced: backups of a failed run come back, a finished run keeps the newest 3.
+work="$(mktemp -d "${TMPDIR:-/tmp}/install-local-test.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
+(
+  # shellcheck source=/dev/null
+  source "$script"
+  set +e
+  [ "$(cd "$work" && abs_path x/y)" = "$work/x/y" ] || fail "abs_path relative"
+  [ "$(abs_path /a/b)" = "/a/b" ] || fail "abs_path absolute"
+
+  STAMP=20260101-000000
+  echo old-bin > "$work/archon"
+  mkdir -p "$work/receipts" && echo old-receipt > "$work/receipts/r.json"
+  echo new-bin > "$work/new"
+  install_file "$work/new" "$work/archon" >/dev/null
+  backup_copy "$work/receipts" >/dev/null
+  echo new-receipt > "$work/receipts/r.json"
+  backup_existing "$work/fresh"
+  mkdir -p "$work/fresh"
+  [ "$(cat "$work/archon")" = new-bin ] || fail "install_file did not install"
+  restore_backups >/dev/null 2>&1
+  [ "$(cat "$work/archon")" = old-bin ] || fail "restore did not bring the old binary back"
+  [ "$(cat "$work/receipts/r.json")" = old-receipt ] || fail "restore did not bring the receipts back"
+  [ ! -e "$work/fresh" ] || fail "restore left a target that was new"
+  [ ! -e "$work/archon.prev-$STAMP" ] || fail "restore left the backup behind"
+
+  for stamp in 20250101-000001 20250101-000002 20250101-000003 20250101-000004 20250101-000005; do
+    echo "$stamp" > "$work/archon.prev-$stamp"
+  done
+  mkdir "$work/archon.prev-20250101-000006"
+  prune_backups "$work/archon"
+  left="$(cd "$work" && printf "%s " archon.prev-*)"
+  [ "$left" = "archon.prev-20250101-000004 archon.prev-20250101-000005 archon.prev-20250101-000006 " ] \
+    || fail "prune kept: $left"
+) || exit 1
+
 echo "install-local tests passed"

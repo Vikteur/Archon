@@ -786,6 +786,38 @@ describe('sync on a fixture repo', () => {
     expect(check.stale[0]).toContain('java-spring/.github/skills/run-app/SKILL.md');
   });
 
+  test('--verify compares profile order by number, flags an unknown profile and an overlay exec bit', () => {
+    const src = fixture();
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-order-')));
+    write(
+      out,
+      'overlays/java/overlay.json',
+      JSON.stringify({
+        'scripts/o.sh': { derivedFrom: null, sourceSha256: null },
+      })
+    );
+    write(out, 'overlays/java/scripts/o.sh', 'echo o\n');
+    sync(src, out, false, NO_REWRITES);
+    expect(verifyKit(out)).toEqual([]);
+    chmodSync(join(out, 'overlays/java/scripts/o.sh'), 0o755);
+    expect(verifyKit(out)).toContain(
+      'overlay not synced: overlays/java/scripts/o.sh (run kit-sync)'
+    );
+    chmodSync(join(out, 'overlays/java/scripts/o.sh'), 0o644);
+    const mf = join(out, 'manifest.json');
+    const manifest = JSON.parse(readFileSync(mf, 'utf8')) as {
+      files: { profile: string; path: string }[];
+    };
+    const javaAt = manifest.files.findIndex(f => f.profile === 'java');
+    const [java] = manifest.files.splice(javaAt, 1);
+    manifest.files.unshift(java);
+    manifest.files.push({ ...manifest.files[1], profile: 'nope' });
+    writeFileSync(mf, JSON.stringify(manifest));
+    const problems = verifyKit(out);
+    expect(problems.some(p => /out of order/.test(p))).toBe(true);
+    expect(problems.some(p => /names an unknown profile nope/.test(p))).toBe(true);
+  });
+
   test('an overlay marked createOnly is marked so in the manifest; the others are not', () => {
     const src = fixture();
     const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-create-only-')));

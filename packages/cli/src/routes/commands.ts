@@ -539,7 +539,12 @@ export async function runKit({
   cwd,
   json,
 }: CliRouteContext): Promise<number> {
-  if (subcommand !== 'add' && subcommand !== 'doctor' && subcommand !== 'list') {
+  if (
+    subcommand !== 'add' &&
+    subcommand !== 'doctor' &&
+    subcommand !== 'list' &&
+    subcommand !== 'tools'
+  ) {
     const problem =
       subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`;
     return await fail(json, `${problem}\nAvailable: add, doctor, list, tools`);

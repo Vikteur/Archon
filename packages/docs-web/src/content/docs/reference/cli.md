@@ -168,7 +168,7 @@ reported as `kept (differs)` unless `--force` is given. Then it runs
 | `--trust` | Add the project to `trustedFolders` in `$COPILOT_HOME/config.json` (default `~/.copilot`) |
 | `--user-hooks` | Write `$COPILOT_HOME/hooks/archon-kit-run-guard.json` so the run guard loads in untrusted folders |
 
-`kit tools [path] [--check]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code; it errors if the script is missing. `add` and `doctor` reuse it.
+`kit tools [path] [--check]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code. In a folder without that script it runs the kit's bundled installer and tool list from a temp folder instead, which switches on no git hooks. `add` and `doctor` reuse it.
 
 `@@KIT_PROJECT_DIR@@` is built in: it renders as the absolute (real) project path and is never read from `kit.yaml`.
 

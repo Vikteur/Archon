@@ -618,7 +618,11 @@ function verifyOverlays(out: string): string[] {
     return readOverlays(join(out, 'overlays'))
       .filter(o => {
         const full = join(out, 'profiles', o.profile, o.path);
-        return !existsSync(full) || readFileSync(full, 'utf8') !== o.content;
+        return (
+          !existsSync(full) ||
+          readFileSync(full, 'utf8') !== o.content ||
+          ((statSync(full).mode & 0o111) !== 0) !== o.executable
+        );
       })
       .map(o => `overlay not synced: overlays/${o.profile}/${o.path} (run kit-sync)`);
   } catch (e) {
@@ -634,12 +638,17 @@ export function verifyKit(out: string): string[] {
   const problems: string[] = [];
   const listed = new Set<string>();
   const files: { profile: string; path: string; content: string }[] = [];
-  let prev = '';
+  let prev: { rank: number; path: string } | null = null;
   for (const f of manifest.files) {
     const key = `${f.profile}/${f.path}`;
-    const sortKey = `${PROFILES.indexOf(f.profile)}\0${f.path}`;
-    if (sortKey <= prev) problems.push(`manifest: ${key} is out of order`);
-    prev = sortKey;
+    // Profile order compares by index as a number (a string compare puts 10 before 9).
+    const rank = (PROFILES as readonly string[]).indexOf(f.profile);
+    if (rank < 0) problems.push(`manifest: ${key} names an unknown profile ${f.profile}`);
+    else {
+      if (prev !== null && (rank < prev.rank || (rank === prev.rank && f.path <= prev.path)))
+        problems.push(`manifest: ${key} is out of order`);
+      prev = { rank, path: f.path };
+    }
     listed.add(key);
     const content = verifyEntry(out, f, problems);
     if (content !== null) files.push({ profile: f.profile, path: f.path, content });

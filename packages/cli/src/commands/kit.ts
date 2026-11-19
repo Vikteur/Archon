@@ -14,14 +14,18 @@ import { createHash } from 'crypto';
 import {
   chmodSync,
   existsSync,
+  lstatSync,
+  mkdtempSync,
   realpathSync,
   mkdirSync,
   readFileSync,
+  renameSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'fs';
-import { homedir } from 'os';
-import { delimiter, dirname, isAbsolute, join, resolve } from 'path';
+import { homedir, tmpdir } from 'os';
+import { delimiter, dirname, isAbsolute, join, relative as relativePath, resolve, sep } from 'path';
 import { isMap, parse as parseYaml, parseDocument } from 'yaml';
 import type { BUNDLED_KIT } from '../bundled-kit';
 
@@ -45,8 +49,14 @@ export interface KitAddOptions {
 }
 
 const KIT_YAML = join('.archon', 'kit.yaml');
+/**
+ * The kit defaults, beside kit.yaml: the project's scripts (kit-config.sh, kit-config.js) read a key kit.yaml
+ * leaves out from here at runtime, so it ships as a lock-tracked kit file of its own.
+ */
+export const KIT_DEFAULTS = '.archon/kit.defaults.yaml';
 /** What kit add last wrote, path → sha256: a file still holding it is the kit's own, so a newer kit updates it. */
 export const KIT_LOCK = join('.archon', 'kit.lock.json');
+const DISPATCH = '.github/hooks/dispatch.sh';
 
 export function readKitLock(projectPath: string): Record<string, string> {
   try {
@@ -69,6 +79,83 @@ export function copilotHome(env: NodeJS.ProcessEnv = process.env): string {
 
 function sha256(text: string): string {
   return createHash('sha256').update(text).digest('hex');
+}
+
+/** CRLF → LF, so a Windows checkout (core.autocrlf) of an unedited file hashes and compares as the kit's own. */
+function toLf(text: string): string {
+  return text.replace(/\r\n/g, '\n');
+}
+
+/** sha256 of the text with CRLF line ends read as LF: what the lock records and drift compares. */
+export function contentHash(text: string): string {
+  return sha256(toLf(text));
+}
+
+/** Quote one word for bash: a path holding a `'` stays one word. */
+export function shellQuote(word: string): string {
+  return `'${word.replace(/'/g, `'\\''`)}'`;
+}
+
+/** kit add owns these two files; a manifest entry for either is refused. */
+const RESERVED_PATHS = new Set(['.archon/kit.yaml', '.archon/kit.lock.json']);
+
+/**
+ * Why a manifest path cannot be written inside the project, or null when it can: an absolute path, a
+ * drive letter, a `..` segment (either separator) or one of kit add's own files is refused.
+ */
+export function unsafeManifestPath(path: string): string | null {
+  if (path === '' || path.startsWith('/') || path.startsWith('\\') || isAbsolute(path)) {
+    return 'an absolute path';
+  }
+  if (/^[A-Za-z]:/.test(path)) return 'a drive letter';
+  const segments = path.split(/[\\/]/);
+  if (segments.includes('..')) return 'a .. segment';
+  if (RESERVED_PATHS.has(segments.filter(seg => seg !== '' && seg !== '.').join('/'))) {
+    return "kit add's own file";
+  }
+  return null;
+}
+
+/** The nearest existing ancestor of `path` (itself when it exists), by lstat so a dangling link counts. */
+function nearestExisting(path: string): string {
+  let current = path;
+  for (;;) {
+    try {
+      lstatSync(current);
+      return current;
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return current;
+      current = parent;
+    }
+  }
+}
+
+/**
+ * Where a write to `relative` under `project` would land: 'symlink' when the destination is a link
+ * (never written through), 'outside' when its nearest existing parent resolves outside the project.
+ */
+export function destinationProblem(
+  project: string,
+  relative: string
+): 'symlink' | 'outside' | null {
+  const dest = join(project, relative);
+  try {
+    if (lstatSync(dest).isSymbolicLink()) return 'symlink';
+  } catch {
+    // absent: checked through its parent below
+  }
+  const root = realpathSync(project);
+  let real: string;
+  try {
+    real = realpathSync(nearestExisting(dirname(dest)));
+  } catch {
+    return 'outside';
+  }
+  const rel = relativePath(root, real);
+  return rel === '' || (!rel.startsWith(`..${sep}`) && rel !== '..' && !isAbsolute(rel))
+    ? null
+    : 'outside';
 }
 
 /**
@@ -132,14 +219,38 @@ export function renderTemplate(
   });
 }
 
-function coerceScalar(raw: string): unknown {
-  try {
-    const parsed: unknown = parseYaml(raw);
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) return raw;
-    return parsed ?? '';
-  } catch {
-    return raw;
+/**
+ * A `--set` value: true/false become booleans and an explicit `[a, b]` list a list; everything else stays
+ * the string it is, so a version such as 20.10 or a code such as 010 is not turned into a number.
+ */
+export function coerceScalar(raw: string): unknown {
+  const text = raw.trim();
+  if (text === 'true') return true;
+  if (text === 'false') return false;
+  if (text.startsWith('[') && text.endsWith(']')) {
+    try {
+      const parsed: unknown = parseYaml(text);
+      if (Array.isArray(parsed))
+        return parsed.map(item => (typeof item === 'string' ? item : String(item)));
+    } catch {
+      // not a list after all: keep the text
+    }
   }
+  return raw;
+}
+
+/** The value of a `--set profiles=…` among the overrides, as a profile list; undefined when absent. */
+export function profilesFromSets(sets: string[]): string[] | undefined {
+  let found: string[] | undefined;
+  for (const entry of sets) {
+    const eq = entry.indexOf('=');
+    if (eq <= 0 || entry.slice(0, eq).trim() !== 'profiles') continue;
+    const value = coerceScalar(entry.slice(eq + 1));
+    found = (Array.isArray(value) ? value.map(String) : String(value).split(','))
+      .map(name => name.trim())
+      .filter(Boolean);
+  }
+  return found;
 }
 
 /** Apply `key=value` overrides (dot keys) to a YAML document, keeping its comments. */
@@ -204,7 +315,15 @@ export function trustFolder(configPath: string, projectPath: string): 'added' | 
   if (current.includes(projectPath)) return 'present';
   data.trustedFolders = [...current, projectPath];
   mkdirSync(dirname(configPath), { recursive: true });
-  writeFileSync(configPath, `${JSON.stringify(data, null, 2)}\n`);
+  // Temp file and rename: a crash mid-write never leaves Copilot a truncated config.json.
+  const temp = `${configPath}.archon-${process.pid}.tmp`;
+  try {
+    writeFileSync(temp, `${JSON.stringify(data, null, 2)}\n`);
+    renameSync(temp, configPath);
+  } catch (err) {
+    rmSync(temp, { force: true });
+    throw err;
+  }
   return 'added';
 }
 
@@ -263,9 +382,17 @@ function isGitRepo(path: string): boolean {
   return result.status === 0 && result.stdout.trim() === 'true';
 }
 
-function streamCommand(command: string, cwd: string): Promise<number> {
+function streamCommand(
+  command: string,
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env
+): Promise<number> {
   return new Promise(resolveExit => {
-    const child = spawn('bash', ['-c', command], { cwd, stdio: 'inherit' });
+    const child = spawn('bash', ['-c', command], {
+      cwd,
+      env,
+      stdio: 'inherit',
+    });
     child.on('error', () => resolveExit(127));
     child.on('close', code => resolveExit(code ?? 1));
   });
@@ -276,17 +403,50 @@ function streamCommand(command: string, cwd: string): Promise<number> {
 // ---------------------------------------------------------------------------
 
 const INSTALL_TOOLS = join('scripts', 'install-tools.sh');
+const BUNDLED_INSTALLER = 'core/scripts/install-tools.sh';
+const BUNDLED_TOOLS_CONF = 'core/scripts/tools.conf';
 
-/** Run `bash scripts/install-tools.sh [--check]` in the project, streaming output. */
-export async function kitToolsCommand(targetPath: string, check = false): Promise<number> {
+/** Does the project carry its own tool installer? Else `kit tools` needs the bundled kit's. */
+export function hasProjectInstaller(targetPath: string): boolean {
+  return existsSync(join(resolve(targetPath), INSTALL_TOOLS));
+}
+
+/**
+ * Run `bash scripts/install-tools.sh [--check]` in the project, streaming output. A folder without one (no
+ * kit installed yet, as when an installer runs it) runs the kit's own installer and tool list from `kit`,
+ * written to a temp folder; its PROJECT_DIR is that folder, so it switches on no project's git hooks.
+ */
+export async function kitToolsCommand(
+  targetPath: string,
+  check = false,
+  kit?: Kit
+): Promise<number> {
   const project = resolve(targetPath);
-  if (!existsSync(join(project, INSTALL_TOOLS))) {
+  const flag = check ? ' --check' : '';
+  if (existsSync(join(project, INSTALL_TOOLS))) {
+    return await streamCommand(`bash ${INSTALL_TOOLS}${flag}`, project);
+  }
+  const installer = kit?.files[BUNDLED_INSTALLER];
+  const toolsConf = kit?.files[BUNDLED_TOOLS_CONF];
+  if (installer === undefined || toolsConf === undefined) {
     console.error(
       `Error: ${join(project, INSTALL_TOOLS)} not found. Install the kit first: archon kit add ${project}`
     );
     return 1;
   }
-  return await streamCommand(`bash ${INSTALL_TOOLS}${check ? ' --check' : ''}`, project);
+  const temp = mkdtempSync(join(tmpdir(), 'archon-kit-tools-'));
+  try {
+    mkdirSync(join(temp, 'scripts'));
+    writeFileSync(join(temp, INSTALL_TOOLS), installer);
+    writeFileSync(join(temp, 'scripts', 'tools.conf'), toolsConf);
+    console.log(`No ${INSTALL_TOOLS} in ${project}; running the kit's bundled tool installer`);
+    return await streamCommand(`bash ${shellQuote(join(temp, INSTALL_TOOLS))}${flag}`, project, {
+      ...process.env,
+      PROJECT_DIR: temp,
+    });
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -295,7 +455,7 @@ export async function kitToolsCommand(targetPath: string, check = false): Promis
 
 // ---------------------------------------------------------------------------
 
-type FileState = 'written' | 'unchanged' | 'kept';
+type FileState = 'written' | 'unchanged' | 'kept' | 'skipped (symlink)' | 'skipped (outside)';
 
 /**
  * What `kit add` does with a file the project may already hold: null writes it. A create-only file (manifest
@@ -308,7 +468,7 @@ export function existingFileState(
   createOnly = false
 ): FileState | null {
   if (!existsSync(dest)) return null;
-  if (readFileSync(dest, 'utf-8') === content) return 'unchanged';
+  if (toLf(readFileSync(dest, 'utf-8')) === toLf(content)) return 'unchanged';
   return force && !createOnly ? null : 'kept';
 }
 
@@ -335,11 +495,24 @@ export async function kitAddCommand(
   const kitYamlExists = existsSync(kitYamlPath);
   const existingConfig = readKitYaml(project);
   let profiles: string[];
+  // `--set profiles=…` picks this run's profiles, as --profile does; it is applied as one, not as a raw set.
+  const setProfiles = profilesFromSets(options.set ?? []);
+  const otherSets = (options.set ?? []).filter(
+    entry => entry.slice(0, Math.max(entry.indexOf('='), 0)).trim() !== 'profiles'
+  );
+  const explicitProfiles =
+    options.profiles && options.profiles.length > 0 ? options.profiles : setProfiles;
   try {
+    if (options.profiles && options.profiles.length > 0 && setProfiles !== undefined) {
+      throw new Error('Give the profiles once: --profile or --set profiles=…, not both');
+    }
+    if (setProfiles !== undefined && setProfiles.length === 0) {
+      throw new Error('--set profiles= names no profile');
+    }
     const defaultsConfig = parseYaml(kit.defaults) as Record<string, unknown> | null;
     const requested =
-      options.profiles && options.profiles.length > 0
-        ? options.profiles
+      explicitProfiles && explicitProfiles.length > 0
+        ? explicitProfiles
         : stringList(existingConfig?.profiles).length > 0
           ? stringList(existingConfig?.profiles)
           : stringList(defaultsConfig?.profiles);
@@ -352,12 +525,9 @@ export async function kitAddCommand(
   let kitYamlText: string;
   try {
     kitYamlText = kitYamlExists ? readFileSync(kitYamlPath, 'utf-8') : kit.defaults;
-    const sets = [
-      ...(kitYamlExists ? [] : [`profiles=${JSON.stringify(profiles)}`]),
-      ...(options.set ?? []),
-    ];
-    // An explicit --profile also replaces the profiles recorded in an existing kit.yaml.
-    if (kitYamlExists && options.profiles && options.profiles.length > 0) {
+    const sets = [...(kitYamlExists ? [] : [`profiles=${JSON.stringify(profiles)}`]), ...otherSets];
+    // An explicit --profile (or --set profiles=) also replaces the profiles recorded in an existing kit.yaml.
+    if (kitYamlExists && explicitProfiles && explicitProfiles.length > 0) {
       sets.unshift(`profiles=${JSON.stringify(profiles)}`);
     }
     kitYamlText = applySetOverrides(kitYamlText, sets);
@@ -374,12 +544,24 @@ export async function kitAddCommand(
     PROJECT_DIR: realpathSync(project),
   };
 
+  const unsafe = kit.manifest.files
+    .map(file => ({ file, why: unsafeManifestPath(file.path) }))
+    .filter(entry => entry.why !== null);
+  if (unsafe.length > 0) {
+    for (const { file, why } of unsafe) {
+      console.error(`Error: kit file ${file.profile}/${file.path} is refused: ${why}`);
+    }
+    return 1;
+  }
+
   console.log(`Kit ${kit.manifest.source.name}@${kit.manifest.source.commit.slice(0, 7)}`);
   console.log(`Profiles: ${profiles.join(', ')}${dry ? ' (dry run, nothing is written)' : ''}`);
 
   const results: { path: string; state: FileState }[] = [];
   const lock = readKitLock(project);
   const nextLock: Record<string, string> = {};
+  // Kept files kit add never wrote (no lock entry): files from before the lock, or the project's own.
+  const keptUnlocked: string[] = [];
   const write = (
     relative: string,
     content: string,
@@ -388,11 +570,16 @@ export async function kitAddCommand(
     always = false
   ): FileState => {
     const dest = join(project, relative);
+    const problem = destinationProblem(project, relative);
+    if (problem !== null) {
+      if (lock[relative] !== undefined) nextLock[relative] = lock[relative];
+      return problem === 'symlink' ? 'skipped (symlink)' : 'skipped (outside)';
+    }
     // A file that still holds what kit add last wrote there was never edited: a newer kit replaces it.
     const untouched =
       lock[relative] !== undefined &&
       existsSync(dest) &&
-      sha256(readFileSync(dest, 'utf-8')) === lock[relative];
+      contentHash(readFileSync(dest, 'utf-8')) === lock[relative];
     const state = existingFileState(
       dest,
       content,
@@ -401,9 +588,10 @@ export async function kitAddCommand(
     );
     if (state === 'kept') {
       if (lock[relative] !== undefined) nextLock[relative] = lock[relative];
+      else if (!createOnly) keptUnlocked.push(relative);
       return state;
     }
-    if (!always) nextLock[relative] = sha256(content);
+    if (!always) nextLock[relative] = contentHash(content);
     if (state) return state;
     if (!dry) {
       mkdirSync(dirname(dest), { recursive: true });
@@ -420,6 +608,13 @@ export async function kitAddCommand(
   // 4. Files, in profile order; the last profile carrying a path wins.
   const missing = new Set<string>();
   const winners = winningFiles(kit, profiles);
+  // The defaults file, unless the manifest ships it itself: replaced while unedited, kept once edited.
+  if (!winners.has(KIT_DEFAULTS)) {
+    results.push({
+      path: KIT_DEFAULTS,
+      state: write(KIT_DEFAULTS, kit.defaults, null),
+    });
+  }
   for (const file of winners.values()) {
     const source = kit.files[`${file.profile}/${file.path}`];
     if (source === undefined) {
@@ -439,23 +634,36 @@ export async function kitAddCommand(
     const files = Object.fromEntries(
       Object.entries(nextLock).sort(([a], [b]) => a.localeCompare(b))
     );
-    writeFileSync(
-      join(project, KIT_LOCK),
-      `${JSON.stringify({ kit: kit.manifest.source, files }, null, 2)}\n`
-    );
+    if (destinationProblem(project, KIT_LOCK) === null) {
+      writeFileSync(
+        join(project, KIT_LOCK),
+        `${JSON.stringify({ kit: kit.manifest.source, files }, null, 2)}\n`
+      );
+    } else {
+      console.warn(`Warning: ${KIT_LOCK} is a symlink or lies outside the project, not written`);
+    }
   }
 
   const count = (state: FileState): number => results.filter(r => r.state === state).length;
-  for (const result of results.filter(r => r.state === 'kept')) {
-    console.log(`  kept (differs)  ${result.path}`);
+  for (const result of results.filter(r => r.state !== 'written' && r.state !== 'unchanged')) {
+    console.log(`  ${result.state === 'kept' ? 'kept (differs)' : result.state}  ${result.path}`);
   }
+  const skipped = count('skipped (symlink)') + count('skipped (outside)');
   console.log(
     `Files: ${count('written')} ${dry ? 'would be written' : 'written'}, ${count('unchanged')} unchanged, ${count('kept')} kept (differs)` +
-      (count('kept') > 0 ? ' (use --force to overwrite)' : '')
+      (count('kept') > 0 ? ' (use --force to overwrite)' : '') +
+      (skipped > 0
+        ? `, ${skipped} skipped (a symlink or outside the project, never written through)`
+        : '')
   );
+  if (keptUnlocked.length > 0) {
+    console.log(
+      `${keptUnlocked.length} ${keptUnlocked.length === 1 ? 'file predates' : 'files predate'} the kit lock and ${keptUnlocked.length === 1 ? 'differs' : 'differ'} from the kit; review ${keptUnlocked.length === 1 ? 'it' : 'them'} and rerun with --force to take the kit's version`
+    );
+  }
 
-  // 5. Aliases.
-  mergeAliasesIntoProject(project, kit, dry);
+  // 5. Aliases and the Copilot file hooks in .archon/config.yaml.
+  mergeProjectConfig(project, kit, dry);
 
   // 6. Tools.
   const installTools = join(project, 'scripts', 'install-tools.sh');
@@ -509,20 +717,10 @@ export async function kitAddCommand(
       console.warn('Warning: the kit has no run-guard.sh, user hook not written');
     else if (dry) console.log(`Would write ${hookFile}`);
     else {
-      const guardPath = join(project, guard);
-      const dispatch = winners.has('.github/hooks/dispatch.sh')
-        ? join(project, '.github/hooks/dispatch.sh')
-        : null;
-      const run =
-        dispatch === null
-          ? `bash '${guardPath}'`
-          : `bash '${dispatch}' PreToolUse '.*' '${guardPath}'`;
       const hook = {
         version: 1,
         hooks: {
-          preToolUse: [
-            { type: 'command', bash: `[ -f '${guardPath}' ] && ${run} || true`, timeoutSec: 30 },
-          ],
+          preToolUse: [userHookEntry(project, guard, winners.has(DISPATCH))],
         },
       };
       mkdirSync(dirname(hookFile), { recursive: true });
@@ -558,15 +756,57 @@ export async function kitAddCommand(
   return postInstallFailed ? 1 : 0;
 }
 
-function mergeAliasesIntoProject(project: string, kit: Kit, dry: boolean): void {
-  if (Object.keys(kit.manifest.aliases).length === 0) return;
+/**
+ * The user-level preToolUse entry that runs the project's run guard in every Copilot session. It runs from
+ * the project with CLAUDE_PROJECT_DIR set, because dispatch.sh resolves the script path against that root
+ * (an absolute path would never resolve, and the guard would allow everything); a missing guard allows.
+ */
+export function userHookEntry(
+  project: string,
+  guard: string,
+  withDispatch: boolean
+): { type: 'command'; bash: string; timeoutSec: number } {
+  const dir = shellQuote(project);
+  const script = shellQuote(guard);
+  const run = withDispatch ? `bash ${DISPATCH} PreToolUse '*' ${script}` : `bash ${script}`;
+  return {
+    type: 'command',
+    bash: `if [ -f ${dir}/${script} ]; then cd ${dir} && CLAUDE_PROJECT_DIR=${dir} ${run}; else exit 0; fi`,
+    timeoutSec: 30,
+  };
+}
+
+export interface FileHooksResult {
+  text: string;
+  state: 'added' | 'present' | 'off';
+}
+
+/**
+ * Turn on `assistants.copilot.fileHooks` (off by default in the provider), so Archon's Copilot sessions run
+ * the kit's `.github/hooks/*.json`. A value the project set itself is kept.
+ */
+export function enableFileHooks(existing: string): FileHooksResult {
+  const doc = parseDocument(existing, { uniqueKeys: false });
+  if (doc.errors.length > 0) throw doc.errors[0];
+  const current: unknown = doc.getIn(['assistants', 'copilot', 'fileHooks']);
+  if (current === true) return { text: existing, state: 'present' };
+  if (current !== undefined && current !== null) return { text: existing, state: 'off' };
+  doc.setIn(['assistants', 'copilot', 'fileHooks'], true);
+  return { text: doc.toString(), state: 'added' };
+}
+
+function mergeProjectConfig(project: string, kit: Kit, dry: boolean): void {
   const configPath = join(project, '.archon', 'config.yaml');
   try {
     const existing = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
-    const merged = mergeAliases(existing, kit.manifest.aliases);
-    if (merged.added.length > 0 && !dry) {
+    const merged =
+      Object.keys(kit.manifest.aliases).length === 0
+        ? { text: existing, added: [], conflicts: [] }
+        : mergeAliases(existing, kit.manifest.aliases);
+    const hooks = enableFileHooks(merged.text);
+    if ((merged.added.length > 0 || hooks.state === 'added') && !dry) {
       mkdirSync(dirname(configPath), { recursive: true });
-      writeFileSync(configPath, merged.text);
+      writeFileSync(configPath, hooks.text);
     }
     if (merged.added.length > 0) {
       console.log(
@@ -576,8 +816,17 @@ function mergeAliasesIntoProject(project: string, kit: Kit, dry: boolean): void 
     for (const name of merged.conflicts) {
       console.warn(`Warning: alias ${name} already set differently in .archon/config.yaml, kept`);
     }
+    if (hooks.state === 'added') {
+      console.log(
+        `assistants.copilot.fileHooks: true ${dry ? 'would be set' : 'set'} in .archon/config.yaml (Copilot runs the kit's .github/hooks)`
+      );
+    } else if (hooks.state === 'off') {
+      console.warn(
+        "Warning: .archon/config.yaml sets assistants.copilot.fileHooks to something other than true, kept; Copilot runs will not run the kit's hooks"
+      );
+    }
   } catch (err) {
-    console.warn(`Warning: could not merge aliases: ${(err as Error).message}`);
+    console.warn(`Warning: could not update .archon/config.yaml: ${(err as Error).message}`);
   }
 }
 
@@ -622,8 +871,18 @@ export function computeDrift(projectPath: string, kit: Kit, profiles: string[]):
     if (file.template || file.createOnly) continue;
     report.checked++;
     const dest = join(projectPath, file.path);
+    const source = kit.files[`${file.profile}/${file.path}`];
+    const expected = source === undefined ? file.sha256 : contentHash(source);
     if (!existsSync(dest)) report.missing.push(file.path);
-    else if (sha256(readFileSync(dest, 'utf-8')) !== file.sha256) report.modified.push(file.path);
+    else if (contentHash(readFileSync(dest, 'utf-8')) !== expected) report.modified.push(file.path);
+  }
+  if (!winningFiles(kit, profiles).has(KIT_DEFAULTS)) {
+    report.checked++;
+    const dest = join(projectPath, KIT_DEFAULTS);
+    if (!existsSync(dest)) report.missing.push(KIT_DEFAULTS);
+    else if (contentHash(readFileSync(dest, 'utf-8')) !== contentHash(kit.defaults)) {
+      report.modified.push(KIT_DEFAULTS);
+    }
   }
   return report;
 }
@@ -739,7 +998,8 @@ export function checkAuth(env: NodeJS.ProcessEnv = process.env): DoctorCheck {
 
 export function checkTrust(projectPath: string, env: NodeJS.ProcessEnv = process.env): DoctorCheck {
   const config = readJsonObject(join(copilotHome(env), 'config.json'));
-  const folders = stringList(config?.trustedFolders ?? config?.trusted_folders);
+  // Both spellings count: an empty trustedFolders must not hide a filled trusted_folders.
+  const folders = [...stringList(config?.trustedFolders), ...stringList(config?.trusted_folders)];
   const trusted = folders.some(f => projectPath === f || projectPath.startsWith(`${f}/`));
   return trusted
     ? { status: 'ok', name: 'folder trust', detail: projectPath }
@@ -969,10 +1229,12 @@ export async function kitCommand(
     );
     return 1;
   }
-  if (subcommand === 'tools')
-    return await kitToolsCommand(targetArg ? resolve(targetArg) : cwd, options.check);
-  const { BUNDLED_KIT: kit } = await import('../bundled-kit');
   const target = targetArg ? resolve(targetArg) : cwd;
+  if (subcommand === 'tools' && hasProjectInstaller(target)) {
+    return await kitToolsCommand(target, options.check);
+  }
+  const { BUNDLED_KIT: kit } = await import('../bundled-kit');
+  if (subcommand === 'tools') return await kitToolsCommand(target, options.check, kit);
   if (subcommand === 'list') return kitListCommand(target, kit);
   if (subcommand === 'doctor') return await kitDoctorCommand(target, kit);
   return await kitAddCommand(target, options, kit);
