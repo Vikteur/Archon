@@ -174,6 +174,18 @@ describe('kit', () => {
       expect(text).toMatch(/profiles:\s*\n?\s*(- core|\[)/);
       expect(applySetOverrides(text, ['contract.repo=x/y'])).toMatch(/repo: "?x\/y"?/);
     });
+    it('renders a key missing from an existing kit.yaml from the kit defaults', async () => {
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), 'contract:\n  repo: acme/mine\n');
+      expect(await add({ force: true })).toBe(0);
+      expect(readFileSync(join(project, '.github/agent.md'), 'utf-8')).toBe(
+        `dir ${realpathSync(project)} repo acme/mine branches a, b none \n`
+      );
+      expect(readFileSync(join(project, '.archon/kit.yaml'), 'utf-8')).toBe(
+        'contract:\n  repo: acme/mine\n'
+      );
+      expect(logs.some(l => l.includes('@@KIT_BRANCHES@@'))).toBe(false);
+    });
     it('later profile wins, modes apply, rerun is unchanged', async () => {
       expect(await add({ profiles: ['java'] })).toBe(0);
       expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# java wins\n');

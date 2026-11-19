@@ -353,7 +353,13 @@ export async function kitAddCommand(
     return 1;
   }
   const config = parseYaml(kitYamlText) as unknown;
-  const vars = { ...flattenKitConfig(config), PROJECT_DIR: realpathSync(project) };
+  // The kit defaults sit under the project's values, so a key the kit added after this kit.yaml
+  // was written still renders (an existing kit.yaml is never rewritten with the new keys).
+  const vars = {
+    ...flattenKitConfig(parseYaml(kit.defaults) as unknown),
+    ...flattenKitConfig(config),
+    PROJECT_DIR: realpathSync(project),
+  };
 
   console.log(`Kit ${kit.manifest.source.name}@${kit.manifest.source.commit.slice(0, 7)}`);
   console.log(`Profiles: ${profiles.join(', ')}${dry ? ' (dry run, nothing is written)' : ''}`);
