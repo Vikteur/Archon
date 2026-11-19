@@ -1,5 +1,5 @@
 import { attachmentCommands } from '../attachment-commands';
-import type { HelpEntry, HelpGroup } from './types';
+import type { FlagHelp, HelpEntry, HelpGroup } from './types';
 
 function attachmentHelp(command: keyof typeof attachmentCommands, scopedOnly = false): HelpEntry[] {
   return Object.entries(attachmentCommands[command])
@@ -12,6 +12,20 @@ function attachmentHelp(command: keyof typeof attachmentCommands, scopedOnly = f
     }));
 }
 
+const kitAddFlags: FlagHelp[] = [
+  {
+    spec: '--profile <a,b,c>',
+    description: 'Profiles to install (default: kit.yaml, then kit defaults)',
+  },
+  { spec: '--force', description: 'Overwrite files that differ from the kit' },
+  { spec: '--dry-run', description: 'Show what would change, write nothing' },
+  { spec: '--no-tools', description: 'Skip scripts/install-tools.sh' },
+  { spec: '--no-post-install', description: 'Skip the profiles post-install commands' },
+  { spec: '--trust', description: 'Trust the project folder in $COPILOT_HOME/config.json' },
+  { spec: '--user-hooks', description: 'Install the run-guard hook in $COPILOT_HOME/hooks' },
+  { spec: '--set <key=value>', description: 'Override a kit.yaml key (dot keys, repeatable)' },
+];
+
 export const installHelp: HelpGroup = {
   entries: [
     {
@@ -20,6 +34,9 @@ export const installHelp: HelpGroup = {
       description: 'Start the web UI server (binary installs download server and UI on first run)',
     },
     ...attachmentHelp('skill'),
+    ...attachmentHelp('kit').map(entry =>
+      entry.subcommand === 'add' ? { ...entry, scopedFlags: kitAddFlags } : entry
+    ),
     ...attachmentHelp('provider'),
     ...attachmentHelp('plugin'),
     {

@@ -85,6 +85,13 @@ export const cliArgOptions: CliArgOptions = {
   effort: { type: 'string' },
   full: { type: 'boolean' },
   'dry-run': { type: 'boolean' },
+  // `archon kit add`.
+  profile: { type: 'string' },
+  'no-tools': { type: 'boolean' },
+  'no-post-install': { type: 'boolean' },
+  check: { type: 'boolean' },
+  trust: { type: 'boolean' },
+  'user-hooks': { type: 'boolean' },
   stubs: { type: 'string' },
   'stubs-init': { type: 'string' },
   'default-stubs': { type: 'boolean' },

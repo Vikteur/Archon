@@ -74,6 +74,11 @@ export const orderedExamples: ExampleHelp[] = [
     owner: { command: 'skill', subcommand: 'add' },
   },
   {
+    text: 'archon kit add --profile core,java --dry-run',
+    owner: { command: 'kit', subcommand: 'add' },
+  },
+  { text: 'archon kit doctor', owner: { command: 'kit', subcommand: 'doctor' } },
+  {
     text: 'archon plugin add coleam00/Archon/plugins/forge-github',
     owner: { command: 'plugin', subcommand: 'add' },
   },

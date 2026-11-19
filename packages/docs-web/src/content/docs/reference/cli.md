@@ -131,6 +131,53 @@ decision, driving the SDLC pack's queues, setup and configuration, authoring, an
 prompt guidance. It is also installed automatically during
 `archon setup`. The former `skill install` verb is a deprecated alias that prints a warning.
 
+### `kit add [path]`, `kit doctor [path]`, `kit tools [path]`, `kit list`
+
+Install the bundled GitHub Copilot kit into a git project, check it, or list its profiles.
+The kit is a set of agents, skills, hooks, instructions, scripts, MCP servers and workflows,
+grouped into profiles (`core`, `java`, `java-quarkus`, `java-spring`, `openapi-contract`).
+
+```bash
+# Install the default profiles into the current repository
+archon kit add
+
+# Pick profiles, preview, and set a kit.yaml value
+archon kit add /path/to/project --profile core,java,java-spring --set contract.repo=acme/contract --dry-run
+
+# Check tools, Copilot auth and trust, MCP servers, hooks and drift
+archon kit doctor
+
+# Show profiles and which are installed here
+archon kit list
+```
+
+`add` resolves `requires` between profiles, rejects exclusive combinations, writes
+`.archon/kit.yaml` from the kit defaults when it is missing, renders `@@KIT_<NAME>@@`
+placeholders in template files from it, and merges the kit's model aliases into
+`.archon/config.yaml` (only missing keys). A file that differs from the kit is kept and
+reported as `kept (differs)` unless `--force` is given. Then it runs
+`scripts/install-tools.sh` (skip with `--no-tools`), the profiles' post-install commands
+(skip with `--no-post-install`) and `archon validate workflows`.
+
+| Flag | Effect |
+|------|--------|
+| `--profile a,b,c` | Profiles to install (default: `profiles` in `.archon/kit.yaml`, then the kit defaults) |
+| `--force` | Overwrite files that differ |
+| `--dry-run` | Print the plan, write nothing |
+| `--set key=value` | Override a `kit.yaml` key; dot keys such as `contract.repo`; repeatable |
+| `--trust` | Add the project to `trustedFolders` in `$COPILOT_HOME/config.json` (default `~/.copilot`) |
+| `--user-hooks` | Write `$COPILOT_HOME/hooks/archon-kit-run-guard.json` so the run guard loads in untrusted folders |
+
+`kit tools [path] [--check]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code; it errors if the script is missing. `add` and `doctor` reuse it.
+
+`@@KIT_PROJECT_DIR@@` is built in: it renders as the absolute (real) project path and is never read from `kit.yaml`.
+
+`doctor` exits non-zero when a required check fails. It runs `scripts/install-tools.sh --check`
+when the project has one, checks Copilot auth (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or a logged-in
+user in `config.json`) and folder trust, starts each server in `.github/mcp.json` and runs MCP
+`initialize` and `tools/list` (20 s limit), checks that `.github/hooks/kit.json` scripts exist,
+and compares installed files with the kit's checksums.
+
 ### `serve`
 
 Start the web UI server in the foreground. The same command works from a binary install and from a source checkout. The server runs as a child process.

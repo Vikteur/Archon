@@ -532,6 +532,37 @@ export async function runSkill({
   return await skillInstallCommand(targetPath);
 }
 
+export async function runKit({
+  subcommand,
+  positionals,
+  values,
+  cwd,
+  json,
+}: CliRouteContext): Promise<number> {
+  if (subcommand !== 'add' && subcommand !== 'doctor' && subcommand !== 'list') {
+    const problem =
+      subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`;
+    return await fail(json, `${problem}\nAvailable: add, doctor, list, tools`);
+  }
+  if (positionals.length > 3) return await fail(json, `Usage: archon kit ${subcommand} [path]`);
+  const { kitCommand } = await loadRoute(() => import('../commands/kit'), { providers: false });
+  const profile = typeof values.profile === 'string' ? values.profile : '';
+  return await kitCommand(subcommand, positionals[2], cwd, {
+    profiles: profile
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean),
+    check: values.check === true,
+    force: values.force === true,
+    dryRun: values['dry-run'] === true,
+    noTools: values['no-tools'] === true,
+    noPostInstall: values['no-post-install'] === true,
+    trust: values.trust === true,
+    userHooks: values['user-hooks'] === true,
+    set: Array.isArray(values.set) ? (values.set as string[]) : [],
+  });
+}
+
 export async function runUnknownCommand({ command, json }: CliRouteContext): Promise<number> {
   const problem = command === undefined ? 'Missing command' : `Unknown command: ${command}`;
   // Help text goes to stdout, which would corrupt the

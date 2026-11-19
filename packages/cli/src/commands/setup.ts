@@ -191,6 +191,7 @@ async function runSetup(options: SetupOptions): Promise<void> {
   reportEnvWrite(writeResult);
 
   const installation = await installProjectSkill(options.repoPath, s);
+  await offerProjectKit(installation.projectPath);
   await configureDocsPath(installation.projectPath);
   showSetupSummary(config, scope, writeResult.targetPath, installation);
   await finishSetup();
@@ -545,6 +546,26 @@ async function installProjectSkill(
   }
 
   return { skillInstalledPath, projectPath, projectConfigCreatedPath };
+}
+
+/**
+ * Offer the Copilot kit for the project. Defaults to no, and is skipped entirely
+ * when there is no terminal to answer on (non-interactive runs).
+ */
+async function offerProjectKit(projectPath: string): Promise<void> {
+  if (!process.stdin.isTTY) return;
+  const wantsKit = await confirm({
+    message: 'Install the Copilot kit (agents, skills, hooks, MCP) in your project?',
+    initialValue: false,
+  });
+  if (isCancel(wantsKit) || !wantsKit) return;
+  try {
+    const { kitCommand } = await import('./kit');
+    const code = await kitCommand('add', projectPath, projectPath, {});
+    if (code !== 0) log.warn('Kit install reported problems; rerun with: archon kit add');
+  } catch (err) {
+    log.warn(`Could not install the kit: ${(err as Error).message}`);
+  }
 }
 
 /**
