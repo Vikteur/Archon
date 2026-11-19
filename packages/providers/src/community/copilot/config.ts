@@ -80,8 +80,11 @@ const localFields = {
    * Run the project's `.github/hooks/*.json` hooks with Copilot CLI semantics
    * (the SDK's `hooks.enableRepositoryHooks`). A preToolUse hook that denies, exits 2 or
    * errors blocks the tool; a timeout lets it run. Independent of
-   * `enableConfigDiscovery`.
-   * @default true
+   * `enableConfigDiscovery`. Off by default: the hooks are commands from the
+   * checked-out tree, so turning them on for every repo would run an untrusted
+   * branch's hooks. `archon kit add` sets it to true in the project's
+   * `.archon/config.yaml`.
+   * @default false
    */
   fileHooks: z.boolean({ error: 'expected a boolean' }).optional(),
   /**

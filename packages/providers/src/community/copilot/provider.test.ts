@@ -786,12 +786,20 @@ describe('CopilotProvider kit parity', () => {
     createSessionSpy.mockClear();
   });
 
-  test('file hooks are on by default (hooks.enableRepositoryHooks)', async () => {
+  test('file hooks are off by default (hooks.enableRepositoryHooks)', async () => {
     const { opts } = await runOnce({ model: 'gpt-5' });
+    expect(opts.hooks?.enableRepositoryHooks).toBe(false);
+  });
+
+  test('fileHooks: true turns the runtime file hooks on', async () => {
+    const { opts } = await runOnce({
+      model: 'gpt-5',
+      assistantConfig: { fileHooks: true },
+    });
     expect(opts.hooks?.enableRepositoryHooks).toBe(true);
   });
 
-  test('fileHooks: false turns the runtime file hooks off', async () => {
+  test('fileHooks: false keeps the runtime file hooks off', async () => {
     const { opts } = await runOnce({
       model: 'gpt-5',
       assistantConfig: { fileHooks: false },

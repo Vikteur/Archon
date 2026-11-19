@@ -446,10 +446,12 @@ async function buildSessionConfig(
     events: { streaming: true },
     systemMessage: resolveSystemMessage(requestOptions),
     enableConfigDiscovery: copilotConfig.enableConfigDiscovery ?? false,
-    // The runtime loads `<cwd>/.github/hooks/*.json` itself and applies Copilot
-    // CLI semantics (deny/exit 2/error block a tool, a timeout does not); its
+    // Opt-in (off by default): the runtime loads `<cwd>/.github/hooks/*.json`
+    // itself, so on any checked-out tree (an untrusted PR branch too) it would
+    // run that tree's commands. `archon kit add` turns it on for a kit project.
+    // It applies Copilot CLI semantics (deny/exit 2/error block a tool, a timeout does not); its
     // `hook.start` / `hook.end` events reach the stream via the event bridge.
-    hooks: { enableRepositoryHooks: copilotConfig.fileHooks ?? true },
+    hooks: { enableRepositoryHooks: copilotConfig.fileHooks ?? false },
     permissions: { onRequest: approveAll },
   };
 

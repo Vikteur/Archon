@@ -332,7 +332,7 @@ assistants:
     copilotCliPath: /absolute/path/to/copilot
     configDir: /absolute/path/to/copilot-config   # default: the SDK's own, usually ~/.copilot
     enableConfigDiscovery: false   # default false; true loads the repo's .copilot/ MCP servers and skills
-    fileHooks: true                # default true; false stops the repo's .github/hooks/*.json from running
+    fileHooks: true                # default false; true runs the repo's .github/hooks/*.json (archon kit add sets it)
     useLoggedInUser: true          # default true; false allows GH_TOKEN or GITHUB_TOKEN
     logLevel: error                # none, error, warning, info, debug or all
 ```
@@ -343,7 +343,7 @@ Copilot has no session-fork API. When Archon asks for a fork on retry, it starts
 
 A node's `skills:` names resolve against Copilot's own skill directories as well as the shared ones. Archon searches, first match wins: `<cwd>/.github/skills/`, `<cwd>/.agents/skills/`, `<cwd>/.claude/skills/`, then `<copilot home>/skills/`, `~/.agents/skills/`, `~/.claude/skills/`. The Copilot home is `configDir` when set, else `COPILOT_HOME`, else `~/.copilot`. Only Copilot reads `.github/skills/` and the Copilot home; Claude's skill roots are unchanged. `archon validate workflows` checks Copilot skills against the shared roots only, so it warns that a skill that lives only in `.github/skills/` or the Copilot home is not found; the run still loads it.
 
-With `fileHooks: true` (the default), the Copilot runtime runs the project's `.github/hooks/*.json` hooks in Archon sessions with Copilot CLI semantics:
+File hooks are off by default, because the hooks are commands from the checked-out tree: on an untrusted branch they would run that branch's code. `archon kit add` turns them on for its project by writing `assistants.copilot.fileHooks: true` to the project's `.archon/config.yaml`. Set it yourself only for a repo whose hooks you trust. With `fileHooks: true`, the Copilot runtime runs the project's `.github/hooks/*.json` hooks in Archon sessions with Copilot CLI semantics:
 
 - A `preToolUse` hook that answers `{"permissionDecision":"deny"}`, exits with code 2, or fails with another non-zero exit blocks the tool call.
 - A hook that times out lets the call run.
