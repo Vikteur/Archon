@@ -118,7 +118,7 @@ base_branch: main
 gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
 build_workflow: build-feature-copilot
-java_version: 21
+java_version: 21              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
   modules: "-"               # the settings.gradle.kts modules, space-separated

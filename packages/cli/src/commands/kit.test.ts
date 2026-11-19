@@ -21,6 +21,7 @@ import { dirname, join, resolve } from 'path';
 import { removeTempTree } from '@archon/paths/test-utils';
 import {
   backlogSwitchedOff,
+  buildToolchain,
   checkTools,
   kitCommand,
   kitToolsCommand,
@@ -413,6 +414,81 @@ describe('kit', () => {
       newest.defaults = `${newest.defaults}agent_cli: claude\n`;
       expect(await add({}, newest)).toBe(0);
       expect(readFileSync(dest, 'utf-8')).toBe('mine: 1\n');
+    });
+  });
+
+  describe('java_version follows the build toolchain', () => {
+    /** A kit whose defaults say java_version 21 and whose ci.yml renders it. */
+    const javaKit = (): Kit => {
+      const kit = makeKit();
+      kit.defaults = `${kit.defaults}java_version: 21\n`;
+      addFile(kit, 'core', 'ci.yml', "java-version: '@@KIT_JAVA_VERSION@@'\n");
+      const entry = kit.manifest.files.find(f => f.path === 'ci.yml');
+      if (entry) entry.template = true;
+      return kit;
+    };
+    const toolchain = (rel: string, n: number): void => {
+      mkdirSync(dirname(join(project, rel)), { recursive: true });
+      writeFileSync(
+        join(project, rel),
+        `java {\n  toolchain {\n    languageVersion.set(JavaLanguageVersion.of(${n}))\n  }\n}\n`
+      );
+    };
+    const kitYaml = (): Record<string, unknown> =>
+      Bun.YAML.parse(readFileSync(join(project, '.archon/kit.yaml'), 'utf-8')) as Record<
+        string,
+        unknown
+      >;
+    const ci = (): string => readFileSync(join(project, 'ci.yml'), 'utf-8');
+
+    it('a new kit.yaml takes the toolchain of build.gradle.kts, not the defaults', async () => {
+      toolchain('build.gradle.kts', 17);
+      expect(await add({}, javaKit())).toBe(0);
+      expect(kitYaml().java_version).toBe(17);
+      expect(ci()).toBe("java-version: '17'\n");
+    });
+    it('a convention plugin under buildSrc/ names the toolchain too', async () => {
+      writeFileSync(join(project, 'build.gradle.kts'), 'plugins { java }\n');
+      toolchain('buildSrc/src/main/kotlin/java-conventions.gradle.kts', 25);
+      toolchain('buildSrc/build/generated/old.gradle.kts', 11);
+      expect(buildToolchain(project)).toEqual({
+        version: '25',
+        file: 'buildSrc/src/main/kotlin/java-conventions.gradle.kts',
+      });
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '25'\n");
+    });
+    it('a kit.yaml without the key renders the toolchain and is not given the key', async () => {
+      toolchain('build.gradle.kts', 17);
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\n');
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '17'\n");
+      expect(Object.hasOwn(kitYaml(), 'java_version')).toBe(false);
+    });
+    it('refuses a kit.yaml java_version that is not the toolchain, and writes nothing', async () => {
+      toolchain('build.gradle.kts', 17);
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\njava_version: 21\n');
+      expect(await add({ force: true }, javaKit())).toBe(1);
+      expect(logs.join('\n')).toContain(
+        "kit.yaml java_version 21 does not match the build's toolchain, JavaLanguageVersion.of(17) in build.gradle.kts"
+      );
+      expect(existsSync(join(project, 'ci.yml'))).toBe(false);
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\njava_version: 17\n');
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '17'\n");
+    });
+    it('refuses a --set java_version that is not the toolchain', async () => {
+      toolchain('build.gradle.kts', 17);
+      expect(await add({ set: ['java_version=21'] }, javaKit())).toBe(1);
+      expect(existsSync(join(project, 'ci.yml'))).toBe(false);
+      expect(await add({ set: ['java_version=17'] }, javaKit())).toBe(0);
+    });
+    it('a build that names no toolchain keeps the kit.yaml value', async () => {
+      expect(buildToolchain(project)).toBeNull();
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '21'\n");
     });
   });
 

@@ -360,6 +360,79 @@ function readJsonObject(path: string): Record<string, unknown> | null {
   }
 }
 
+/** Where a Gradle build names its Java toolchain, in the order the kit's scripts read them (class-version-check.sh). */
+export const TOOLCHAIN_PLACES = ['build.gradle.kts', 'buildSrc', 'build-logic'];
+const TOOLCHAIN = /JavaLanguageVersion\.of\(\s*(\d+)\s*\)/;
+
+/**
+ * The Java toolchain the project's build names: the first `JavaLanguageVersion.of(N)` in build.gradle.kts, else in a
+ * Gradle file under buildSrc/, else under build-logic/ (files in name order, build output skipped), or null.
+ */
+export function buildToolchain(projectPath: string): { version: string; file: string } | null {
+  const gradleFiles = (dir: string): string[] => {
+    const out: string[] = [];
+    const walk = (rel: string): void => {
+      const abs = join(projectPath, rel);
+      let entries: string[];
+      try {
+        entries = readdirSync(abs).sort();
+      } catch {
+        return;
+      }
+      for (const name of entries) {
+        const child = join(rel, name);
+        const st = lstatSync(join(projectPath, child));
+        if (st.isDirectory()) {
+          if (name !== 'build' && name !== '.gradle') walk(child);
+        } else if (/\.gradle(\.kts)?$|\.kt$/.test(name)) out.push(child);
+      }
+    };
+    walk(dir);
+    return out;
+  };
+  for (const place of TOOLCHAIN_PLACES) {
+    const abs = join(projectPath, place);
+    if (!existsSync(abs)) continue;
+    const files = statSync(abs).isDirectory() ? gradleFiles(place) : [place];
+    for (const file of files) {
+      const match = TOOLCHAIN.exec(readFileSync(join(projectPath, file), 'utf-8'));
+      if (match?.[1]) return { version: match[1], file: file.split(sep).join('/') };
+    }
+  }
+  return null;
+}
+
+/**
+ * kit.yaml's java_version against the build's toolchain. Set by the project (its kit.yaml or a --set) it must name the
+ * toolchain, else kit add refuses; not set, it is the toolchain's (a new kit.yaml gets that value, not the defaults').
+ * Returns the kit.yaml text to write and the value to render, or the refusal.
+ */
+export function javaVersionFor(
+  projectPath: string,
+  kitYamlText: string,
+  setByProject: boolean
+): { text: string; version: string | null } | { error: string } {
+  const toolchain = buildToolchain(projectPath);
+  if (toolchain === null) return { text: kitYamlText, version: null };
+  if (setByProject) {
+    const configured = (parseYaml(kitYamlText) as Record<string, unknown> | null)?.java_version;
+    if (String(configured) !== toolchain.version)
+      return {
+        error:
+          `kit.yaml java_version ${String(configured)} does not match the build's toolchain, ` +
+          `JavaLanguageVersion.of(${toolchain.version}) in ${toolchain.file}: set java_version: ${toolchain.version} ` +
+          'or remove the key, and kit add takes it from the build',
+      };
+    return { text: kitYamlText, version: toolchain.version };
+  }
+  const doc = parseDocument(kitYamlText);
+  if (doc.has('java_version')) doc.set('java_version', Number(toolchain.version));
+  return {
+    text: doc.has('java_version') ? doc.toString() : kitYamlText,
+    version: toolchain.version,
+  };
+}
+
 function readKitYaml(projectPath: string): Record<string, unknown> | null {
   const path = join(projectPath, KIT_YAML);
   if (!existsSync(path)) return null;
@@ -614,12 +687,26 @@ export async function kitAddCommand(
     console.error(`Error: ${(err as Error).message}`);
     return 1;
   }
+  // java_version follows the build's toolchain (JavaLanguageVersion.of(N)): derived unless the project set it, and
+  // refused when the project set another one, so ci.yml never sets up a JDK the build does not compile for.
+  const javaSetByProject =
+    otherSets.some(
+      entry => entry.slice(0, Math.max(entry.indexOf('='), 0)).trim() === 'java_version'
+    ) ||
+    (kitYamlExists && existingConfig !== null && Object.hasOwn(existingConfig, 'java_version'));
+  const java = javaVersionFor(project, kitYamlText, javaSetByProject);
+  if ('error' in java) {
+    console.error(`Error: ${java.error}`);
+    return 1;
+  }
+  kitYamlText = java.text;
   const config = parseYaml(kitYamlText) as unknown;
   // The kit defaults sit under the project's values, so a key the kit added after this kit.yaml
   // was written still renders (an existing kit.yaml is never rewritten with the new keys).
   const vars = {
     ...flattenKitConfig(parseYaml(kit.defaults) as unknown),
     ...flattenKitConfig(config),
+    ...(java.version !== null ? { JAVA_VERSION: java.version } : {}),
     PROJECT_DIR: realpathSync(project),
   };
 
