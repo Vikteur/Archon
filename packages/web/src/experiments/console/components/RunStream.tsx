@@ -22,6 +22,8 @@ import { StreamCard } from './StreamCard';
 import { scriptCallOf } from '../lib/script-run';
 import { promptCallOf } from '../lib/prompt-call';
 import { mcpCallOf } from '../lib/mcp-call';
+import { docReadOf } from '../lib/doc-read';
+import { logKindNouns, type LogKind } from '../lib/log-filter';
 import { PromptItem, nodePromptNote } from './PromptItem';
 
 interface RunStreamProps {
@@ -34,21 +36,12 @@ interface RunStreamProps {
   showToolCalls: boolean;
   showSystem: boolean;
   /**
-   * Show only the tool calls that ran a script, under their node's divider; overrides
-   * `showToolCalls` and `showSystem`. The node filter still applies.
+   * Show only the rows of these kinds (lib/log-filter.ts), each under its node's divider:
+   * prompts (node prompts and subagent calls), script runs, MCP calls, doc reads. Any
+   * non-empty list overrides `showToolCalls` and `showSystem`; the node filter still
+   * applies. Empty shows the whole log.
    */
-  scriptsOnly?: boolean;
-  /**
-   * Show only the prompts agents were given (node prompts and subagent calls), under
-   * their node's divider; overrides `showToolCalls` and `showSystem`. The node filter
-   * still applies.
-   */
-  promptsOnly?: boolean;
-  /**
-   * Show only the calls to an MCP server's tools, under their node's divider; overrides
-   * `showToolCalls` and `showSystem`. The node filter still applies.
-   */
-  mcpOnly?: boolean;
+  only?: readonly LogKind[];
   /** `'all'` shows every node; otherwise restrict the stream to one node's entries. */
   selectedNodeId: string;
 }
@@ -188,6 +181,8 @@ export function runToolCalls(
   promptCallCount: number;
   /** How many of the shown calls went to an MCP server's tool. */
   mcpCount: number;
+  /** How many of the shown calls read a doc file. */
+  docReadCount: number;
 } {
   const fromProviderEvents = pairProviderToolCalls(providerEvents);
   const showInline = fromProviderEvents.length === 0;
@@ -201,6 +196,7 @@ export function runToolCalls(
     scriptCount: calls.filter(isScriptCall).length,
     promptCallCount: calls.filter(isPromptCall).length,
     mcpCount: calls.filter(isMcpCall).length,
+    docReadCount: calls.filter(isDocReadCall).length,
   };
 }
 
@@ -217,6 +213,11 @@ export function isPromptCall(call: InlineToolCall): boolean {
 /** Whether a tool call went to an MCP server's tool (lib/mcp-call.ts). */
 export function isMcpCall(call: InlineToolCall): boolean {
   return mcpCallOf(call) !== null;
+}
+
+/** Whether a tool call read a doc file (lib/doc-read.ts). */
+export function isDocReadCall(call: InlineToolCall): boolean {
+  return docReadOf(call) !== null;
 }
 
 /** How many prompts a run's log shows: the node prompts plus the subagent calls. */
@@ -353,9 +354,7 @@ export function RunStream({
   providerEvents,
   showToolCalls,
   showSystem,
-  scriptsOnly = false,
-  promptsOnly = false,
-  mcpOnly = false,
+  only = [],
   selectedNodeId,
 }: RunStreamProps): ReactElement {
   // Single source for the folded nodes — consumed by both the timeline (one
@@ -424,56 +423,34 @@ export function RunStream({
     return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
   };
 
-  const visible = promptsOnly
-    ? onlyEntries(timeline, isPromptEntry, inSelectedNode)
-    : mcpOnly
-      ? onlyEntries(timeline, isMcpEntry, inSelectedNode)
-      : scriptsOnly
-        ? onlyEntries(timeline, isScriptEntry, inSelectedNode)
-        : timeline.filter(e => {
-            if (e.kind === 'tool' && !showToolCalls) return false;
-            if (e.kind === 'system' && !showSystem) return false;
-            if (e.kind === 'system_row' && !showSystem) return false;
-            // Node filter: isolate one node. Node markers, hooks and tools from provider events
-            // match by identity; every node-blind entry (prose, artifacts, system rows,
-            // legacy message-inline tools) falls back to the node's time window so a
-            // node's whole slice of the timeline stays visible.
-            if (selectedNodeId !== 'all') {
-              if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
-              if (e.kind === 'hook') return e.nodeId === selectedNodeId;
-              if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
-              if (e.kind === 'prompt' && e.event.nodeId !== null)
-                return e.event.nodeId === selectedNodeId;
-              return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
-            }
-            return true;
-          });
+  const visible =
+    only.length > 0
+      ? onlyEntries(timeline, e => only.some(kind => KIND_MATCHERS[kind](e)), inSelectedNode)
+      : timeline.filter(e => {
+          if (e.kind === 'tool' && !showToolCalls) return false;
+          if (e.kind === 'system' && !showSystem) return false;
+          if (e.kind === 'system_row' && !showSystem) return false;
+          // Node filter: isolate one node. Node markers, hooks and tools from provider events
+          // match by identity; every node-blind entry (prose, artifacts, system rows,
+          // legacy message-inline tools) falls back to the node's time window so a
+          // node's whole slice of the timeline stays visible.
+          if (selectedNodeId !== 'all') {
+            if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
+            if (e.kind === 'hook') return e.nodeId === selectedNodeId;
+            if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+            if (e.kind === 'prompt' && e.event.nodeId !== null)
+              return e.event.nodeId === selectedNodeId;
+            return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
+          }
+          return true;
+        });
 
-  if (visible.length === 0 && promptsOnly) {
+  if (visible.length === 0 && only.length > 0) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-center">
         <p className="text-sm text-text-tertiary">
-          No prompts{selectedNodeId !== 'all' ? ' in this node' : ''} recorded yet.
-        </p>
-      </div>
-    );
-  }
-
-  if (visible.length === 0 && mcpOnly) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-center">
-        <p className="text-sm text-text-tertiary">
-          No MCP calls{selectedNodeId !== 'all' ? ' in this node' : ''} yet.
-        </p>
-      </div>
-    );
-  }
-
-  if (visible.length === 0 && scriptsOnly) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-center">
-        <p className="text-sm text-text-tertiary">
-          No script runs{selectedNodeId !== 'all' ? ' in this node' : ''} yet.
+          No {logKindNouns(only)}
+          {selectedNodeId !== 'all' ? ' in this node' : ''} yet.
         </p>
       </div>
     );
@@ -615,6 +592,18 @@ function NodeSections({
     </div>
   );
 }
+
+function isDocReadEntry(e: TimelineEntry): boolean {
+  return e.kind === 'tool' && isDocReadCall(e.call);
+}
+
+/** Which timeline entries each kind of the log filter picks. */
+const KIND_MATCHERS: Record<LogKind, (e: TimelineEntry) => boolean> = {
+  prompts: isPromptEntry,
+  scripts: isScriptEntry,
+  mcp: isMcpEntry,
+  docs: isDocReadEntry,
+};
 
 function isScriptEntry(e: TimelineEntry): boolean {
   return e.kind === 'tool' && isScriptCall(e.call);

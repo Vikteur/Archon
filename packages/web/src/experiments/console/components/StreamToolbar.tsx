@@ -1,4 +1,6 @@
 import type { ReactElement, ReactNode } from 'react';
+import { LogFilterMenu } from './LogFilterMenu';
+import type { LogKind } from '../lib/log-filter';
 
 export type DetailView = 'log' | 'graph' | 'artifacts';
 
@@ -15,18 +17,10 @@ interface StreamToolbarProps {
   showSystem: boolean;
   onToggleSystem: (next: boolean) => void;
   toolCallCount: number;
-  /** Tool calls that ran a script; the "Scripts only" switch shows only those. */
-  scriptCount: number;
-  scriptsOnly: boolean;
-  onToggleScriptsOnly: (next: boolean) => void;
-  /** Prompts agents were given; the "Prompts only" switch shows only those. */
-  promptCount: number;
-  promptsOnly: boolean;
-  onTogglePromptsOnly: (next: boolean) => void;
-  /** Calls to an MCP server's tools; the "MCP only" switch shows only those. */
-  mcpCount: number;
-  mcpOnly: boolean;
-  onToggleMcpOnly: (next: boolean) => void;
+  /** The log's kind filter: the kinds picked (empty shows everything) and each kind's count. */
+  only: readonly LogKind[];
+  onChangeOnly: (next: LogKind[]) => void;
+  kindCounts: Record<LogKind, number>;
   messageCount: number;
   artifactCount: number | null;
   /** Distinct nodes in the run; empty hides the node filter. */
@@ -88,48 +82,6 @@ function Checkbox({ label, checked, onChange }: CheckboxProps): ReactElement {
   );
 }
 
-/** A "… only" switch, styled like the rows it filters to. */
-function OnlyToggle({
-  label,
-  title,
-  accent,
-  on,
-  count,
-  onChange,
-}: {
-  label: string;
-  title: string;
-  accent: string;
-  on: boolean;
-  count: number;
-  onChange: (next: boolean) => void;
-}): ReactElement {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      title={title}
-      onClick={() => {
-        onChange(!on);
-      }}
-      className="flex items-center gap-1.5 rounded-full border px-2.5 py-[2px] font-mono text-[11.5px] font-semibold transition-colors"
-      style={{
-        color: on ? accent : 'var(--text-secondary)',
-        borderColor: `color-mix(in oklch, ${accent}, transparent ${on ? '40%' : '75%'})`,
-        background: on ? `color-mix(in oklch, ${accent}, transparent 82%)` : 'transparent',
-      }}
-    >
-      <span
-        aria-hidden
-        className="h-1.5 w-1.5 rounded-full"
-        style={{ background: on ? accent : `color-mix(in oklch, ${accent}, transparent 50%)` }}
-      />
-      {label}
-      <span className="tabular-nums opacity-80">{count.toString()}</span>
-    </button>
-  );
-}
-
 interface TabProps {
   label: string;
   active: boolean;
@@ -169,15 +121,9 @@ export function StreamToolbar({
   showSystem,
   onToggleSystem,
   toolCallCount,
-  scriptCount,
-  scriptsOnly,
-  onToggleScriptsOnly,
-  promptCount,
-  promptsOnly,
-  onTogglePromptsOnly,
-  mcpCount,
-  mcpOnly,
-  onToggleMcpOnly,
+  only,
+  onChangeOnly,
+  kindCounts,
   messageCount,
   artifactCount,
   nodeOptions,
@@ -214,10 +160,7 @@ export function StreamToolbar({
 
       {isLog ? (
         <span className="font-mono text-[12px] text-text-tertiary md:ml-3">
-          {messageCount.toString()} messages · {toolCallCount.toString()} tool calls ·{' '}
-          {scriptCount.toString()} {scriptCount === 1 ? 'script' : 'scripts'} ·{' '}
-          {promptCount.toString()} {promptCount === 1 ? 'prompt' : 'prompts'} ·{' '}
-          {mcpCount.toString()} MCP {mcpCount === 1 ? 'call' : 'calls'}
+          {messageCount.toString()} messages · {toolCallCount.toString()} tool calls
         </span>
       ) : null}
 
@@ -245,31 +188,8 @@ export function StreamToolbar({
               </SelectShell>
             </label>
           ) : null}
-          <OnlyToggle
-            label="Prompts only"
-            title="Show only the prompts agents were given (o)"
-            accent="var(--accent)"
-            on={promptsOnly}
-            count={promptCount}
-            onChange={onTogglePromptsOnly}
-          />
-          <OnlyToggle
-            label="MCP only"
-            title="Show only the calls to an MCP server's tools (m)"
-            accent="var(--brand-teal)"
-            on={mcpOnly}
-            count={mcpCount}
-            onChange={onToggleMcpOnly}
-          />
-          <OnlyToggle
-            label="Scripts only"
-            title="Show only the tool calls that ran a script (x)"
-            accent="var(--warning)"
-            on={scriptsOnly}
-            count={scriptCount}
-            onChange={onToggleScriptsOnly}
-          />
-          {scriptsOnly || promptsOnly || mcpOnly ? null : (
+          <LogFilterMenu selected={only} onChange={onChangeOnly} counts={kindCounts} />
+          {only.length > 0 ? null : (
             <>
               <Checkbox label="Tool calls" checked={showToolCalls} onChange={onToggleToolCalls} />
               <Checkbox label="System" checked={showSystem} onChange={onToggleSystem} />

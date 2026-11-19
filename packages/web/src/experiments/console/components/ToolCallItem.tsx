@@ -8,6 +8,8 @@ import { promptCallOf } from '../lib/prompt-call';
 import { PromptItem } from './PromptItem';
 import { mcpCallOf } from '../lib/mcp-call';
 import { McpCallItem } from './McpCallItem';
+import { docReadOf } from '../lib/doc-read';
+import { DocReadItem } from './DocReadItem';
 
 interface ToolCallItemProps {
   call: InlineToolCall;
@@ -65,6 +67,10 @@ export function ToolCallItem({ call, timestamp }: ToolCallItemProps): ReactEleme
   const mcp = mcpCallOf(call);
   if (mcp !== null) {
     return <McpCallItem call={call} mcp={mcp} timestamp={timestamp} />;
+  }
+  const doc = docReadOf(call);
+  if (doc !== null) {
+    return <DocReadItem call={call} doc={doc} timestamp={timestamp} />;
   }
   return <PlainToolCallItem call={call} timestamp={timestamp} />;
 }
