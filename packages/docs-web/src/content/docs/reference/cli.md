@@ -131,6 +131,45 @@ decision, driving the SDLC pack's queues, setup and configuration, authoring, an
 prompt guidance. It is also installed automatically during
 `archon setup`. The former `skill install` verb is a deprecated alias that prints a warning.
 
+### `kit setup`
+
+The guided install of the bundled GitHub Copilot kit, and the main way to install it. It
+asks for the backend repository (a git checkout), the frontend repository (optional) and
+the OpenAPI contract file, and checks each answer as it is typed. After a confirmation it
+installs the tools, installs the kit into the backend (`kit add --trust`), sets
+`contract.spec_path` to the absolute contract path and runs the contract MCP setup, builds
+the CodeGraph index of both repositories, gives the frontend the codegraph MCP server,
+folder trust and a `codegraph.extra_projects` entry in the backend's `kit.yaml`, runs
+`rtk init --copilot` in each repository, checks every MCP server and starts the web views.
+The [Copilot Kit guide](/guides/copilot-kit/) describes each step.
+
+```bash
+# Ask in the terminal (offers the last run's answers)
+archon kit setup
+
+# No questions
+archon kit setup --backend ~/code/backend --contract ~/code/contract/dist/openapi.yaml --yes
+```
+
+| Flag | Effect |
+|------|--------|
+| `--backend <path>` | Backend git repository (gets the kit) |
+| `--frontend <path>` | Frontend git repository; leave it out to skip the frontend |
+| `--contract <file>` | OpenAPI contract: `.yaml`, `.yml` or `.json` with a top-level `openapi` key |
+| `--profile a,b,c` | Kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--yes` | Skip the confirmation |
+| `--no-tools` | Skip the tool installer |
+| `--no-rtk` | Skip the rtk hooks |
+| `--no-web` | Do not start the web views |
+
+The answers are saved in `<archon home>/kit-setup.json` (the three paths and the
+profiles). Each step's output goes to `<archon home>/logs/kit-setup-<time>.log`; a failed
+step names that log, and the later steps still run. Without a terminal, `--backend` and
+`--contract` are required.
+
+Exit codes: `0` done or cancelled, `1` a step failed, `2` a usage error (missing or invalid
+flags, an unknown profile).
+
 ### `kit add [path]`, `kit doctor [path]`, `kit tools [path]`, `kit list`
 
 Install the bundled GitHub Copilot kit into a git project, check it, or list its profiles.

@@ -10,12 +10,72 @@ sidebar:
 ---
 
 The Copilot kit gives a project the Archon setup for GitHub Copilot CLI. It is the
-Copilot counterpart of the Claude setup. You install it once with `archon kit add`,
-commit the files it writes, and then run the `build-feature-copilot` workflow on your
-own tickets.
+Copilot counterpart of the Claude setup. You install it once with `archon kit setup`
+(or by hand with `archon kit add`), commit the files it writes, and then run the
+`build-feature-copilot` workflow on your own tickets.
 
 The kit is for projects that use Copilot CLI as the coding agent. It is not a
 separate product. Its files live in the Archon fork (`Vikteur/Archon`, folder `kit/`).
+
+## Install with `archon kit setup`
+
+`archon kit setup` is the main way to install the kit. It asks three questions in the
+terminal and checks each answer as you type it:
+
+1. **Backend repository**: a git checkout. The kit goes here.
+2. **Frontend repository**: a git checkout, or empty to skip it.
+3. **API contract file**: an OpenAPI file (`.yaml`, `.yml` or `.json`) with a top-level
+   `openapi` key.
+
+A path may start with `~`. A relative path is read against the current folder. On a
+rerun, the dialog offers the last answers. They are kept in `~/.archon/kit-setup.json`
+(the three paths and the profiles, nothing else).
+
+After you confirm the summary, it runs these steps, each with a spinner:
+
+| Step | What it does |
+|------|--------------|
+| Tools | Runs the kit's tool installer for the backend (`archon kit tools`). |
+| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract` unless you pick others. |
+| Contract | Sets `contract.spec_path` in the backend's `.archon/kit.yaml` to the absolute contract path, then runs `.archon/scripts/contract-mcp-setup.sh`. |
+| CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
+| Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
+| rtk hooks | Runs `rtk init --copilot` in each repository, when `rtk` is on `PATH`. It never installs the global hooks. |
+| Servers check | Starts each MCP server of both repositories, as `kit doctor` does. |
+| Web views | Runs `bash scripts/web-uis.sh start --open` in the backend and lists the URLs. |
+
+The output of every step goes to a log, `~/.archon/logs/kit-setup-<time>.log`, not to the
+terminal. A step that fails is shown as failed with that log path. The later steps still
+run, and the command exits 1 at the end.
+
+The last screen lists the web view URLs, the command that stops them
+(`bash scripts/web-uis.sh stop` in the backend), the log path and the Copilot login: run
+`copilot`, then `/login`, and finish it in a browser signed in as the GitHub account that
+has Copilot. That account may differ from the one `gh` uses.
+
+To run it without questions, for example in a script, give the answers as flags:
+
+```bash
+archon kit setup --backend ~/code/backend --frontend ~/code/frontend \
+  --contract ~/code/contract/dist/openapi.yaml --yes
+```
+
+| Flag | Effect |
+|------|--------|
+| `--backend <path>` | The backend repository |
+| `--frontend <path>` | The frontend repository; leave it out to skip the frontend |
+| `--contract <file>` | The OpenAPI contract file |
+| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--yes` | Skip the confirmation |
+| `--no-tools` | Skip the tool installer |
+| `--no-rtk` | Skip the rtk hooks |
+| `--no-web` | Do not start the web views |
+
+Without a terminal, `--backend` and `--contract` are required. Without them, the command
+prints its usage and exits 2.
+
+Both installers, `scripts/install.sh` and `scripts/install-local.sh`, start
+`archon kit setup` at the end when they run in a terminal. Pass `--no-setup` to skip it.
 
 ## What the kit installs
 
@@ -173,6 +233,9 @@ command keeps every other key in that file. You can also trust the folder from i
 `copilot` when it asks.
 
 ## First run
+
+`archon kit setup` already checks the MCP servers and points you to the Copilot login.
+After a manual `kit add`, do these steps:
 
 1. Check the install:
 
