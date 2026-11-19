@@ -295,6 +295,13 @@ profiles and which ones are installed here. The flags and exit codes are in the
   any agent scope. Select an agent for work that should be fenced.
 - **Notifications.** The delegator's push notifications and its agent messaging are
   Claude-only. On Copilot, `notify-owner.sh` sends through ntfy, so set `ntfy_topic`.
+- **An organization's MCP registry policy.** A Copilot account whose organization sets an
+  MCP registry allows only the servers that registry lists. Copilot then says
+  `2 MCP servers were blocked by policy: 'codegraph', 'contract-api' (Not found in registry <url>)`.
+  The servers themselves work (the setup's servers check starts them outside Copilot), and
+  Copilot's logs do not record the block, so `kit doctor` cannot see it. Its admin has to
+  allow them. Until then, agents run without MCP: the build workflow falls back to file
+  searches, and its MCP check warns.
 - **Structured output.** Structured output from a Copilot node is best effort. Check the
   result of a node that needs a strict format.
 

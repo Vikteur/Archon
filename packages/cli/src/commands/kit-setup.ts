@@ -757,6 +757,8 @@ function finish(run: SetupRun, urls: string[]): number {
     '',
     'Copilot login: run `copilot`, then `/login`, and finish it in a browser signed in as the GitHub',
     'account that has Copilot (it may differ from your gh account).',
+    'MCP servers "blocked by policy ... Not found in registry" in Copilot: your organization allows only',
+    'the MCP servers its registry lists. The servers here work; its admin has to allow them.',
   ];
   ui.note(next.join('\n'), 'Next');
   if (run.failed.length > 0) {
