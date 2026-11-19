@@ -6,6 +6,8 @@ import { scriptCallOf } from '../lib/script-run';
 import { ScriptRunItem } from './ScriptRunItem';
 import { promptCallOf } from '../lib/prompt-call';
 import { PromptItem } from './PromptItem';
+import { mcpCallOf } from '../lib/mcp-call';
+import { McpCallItem } from './McpCallItem';
 
 interface ToolCallItemProps {
   call: InlineToolCall;
@@ -59,6 +61,10 @@ export function ToolCallItem({ call, timestamp }: ToolCallItemProps): ReactEleme
         status={subagentStatus(call)}
       />
     );
+  }
+  const mcp = mcpCallOf(call);
+  if (mcp !== null) {
+    return <McpCallItem call={call} mcp={mcp} timestamp={timestamp} />;
   }
   return <PlainToolCallItem call={call} timestamp={timestamp} />;
 }

@@ -761,6 +761,107 @@ describe('RunStream prompts only', () => {
   });
 });
 
+describe('RunStream MCP only', () => {
+  const started = (nodeId: string, timestamp: string): NodeTransitionEvent => ({
+    id: `n:${nodeId}`,
+    runId: 'r1',
+    kind: 'node_transition',
+    timestamp,
+    nodeId,
+    nodeName: nodeId,
+    transition: 'started',
+    durationMs: null,
+    skipReason: null,
+    skipExpr: null,
+    costUsd: null,
+    costPartial: false,
+    costScope: null,
+    stopReason: null,
+    numTurns: null,
+    tokens: null,
+  });
+  const message: Message = {
+    id: 'm1',
+    role: 'assistant',
+    content: 'thinking out loud',
+    timestamp: '2026-10-02T10:00:00.500Z',
+    toolCalls: [],
+    error: null,
+    category: null,
+    dispatch: null,
+    workflowResult: null,
+  };
+  const providerEvents: RunProviderEvents = new Map([
+    [
+      'implement',
+      [
+        record('implement', 'a1', 0, '2026-10-02T10:00:02.100Z', {
+          type: 'tool_call',
+          toolCallId: 'm1',
+          name: 'mcp__portal-api__read',
+          rawInput: { operationId: 'cancelVendorBooking' },
+        }),
+        record('implement', 'a1', 1, '2026-10-02T10:00:02.200Z', {
+          type: 'tool_call_update',
+          toolCallId: 'm1',
+          status: 'completed',
+          output: '{"operationId":"cancelVendorBooking","method":"POST"}',
+        }),
+        record('implement', 'a1', 2, '2026-10-02T10:00:02.300Z', {
+          type: 'tool_call',
+          toolCallId: 'b1',
+          name: 'Bash',
+          rawInput: { command: 'git status' },
+        }),
+      ],
+    ],
+  ]);
+  const events = [
+    started('plan', '2026-10-02T10:00:00.000Z'),
+    started('implement', '2026-10-02T10:00:02.000Z'),
+  ];
+
+  const render = (mcpOnly: boolean, selectedNodeId = 'all'): string =>
+    renderToStaticMarkup(
+      <StreamContextProvider value={{ runStartedAt: '2026-10-02T09:59:00.000Z' }}>
+        <RunStream
+          messages={[message]}
+          events={events}
+          nodes={[
+            { node_id: 'plan', state: 'completed' },
+            { node_id: 'implement', state: 'running' },
+          ]}
+          providerEvents={providerEvents}
+          showToolCalls={false}
+          showSystem={false}
+          mcpOnly={mcpOnly}
+          selectedNodeId={selectedNodeId}
+        />
+      </StreamContextProvider>
+    );
+
+  test('shows only MCP calls, under the divider of a node that made one', () => {
+    const html = render(true);
+    expect(html).toContain('portal-api');
+    expect(html).toContain('operationId=&quot;cancelVendorBooking&quot;');
+    expect(html).not.toContain('git status');
+    expect(html).not.toContain('thinking out loud');
+    expect(html).toContain('implement');
+    expect(html).not.toContain('>plan<');
+  });
+
+  test('with the node filter on a node without MCP calls it says so', () => {
+    expect(render(true, 'plan')).toContain('No MCP calls in this node yet.');
+  });
+
+  test('runToolCalls counts the MCP calls', () => {
+    expect(runToolCalls([message], providerEvents)).toMatchObject({
+      count: 2,
+      mcpCount: 1,
+    });
+  });
+});
+
 describe('RunStream node sections', () => {
   const started = (nodeId: string, timestamp: string): NodeTransitionEvent => ({
     id: `n:${nodeId}`,

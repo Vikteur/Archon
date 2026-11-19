@@ -148,7 +148,7 @@ export function ScriptRunItem({
   );
 }
 
-function formatDuration(ms: number): string {
+export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms.toString()}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   const minutes = Math.floor(ms / 60_000);
@@ -176,7 +176,7 @@ function RunHeadline({ run }: { run: ScriptRun }): ReactElement {
   );
 }
 
-function StatusPill({ call }: { call: InlineToolCall }): ReactElement | null {
+export function StatusPill({ call }: { call: InlineToolCall }): ReactElement | null {
   if (call.outcomeUnrecorded === true) {
     return <span className="font-mono text-[11.5px] text-text-tertiary">no result recorded</span>;
   }

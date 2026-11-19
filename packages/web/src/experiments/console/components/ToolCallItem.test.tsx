@@ -41,3 +41,31 @@ describe('ToolCallItem subagent prompts', () => {
     expect(html).not.toContain('then report');
   });
 });
+
+describe('ToolCallItem MCP calls', () => {
+  const call: InlineToolCall = {
+    name: 'mcp__portal-api__search',
+    input: { query: 'cancel a booked vendor' },
+    status: 'completed',
+    durationMs: 42,
+    output: '[{"operationId":"cancelVendorBooking","path":"/bookings/{id}/cancel"}]',
+  };
+
+  test('renders as an MCP row naming the server, the tool, the params and the answer', () => {
+    const html = render(call);
+    expect(html).toContain('>MCP<');
+    expect(html).toContain('portal-api');
+    expect(html).toContain('>search<');
+    expect(html).toContain('query=&quot;cancel a booked vendor&quot;');
+    expect(html).toContain('→ 1 item');
+    expect(html).toContain('✓ ok');
+    expect(html).toContain('42ms');
+    expect(html).not.toContain('>Tool<');
+  });
+
+  test('a failed call is marked failed', () => {
+    expect(render({ ...call, status: 'failed', output: 'unknown operationId' })).toContain(
+      'failed'
+    );
+  });
+});
