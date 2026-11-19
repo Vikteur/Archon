@@ -74,10 +74,11 @@ check "busy port reported, nothing started: $out" '[[ "$out" == *"already in use
 kill "$srv" 2>/dev/null; wait "$srv" 2>/dev/null
 run stop >/dev/null
 
-# No backlog in the hub: refuse, start nothing.
+# No backlog in the hub (a fresh kit install): the board is skipped with a line, the rest still starts.
 rm -f "$tmp/hub/backlog/config.yml"; : > "$tmp/backlog.log"
 out="$(run start)"; rc=$?
-check "refuses without a backlog (rc=$rc): $out" '[ "$rc" -ne 0 ] && [[ "$out" == *"backlog/config.yml"* ]] && [ ! -s "$tmp/backlog.log" ]'
+check "skips the board without a backlog (rc=$rc): $out" '[ "$rc" -eq 0 ] && [[ "$out" == *"backlog: skipped, no Backlog.md board at $tmp/hub (no backlog/config.yml"* ]] && [ ! -s "$tmp/backlog.log" ]'
+run stop >/dev/null
 
 out="$(run bogus)"; rc=$?
 check "unknown command is refused with usage (rc=$rc): $out" '[ "$rc" -ne 0 ] && [[ "$out" == *"usage"* ]]'

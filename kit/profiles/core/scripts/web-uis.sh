@@ -19,6 +19,7 @@
 # backlog/; default: MAP_DIR), BACKLOG_PORT (6420), GROMA_PORT (6421), MCP_PORT_BASE (6274: the first MCP server's
 # web port), WEB_UIS_OPEN (the command --open runs on each URL, instead of the first of the four above), STATE_DIR (pid,
 # url, log and inspector config files; default: $TMPDIR/web-uis).
+# The board is skipped, with the reason, when HUB_DIR has no backlog/config.yml (a fresh kit install).
 # The map is skipped, with the reason, while this project has no groma/ folder (no map built yet).
 set -uo pipefail
 
@@ -167,14 +168,16 @@ done
 
 case "$cmd" in
   start)
-    if [ ! -f "$hub/backlog/config.yml" ]; then
-      echo "web-uis: no backlog at $hub (backlog/config.yml missing); set HUB_DIR." >&2
-      exit 1
-    fi
     mkdir -p "$state"
-    start_one backlog "$backlog_port" "$hub" backlog browser --non-interactive --port "$backlog_port"
+    # A project without a Backlog.md board (a fresh kit install) still gets the map and the MCP views.
+    if [ -f "$hub/backlog/config.yml" ]; then
+      start_one backlog "$backlog_port" "$hub" backlog browser --non-interactive --port "$backlog_port"
+      export BACKLOG_CWD="$hub"   # the map shows the board's open tickets
+    else
+      echo "backlog: skipped, no Backlog.md board at $hub (no backlog/config.yml; set HUB_DIR)"
+    fi
     if [ -d "$map/groma" ]; then
-      BACKLOG_CWD="$hub" start_one groma "$groma_port" "$map" groma web --port "$groma_port"
+      start_one groma "$groma_port" "$map" groma web --port "$groma_port"
     else
       echo "groma: skipped, no Groma map in $map (no groma/ folder yet)"
     fi
