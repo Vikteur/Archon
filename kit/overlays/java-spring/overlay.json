@@ -1,4 +1,8 @@
 {
+  ".github/ci-inputs.yml": {
+    "derivedFrom": ".github/ci-inputs.yml",
+    "sourceSha256": "5c8996f160e9beac718e6ed1b99053025236780393877b5ac915c09fd53f8dfd"
+  },
   ".github/skills/api-first-controller/SKILL.md": {
     "derivedFrom": ".claude/skills/api-first-controller/SKILL.md",
     "sourceSha256": "4fcdd8ff1830ca82138c3899cbc9eea260aa74d3b8c54e1995328b3e989163ca"
@@ -42,6 +46,10 @@
   ".github/skills/testcontainers/SKILL.md": {
     "derivedFrom": ".claude/skills/testcontainers/SKILL.md",
     "sourceSha256": "0f734e4f04e795569f79bc25ca8d9ffd5c526b5d686aeaa658e368cf862d144d"
+  },
+  ".github/workflows/ci.yml": {
+    "derivedFrom": ".github/workflows/ci.yml",
+    "sourceSha256": "4999b043cd44b5d500ac12b5c951377e33a565280971a7e7580573b2f70e8c45"
   },
   "docs/scaffold-templates/adapter/controller-command-test.mustache": {
     "derivedFrom": "docs/scaffold-templates/adapter/controller-command-test.mustache",
