@@ -6,6 +6,7 @@ import { trackTempRoots } from '@archon/paths/test-utils';
 import { renderBundledKit } from './generate-bundled-kit';
 import { depsCheck, installableSets, judgeDeps, KNOWN_GAPS } from './kit-sync-deps';
 import { genericThisRepo, renamePath } from './kit-sync-generic';
+import { applySuiteNouns, classifySuite, suiteOf, suiteSubject } from './kit-sync-tests';
 import {
   applyGlobalRewrites,
   applyRewrites,
@@ -141,7 +142,12 @@ function fixture(): string {
   write(root, '.claude/settings.json', `${JSON.stringify(SETTINGS, null, 2)}\n`);
   write(root, '.claude/hooks/scripts/guard.sh', '#!/usr/bin/env bash\nexit 0\n', true);
   write(root, '.claude/scripts/contract-pin.sh', 'repo=Vikteur/rekord-contract\n', true);
-  write(root, '.archon/scripts/test/x.test.sh', 'excluded\n');
+  write(
+    root,
+    '.archon/scripts/test/guard.test.sh',
+    'bash .claude/hooks/scripts/guard.sh # wedding-portal\n'
+  );
+  write(root, 'scripts/test/image.test.sh', 'excluded\n');
   write(root, 'docs/scaffold-templates/a/resource.mustache', 'import jakarta.ws.rs.GET;\n');
   write(root, 'docs/scaffold-templates/a/entity.mustache', 'record {{name}}() {}\n');
   write(root, 'docs/code-maps/README.md', '# Code maps\n');
@@ -425,6 +431,19 @@ describe('dependency check', () => {
       'core,java,java-quarkus: .github/agents/d.agent.md needs scripts/contract-mcp/server.mjs (its mcp-servers entry)'
     );
     expect(lines.some(l => l.startsWith('core: '))).toBe(false);
+    const ci = depsCheck([
+      {
+        profile: 'java-spring',
+        path: '.github/workflows/ci.yml',
+        content:
+          'run: bash scripts/test/a.test.sh && bash .archon/scripts/test/b.test.sh scripts/test/*.test.sh\n',
+      },
+      { profile: 'java', path: 'scripts/test/a.test.sh', content: '' },
+    ]);
+    expect(ci).toContain(
+      'core,java,java-spring: .github/workflows/ci.yml needs .archon/scripts/test/b.test.sh (a CI step runs it)'
+    );
+    expect(ci.some(l => l.includes('needs scripts/test/a.test.sh'))).toBe(false);
     expect(lines.some(l => l.startsWith('core,java,java-quarkus,openapi-contract: '))).toBe(false);
   });
 
@@ -436,6 +455,70 @@ describe('dependency check', () => {
     expect(r.known).toHaveLength(1);
     expect(r.failures).toEqual(['core,java,java-quarkus: docs/code-maps/x.md needs docs/y (z)']);
     expect(r.unused).toHaveLength(KNOWN_GAPS.length - 1);
+  });
+});
+
+describe('test suites', () => {
+  const files = new Set([
+    '.claude/hooks/scripts/guard.sh',
+    'scripts/scaffold/targets.js',
+    'scripts/scaffold/index.js',
+    '.claude/hooks/scripts/audit-log.sh',
+  ]);
+  const judge = (p: string) =>
+    p.startsWith('scripts/scaffold/')
+      ? ({ profile: 'java' } as const)
+      : p.includes('guard')
+        ? ({ profile: 'core' } as const)
+        : ({ exclude: true, why: 'never ships' } as const);
+
+  test('a suite ships with the profile of the script it tests, found by stem or by name', () => {
+    expect(suiteSubject('.archon/scripts/test/guard.test.sh', files)).toBe(
+      '.claude/hooks/scripts/guard.sh'
+    );
+    expect(suiteSubject('scripts/test/scaffold-x.test.sh', files)).toBeUndefined();
+    expect(
+      suiteSubject(
+        'scripts/test/scaffold.test.sh',
+        new Set(['scripts/scaffold/b.js', 'scripts/scaffold/a.js'])
+      )
+    ).toBe('scripts/scaffold/a.js');
+    expect(suiteSubject('scripts/test/audit-log-args.test.sh', files)).toBe(
+      '.claude/hooks/scripts/audit-log.sh'
+    );
+    expect(classifySuite('.archon/scripts/test/guard.test.sh', files, judge)).toEqual({
+      profile: 'core',
+    });
+  });
+
+  test('a listed suite stays out with its reason, and so do its fixtures', () => {
+    const a = classifySuite('scripts/test/image.test.sh', files, judge);
+    expect(a).toMatchObject({ exclude: true });
+    expect(a.exclude && a.why).toContain('suite stays out:');
+    expect(suiteOf('scripts/test/fixtures/tokenomics/prices.json')).toBe(
+      'scripts/test/tokenomics.test.sh'
+    );
+    expect(
+      classifySuite('scripts/test/fixtures/tokenomics/prices.json', files, judge)
+    ).toMatchObject({
+      exclude: true,
+    });
+  });
+
+  test('an unknown suite, an unshipped subject and a stray test-folder file fail', () => {
+    expect(() => classifySuite('scripts/test/nothing.test.sh', files, judge)).toThrow(
+      /no script found for the suite/
+    );
+    expect(() => classifySuite('scripts/test/audit-log-args.test.sh', files, judge)).toThrow(
+      /does not ship \(never ships\)/
+    );
+    expect(() => suiteOf('scripts/test/helper.sh')).toThrow(/no suite and no listed fixture/);
+  });
+
+  test("the source's nouns become neutral ones", () => {
+    expect(
+      applySuiteNouns('Viktor Van Steenweghen runs wedding-portal-hooks on WeddingId in app.rekord')
+    ).toBe('Example Owner runs project-hooks on OrderId in com.example');
   });
 });
 
@@ -529,6 +612,7 @@ describe('sync on a fixture repo', () => {
     const keys = manifest.files.map(f => `${f.profile}/${f.path}`);
     expect(keys).toEqual([
       'core/.archon/copilot/deny.json',
+      'core/.archon/scripts/test/guard.test.sh',
       'core/.claude/hooks/scripts/guard.sh',
       'core/.github/hooks/dispatch.sh',
       'core/.github/hooks/kit.json',
@@ -561,6 +645,11 @@ describe('sync on a fixture repo', () => {
       kind: 'hook',
       mode: '0755',
     });
+    // A suite ships with its subject's profile, its source nouns neutral; a listed one stays out.
+    expect(
+      readFileSync(join(out, 'profiles/core/.archon/scripts/test/guard.test.sh'), 'utf8')
+    ).toBe('bash .claude/hooks/scripts/guard.sh # example-app\n');
+    expect(keys.some(k => k.endsWith('scripts/test/image.test.sh'))).toBe(false);
     const skill = readFileSync(join(out, 'profiles/core/.github/skills/grill-pr/SKILL.md'), 'utf8');
     expect(skill).toContain(
       '.github/skills/grill-pr/references and .github/skills/run-app/SKILL.md'
@@ -673,5 +762,29 @@ describe('sync on a fixture repo', () => {
     const check = sync(src, out, true, NO_REWRITES);
     expect(check.stale.length).toBe(1);
     expect(check.stale[0]).toContain('java-spring/.github/skills/run-app/SKILL.md');
+  });
+
+  test('an overlay marked createOnly is marked so in the manifest; the others are not', () => {
+    const src = fixture();
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-create-only-')));
+    write(
+      out,
+      'overlays/java/overlay.json',
+      JSON.stringify({
+        'docs/memory.md': { derivedFrom: null, sourceSha256: null, createOnly: true },
+        'docs/other.md': { derivedFrom: null, sourceSha256: null },
+      })
+    );
+    write(out, 'overlays/java/docs/memory.md', '# Project memory\n');
+    write(out, 'overlays/java/docs/other.md', '# other\n');
+    sync(src, out, false, NO_REWRITES);
+    const files = (
+      JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8')) as {
+        files: { path: string; createOnly?: boolean }[];
+      }
+    ).files;
+    expect(files.find(x => x.path === 'docs/memory.md')?.createOnly).toBe(true);
+    expect(files.find(x => x.path === 'docs/other.md')).not.toHaveProperty('createOnly');
+    expect(verifyKit(out)).toEqual([]);
   });
 });

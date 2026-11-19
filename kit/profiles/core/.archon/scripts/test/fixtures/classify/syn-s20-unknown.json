@@ -1,0 +1,98 @@
+{
+ "id": "syn00020",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-99.1",
+ "started_at": "2026-10-20T11:00:00.000Z",
+ "completed_at": "2026-10-20T11:59:00.000Z",
+ "working_path": "<home>/.archon/workspaces/o/r/worktrees/build-feature-1",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'map-check': Bash node 'map-check' failed [exit 1]: groma: the map has 3 elements with no owner"
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'map-check': Bash node 'map-check' failed [exit 1]: groma: the map has 3 elements with no owner",
+  "first_failed_node": "map-check",
+  "nodes": [
+   {
+    "node_id": "map-check",
+    "state": "failed",
+    "error": "Bash node 'map-check' failed [exit 1]: groma: the map has 3 elements with no owner"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-99.1\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "explore",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "skill-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "scaffold-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

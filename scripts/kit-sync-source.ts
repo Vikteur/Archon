@@ -102,6 +102,8 @@ export const sha256 = (s: string | Buffer): string => createHash('sha256').updat
 export interface OverlayEntry {
   derivedFrom: string | null;
   sourceSha256: string | null;
+  /** `kit add` writes the file only when the project has none, even with --force (kit/SPEC.md, manifest.json). */
+  createOnly?: boolean;
 }
 
 export function walk(dir: string, base = dir): string[] {

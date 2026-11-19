@@ -37,6 +37,13 @@ import {
   splitFrontmatter,
 } from './kit-sync-convert';
 import { depsCheck, judgeDeps } from './kit-sync-deps';
+import {
+  applySuiteNouns,
+  classifySuite,
+  isSuitePath,
+  suiteOf,
+  suiteSubject,
+} from './kit-sync-tests';
 import { genericThisRepo, PATH_REWRITES, PATH_SKIP, renamePath } from './kit-sync-generic';
 import {
   AGENT_PROFILES,
@@ -88,6 +95,8 @@ export interface KitFile {
   origin: string | null;
   kind: Kind;
   content: string;
+  /** Written only when the project has no such file (an overlay's `createOnly`). */
+  createOnly?: boolean;
 }
 
 export interface Kit {
@@ -230,8 +239,16 @@ function classifyByList(path: string): Assignment {
   );
 }
 
-export function classify(path: string, text: string): Assignment {
+export function classify(
+  path: string,
+  text: string,
+  files: ReadonlySet<string> = new Set()
+): Assignment {
   if (NEVER_SHIP.includes(path)) return { exclude: true, why: 'never ships' };
+  if (isSuitePath(path)) {
+    const a = classifySuite(path, files, p => classify(p, '', files));
+    return a.exclude ? a : { profile: a.profile, convert: 'copy' };
+  }
   if (EXCLUDE.some(p => matches(p, path))) return { exclude: true, why: 'excluded' };
   const claude = classifyClaude(path);
   if (claude) return claude;
@@ -261,12 +278,20 @@ export function applyRewrites(path: string, text: string, rules: Rewrite[]): str
   return out;
 }
 
-/** `path` is the source path: a PATH_SKIP file keeps its Claude Code path references. */
+/** A PATH_SKIP file, or a suite (or its fixture) of one, keeps its Claude Code path references. */
+function keepsClaudePaths(path: string): boolean {
+  if (PATH_SKIP.includes(path)) return true;
+  if (!isSuitePath(path)) return false;
+  const subject = suiteSubject(suiteOf(path), new Set(PATH_SKIP));
+  return subject !== undefined && PATH_SKIP.includes(subject);
+}
+
+/** `path` is the source path: see keepsClaudePaths; a suite also gets the suite nouns. */
 export function applyGlobalRewrites(text: string, path = ''): string {
   let out = text;
   for (const [re, to] of GLOBAL_REWRITES) out = out.replace(re, to);
-  if (!PATH_SKIP.includes(path)) for (const [re, to] of PATH_REWRITES) out = out.replace(re, to);
-  return out;
+  if (!keepsClaudePaths(path)) for (const [re, to] of PATH_REWRITES) out = out.replace(re, to);
+  return isSuitePath(path) ? applySuiteNouns(out) : out;
 }
 
 function targetPath(path: string, convert: 'agent' | 'skill' | 'rule' | 'copy'): string {
@@ -346,9 +371,10 @@ function convertText(
 /** Every tracked source file that is not excluded, converted and rewritten. */
 function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[] {
   const out: KitFile[] = [];
+  const tracked = new Set(src.files.keys());
   for (const f of [...src.files.values()].sort((a, b) => (a.path < b.path ? -1 : 1))) {
     const raw = textOf(f);
-    const a = classify(f.path, raw);
+    const a = classify(f.path, raw, tracked);
     if (a.exclude) continue;
     if (f.gitMode === '120000') throw new Error(`${f.path}: symlinks are not supported by the kit`);
     out.push(
@@ -451,6 +477,7 @@ function withOverlays(files: KitFile[], overlays: OverlayFile[]): KitFile[] {
         mode: o.executable ? '0755' : '0644',
         origin: o.entry.derivedFrom,
         content: o.content,
+        ...(o.entry.createOnly ? { createOnly: true } : {}),
       })
     );
   return [...seen.values()];
@@ -514,6 +541,7 @@ export function manifestOf(kit: Kit): string {
       origin: f.origin,
       kind: f.kind,
       sha256: sha256(f.content),
+      ...(f.createOnly ? { createOnly: true } : {}),
     })),
     aliases: kit.aliases,
     postInstall: POST_INSTALL,
@@ -642,7 +670,7 @@ export function sync(
   const stale = staleOverlays(overlays, src);
   const dirty = uncommitted(source).filter(p => {
     try {
-      return !classify(p, '').exclude;
+      return !classify(p, '', new Set(src.files.keys())).exclude;
     } catch {
       return true;
     }

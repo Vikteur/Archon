@@ -1,0 +1,175 @@
+{
+ "id": "7afd7646db035816204b1f949f7933f3",
+ "workflow_name": "build-feature",
+ "status": "cancelled",
+ "user_message": "Build TASK-2.3",
+ "started_at": "2026-10-18T05:03:27.000Z",
+ "completed_at": "2026-10-18T07:52:14.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\build-feature-1792299807952",
+ "metadata": {
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\7afd7646db035816204b1f949f7933f3"
+  }
+ },
+ "terminal_record": {
+  "status": "cancelled",
+  "error": null,
+  "first_failed_node": null,
+  "nodes": [
+   {
+    "node_id": "ci-fix",
+    "state": "running"
+   },
+   {
+    "node_id": "ready",
+    "state": "pending"
+   },
+   {
+    "node_id": "auto-merge",
+    "state": "pending"
+   },
+   {
+    "node_id": "merged",
+    "state": "pending"
+   },
+   {
+    "node_id": "main-ci",
+    "state": "pending"
+   },
+   {
+    "node_id": "ticket-files",
+    "state": "pending"
+   },
+   {
+    "node_id": "finalize",
+    "state": "pending"
+   },
+   {
+    "node_id": "close-out",
+    "state": "pending"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-2.3\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":true,\"stop_reason\":\"production configuration / secrets: CI's image job gains a second @@KIT_CONTRACT_REPO@@ checkout with the read-only secret CONTRACT_TOKEN, and every contract checkout mov..."
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":true,\"why\":\"plan: production configuration / secrets: CI's image job gains a second @@KIT_CONTRACT_REPO@@ checkout with the read-only secret CONTRACT_TOKEN, and every contract checkout move..."
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Step 8 passes and is marked `- [x] (verify only)` in the plan. It turned up one problem, a docs bug of mine from an earlier step, which I fixed and committed as `bd0a84f` (\"docs: TASK-2.3 memory secti..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first step still marked `- [ ]` is Step 8, \"whole-change checks before the run's later nodes\", which is marked `(verify only)`. It adds no behaviour, so I wrote no tests, changed no files and made..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Step 8 passes and is marked `- [x] (verify only)` in the plan. It turned up one problem, a docs bug of mine from an earlier step, which I fixed and committed as `bd0a84f` (\"docs: TASK-2.3 memory secti..."
+  },
+  {
+   "nodeId": "skill-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "SKILLS: every skill the plan names was loaded by the agent of its step"
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "TASK-2.3 is built, and the review of the branch against plan.md is done. The review found 10 issues and I fixed all of them, tests first: 12 commits, each test committed before its fix. The one `AFFEC..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":true}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "`bash .claude/scripts/groma-check.sh` now passes (rc=0), including the check that a fresh scan changes nothing under `groma/`. The map change is committed with only `groma/` in it, as `docs(groma): fo..."
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: every open ticket is pinn..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":33,\"refs\":\"health-endpoint,shared-kernel\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "rebase-main",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"rebased\":true,\"pushed\":false}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"TASK-2.3: Generate server interfaces from the pinned contract\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/130\",\"sha\":\"37d245c291fe15b952f6830e23d3da8400372ec7\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"red\",\"sha\":\"37d245c291fe15b952f6830e23d3da8400372ec7\",\"detail\":\"CI=failure https://github.com/example-org/example-app/actions/runs/39107801303\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "running",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ci-fix.diagnose",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "CI is still red for the same reason as before: GitHub refuses to run Actions jobs on this account because of a billing problem. The only run on this commit, 39107801303, failed twice, including the re..."
+  },
+  {
+   "nodeId": "ci-fix.fix",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "I made no commit and no push. The fix in the diagnosis is a billing change that only you can make, so there is no code to test or commit. The work tree is clean and `git push` would have had nothing t..."
+  }
+ ]
+}

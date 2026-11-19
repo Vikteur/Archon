@@ -1,0 +1,394 @@
+#!/usr/bin/env bash
+# Tests for .archon/scripts/retro-evidence.sh and retro-commit.sh (TASK-34) against throwaway repos, stubbed gh/archon
+# and a fixture transcript.
+# Usage: bash .archon/scripts/test/retro.test.sh   (exit 0 = all pass)
+set -uo pipefail
+# No automatic gc or maintenance in the throwaway repos: a background gc racing the next git call was the suspected
+# cause of the temp-repo flakes (docs/memory.md 2026-10-20).
+export GIT_CONFIG_COUNT=3
+export GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0
+export GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false
+export GIT_CONFIG_KEY_2=receive.autoGc GIT_CONFIG_VALUE_2=false
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+evidence="$here/retro-evidence.sh"
+commit="$here/retro-commit.sh"
+pass=0; fail=0
+root="$(mktemp -d)"
+trap 'rm -rf "$root"' EXIT
+run_id=73ef1981-f10d-44d1-a4f5-5f9ca3a3d373
+export ARCHON_HOME="$root/no-archon-home"   # the real ~/.archon is never read
+
+check() { # check <name> <condition exit code>
+  if [ "$2" -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1"; echo "$out" | sed 's/^/    /'; fi
+}
+has() { grep -qF -- "$1" "$2"; }
+same() { [ "$(echo "$out" | tail -1 | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s)[process.argv[1]]))' "$1")" -ef "$2" ]; } # same <json field> <dir>: same directory
+
+# Stubs first on PATH: gh answers from STUB_* files; archon prints the fixture transcript for `workflow logs`.
+mkdir -p "$root/bin"
+cat > "$root/bin/gh" <<'STUB'
+#!/usr/bin/env bash
+[ -n "${STUB_LOG:-}" ] && echo "$*" >> "$STUB_LOG"
+case "$*" in
+  "pr view"*) [ -n "${STUB_PR_FAIL:-}" ] && exit 1; cat "$STUB_PR_JSON" ;;
+  "pr list"*) [ -n "${STUB_PR:-}" ] && echo "$STUB_PR" ;;
+  "run list"*) cat "$STUB_RUNS_JSON" ;;
+  *) exit 1 ;;
+esac
+STUB
+cat > "$root/bin/archon" <<'STUB'
+#!/usr/bin/env bash
+[ "$1 $2" = "workflow logs" ] && [ "$3" = "$STUB_RUN" ] && cat "$STUB_TRANSCRIPT"
+STUB
+chmod +x "$root/bin/gh" "$root/bin/archon"
+# The Groma delta check of retro-commit.sh is stubbed: it logs "<HEAD subject> <args>", runs $root/delta.race once when
+# it exists (a push landing between the commit and its push) and exits with the code $root/delta.rc held when it started.
+cat > "$root/delta.sh" <<STUB
+#!/usr/bin/env bash
+echo "\$(git log -1 --format=%s) \$*" >> "$root/delta.log"
+rc=\$(cat "$root/delta.rc" 2>/dev/null || echo 0)
+if [ -f "$root/delta.race" ]; then mv "$root/delta.race" "$root/delta.race.ran"; bash "$root/delta.race.ran"; fi
+exit \$rc
+STUB
+export GROMA_DELTA="$root/delta.sh"
+# local-ci-run.sh is stubbed (CI plan C13): it logs "<cwd> <args>" and exits with the code in $root/run-ci.rc (0 when
+# absent). Never the real one: that would start local CI on a throwaway commit.
+cat > "$root/run-ci.sh" <<STUB
+#!/usr/bin/env bash
+echo "\$PWD \$*" >> "$root/run-ci.log"
+exit \$(cat "$root/run-ci.rc" 2>/dev/null || echo 0)
+STUB
+export LOCAL_CI_RUN="$root/run-ci.sh"
+
+cat > "$root/transcript.jsonl" <<EOF
+{"type":"workflow_start","workflow_name":"build-feature","content":"TASK-7.1 add the thing","workflow_id":"$run_id","ts":"2026-10-07T10:00:00.000Z"}
+{"type":"node_start","step":"ticket","execution":{"node":{"id":"ticket","kind":"exec"}},"ts":"2026-10-07T10:00:01.000Z"}
+{"type":"node_complete","step":"ticket","duration_ms":2283,"ts":"2026-10-07T10:00:03.000Z"}
+{"type":"node_start","step":"plan","execution":{"node":{"id":"plan","kind":"agent"}},"ts":"2026-10-07T10:00:04.000Z"}
+{"type":"assistant","content":"Reading the module builds first.","ts":"2026-10-07T10:00:05.000Z"}
+{"type":"tool","tool_name":"Bash","tool_input":{"command":"ls"},"ts":"2026-10-07T10:00:06.000Z"}
+{"type":"tool","tool_name":"Read","tool_input":{"file_path":"a"},"ts":"2026-10-07T10:00:07.000Z"}
+{"type":"assistant","content":"Plan written: 3 steps, no STOP item because the change adds no migration.","ts":"2026-10-07T10:06:00.000Z"}
+{"type":"node_complete","step":"plan","duration_ms":384000,"ts":"2026-10-07T10:06:28.000Z"}
+{"type":"node_skipped","step":"stop-gate","content":"when_condition","cause":{"kind":"condition","expr":"\$stop-route.output.pause == 'true'"},"ts":"2026-10-07T10:06:29.000Z"}
+{"type":"node_error","step":"ready","error":"Bash node 'ready' failed [exit 1]: Pull request o/repo#15 is closed.","ts":"2026-10-07T11:00:00.000Z"}
+{"type":"node_skipped","step":"merged","content":"trigger_rule","cause":{"kind":"upstream_failed","origin":"ready"},"ts":"2026-10-07T11:00:01.000Z"}
+EOF
+cat > "$root/pr.json" <<'EOF'
+{"number":15,"title":"feat: add the thing (TASK-7.1)","state":"MERGED","mergedAt":"2026-10-07T10:59:00Z",
+ "mergeCommit":{"oid":"5f7f1df0000000000000000000000000000000000"},"headRefOid":"fd40198000000000000000000000000000000000",
+ "headRefName":"archon/task-build-feature-1","commits":[
+  {"oid":"abc1234000000000000000000000000000000000","messageHeadline":"test(step 1): the thing is missing"},
+  {"oid":"def5678000000000000000000000000000000000","messageHeadline":"feat: add the thing"}],
+ "reviews":[{"author":{"login":"example-org"},"state":"COMMENTED","body":"Looks right, but name the port."}],
+ "comments":[{"author":{"login":"example-org"},"body":"Merging; the STOP item is approved."}]}
+EOF
+cat > "$root/runs.json" <<'EOF'
+[{"databaseId":37585096973,"headSha":"fd40198000000000000000000000000000000000","conclusion":"success","status":"completed","workflowName":"build","createdAt":"2026-10-07T10:50:00Z"},
+ {"databaseId":37585090000,"headSha":"def5678000000000000000000000000000000000","conclusion":"failure","status":"completed","workflowName":"build","createdAt":"2026-10-07T10:40:00Z"}]
+EOF
+
+# layout <name>: umbrella (Backlog + an earlier retro with two ADRs) beside a product repo's main checkout and a run
+# worktree; sets umb wt art.
+layout() {
+  local d="$root/$1"; mkdir -p "$d"
+  umb="$d/umbrella"; mkdir -p "$umb/backlog" "$umb/docs/retro/TASK-7.1/adr"
+  echo 'project_name: "t"' > "$umb/backlog/config.yml"; echo '# Retro' > "$umb/docs/retro/README.md"
+  echo x > "$umb/docs/retro/TASK-7.1/adr/ADR-01-one.md"; echo x > "$umb/docs/retro/TASK-7.1/adr/ADR-02-two.md"
+  git init -q -b main "$d/wp"; git -C "$d/wp" config user.name t; git -C "$d/wp" config user.email t@t
+  echo base > "$d/wp/README.md"; git -C "$d/wp" add -A; git -C "$d/wp" commit -qm base
+  git -C "$d/wp" worktree add -q -b archon/task-build-feature-1 "$d/wt"
+  echo work > "$d/wt/work.txt"; git -C "$d/wt" add -A; git -C "$d/wt" commit -qm "feat: local work"
+  wt="$d/wt"; art="$d/artifacts"; mkdir -p "$art/red"; echo plan > "$art/plan.md"; echo red > "$art/red/step-1.log"
+}
+evid() { # evid <request> [env...]: runs retro-evidence.sh in the worktree; sets out rc ev
+  local req=$1; shift
+  out=$( (cd "$wt" && env PATH="$root/bin:$PATH" STUB_RUN="$run_id" STUB_TRANSCRIPT="$root/transcript.jsonl" \
+    STUB_PR_JSON="$root/pr.json" STUB_RUNS_JSON="$root/runs.json" "$@" \
+    bash "$evidence" "$req" "$run_id" "$art" main) 2>&1 ); rc=$?
+  ev="$art/retro-evidence.md"
+}
+
+# ---------- retro-evidence.sh ----------
+# E1. A ticket run with a pull request: folder, next ADR number, and every evidence section.
+layout e1; evid "TASK-7.1 add the thing" STUB_PR=https://github.com/o/repo/pull/15
+check "E1 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "E1 folder docs/retro/TASK-7.1" $(echo "$out" | grep -qF '"dir":"docs/retro/TASK-7.1"'; echo $?)
+check "E1 next ADR continues at 03" $(echo "$out" | grep -qF '"next_adr":"03"'; echo $?)
+check "E1 umbrella found beside the product repo" $(same umbrella "$umb"; echo $?)
+check "E1 task reported" $(echo "$out" | grep -qF '"task":"TASK-7.1"'; echo $?)
+check "E1 evidence path reported" $(echo "$out" | grep -qF '"evidence":'; echo $?)
+check "E1 evidence written" $([ -s "$ev" ]; echo $?)
+check "E1 completed node with duration" $(has '- plan: completed (384s)' "$ev"; echo $?)
+check "E1 failed node with its error" $(has "- ready: failed: Bash node 'ready' failed [exit 1]: Pull request o/repo#15 is closed." "$ev"; echo $?)
+check "E1 skipped by upstream failure" $(has '- merged: skipped (upstream_failed: ready)' "$ev"; echo $?)
+check "E1 skipped by condition" $(has "- stop-gate: skipped (condition: \$stop-route.output.pause == 'true')" "$ev"; echo $?)
+check "E1 agent summary is the last message" $(has 'Plan written: 3 steps, no STOP item because the change adds no migration.' "$ev"; echo $?)
+check "E1 agent summary drops earlier messages" $(! has 'Reading the module builds first.' "$ev"; echo $?)
+check "E1 agent tool count" $(has '(2 tool calls)' "$ev"; echo $?)
+check "E1 commits from the pull request" $(has 'abc1234 test(step 1): the thing is missing' "$ev"; echo $?)
+check "E1 pull request state" $(has 'State: MERGED' "$ev"; echo $?)
+check "E1 review body" $(has 'Looks right, but name the port.' "$ev"; echo $?)
+check "E1 comment body" $(has 'Merging; the STOP item is approved.' "$ev"; echo $?)
+check "E1 green CI run" $(has '37585096973 success build fd40198' "$ev"; echo $?)
+check "E1 red CI run" $(has '37585090000 failure build def5678' "$ev"; echo $?)
+check "E1 artifacts listed" $(has 'red/step-1.log' "$ev" && has 'plan.md' "$ev"; echo $?)
+
+# E2. A request without a ticket and without a pull request: run folder, ADR 01, commits from git.
+layout e2; evid "fix the typo"
+check "E2 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "E2 run folder" $(echo "$out" | grep -qF '"dir":"docs/retro/run-73ef1981"'; echo $?)
+check "E2 first ADR is 01" $(echo "$out" | grep -qF '"next_adr":"01"'; echo $?)
+check "E2 no pull request said" $(has 'No pull request' "$ev"; echo $?)
+check "E2 commits from git" $(has 'feat: local work' "$ev"; echo $?)
+
+# E3. No umbrella anywhere: fails loudly.
+layout e3; rm -rf "$umb"; evid "TASK-7.1"
+check "E3 exit non-zero without an umbrella" $([ "$rc" -ne 0 ]; echo $?)
+
+# E4. UMBRELLA_CWD overrides the search.
+layout e4; other="$root/e4/elsewhere"; mkdir -p "$other/docs/retro"; echo x > "$other/docs/retro/README.md"
+evid "TASK-7.1" UMBRELLA_CWD="$other"
+check "E4 UMBRELLA_CWD wins" $(same umbrella "$other"; echo $?)
+check "E4 next ADR in that umbrella is 01" $(echo "$out" | grep -qF '"next_adr":"01"'; echo $?)
+
+# E5. After the merge: HEAD is main, the run's branch and worktree are gone, the pull request is the argument.
+evidpr() { # evidpr <request> <pr> [env...]: runs retro-evidence.sh from the product repo's main checkout; sets out rc ev
+  local req=$1 pr=$2; shift 2
+  out=$( (cd "$main" && env PATH="$root/bin:$PATH" STUB_RUN="$run_id" STUB_TRANSCRIPT="$root/transcript.jsonl"     STUB_PR_JSON="$root/pr.json" STUB_RUNS_JSON="$root/runs.json" STUB_LOG="$log" "$@"     bash "$evidence" "$req" "$run_id" "$art" main "$pr") 2>&1 ); rc=$?
+  ev="$art/retro-evidence.md"
+}
+layout e5; main="$root/e5/wp"; log="$root/e5/gh.log"; : > "$log"
+git -C "$main" worktree remove --force "$wt"; git -C "$main" branch -q -D archon/task-build-feature-1
+evidpr "TASK-7.1 add the thing" https://github.com/o/repo/pull/15
+check "E5 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "E5 pull request read by the argument" $(grep -qE '^pr view https://github.com/o/repo/pull/15 ' "$log"; echo $?)
+check "E5 no branch lookup of the pull request" $(! grep -q '^pr list' "$log"; echo $?)
+check "E5 pr.json is the pull request" $(has '"number":15' "$art/retro/pr.json" || has '"number": 15' "$art/retro/pr.json"; echo $?)
+check "E5 CI runs asked by head SHA" $(grep -qF -- '--commit fd40198000000000000000000000000000000000' "$log"; echo $?)
+check "E5 runs.json filled" $([ -s "$art/retro/runs.json" ]; echo $?)
+check "E5 branch is the pull request's head" $(has 'archon/task-build-feature-1' "$art/retro/meta.json"; echo $?)
+check "E5 pull request url in meta" $(has 'https://github.com/o/repo/pull/15' "$art/retro/meta.json"; echo $?)
+check "E5 commits from the pull request" $(has 'def5678 feat: add the thing' "$art/retro/commits.txt"; echo $?)
+check "E5 commits not from HEAD" $(! has 'feat: local work' "$art/retro/commits.txt"; echo $?)
+check "E5 evidence has the commits" $(has 'abc1234 test(step 1): the thing is missing' "$ev"; echo $?)
+check "E5 evidence has the merged state" $(has 'State: MERGED' "$ev"; echo $?)
+check "E5 evidence has the green CI run" $(has '37585096973 success build fd40198' "$ev"; echo $?)
+
+# E6. The pull request cannot be read: recorded as unavailable, not a crash.
+layout e6; main="$root/e6/wp"; log="$root/e6/gh.log"; : > "$log"
+evidpr "TASK-7.1 add the thing" 15 STUB_PR_FAIL=1
+check "E6 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "E6 pr.json empty" $([ -e "$art/retro/pr.json" ] && [ ! -s "$art/retro/pr.json" ]; echo $?)
+check "E6 evidence written" $([ -s "$ev" ]; echo $?)
+check "E6 runs fall back to nothing unavailable" $(grep -qF -- '--branch' "$log" || ! grep -q -- '--commit' "$log"; echo $?)
+
+# E7. The pull request lives in another repo than the umbrella: CI runs are asked of that repo.
+layout e7; main="$root/e7/wp"; log="$root/e7/gh.log"; : > "$log"
+evidpr "TASK-7.1 add the thing" https://github.com/example-org/example-app/pull/9
+check "E7 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "E7 run list by SHA asks the pull request's repo" $(grep -E '^run list .*--commit .* -R example-org/example-app( |$)|^run list -R example-org/example-app .*--commit' "$log" >/dev/null; echo $?)
+
+# ---------- retro-commit.sh ----------
+lessons() { # lessons <file> <run id8> [skip heading] [empty heading]
+  { echo "# Retro — TASK-7.1"; echo
+    echo "## Run $2 — 2026-10-07 — merged"; echo
+    for h in "What happened" "Decisions" "What went well" "What dragged" "Lessons" "Actions"; do
+      [ "$h" = "${3:-}" ] && continue
+      echo "### $h"
+      if [ "$h" = "${4:-}" ]; then echo; continue; fi
+      if [ "$h" = Decisions ]; then echo "- [ADR-01: Use the port](adr/ADR-01-use-the-port.md)"; else echo "- something real"; fi
+      echo
+    done; } > "$1"
+}
+adr() { # adr <file> <title> [skip heading]
+  { echo "# $2"; echo
+    for h in Status Context Decision "Alternatives considered" Consequences Evidence; do
+      [ "$h" = "${3:-}" ] && continue
+      echo "## $h"; echo "Accepted text"; echo
+    done; } > "$1"
+}
+umbrella() { # umbrella <name>: an umbrella clone on main with an origin, the retro README and a Backlog file
+  local d="$root/$1"; mkdir -p "$d"
+  git init -q --bare -b main "$d/origin.git"; git clone -q "$d/origin.git" "$d/u" 2>/dev/null
+  u="$d/u"; git -C "$u" config user.name t; git -C "$u" config user.email t@t
+  mkdir -p "$u/docs/retro" "$u/backlog"
+  printf '# Retro\n\nFacts.\n\n<!-- retro-index:start -->\n<!-- retro-index:end -->\n' > "$u/docs/retro/README.md"
+  echo task > "$u/backlog/task.md"
+  git -C "$u" add -A; git -C "$u" commit -qm base; git -C "$u" push -q origin main
+  f="$u/docs/retro/TASK-7.1"; mkdir -p "$f/adr"
+}
+commit_run() { out=$(bash "$commit" "$u" docs/retro/TASK-7.1 "$run_id" 2>&1); rc=$?; }
+origin_head() { git --git-dir="$root/$1/origin.git" log -1 --format=%s main; }
+
+# C1. A complete retro: committed and pushed, only docs/retro, index regenerated, other changes left alone.
+umbrella c1; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+echo changed >> "$u/backlog/task.md"
+commit_run
+check "C1 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C1 pushed retro commit" $(origin_head c1 | grep -q '^retro: TASK-7.1 .*run 73ef1981'; echo $?)
+check "C1 commit touches only docs/retro" $(! git --git-dir="$root/c1/origin.git" show --name-only --format= main | grep -qv '^docs/retro/'; echo $?)
+check "C1 index links the lessons" $(has '[TASK-7.1](TASK-7.1/lessons-learned.md)' "$u/docs/retro/README.md"; echo $?)
+check "C1 index links the ADR" $(has '[ADR-01: Use the port](TASK-7.1/adr/ADR-01-use-the-port.md)' "$u/docs/retro/README.md"; echo $?)
+check "C1 index kept the leaf text" $(has 'Facts.' "$u/docs/retro/README.md"; echo $?)
+check "C1 Backlog change not committed" $(git -C "$u" diff --quiet -- backlog/task.md; [ $? -eq 1 ]; echo $?)
+check "C1 commit reported" $(echo "$out" | grep -qE '"commit":"[0-9a-f]{7,}"'; echo $?)
+
+# C2..C7. Each broken retro fails and commits nothing.
+broken() { # broken <name> <description>: asserts a failed run left origin main at base
+  commit_run
+  check "$1 exit non-zero ($2)" $([ "$rc" -ne 0 ]; echo $?)
+  check "$1 nothing pushed ($2)" $([ "$(origin_head "$1")" = base ]; echo $?)
+}
+umbrella C2; lessons "$f/lessons-learned.md" 73ef1981 "What dragged"; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+broken C2 "a lessons section is missing"
+umbrella C3; lessons "$f/lessons-learned.md" 73ef1981 "" "Lessons"; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+broken C3 "a lessons section is empty"
+umbrella C4; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port" "Alternatives considered"
+broken C4 "an ADR section is missing"
+umbrella C5; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+adr "$f/adr/ADR-02-unlinked.md" "ADR-02: Unlinked"
+broken C5 "an ADR is not linked from lessons-learned.md"
+umbrella C6; lessons "$f/lessons-learned.md" 11111111; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+broken C6 "no section for this run"
+umbrella C7; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+git -C "$u" checkout -q -b side
+broken C7 "the umbrella is not on main"
+
+# C8. CRLF files written on Windows pass the same gate.
+umbrella c8; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+sed -i 's/$/\r/' "$f/lessons-learned.md" "$f/adr/ADR-01-use-the-port.md"
+commit_run
+check "C8 CRLF exit 0" $([ "$rc" -eq 0 ]; echo $?)
+
+# C9. A push rejected because main moved on: rebased once and pushed.
+umbrella c9; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+git clone -q "$root/c9/origin.git" "$root/c9/other" 2>/dev/null
+git -C "$root/c9/other" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "backlog: elsewhere"
+git -C "$root/c9/other" push -q origin main
+commit_run
+check "C9 exit 0 after a rebase" $([ "$rc" -eq 0 ]; echo $?)
+check "C9 retro on top of the other commit" $(origin_head c9 | grep -q '^retro: TASK-7.1'; echo $?)
+
+# C10. A stopped run's short section (cancelled or rejected) needs only What happened and Why it stopped.
+short_lessons() { # short_lessons <file> <outcome> [skip heading]
+  { echo "# Retro — TASK-7.1"; echo; echo "## Run 73ef1981 — 2026-10-07 — $2"; echo
+    for h in "What happened" "Why it stopped"; do
+      [ "$h" = "${3:-}" ] && continue
+      echo "### $h"; echo "- something real"; echo
+    done; } > "$1"
+}
+umbrella c10; short_lessons "$f/lessons-learned.md" cancelled
+commit_run
+check "C10 cancelled short section exit 0" $([ "$rc" -eq 0 ]; echo $?)
+umbrella c10b; short_lessons "$f/lessons-learned.md" rejected
+commit_run
+check "C10 rejected short section exit 0" $([ "$rc" -eq 0 ]; echo $?)
+umbrella C11; short_lessons "$f/lessons-learned.md" cancelled "Why it stopped"
+broken C11 "a stopped run without Why it stopped"
+umbrella C12; short_lessons "$f/lessons-learned.md" merged
+broken C12 "a merged run with only the short section"
+
+# C13..C15. The token report script: called with the umbrella dir when it exists, its failure is only a warning, and the
+# JSON line stays the last line of stdout.
+reports_stub() { # reports_stub <exit code> [noexec]: a commit-reports.sh stub that records its arguments; noexec leaves
+  # it without the execute bit, as git checks it out (TASK-74)
+  mkdir -p "$u/scripts/tokenomics"
+  cat > "$u/scripts/tokenomics/commit-reports.sh" <<STUB
+#!/usr/bin/env bash
+echo "\$*" > "$(dirname "$u")/reports.args"
+echo '{"commit":"abc"}'
+exit $1
+STUB
+  [ "${2:-}" = noexec ] || chmod +x "$u/scripts/tokenomics/commit-reports.sh"
+}
+commit_split() { # like commit_run, but keeps stdout apart: sets out (stdout and stderr), json (stdout), rc
+  json=$(bash "$commit" "$u" docs/retro/TASK-7.1 "$run_id" 2> "$root/stderr.txt"); rc=$?
+  out="$json
+$(cat "$root/stderr.txt")"
+}
+json_ok() { echo "$json" | tail -1 | grep -qE '^\{"commit":"[0-9a-f]{7,}"\}$'; }
+umbrella c13; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"; reports_stub 0
+commit_split
+check "C13 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C13 report script called with the umbrella dir" $([ "$(cat "$(dirname "$u")/reports.args")" = "$u" ]; echo $?)
+check "C13 the last stdout line is the retro commit" $(json_ok; echo $?)
+check "C13 stdout has one line" $([ "$(echo "$json" | wc -l)" -eq 1 ]; echo $?)
+umbrella c14; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"; reports_stub 1
+commit_split
+check "C14 a failing report script: exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C14 report script was called" $([ -f "$(dirname "$u")/reports.args" ]; echo $?)
+check "C14 warning on stderr" $(grep -q "token reports were not committed" "$root/stderr.txt"; echo $?)
+check "C14 the retro commit is still reported" $(json_ok; echo $?)
+check "C14 the retro was pushed" $(origin_head c14 | grep -q '^retro: TASK-7.1'; echo $?)
+umbrella c15; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+commit_split
+check "C15 without the report script: exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C15 nothing is said about the token reports" $(! grep -q "token reports" "$root/stderr.txt"; echo $?)
+
+# C17. A report script without the execute bit (as git checks it out) still runs (TASK-74).
+umbrella c17; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+reports_stub 0 noexec
+commit_split
+check "C17 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C17 a non-executable report script is called with the umbrella dir" $([ "$(cat "$(dirname "$u")/reports.args" 2>/dev/null)" = "$u" ]; echo $?)
+check "C17 no warning about the token reports" $(! grep -q "token reports were not committed" "$root/stderr.txt"; echo $?)
+
+# C16. Finished Archon runs are no longer archived in git (2026-10-17): the retro commit stays the head.
+mkdir -p "$root/ah/workspaces/example-org/example-umbrella/logs"
+printf '%s
+' '{"type":"workflow_start","workflow_name":"build-feature","content":"TASK-7.1: x","ts":"2026-10-09T10:00:00Z"}' '{"type":"workflow_complete","ts":"2026-10-09T11:00:00Z"}' > "$root/ah/workspaces/example-org/example-umbrella/logs/aaaabbbbcccc.jsonl"
+umbrella c16; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+ARCHON_HOME="$root/ah" commit_split
+check "C16 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C16 the retro commit is the head, no run is archived" $(origin_head c16 | grep -q '^retro: TASK-7.1 lessons'; echo $?)
+check "C16 the last stdout line is the retro commit" $(json_ok; echo $?)
+
+# C18. The Groma delta check runs on the retro commit against origin/main before the push.
+umbrella c18; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+: > "$root/delta.log"; rm -f "$root/delta.rc"
+commit_run
+check "C18 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "C18 the delta checked the retro commit against origin/main" \
+  $(grep -qE '^retro: TASK-7.1 .* HEAD origin/main$' "$root/delta.log" && [ "$(wc -l < "$root/delta.log")" -eq 1 ]; echo $?)
+
+# C19. A refused Groma check pushes nothing and leaves no local commit; a resumed run commits it again.
+umbrella c19; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+echo 1 > "$root/delta.rc"; commit_run; rm -f "$root/delta.rc"
+check "C19 exit 1" $([ "$rc" -eq 1 ]; echo $?)
+check "C19 nothing pushed" $([ "$(origin_head c19)" = base ]; echo $?)
+check "C19 no local commit" $([ "$(git -C "$u" log -1 --format=%s)" = base ]; echo $?)
+check "C19 the retro stays staged" $(git -C "$u" diff --cached --name-only | grep -q '^docs/retro/TASK-7.1/'; echo $?)
+check "C19 the reason is said" $(echo "$out" | grep -q "Groma check refused"; echo $?)
+commit_run
+check "C19 a resumed run pushes it" $([ "$rc" -eq 0 ] && origin_head c19 | grep -q '^retro: TASK-7.1'; echo $?)
+
+# C20. A refusal after the rebase also leaves no local commit, on top of what the rebase pulled.
+umbrella c20; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+git clone -q "$root/c20/origin.git" "$root/c20/other" 2>/dev/null
+printf 'git -C %q -c user.name=t -c user.email=t@t commit -q --allow-empty -m elsewhere && git -C %q push -q origin main && echo 1 > %q\n' \
+  "$root/c20/other" "$root/c20/other" "$root/delta.rc" > "$root/delta.race"
+: > "$root/delta.log"; commit_run; rm -f "$root/delta.rc"
+check "C20 exit 1" $([ "$rc" -eq 1 ]; echo $?)
+check "C20 checked twice" $([ "$(wc -l < "$root/delta.log")" -eq 2 ]; echo $?)
+check "C20 no local commit, main is what origin has" $([ "$(git -C "$u" log -1 --format=%s)" = elsewhere ] \
+  && [ "$(origin_head c20)" = elsewhere ]; echo $?)
+check "C20 the reason is said" $(echo "$out" | grep -q "refused it after the rebase"; echo $?)
+
+# C21. A pushed retro commit gets local CI started on it in the background (C13) when the docs home is the repository
+# the script runs in; another docs home (a test's throwaway, the archived umbrella) is not run.
+umbrella c21; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+: > "$root/run-ci.log"; out=$(cd "$u" && bash "$commit" "$u" docs/retro/TASK-7.1 "$run_id" 2>&1); rc=$?
+check "C21 local CI started on the pushed retro commit" \
+  $([ "$rc" -eq 0 ] && [ "$(cat "$root/run-ci.log")" = "$u $(git --git-dir="$root/c21/origin.git" rev-parse main) --no-wait" ]; echo $?)
+umbrella c21b; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+echo 1 > "$root/run-ci.rc"; : > "$root/run-ci.log"
+out=$(cd "$u" && bash "$commit" "$u" docs/retro/TASK-7.1 "$run_id" 2>&1); rc=$?; rm -f "$root/run-ci.rc"
+check "C21 a failed start is only a warning" $([ "$rc" -eq 0 ] && echo "$out" | grep -q "local CI was not started"; echo $?)
+umbrella c21c; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
+: > "$root/run-ci.log"; commit_run
+check "C21 another repository's docs home is not run" $([ "$rc" -eq 0 ] && [ ! -s "$root/run-ci.log" ]; echo $?)
+
+echo "retro: $pass passed, $fail failed"
+[ "$fail" -eq 0 ]

@@ -284,6 +284,21 @@ export async function kitToolsCommand(targetPath: string, check = false): Promis
 
 type FileState = 'written' | 'unchanged' | 'kept';
 
+/**
+ * What `kit add` does with a file the project may already hold: null writes it. A create-only file (manifest
+ * `createOnly`, e.g. the starter docs/memory.md) the project has is the project's own, kept even with --force.
+ */
+export function existingFileState(
+  dest: string,
+  content: string,
+  force: boolean,
+  createOnly = false
+): FileState | null {
+  if (!existsSync(dest)) return null;
+  if (readFileSync(dest, 'utf-8') === content) return 'unchanged';
+  return force && !createOnly ? null : 'kept';
+}
+
 export async function kitAddCommand(
   targetPath: string,
   options: KitAddOptions,
@@ -344,13 +359,15 @@ export async function kitAddCommand(
   console.log(`Profiles: ${profiles.join(', ')}${dry ? ' (dry run, nothing is written)' : ''}`);
 
   const results: { path: string; state: FileState }[] = [];
-  const write = (relative: string, content: string, mode: string | null): FileState => {
+  const write = (
+    relative: string,
+    content: string,
+    mode: string | null,
+    createOnly = false
+  ): FileState => {
     const dest = join(project, relative);
-    if (existsSync(dest)) {
-      const current = readFileSync(dest, 'utf-8');
-      if (current === content) return 'unchanged';
-      if (!options.force) return 'kept';
-    }
+    const state = existingFileState(dest, content, options.force ?? false, createOnly);
+    if (state) return state;
     if (!dry) {
       mkdirSync(dirname(dest), { recursive: true });
       writeFileSync(dest, content);
@@ -371,7 +388,10 @@ export async function kitAddCommand(
       return 1;
     }
     const content = file.template ? renderTemplate(source, vars, missing) : source;
-    results.push({ path: file.path, state: write(file.path, content, file.mode) });
+    results.push({
+      path: file.path,
+      state: write(file.path, content, file.mode, file.createOnly === true),
+    });
   }
   for (const key of [...missing].sort()) {
     console.warn(`Warning: kit.yaml has no value for @@KIT_${key}@@, rendered empty`);
@@ -547,11 +567,11 @@ export interface DriftReport {
   checked: number;
 }
 
-/** sha256 of each installed non-template file against the manifest. */
+/** sha256 of each installed non-template file against the manifest; a create-only file is the project's own. */
 export function computeDrift(projectPath: string, kit: Kit, profiles: string[]): DriftReport {
   const report: DriftReport = { modified: [], missing: [], checked: 0 };
   for (const file of winningFiles(kit, profiles).values()) {
-    if (file.template) continue;
+    if (file.template || file.createOnly) continue;
     report.checked++;
     const dest = join(projectPath, file.path);
     if (!existsSync(dest)) report.missing.push(file.path);

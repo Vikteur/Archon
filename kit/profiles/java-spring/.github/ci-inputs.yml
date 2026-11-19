@@ -1,0 +1,88 @@
+# The input manifest of the CI jobs: for each job of .github/workflows/ci.yml, the tracked files whose content can
+# change its result. .claude/scripts/ci-plan.sh reads it at the tested tree and fingerprints each job's inputs; a job
+# may reuse a green run only when its fingerprint is equal.
+# Over-approximate: a file listed here that a job never reads only costs a reuse, a file missing from here is a miss.
+# Every change to this file changes every job's fingerprint (it is in `always`), so a narrowed manifest never reuses a
+# run made under the old one.
+#
+# Entries (paths relative to the repo root):
+#   .            the whole tree
+#   dir/         everything under dir
+#   name         the file name, or everything under a folder of that name
+#   a glob       * and ** match any characters, / included; ? one character (over-approximates, the safe direction)
+# Keys per job:
+#   inputs           what the job reads. A job whose steps walk a directory (./gradlew, git ls-files, find) takes .
+#   when-targets     mutation only: the inputs when the change has mutation targets (then Gradle runs)
+#   exclude          literal folders taken out of `inputs`. Only backlog/, docs/retro/ and the docs/tokenomics reports
+#                    are allowed, only for test, mutation and image; ci-plan.sh refuses any other. An exclusion holds
+#                    for a plan only when its folder's name occurs as a word in none of the job's readers.
+#   readers          globs whose text the exclusion proof reads, beside the scripts the job's run: lines reach
+#   contract         the job reads the contract at the pin of gradle.properties: the resolved commit is an input
+#   docker-context   the Docker build context is an input: the ! entries of .dockerignore when it denies by default
+#                    (starts with *), otherwise the whole tree; the local ids of the Dockerfile's base images too
+#   mutation-targets the sorted mutation targets (mutation-gate.sh's rule) with their blobs are an input
+# groma is never narrowed: ci-plan.sh plans it on the whole tree whatever this file says.
+version: 1
+
+# Inputs of every job: the planner, its manifest, the runner and the gate that reads its statuses, the workflow (whole
+# file in v1), .gitattributes, and the kit config the scripts branch on (kit key stack, java_version, contract.*).
+always:
+  - .github/ci-inputs.yml
+  - .github/workflows/ci.yml
+  - .claude/scripts/ci-plan.sh
+  - .claude/scripts/ci-local.sh
+  - .archon/scripts/local-ci-status.sh
+  - .archon/scripts/kit-config.sh
+  - .archon/kit.yaml
+  - .gitattributes
+
+jobs:
+  test:
+    # Every module's src/ and build file, the Gradle wrapper and settings, config/; the gates after Gradle run
+    # .claude/scripts/: pin-proof-check.sh reads .archon/pin-proofs.txt, build-shape-check.sh docs/memory.md and the
+    # boot jar, generated-untracked-check.sh's git reads .gitignore.
+    inputs:
+      - "*/src/**"
+      - "*.gradle.kts"
+      - gradle/
+      - gradlew
+      - gradlew.bat
+      - gradle.properties
+      - lombok.config
+      - config/
+      - .claude/scripts/
+      - .archon/pin-proofs.txt
+      - docs/memory.md
+      - .gitignore
+    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
+    readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
+    contract: true
+
+  mutation:
+    # No target: mutation-gate.sh passes before Gradle starts, and the job reads only the gate. Its
+    # git ls-files --exclude-standard reads .gitignore.
+    inputs: [.claude/scripts/, config/, .gitignore]
+    # A target: Gradle runs PIT, which reads the whole tree like the test job.
+    when-targets: [.]
+    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
+    readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
+    mutation-targets: true
+
+  image:
+    # The build reads the Docker context (from .dockerignore); image-check.sh reads the Dockerfile and the toolchain's
+    # Java version from the build files beside it.
+    inputs: [Dockerfile, .dockerignore, .claude/scripts/, "*/src/**", "*.gradle.kts", gradle/, gradlew, gradle.properties]
+    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
+    readers: [Dockerfile, .dockerignore, "*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties,
+      settings.gradle.kts]
+    docker-context: true
+    contract: true
+
+  archon-scripts:
+    # ci-workflow-check.sh reads .github/, the build file and docs/memory.md; the .archon suites read the checkout, so
+    # the job takes the whole tree.
+    inputs: [.]
+
+  groma:
+    # The architecture check reads the whole tree (backlog/ included); never narrowed.
+    inputs: [.]

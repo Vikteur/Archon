@@ -17,11 +17,12 @@ const POLL_MS = Number(process.env.TRACE_POLL_MS || 20000);
 const AFTER_ERROR_MS = Number(process.env.TRACE_AFTER_ERROR_MS || 30 * 60000);
 const IDLE_MS = Number(process.env.TRACE_IDLE_MS || 3 * 3600000);
 
+// A skill is read under .github/skills (Claude Code) or .github/skills (the Copilot kit's path for the same skill).
 const RULES = [
   [/\bscaffold\.sh\s+(?:--test\s+)?["']?([\w/.-]+)/g, m => ['template', m[1]]],
   [/(?:Moustache scripts|scaffold-templates)\/([\w/-]+)\.mustache/g, m => ['template read', m[1]]],
-  [/\.claude\/skills\/([\w-]+)\/scripts\/([\w.-]+)/g, m => ['skill script', `${m[1]}/${m[2]}`]],
-  [/\.claude\/skills\/([\w-]+)\/SKILL\.md/g, m => ['skill read', m[1]]],
+  [/\.(?:claude|github)\/skills\/([\w-]+)\/scripts\/([\w.-]+)/g, m => ['skill script', `${m[1]}/${m[2]}`]],
+  [/\.(?:claude|github)\/skills\/([\w-]+)\/SKILL\.md/g, m => ['skill read', m[1]]],
   [/\.archon\/scripts\/([\w./-]+\.(?:sh|js|mjs))/g, m => ['archon script', m[1]]],
   [/\.claude\/scripts\/([\w./-]+\.(?:sh|js|mjs))/g, m => ['claude script', m[1]]],
   [/(?<![\w./])scripts\/(?!scaffold\.sh)([\w./-]+\.(?:sh|js|mjs))/g, m => ['repo script', m[1]]],

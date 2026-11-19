@@ -1,0 +1,170 @@
+{
+ "id": "3545989d-cd9b-4071-a862-85387f062b39",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-2.8",
+ "started_at": "2026-10-08T17:20:24.000Z",
+ "completed_at": "2026-10-08T21:03:27.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-2.8-ci-gate-fail-closed",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\ncal/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-2.8-ci-gate-fail-closed\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-2.8-ci-gate-fail-closed': Permission denied\\n\"},\"branch\":\"feat/task-2.8-ci-gate-fail-closed\",\"envId\":\"887fa60145a81207a7af7bcd5eaa3018\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-2.8-ci-gate-fail-closed — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-2.8-ci-gate-fail-closed\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-2.8-ci-gate-fail-closed': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-2.8-ci-gate-fail-closed\n[stdout]\n{\"backlog\":\"c11d200\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\3545989d-cd9b-4071-a862-85387f062b39"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\ncal/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-2.8-ci-gate-fail-closed\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-2.8-ci-gate-fail-closed': Permission denied\\n\"},\"branch\":\"feat/task-2.8-ci-gate-fail-closed\",\"envId\":\"887fa60145a81207a7af7bcd5eaa3018\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-2.8-ci-gate-fail-closed — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-2.8-ci-gate-fail-closed\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-2.8-ci-gate-fail-closed': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-2.8-ci-gate-fail-closed\n[stdout]\n{\"backlog\":\"c11d200\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "first_failed_node": "close-out",
+  "nodes": [
+   {
+    "node_id": "stop-gate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "failed",
+    "error": "Bash node 'close-out' failed [exit 1]: [stderr]\ncal/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-2.8-ci-gate-fail-closed\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-2.8-ci-gate-fail-closed': Permission denied\\n\"},\"branch\":\"feat/task-2.8-ci-gate-fail-closed\",\"envId\":\"887fa60145a81207a7af7bcd5eaa3018\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-2.8-ci-gate-fail-closed — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-2.8-ci-gate-fail-closed\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-2.8-ci-gate-fail-closed': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-2.8-ci-gate-fail-closed\n[stdout]\n{\"backlog\":\"c11d200\",\"branch\":\"kept\",\"worktree\":\"kept\"}"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-2.8\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":false,\"stop_reason\":\"\"}"
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":false,\"why\":\"\"}"
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "skipped",
+   "kind": "gate",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Files use CRLF; I'll append with CRLF.Step 9 (verify only) is done. I committed the docs as `b998ad9` and marked the step `- [x]` in the plan. All nine plan steps are now checked, with no push or pull..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first step still marked `- [ ]` is step 9, \"Docs and full checks\", and it is marked `(verify only)`. It adds no behaviour, so I wrote no tests and made no commit and no `red/step-9.log`. A later n..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Files use CRLF; I'll append with CRLF.Step 9 (verify only) is done. I committed the docs as `b998ad9` and marked the step `- [x]` in the plan. All nine plan steps are now checked, with no push or pull..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Branch structure is sound (test-only commits before each fix, footprint respected, links recorded). Running the test class as a baseline before probing gaps.Mutation confirmed. Committing the coverage..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: agent sessions load Groma..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":3,\"refs\":\"\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"test(build): CiContractSpecTest fails closed on CI shapes it cannot classify (TASK-2.8)\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/41\",\"sha\":\"4c5d71e58911fd3064e5cba65a0d08d978cd516c\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"green\",\"sha\":\"4c5d71e58911fd3064e5cba65a0d08d978cd516c\",\"detail\":\"\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\": \"green\", \"sha\": \"4c5d71e58911fd3064e5cba65a0d08d978cd516c\", \"detail\": \"\"}"
+  },
+  {
+   "nodeId": "merged",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"merged\",\"merge\":\"18351fcbcb40075541b8f28d1e8b85041fc583fa\",\"head\":\"ed2563a30799ce9a9b92064de717ae897f794114\",\"branch\":\"feat/task-2.8-ci-gate-fail-closed\",\"ci\":\"green\",\"backlog\":\"<home>"
+  },
+  {
+   "nodeId": "finalize",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"close\":true}"
+  },
+  {
+   "nodeId": "close-out",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

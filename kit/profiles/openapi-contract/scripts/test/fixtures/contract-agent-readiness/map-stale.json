@@ -1,0 +1,10 @@
+{
+  "lookAlikes": [["deleteNote", "noSuchOperation"]],
+  "humanConfirm": { "tag:NoSuchTag": "Gone.", "noSuchOperation": "Gone." },
+  "alsoDestroys": { "noSuchOperation": "Gone." },
+  "readBudget": { "allowOver": { "noSuchOperation": "Gone." } },
+  "accept": {
+    "noSuchOperation": { "reversibility": "Gone." },
+    "deleteNote": { "no-such-rule": "Gone." }
+  }
+}

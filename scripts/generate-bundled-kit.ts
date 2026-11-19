@@ -53,6 +53,7 @@ export function renderBundledKit(kitDir: string): string {
     '  origin: string | null;',
     '  kind: string;',
     '  sha256: string;',
+    '  createOnly?: boolean;',
     '}',
     '',
     'export interface KitManifest {',

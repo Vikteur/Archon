@@ -97,8 +97,7 @@ export const EXCLUDE: string[] = [
   '.claude/settings.json', // converted: hooks -> .github/hooks/kit.json, permissions.deny -> .archon/copilot/deny.json
   '.claude/skills/archon-cli/**', // the same skill ships from .agents/skills/archon-cli
   '.archon/stop/approvals/2*.json', // the owner's dated approvals
-  '.archon/scripts/test/**', // the source's own tests
-  'scripts/test/**',
+  '.archon/pin-proofs.txt', // the source's own pin proofs (kit key pin_proofs)
 ];
 
 export const AGENT_PROFILES: Record<string, Profile> = {
@@ -214,21 +213,18 @@ export const FILES: Record<Profile, string[]> = {
   ],
   java: [
     '.claude/scripts/affected-check.sh',
+    '.claude/scripts/build-shape-check.sh',
+    '.claude/scripts/ci-workflow-check.sh',
     '.claude/scripts/class-version-check.sh',
+    '.claude/scripts/image-check.sh',
     '.claude/scripts/mutation-gate.sh',
+    '.claude/scripts/pin-proof-check.sh',
     '.claude/scripts/test-set-coverage.java',
     '.claude/scripts/test-set-coverage.sh',
     'scripts/scaffold.sh',
     'scripts/scaffold/**',
   ],
-  'java-quarkus': [
-    '.claude/scripts/build-shape-check.sh',
-    '.claude/scripts/ci-workflow-check.sh',
-    '.claude/scripts/image-check.sh',
-    '.claude/scripts/pin-proof-check.sh',
-    '.github/ci-inputs.yml',
-    '.github/workflows/ci.yml',
-  ],
+  'java-quarkus': ['.github/ci-inputs.yml', '.github/workflows/ci.yml'],
   'java-spring': [],
   'openapi-contract': [
     '.archon/scripts/portal-mcp-setup.sh',

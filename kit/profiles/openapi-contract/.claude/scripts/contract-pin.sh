@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks the rekord-contract checkout out at the one pin in gradle.properties (TASK-2.3; BR-OPS-02, RD-02): a tag vX.Y.Z,
+# Checks the contract checkout out at the one pin in gradle.properties (TASK-2.3; BR-OPS-02, RD-02): a tag vX.Y.Z,
 # or, on a shared feature branch, that branch's own name. Every CI job that generates code or starts the application runs
 # it, inside the job: the local CI runner (ci-local.sh) reproduces no needs/outputs/with.ref, so the pin cannot be passed
 # between jobs or to actions/checkout (docs/memory.md, 2026-10-18).

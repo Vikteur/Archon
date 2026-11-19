@@ -1,0 +1,337 @@
+openapi: 3.0.3
+info:
+  title: Notes fixture
+  version: 1.0.0
+# One operation per case of scripts/test/contract-agent-readiness.test.sh; the comment above each says what it shows.
+paths:
+  # wrap: a read with a full description and a described $ref parameter.
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [Notes]
+      summary: List notes
+      description: Lists the notes of one project, newest first. Use it to find a note's id before you change or move it.
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200': { description: The notes. }
+  # param-undocumented: q has no description.
+  /notes/search:
+    get:
+      operationId: searchNotes
+      tags: [Notes]
+      summary: Search notes
+      description: Finds the notes whose title or text holds the search words, across every project the caller can read.
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: The matching notes. }
+  # thin-description: six words.
+  /status:
+    get:
+      operationId: getStatus
+      tags: [Health]
+      summary: Status
+      description: Answers whether the service is up.
+      responses:
+        '200': { description: Up. }
+  # reversibility, blast-radius and alternative: a DELETE that says none of it. Its id parameter sits on the path.
+  /notes/{noteId}:
+    parameters:
+      - { name: noteId, in: path, required: true, description: "The note's id, from listNotes.", schema: { type: string } }
+    delete:
+      operationId: deleteNote
+      tags: [Notes]
+      summary: Delete a note
+      description: Deletes the note with this id. Use it when the author asks to delete a note they wrote by mistake.
+      responses:
+        '204': { description: Deleted. }
+  # accept: the reversibility finding is accepted in the map, so it drops to info and the verdict stays wrap.
+  /comments/{commentId}:
+    delete:
+      operationId: deleteComment
+      tags: [Notes]
+      summary: Delete a comment
+      description: Deletes one comment. The note it belongs to stays as it is; listNotes shows the notes, and the comment can be written anew.
+      parameters:
+        - { name: commentId, in: path, required: true, description: The comment's id., schema: { type: string } }
+      responses:
+        '204': { description: Deleted. }
+  # The inverse operation: unlink names link, which undoes it, so it needs no other undo cue.
+  /projects/{projectId}/notes/{noteId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectPath'
+      - { name: noteId, in: path, required: true, description: "The note's id, from listNotes.", schema: { type: string } }
+    put:
+      operationId: linkNoteToProject
+      tags: [Projects]
+      summary: Put a note in a project
+      description: Puts the note in the project, next to its other notes. A note that is in the project already stays where it is.
+      responses:
+        '204': { description: Linked. }
+    delete:
+      operationId: unlinkNoteFromProject
+      tags: [Projects]
+      summary: Take a note out of a project
+      description: Takes the note out of the project; the note itself stays, and so do its comments. Call linkNoteToProject to put it in the project once more.
+      responses:
+        '204': { description: Unlinked. }
+  # look-alike: the map pairs deleteProject with archiveProject. Each must name the other, the one that destroys or not.
+  # error-cause: a 409 by $ref that says only "Conflict", and a description that never mentions it.
+  /projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectPath'
+    delete:
+      operationId: deleteProject
+      tags: [Projects]
+      summary: Delete a project
+      description: Deletes the project and its notes for good; it cannot be undone. The members of the project keep their accounts.
+      responses:
+        '204': { description: Deleted. }
+    patch:
+      operationId: renameProject
+      tags: [Projects]
+      summary: Rename a project
+      description: Gives the project a new name. The notes, the members and the project's id stay as they are.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { name: { type: string } } }
+      responses:
+        '200': { description: Renamed. }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /projects/{projectId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/ProjectPath'
+    post:
+      operationId: archiveProject
+      tags: [Projects]
+      summary: Archive a project
+      description: Hides the project from the lists and stops new notes. Its notes stay readable, and nothing is deleted.
+      responses:
+        '204': { description: Archived. }
+  # A 409 the description explains, and one whose answer gives the cause.
+  /projects:
+    post:
+      operationId: createProject
+      tags: [Projects]
+      summary: Create a project
+      description: Creates an empty project. Answers 409 NAME_TAKEN when a project with this name already exists; pick another name.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { name: { type: string } } }
+      responses:
+        '201': { description: Created. }
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              example: { code: NAME_TAKEN }
+  /notes/{noteId}/move:
+    post:
+      operationId: moveNote
+      tags: [Notes]
+      summary: Move a note
+      description: Moves the note to another project. The note keeps its id, its text and its comments. Use copyNote to keep it where it is too.
+      parameters:
+        - { name: noteId, in: path, required: true, description: "The note's id, from listNotes.", schema: { type: string } }
+      responses:
+        '200': { description: Moved. }
+        '409': { description: The target project is archived and takes no new notes. }
+  # look-alike: the map pairs moveNote with copyNote, neither destroys, and each names the other.
+  /notes/{noteId}/copy:
+    post:
+      operationId: copyNote
+      tags: [Notes]
+      summary: Copy a note
+      description: Copies the note into another project; the original stays where it is. Use moveNote to take it out of its project instead.
+      parameters:
+        - { name: noteId, in: path, required: true, description: "The note's id, from listNotes.", schema: { type: string } }
+      responses:
+        '201': { description: Copied. }
+  # The word after a determiner is the object, not the verb: restoring a note "from the trash" destroys nothing.
+  /notes/{noteId}/restore:
+    post:
+      operationId: restoreNote
+      tags: [Notes]
+      summary: Restore a note from the trash
+      description: Puts the note back in the project it was trashed from, with its comments. Use it when the author trashed a note by mistake.
+      parameters:
+        - { name: noteId, in: path, required: true, description: "The note's id, from previewTrash.", schema: { type: string } }
+      responses:
+        '200': { description: Restored. }
+  # reversibility: "clear" destroys, here the owner, and nothing says how to undo it.
+  /notes/{noteId}/owner:
+    put:
+      operationId: setNoteOwner
+      tags: [Notes]
+      summary: Set or clear the owner
+      description: Gives the note the user in the body as its owner, or none when the body has no user. Only the owner changes; the text stays. Find the note in listNotes.
+      parameters:
+        - { name: noteId, in: path, required: true, description: "The note's id, from listNotes.", schema: { type: string } }
+      responses:
+        '204': { description: Set. }
+  # reversibility through the map's alsoDestroys: the summary does not say it destroys, the map does.
+  /notes/import:
+    post:
+      operationId: importNotes
+      tags: [Notes]
+      summary: Import notes
+      description: Fills the project with the notes in the uploaded file, in place of the notes it has; the comments stay. listNotes shows the result.
+      responses:
+        '200': { description: Imported. }
+  # single-step-irreversible: a bare "first" is a precondition, not a prepare call.
+  /notes/purge-old:
+    post:
+      operationId: purgeOld
+      tags: [Notes]
+      summary: Purge all old notes
+      description: Deletes every note older than a year permanently, with its comments. Archive them first, when the owner wants to keep them.
+      responses:
+        '204': { description: Purged. }
+  # human-confirm on a read: the map names this GET by its operationId.
+  /notes/export:
+    get:
+      operationId: exportNotes
+      tags: [Notes]
+      summary: Export notes
+      description: Answers every note of the account with its comments, as one file. Use it when the owner asks for a copy of their data.
+      responses:
+        '200': { description: The notes. }
+  # example-code: the 409's example carries a code that neither the response nor the description names.
+  /notes/{noteId}/name:
+    patch:
+      operationId: renameNote
+      tags: [Notes]
+      summary: Rename a note
+      description: Gives the note a new title. Its text, its comments and its id stay as they are; find the note in listNotes.
+      parameters:
+        - { name: noteId, in: path, required: true, description: "The note's id, from listNotes.", schema: { type: string } }
+      responses:
+        '200': { description: Renamed. }
+        '409':
+          description: Another note in the project has this title.
+          content:
+            application/json:
+              examples:
+                taken: { $ref: '#/components/examples/NameTaken' }
+  # --first-paragraph: the undo sits in the second paragraph, so only the cut has a reversibility finding.
+  /tags/{tagId}:
+    delete:
+      operationId: deleteTag
+      tags: [Notes]
+      summary: Delete a tag
+      description: |
+        Deletes the tag; the notes that carry it stay as they are. Find the tag's id in the notes that listNotes answers.
+
+        A deleted tag can be added again, under the same name.
+      parameters:
+        - { name: tagId, in: path, required: true, description: The tag's id., schema: { type: string } }
+      responses:
+        '204': { description: Deleted. }
+  # single-step-irreversible: permanent, takes everything under the account, and one call does it.
+  /accounts/{accountId}:
+    delete:
+      operationId: purgeAccount
+      tags: [Accounts]
+      summary: Purge an account
+      description: Deletes the account permanently, together with all its projects, notes and comments. Use it when the owner closes the account for good.
+      parameters:
+        - { name: accountId, in: path, required: true, description: The account's id., schema: { type: string } }
+      responses:
+        '204': { description: Purged. }
+  # The same loss behind a confirmation input: no redesign.
+  /archives/{archiveId}:
+    delete:
+      operationId: purgeArchive
+      tags: [Accounts]
+      summary: Purge an archive
+      description: Deletes the archive permanently, with all its files. Send confirm=true after you showed the person what will be lost.
+      parameters:
+        - { name: archiveId, in: path, required: true, description: The archive's id., schema: { type: string } }
+        - { name: confirm, in: query, required: true, description: true once the person agreed., schema: { type: boolean } }
+      responses:
+        '204': { description: Purged. }
+  # The same loss behind a prepare call the description names: no redesign.
+  /trash/preview:
+    get:
+      operationId: previewTrash
+      tags: [Notes]
+      summary: Preview emptying the trash
+      description: Lists the notes in the trash, which emptyTrash would delete, with their titles and the date each was trashed.
+      responses:
+        '200': { description: The trashed notes. }
+  /trash/empty:
+    post:
+      operationId: emptyTrash
+      tags: [Notes]
+      summary: Empty the trash, deleting every trashed note
+      description: Deletes the notes in the trash permanently. Call previewTrash first, and let the person agree to what it lists. Notes outside the trash stay.
+      responses:
+        '204': { description: Emptied. }
+  # completion: a 202 that names the read showing the outcome, one that says there is nothing to wait for, and one that says neither.
+  /exports:
+    post:
+      operationId: startExport
+      tags: [Jobs]
+      summary: Start an export
+      description: Starts building an export of every note. getExport with the id from the answer shows its status, DONE once the file is ready.
+      responses:
+        '202': { description: Started. }
+  /exports/{exportId}:
+    get:
+      operationId: getExport
+      tags: [Jobs]
+      summary: Get an export
+      description: Answers the export's status, and the download link once the status is DONE. Call it again a few seconds later while it is RUNNING.
+      parameters:
+        - { name: exportId, in: path, required: true, description: The id startExport answered., schema: { type: string } }
+      responses:
+        '200': { description: The export. }
+  /digests:
+    post:
+      operationId: sendDigest
+      tags: [Jobs]
+      summary: Send the weekly digest
+      description: Queues the weekly digest e-mail for the members of the project. There is nothing to wait for; calling it again sends a second mail.
+      responses:
+        '202': { description: Queued. }
+  /imports:
+    post:
+      operationId: startImport
+      tags: [Jobs]
+      summary: Start an import
+      description: Starts importing notes from the uploaded file. The answer carries the import's id and the number of rows found in the file.
+      responses:
+        '202': { description: Started. }
+  # human-confirm by tag: the write is matched, the read is not.
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [Admin]
+      summary: List users
+      description: Lists the users who can sign in, with their roles, sorted by name. Use it to find a user's id.
+      responses:
+        '200': { description: The users. }
+    post:
+      operationId: createUser
+      tags: [Admin]
+      summary: Create a user
+      description: Creates a user who can sign in with the given roles. The new user gets an e-mail to set a password.
+      responses:
+        '201': { description: Created. }
+components:
+  parameters:
+    ProjectId:
+      { name: projectId, in: query, required: true, description: "The project's id, from createProject.", schema: { type: string } }
+    ProjectPath:
+      { name: projectId, in: path, required: true, description: "The project's id, from createProject.", schema: { type: string } }
+  responses:
+    Conflict:
+      description: Conflict
+  examples:
+    NameTaken:
+      value: { code: NAME_TAKEN, message: A note with this title exists. }

@@ -118,8 +118,8 @@ jobs:
         run: bash .claude/scripts/image-check.sh "${CI_IMAGE_TAG:-app:ci}"
 
   archon-scripts:
-    # The script gates that need no build: the CI workflow rules (this file), and the .archon test suites a project
-    # adds (four at a time, run-suites.sh; ci-local.sh narrows the glob to the suites the change touches).
+    # The script gates that need no build: the CI workflow rules (this file), the .archon test suites (four at a time,
+    # run-suites.sh; ci-local.sh narrows the glob to the suites the change touches) and the scripts/test suites.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -130,10 +130,17 @@ jobs:
         run: |
           git config --global user.name ci
           git config --global user.email ci@example.invalid
-          # The kit ships no .archon suites: the step passes with a notice until the project adds one.
+          # The kit ships the suites of the scripts it ships; a project adds its own beside them.
           shopt -s nullglob; set -- .archon/scripts/test/*.test.sh
           [ $# -gt 0 ] || { echo "::notice::no .archon/scripts/test suites"; exit 0; }
           bash .claude/scripts/run-suites.sh "$@"
+      - name: Every script suite passes
+        run: |
+          git config --global user.name ci
+          git config --global user.email ci@example.invalid
+          shopt -s nullglob; set -- scripts/test/*.test.sh
+          [ $# -gt 0 ] || { echo "::notice::no scripts/test suites"; exit 0; }
+          SUITE_JOBS=8 bash .claude/scripts/run-suites.sh "$@"
 
   groma:
     runs-on: ubuntu-latest

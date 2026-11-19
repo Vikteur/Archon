@@ -21,6 +21,7 @@ import {
   applySetOverrides,
   checkMcpServers,
   computeDrift,
+  existingFileState,
   flattenKitConfig,
   kitAddCommand,
   mergeAliases,
@@ -190,6 +191,36 @@ describe('kit', () => {
       expect(logs.join('\n')).toContain('kept (differs)  README.md');
       await add({ force: true });
       expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# core\n');
+    });
+    it('writes a create-only file only when the project has none, even with --force', async () => {
+      const kit = makeKit();
+      kit.files['core/docs/memory.md'] = '# starter\n';
+      kit.manifest.files.push({
+        path: 'docs/memory.md',
+        profile: 'core',
+        mode: '0644',
+        template: false,
+        origin: null,
+        kind: 'doc',
+        sha256: sha('# starter\n'),
+        createOnly: true,
+      });
+      expect(await add({}, kit)).toBe(0);
+      expect(readFileSync(join(project, 'docs/memory.md'), 'utf-8')).toBe('# starter\n');
+      writeFileSync(join(project, 'docs/memory.md'), '# ours\n');
+      expect(await add({ force: true }, kit)).toBe(0);
+      expect(readFileSync(join(project, 'docs/memory.md'), 'utf-8')).toBe('# ours\n');
+      expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# core\n');
+      expect(computeDrift(project, kit, ['core']).modified).toEqual([]);
+    });
+    it('existingFileState: absent writes, equal is unchanged, --force overrides all but create-only', () => {
+      const f = join(root, 'f.txt');
+      expect(existingFileState(f, 'a', false)).toBeNull();
+      writeFileSync(f, 'a');
+      expect(existingFileState(f, 'a', true, true)).toBe('unchanged');
+      expect(existingFileState(f, 'b', false)).toBe('kept');
+      expect(existingFileState(f, 'b', true)).toBeNull();
+      expect(existingFileState(f, 'b', true, true)).toBe('kept');
     });
     it('dry-run writes nothing', async () => {
       expect(await add({ dryRun: true, trust: true })).toBe(0);

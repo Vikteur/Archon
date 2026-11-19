@@ -7,12 +7,12 @@ import path from 'node:path';
 import { parse } from 'yaml';
 
 export const DEFAULTS = {
-  'project_name': 'wedding-portal',
+  'project_name': 'app',
   'contract.spec_path': 'contract/dist/openapi.yaml',
   'contract.repo': '@@KIT_CONTRACT_REPO@@',
   'contract.tag_key': '@@KIT_CONTRACT_TAG_KEY@@',
-  'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/app/rekord/api',
-  'contract.api_package': 'app.rekord.api',
+  'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/com/example/api',
+  'contract.api_package': 'com.example.api',
   'contract.server_name': '@@KIT_CONTRACT_SERVER_NAME@@',
 };
 

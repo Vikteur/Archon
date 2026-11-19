@@ -1,0 +1,10 @@
+{"type":"workflow_start","workflow_name":"build-feature-copilot","workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:00.000Z"}
+{"type":"provider_event","step":"write-tests","seq":1,"event":{"type":"tool_call","toolCallId":"c1","name":"skill","rawInput":{"skill":"jvm-testing"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:05.250Z"}
+{"type":"provider_event","step":"write-tests","seq":2,"event":{"type":"tool_call","toolCallId":"c2","name":"view","rawInput":{"path":"/w/src/A.java"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:06.100Z"}
+{"type":"provider_event","step":"write-tests","seq":3,"event":{"type":"tool_call","toolCallId":"c3","name":"create","rawInput":{"path":"/w/src/ATest.java","file_text":"class ATest {}"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:07.000Z"}
+{"type":"provider_event","step":"write-tests","seq":4,"event":{"type":"tool_call","toolCallId":"c4","name":"bash","rawInput":{"command":"./gradlew test"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:08.000Z"}
+{"type":"provider_event","step":"write-tests","seq":5,"event":{"type":"tool_call_update","toolCallId":"c4","status":"failed"},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:09.000Z"}
+{"type":"provider_event","step":"write-tests","seq":6,"event":{"type":"tool_call","toolCallId":"c5","name":"report_intent","rawInput":{"intent":"testing"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:00:10.000Z"}
+{"type":"provider_event","step":"build-step","seq":7,"event":{"type":"tool_call","toolCallId":"c6","name":"skill","rawInput":{"skill":"clean-code"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:05:03.500Z"}
+{"type":"provider_event","step":"build-step","seq":8,"event":{"type":"tool_call","toolCallId":"c7","name":"edit","rawInput":{"path":"/w/src/A.java","old_str":"a","new_str":"b"}},"workflow_id":"0123456789abcdef0123456789abcdef","ts":"2026-11-19T10:05:04.000Z"}
+{"type":"workflow_complete","ts":"2026-11-19T10:06:00.000Z"}

@@ -1,0 +1,166 @@
+{
+ "id": "4f4dc33f-badd-440b-9e8c-129fa6832e4a",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-5.2",
+ "started_at": "2026-10-08T11:35:55.000Z",
+ "completed_at": "2026-10-08T12:38:37.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-5.2-error-envelope",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nal\":null,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-5.2-error-envelope\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-5.2-error-envelope': Permission denied\\n\"},\"branch\":\"feat/task-5.2-error-envelope\",\"envId\":\"27ddb49d3293b46e29096cb496a9be7b\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-5.2-error-envelope — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-5.2-error-envelope\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-5.2-error-envelope': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-5.2-error-envelope\n[stdout]\n{\"backlog\":\"6d492e2\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\4f4dc33f-badd-440b-9e8c-129fa6832e4a"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nal\":null,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-5.2-error-envelope\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-5.2-error-envelope': Permission denied\\n\"},\"branch\":\"feat/task-5.2-error-envelope\",\"envId\":\"27ddb49d3293b46e29096cb496a9be7b\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-5.2-error-envelope — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-5.2-error-envelope\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-5.2-error-envelope': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-5.2-error-envelope\n[stdout]\n{\"backlog\":\"6d492e2\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "first_failed_node": "close-out",
+  "nodes": [
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "failed",
+    "error": "Bash node 'close-out' failed [exit 1]: [stderr]\nal\":null,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-5.2-error-envelope\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-5.2-error-envelope': Permission denied\\n\"},\"branch\":\"feat/task-5.2-error-envelope\",\"envId\":\"27ddb49d3293b46e29096cb496a9be7b\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-5.2-error-envelope — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-5.2-error-envelope\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-5.2-error-envelope': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-5.2-error-envelope\n[stdout]\n{\"backlog\":\"6d492e2\",\"branch\":\"kept\",\"worktree\":\"kept\"}"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-5.2\",\"stop\":\"stop-crypto-logging\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":true,\"stop_reason\":\"crypto-logging: the Throwable catch-all writes the cause of every 500 to the server log at ERROR. The plan logs the fixed message \\\"Unhandled exception\\\" with a redacted co..."
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":true,\"why\":\"ticket labels: stop-crypto-logging; plan: crypto-logging: the Throwable catch-all writes the cause of every 500 to the server log at ERROR. The plan logs the fixed message \\\"Unhan..."
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "completed",
+   "kind": "gate",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "The scan created 2 components. I'll look at what it made.Now the relations (file endpoints), and the status-table overview.Now the memory append and the ticket links.Recording the changed files and th..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first unchecked step is step 8, which is marked verify only. It adds no behaviour, so I wrote no tests and committed nothing. The Groma map, `docs/memory.md` and the final checks are left for the ..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The scan created 2 components. I'll look at what it made.Now the relations (file endpoints), and the status-table overview.Now the memory append and the ticket links.Recording the changed files and th..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The mapper matches the oracle line for line. Next I'm checking for a formatter and running the full test suite to get a baseline.I'll export the pinned v0.1.0 spec into a scratch directory (outside bo..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: agent sessions load Groma..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":31,\"refs\":\"error-envelope-mapper\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"feat: error envelope mappers answering byte for byte as legacy-api (TASK-5.2)\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/31\",\"sha\":\"180d219d47a29f257585543ec6ed8b6db360a694\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"none\",\"sha\":\"180d219d47a29f257585543ec6ed8b6db360a694\",\"detail\":\"no CI run registered for 180d219d47a29f257585543ec6ed8b6db360a694\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\": \"green\", \"sha\": \"e2d592040e2595144ad98cfa673af0942118d442\", \"detail\": \"\"}"
+  },
+  {
+   "nodeId": "merged",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"merged\",\"merge\":\"bf546c76bfa699d701568691f80b2bf2b5d2e864\",\"head\":\"3cb1bb4814dfcfed0a15b21e0871080e53331653\",\"branch\":\"feat/task-5.2-error-envelope\",\"ci\":\"green\",\"backlog\":\"<home>/D..."
+  },
+  {
+   "nodeId": "finalize",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"close\":true}"
+  },
+  {
+   "nodeId": "close-out",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

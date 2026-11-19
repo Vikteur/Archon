@@ -1,0 +1,166 @@
+{
+ "id": "870a251f-52e6-46d7-8ef5-d2b934aa1a24",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-24.4",
+ "started_at": "2026-10-08T11:40:18.000Z",
+ "completed_at": "2026-10-08T13:30:37.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-24.4-golden-gate",
+ "metadata": {
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nd\":false,\"signal\":null,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-24.4-golden-gate\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-24.4-golden-gate': Permission denied\\n\"},\"branch\":\"feat/task-24.4-golden-gate\",\"envId\":\"d17148365cece7338a11fed124bfcc16\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-24.4-golden-gate — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-24.4-golden-gate\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-24.4-golden-gate': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-24.4-golden-gate\n[stdout]\n{\"backlog\":\"038fa7e\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "stop_reason": {
+   "reason": "node_error"
+  },
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\870a251f-52e6-46d7-8ef5-d2b934aa1a24"
+  }
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": "DAG workflow 'build-feature' completed with failures: 'close-out': Bash node 'close-out' failed [exit 1]: [stderr]\nd\":false,\"signal\":null,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-24.4-golden-gate\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-24.4-golden-gate': Permission denied\\n\"},\"branch\":\"feat/task-24.4-golden-gate\",\"envId\":\"d17148365cece7338a11fed124bfcc16\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-24.4-golden-gate — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-24.4-golden-gate\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-24.4-golden-gate': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-24.4-golden-gate\n[stdout]\n{\"backlog\":\"038fa7e\",\"branch\":\"kept\",\"worktree\":\"kept\"}",
+  "first_failed_node": "close-out",
+  "nodes": [
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "failed",
+    "error": "Bash node 'close-out' failed [exit 1]: [stderr]\nd\":false,\"signal\":null,\"cmd\":\"git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\\\.archon\\\\workspaces\\\\example-org\\\\example-app\\\\worktrees\\\\feat\\\\task-24.4-golden-gate\",\"stdout\":\"\",\"stderr\":\"error: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-24.4-golden-gate': Permission denied\\n\"},\"branch\":\"feat/task-24.4-golden-gate\",\"envId\":\"d17148365cece7338a11fed124bfcc16\",\"msg\":\"isolation.complete_failed\"}\n  Failed: feat/task-24.4-golden-gate — Command failed: git -C <home>/Documents/example-umbrella/example-app worktree remove --force <home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\feat\\task-24.4-golden-gate\nerror: failed to delete '<home>/.archon/workspaces/example-org/example-app/worktrees/feat/task-24.4-golden-gate': Permission denied\n\n\nComplete: 0 completed, 1 failed, 0 not found\nClose-out incomplete. Finish by hand: archon complete feat/task-24.4-golden-gate\n[stdout]\n{\"backlog\":\"038fa7e\",\"branch\":\"kept\",\"worktree\":\"kept\"}"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-24.4\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":true,\"stop_reason\":\"No item of the .claude/CLAUDE.md STOP list is touched: no contract push, migration, auth, encryption/logging, history deletion or production config. The plan still stops be..."
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":true,\"why\":\"plan: No item of the .claude/CLAUDE.md STOP list is touched: no contract push, migration, auth, encryption/logging, history deletion or production config. The plan still stops bec..."
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "completed",
+   "kind": "gate",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": "Step 6. Start with the contract and the groma check.Step 6 is verified and marked `- [x] (verify only)` in the plan. Every check passed and no files changed, so nothing was committed.\n\n- **Full build:..."
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first step still marked `- [ ]` is step 6, which is marked verify only. It adds no behaviour, so I wrote no tests and made no commit and no `red/step-6.log`. The implement node runs it: the full b..."
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Step 6. Start with the contract and the groma check.Step 6 is verified and marked `- [x] (verify only)` in the plan. Every check passed and no files changed, so nothing was committed.\n\n- **Full build:..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "I'm reviewing the branch against the plan: the matcher change and its unit tests line up with legacy-api's step so far. Next I'm checking the gate classes and fixtures.The fixtures match the oracle ex..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: agent sessions load Groma..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":13,\"refs\":\"track-matcher\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"TASK-24.4: golden-set acceptance gate for the track matcher\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/32\",\"sha\":\"5b96f37b66695d9eb0fc528ee8d72ebea510c108\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"green\",\"sha\":\"5b96f37b66695d9eb0fc528ee8d72ebea510c108\",\"detail\":\"\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\": \"green\", \"sha\": \"5b96f37b66695d9eb0fc528ee8d72ebea510c108\", \"detail\": \"\"}"
+  },
+  {
+   "nodeId": "merged",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"merged\",\"merge\":\"afeec66f5b1f9636bcabb180bb58e7a28079769b\",\"head\":\"ff25ff8f5eadd0771ada19cd6bbc799318871892\",\"branch\":\"feat/task-24.4-golden-gate\",\"ci\":\"green\",\"backlog\":\"<home>/Doc..."
+  },
+  {
+   "nodeId": "finalize",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"close\":true}"
+  },
+  {
+   "nodeId": "close-out",
+   "state": "failed",
+   "kind": "exec",
+   "outputPreview": null
+  }
+ ]
+}

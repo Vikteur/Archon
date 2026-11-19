@@ -1,0 +1,93 @@
+{
+ "id": "720743c1-0c3d-4d41-a8e2-ce930f490be5",
+ "workflow_name": "build-feature",
+ "status": "cancelled",
+ "user_message": "Build TASK-1.1",
+ "started_at": "2026-10-07T06:45:27.000Z",
+ "completed_at": "2026-10-07T06:47:18.000Z",
+ "working_path": "<home>\\.archon\\workspaces\\example-org\\example-app\\worktrees\\archon\\task-build-feature-1791354426992",
+ "metadata": {
+  "workflow_source": {
+   "root": "<home>\\.archon\\workspaces\\example-org\\example-app\\workflow-source\\runs\\720743c1-0c3d-4d41-a8e2-ce930f490be5"
+  }
+ },
+ "terminal_record": {
+  "status": "cancelled",
+  "error": null,
+  "first_failed_node": null,
+  "nodes": [
+   {
+    "node_id": "stop-gate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "approve",
+    "state": "running"
+   },
+   {
+    "node_id": "pr-text",
+    "state": "pending"
+   },
+   {
+    "node_id": "open-pr",
+    "state": "pending"
+   },
+   {
+    "node_id": "ci",
+    "state": "pending"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "pending"
+   },
+   {
+    "node_id": "ready",
+    "state": "pending"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-1.1\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":false,\"stop_reason\":\"\"}"
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":false,\"why\":\"\"}"
+  },
+  {
+   "nodeId": "stop-gate",
+   "state": "skipped",
+   "kind": "gate",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop",
+   "outputPreview": "Step 7 is the first open step. Running the clean build.Build is green and the tree is clean (no changes). Marking the step done and committing.Step 7, the last open step, is done, and I marked it `- [..."
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The diff contains no `BuildLayoutTest.java` or `ClassFileVersionTest.java`, but steps 2 and 4 say they were added. I'll check.The test files exist locally and run there, but git ignores them, so CI wo..."
+  },
+  {
+   "nodeId": "approve",
+   "state": "running",
+   "kind": "loop",
+   "outputPreview": null
+  }
+ ]
+}

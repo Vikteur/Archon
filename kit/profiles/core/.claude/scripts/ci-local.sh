@@ -53,8 +53,8 @@
 # Two runs side by side never share a name, a folder or a port: two commits with the same 7-character prefix never run
 # side by side (ci-queue.sh), and everything a run owns is named by that prefix:
 #   - its folder $CI_LOCAL_ROOT/<sha7>, its job worktrees in it, and its WSL clones ~/ci-local/<sha7>/<job>;
-#   - every step gets CI_LOCAL_RUN=<sha7>, CI_LOCAL_SLOT=<k>, CI_IMAGE_TAG=wedding-portal:ci-<sha7> (the image
-#     image.test.sh builds and checks), IMAGE_CHECK_NAME=wedding-image-check-<sha7> (image-check.sh's container and
+#   - every step gets CI_LOCAL_RUN=<sha7>, CI_LOCAL_SLOT=<k>, CI_IMAGE_TAG=app:ci-<sha7> (the image
+#     image.test.sh builds and checks), IMAGE_CHECK_NAME=app-image-check-<sha7> (image-check.sh's container and
 #     network prefix) and IMAGE_CHECK_PORT=<18080 + k - 1> (its host port, one per slot k); a variable the workflow sets
 #     on the job or the step wins;
 #   - after each job, only the run's own image-check leftovers are removed; after the run (not with --keep), its own
@@ -95,7 +95,7 @@
 # over its ci.yml timeout-minutes is stopped and posts `timed out after <m> min`; CI_LOCAL_FAIL_FAST (D6) decides the
 # rest of a red run: when-queued (default) stops its other jobs only while another run is queued, always stops them,
 # never lets them finish. A stopped job posts error `cancelled: <red job> failed and run #<n> is queued, not a pass`.
-# After each job, the run's own Docker leftovers of image-check (wedding-image-check-<sha7>-<pid>, its process gone)
+# After each job, the run's own Docker leftovers of image-check (app-image-check-<sha7>-<pid>, its process gone)
 # are removed, and the run's port still held is noted in the job's log.
 set -uo pipefail
 
@@ -298,7 +298,7 @@ done
 t_lock=$(date -u +%s)
 q_locked q_set "$qn" state running
 # What this run owns, by its commit's 7-character prefix and its slot (D18): see the header.
-run_tag="wedding-portal:ci-$short" run_name="wedding-image-check-$short" run_port=$((18080 + ${Q_SLOT:-1} - 1))
+run_tag="app:ci-$short" run_name="app-image-check-$short" run_port=$((18080 + ${Q_SLOT:-1} - 1))
 run_env=(CI_LOCAL_RUN="$short" CI_LOCAL_SLOT="${Q_SLOT:-1}" CI_IMAGE_TAG="$run_tag" IMAGE_CHECK_NAME="$run_name"
   IMAGE_CHECK_PORT="$run_port")
 
@@ -926,7 +926,7 @@ kill_tree() {
 }
 
 # clean_leftovers <job>: after a job, this run's Docker leftovers of image-check whose process is gone (its containers
-# and network are named wedding-image-check-<sha7>-<pid>; another run's are never touched), and a note when the run's
+# and network are named app-image-check-<sha7>-<pid>; another run's are never touched), and a note when the run's
 # port is still held. Without Docker, nothing.
 clean_leftovers() {
   local job=$1 d=${CI_LOCAL_DOCKER:-docker} n pid held

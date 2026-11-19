@@ -20,6 +20,12 @@ export const PATH_RENAMES: [RegExp, string][] = [
   [/^scripts\/portal-mcp\//, 'scripts/contract-mcp/'],
   [/^\.archon\/scripts\/portal-mcp-setup\.sh$/, '.archon/scripts/contract-mcp-setup.sh'],
   [/^\.archon\/workflows\/portal-metrics\.yaml$/, '.archon/workflows/run-metrics.yaml'],
+  [/^scripts\/test\/portal-mcp\.test\.sh$/, 'scripts/test/contract-mcp.test.sh'],
+  [
+    /^\.archon\/scripts\/test\/portal-mcp-setup\.test\.sh$/,
+    '.archon/scripts/test/contract-mcp-setup.test.sh',
+  ],
+  [/^scripts\/test\/fixtures\/portal-mcp\//, 'scripts/test/fixtures/contract-mcp/'],
 ];
 
 export function renamePath(path: string): string {
@@ -101,6 +107,11 @@ export function genericThisRepo(path: string, profile: string, text: string): st
 }
 
 const HOOKS = 'the project hooks';
+const SOURCE_MODULES =
+  'default_mods="application identity-adapter identity-domain identity-usecase library-adapter library-domain ' +
+  'library-usecase logging matching-adapter matching-domain matching-usecase musicfolder-gateway pdf-gateway ' +
+  'planning-adapter planning-domain planning-usecase portal-adapter portal-domain portal-usecase shared-adapter ' +
+  'shared-domain shared-usecase spotify-gateway"';
 
 /** Exact per-file noun rewrites in comments and messages; merged into TARGETED. */
 export const NOUN_TARGETED: Record<string, Rewrite[]> = {
@@ -167,6 +178,61 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   ],
   'scripts/tokenomics/commit-reports.sh': [
     ["<repo dir: wedding-portal's main checkout>", "<repo dir: the project's main checkout>", 1],
+  ],
+  // The build and image gates: the source's own values sit in their defaults; an install reads its kit.yaml.
+  '.claude/scripts/build-shape-check.sh': [
+    [
+      'no Python or\n# rekord-api remnant is back.',
+      'no Python or\n# forbidden remnant (kit key build_shape.forbidden) is back.',
+      1,
+    ],
+    [SOURCE_MODULES, 'default_mods="-"', 1],
+    ['"\\"${root_name:-wedding-portal}\\""', '"\\"${root_name:-}\\""', 1],
+    ['kit_get build_shape.memory_marker UD-17 ', 'kit_get build_shape.memory_marker - ', 1],
+    ['kit_get build_shape.forbidden rekord-api ', 'kit_get build_shape.forbidden - ', 1],
+  ],
+  '.claude/scripts/image-check.sh': [
+    ['wedding-image-check', 'app-image-check', 2],
+    ['db_user="wedding_portal"\ndb_name="wedding_portal"', 'db_user="app"\ndb_name="app"', 1],
+    [' and the ops/throttle settings.', '.', 1],
+    [
+      '   -e WEDDING_OPS_USERNAME="ops" -e WEDDING_OPS_PASSWORD="$(openssl rand -hex 16)" \\\n  -e WEDDING_THROTTLE_SERVER_KEY="$(openssl rand -base64 32)" "$image")"',
+      ' "$image")"',
+      1,
+    ],
+  ],
+  '.claude/scripts/ci-local.sh': [
+    ['wedding-portal:ci-', 'app:ci-', 2],
+    ['wedding-image-check-', 'app-image-check-', 4],
+  ],
+  // The contract scripts' defaults: an install's kit.yaml names its own; the shipped defaults are generic examples.
+  'scripts/portal-mcp/kit-config.mjs': [
+    ["'project_name': 'wedding-portal',", "'project_name': 'app',", 1],
+    [
+      "'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/app/rekord/api',",
+      "'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/com/example/api',",
+      1,
+    ],
+    ["'contract.api_package': 'app.rekord.api',", "'contract.api_package': 'com.example.api',", 1],
+  ],
+  '.claude/scripts/contract-pin.sh': [
+    ['# Checks the rekord-contract checkout out', '# Checks the contract checkout out', 1],
+  ],
+  // park-ticket.sh stamps the install's timezone (kit key timezone), not the source's CET/CEST.
+  '.archon/scripts/test/park-ticket.test.sh': [
+    ['[0-9:]+ CES?T: held', '[0-9:]+ [A-Z][A-Za-z0-9+-]*: held', 1],
+  ],
+  // A case about the source's own ci-inputs.yml (its test-data gate input); an install's inputs have no such gate.
+  'scripts/test/ci-plan.test.sh': [
+    [
+      '[ "$(fp test "$(plan "$c_leaf")")" != "$(fp test "$(plan "$c_mem")")" ]; check "a docs/code-maps/test-data.md change moves test (the test-data gate reads it)" "$?" 0',
+      "# (the source's test-data gate case is left out: it asserts the source's own ci-inputs.yml)",
+      1,
+    ],
+  ],
+  // kit-config.mjs's shipped project_name default is 'app' (above), so its suite expects that.
+  'scripts/test/portal-mcp.test.sh': [
+    ['app.rekord.api wedding-portal from-env', 'app.rekord.api app from-env', 1],
   ],
   'docs/scaffold-templates/domain/id.mustache': [
     ['e.g. Wedding renders WeddingId', 'e.g. Order renders OrderId', 1],

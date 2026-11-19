@@ -1,0 +1,237 @@
+{
+ "id": "1846c63440fda2ac54e3f6e91dd02a98",
+ "workflow_name": "build-feature",
+ "status": "completed",
+ "user_message": "Build TASK-5.1",
+ "started_at": "2026-10-18T18:30:17.000Z",
+ "completed_at": "2026-10-18T20:25:10.000Z",
+ "working_path": "<home>/.archon/workspaces/example-org/example-app/worktrees/build-feature-1792345000448",
+ "metadata": {
+  "workflow_source": {
+   "root": "<home>/.archon/workspaces/example-org/example-app/workflow-source/runs/1846c63440fda2ac54e3f6e91dd02a98"
+  }
+ },
+ "terminal_record": {
+  "status": "completed",
+  "error": null,
+  "first_failed_node": null,
+  "nodes": [
+   {
+    "node_id": "map-curate",
+    "state": "skipped"
+   },
+   {
+    "node_id": "ci-fix",
+    "state": "skipped"
+   },
+   {
+    "node_id": "close-out",
+    "state": "skipped"
+   },
+   {
+    "node_id": "auto-merge.github-agent",
+    "state": "skipped"
+   }
+  ]
+ },
+ "nodes": [
+  {
+   "nodeId": "ticket",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"task\":\"TASK-5.1\",\"stop\":\"\"}"
+  },
+  {
+   "nodeId": "explore",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "I wrote the map to `artifacts/runs/1846c63440fda2ac54e3f6e91dd02a98/explore.md`. I changed no code.\n\nThe ticket describes a design that is not in the tree. Its `exampleException` family, the `app.rekor..."
+  },
+  {
+   "nodeId": "plan",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"stop\":false,\"stop_reason\":\"\"}"
+  },
+  {
+   "nodeId": "stop-route",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pause\":false,\"why\":\"\"}"
+  },
+  {
+   "nodeId": "implement",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "implement.write-tests",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "The first open step is step 6, marked `(verify only)`. It adds no behaviour, so I wrote nothing and made no commit."
+  },
+  {
+   "nodeId": "implement.tests-blocked",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "implement.tests-skills",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"ok\":true,\"n\":6,\"side\":\"test\",\"missing\":[]}"
+  },
+  {
+   "nodeId": "implement.build-step",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "Step 6 (verify only) passes, so I marked it `[x]`. No step in the plan is still open, and `git status` is clean, so I committed nothing.\n\n- **`affected-check`:** it passes. The mutation gate killed 2 ..."
+  },
+  {
+   "nodeId": "implement.step-skills",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"ok\":true,\"n\":5,\"side\":\"build\",\"missing\":[]}"
+  },
+  {
+   "nodeId": "implement.step-blocked",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "skill-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "SKILLS: every skill the plan names was loaded by the agent of its step"
+  },
+  {
+   "nodeId": "scaffold-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "SCAFFOLD: passed: 0 scaffolded, 10 by hand, 0 by hand where a loaded skill has a template and the plan does not name it, 0 named in the plan, 0 problem(s)"
+  },
+  {
+   "nodeId": "review",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "I reviewed TASK-5.1 against the plan and found no real issues. I fixed two small ones, and the second affected-check run passed, mutation gate included.\n\n**Mutations**\n- **PIT:** it mutated the five n..."
+  },
+  {
+   "nodeId": "tdd-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "TDD: tests came first on every step and every code commit"
+  },
+  {
+   "nodeId": "map-scan",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"curate\":false}"
+  },
+  {
+   "nodeId": "map-curate",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "map-check",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Check: groma/ scans the Java source\nCheck: the map is curated, not a first scan\nCheck: every element has a description\nCheck: a fresh scan changes nothing under groma/\nCheck: every open ticket is pinn..."
+  },
+  {
+   "nodeId": "map-links",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"files\":18,\"refs\":\"shared-kernel\",\"dropped\":\"\"}"
+  },
+  {
+   "nodeId": "rebase-main",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"rebased\":false,\"pushed\":false}"
+  },
+  {
+   "nodeId": "pr-text",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"title\":\"TASK-5.1: exception families and a status per contract error code\"}"
+  },
+  {
+   "nodeId": "open-pr",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"pr\":\"https://github.com/example-org/example-app/pull/148\",\"sha\":\"4e5325109ecc13a89318e9943b4b33131f679639\"}"
+  },
+  {
+   "nodeId": "ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"green\",\"sha\":\"4e5325109ecc13a89318e9943b4b33131f679639\",\"detail\":\"local CI: every job of ci.yml passed locally\"}"
+  },
+  {
+   "nodeId": "ci-fix",
+   "state": "skipped",
+   "kind": "loop_group",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "ready",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\": \"green\", \"sha\": \"4e5325109ecc13a89318e9943b4b33131f679639\", \"detail\": \"local CI: every job of ci.yml passed locally\"}\nTDD: tests came first on every step and every code commit\nhttps://github..."
+  },
+  {
+   "nodeId": "auto-merge",
+   "state": "completed",
+   "kind": "loop_group",
+   "outputPreview": ""
+  },
+  {
+   "nodeId": "merged",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"merged\",\"merge\":\"c55c3faefd8ef9be3fdd15d84febf00ee34c7e93\",\"head\":\"befb9e4bc981dc4ef8044aa1bbc82beb5f391652\",\"branch\":\"build-feature-1792345000448\",\"ci\":\"green\",\"backlog\":\"<home>/weddi..."
+  },
+  {
+   "nodeId": "main-ci",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"none\",\"sha\":\"c55c3faefd8ef9be3fdd15d84febf00ee34c7e93\",\"detail\":\"no CI run registered for c55c3faefd8ef9be3fdd15d84febf00ee34c7e93\"}"
+  },
+  {
+   "nodeId": "ticket-files",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "Updated task TASK-5.1"
+  },
+  {
+   "nodeId": "finalize",
+   "state": "completed",
+   "kind": "agent",
+   "outputPreview": "{\"close\":false}"
+  },
+  {
+   "nodeId": "close-out",
+   "state": "skipped",
+   "kind": "exec",
+   "outputPreview": null
+  },
+  {
+   "nodeId": "auto-merge.gate",
+   "state": "completed",
+   "kind": "exec",
+   "outputPreview": "{\"state\":\"ready\",\"sha\":\"d2502b7ee5be275fac571e2ff7b38c7bec357964\",\"detail\":\"every review done, CI green on d2502b7ee5be275fac571e2ff7b38c7bec357964: ready for the delegator or the owner to merge\"}"
+  },
+  {
+   "nodeId": "auto-merge.github-agent",
+   "state": "skipped",
+   "kind": "agent",
+   "outputPreview": null
+  }
+ ]
+}

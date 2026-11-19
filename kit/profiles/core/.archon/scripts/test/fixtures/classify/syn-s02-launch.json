@@ -1,0 +1,19 @@
+{
+ "id": "syn00002",
+ "workflow_name": "build-feature",
+ "status": "failed",
+ "user_message": "Build TASK-99.1",
+ "started_at": "2026-10-20T11:59:00.000Z",
+ "completed_at": "2026-10-20T11:59:00.000Z",
+ "working_path": null,
+ "metadata": {
+  "error": "**Error:** Could not create isolated workspace (git worktree add failed: fatal: a branch named 'build-feature-1' already exists)"
+ },
+ "terminal_record": {
+  "status": "failed",
+  "error": null,
+  "first_failed_node": null,
+  "nodes": []
+ },
+ "nodes": []
+}

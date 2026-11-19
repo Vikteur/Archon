@@ -40,6 +40,8 @@ export function installableSets(): Profile[][] {
 const SCAFFOLD_ROW = /^\| \[[^\]]+\]\(\.\.\/(scaffold-templates\/[^)]+\.mustache)\) \| `/gm;
 // An inline MCP server of a converted agent that runs a project script.
 const AGENT_SERVER_ARG = /^ {4}args: \["((?:scripts|\.archon)\/[^"]+)"/gm;
+// A test suite a CI workflow runs by name (a glob is no dependency).
+const CI_SUITE = /(?<![\w/.-])((?:\.archon\/)?scripts\/test\/[\w.-]+\.test\.sh)\b/g;
 
 function needsOf(f: DepFile): { needs: string; why: string }[] {
   const out: { needs: string; why: string }[] = [];
@@ -52,6 +54,9 @@ function needsOf(f: DepFile): { needs: string; why: string }[] {
   if (/^\.github\/agents\/[^/]+\.agent\.md$/.test(f.path))
     for (const m of f.content.matchAll(AGENT_SERVER_ARG))
       out.push({ needs: m[1] ?? '', why: 'its mcp-servers entry' });
+  if (f.path === '.github/workflows/ci.yml')
+    for (const m of f.content.matchAll(CI_SUITE))
+      out.push({ needs: m[1] ?? '', why: 'a CI step runs it' });
   return out;
 }
 
@@ -68,14 +73,15 @@ export const KNOWN_GAPS: { match: RegExp; reason: string }[] = [
   },
   {
     match:
-      /^core,java,java-spring(,openapi-contract)?: \.claude\/scripts\/ci-(local|plan)\.sh needs \.github\//,
-    reason: "java-spring's CI workflow and inputs are not in the kit yet (its overlay is pending)",
-  },
-  {
-    match:
       /^core,java(,java-quarkus|,java-spring)?: \.github\/agents\/\S+ needs scripts\/contract-mcp\/server\.mjs/,
     reason:
       'the java agents name the contract server inline; without openapi-contract it cannot start, install that profile',
+  },
+  {
+    match:
+      /^core,java,java-quarkus(,openapi-contract)?: \.github\/workflows\/ci\.yml needs (\.archon\/)?scripts\/test\/\S+ \(a CI step runs it\)/,
+    reason:
+      "the java-quarkus ci.yml is still the source's own, which names the source's suites; it needs an overlay like java-spring's",
   },
 ];
 
