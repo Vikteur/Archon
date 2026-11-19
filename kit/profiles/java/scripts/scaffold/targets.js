@@ -14,7 +14,11 @@ const fs = require('fs');
 const path = require('path');
 
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const cells = line => line.split(/(?<!\\)\|/).slice(1, -1).map(c => c.trim());
+const cells = line =>
+  line
+    .split(/(?<!\\)\|/)
+    .slice(1, -1)
+    .map(c => c.trim());
 
 const PROJECT = path.posix.join('docs', 'scaffold-templates', 'project');
 const ROW = /^\| \[([^\]]+)\]\(([^)]+\.mustache)\) \| `([^`]+)`/;
@@ -35,12 +39,26 @@ function tableRows(text, skill, link) {
       target = head ? head + target.slice(3) : '**' + target.slice(3);
     }
     prev = target;
-    rows.push({ template: m[1], file, skill, target, variables: cells(line)[2] || '', left: cells(line)[3] || '', re: targetRegex(target) });
+    rows.push({
+      template: m[1],
+      file,
+      skill,
+      target,
+      variables: cells(line)[2] || '',
+      left: cells(line)[3] || '',
+      re: targetRegex(target),
+    });
   }
   return rows;
 }
 
-const read = file => { try { return fs.readFileSync(file, 'utf8'); } catch { return null; } };
+const read = file => {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch {
+    return null;
+  }
+};
 const exists = (root, file) => fs.existsSync(path.join(root, file));
 
 // [{ template, file, skill, target, variables, left, re }]: file is the template's path relative to the repo root;
@@ -49,10 +67,18 @@ const exists = (root, file) => fs.existsSync(path.join(root, file));
 function templateTargets(root) {
   const dir = path.join(root, 'docs', 'code-maps');
   let leaves = [];
-  try { leaves = fs.readdirSync(dir).filter(f => f.endsWith('.md')).sort(); } catch { leaves = []; }
+  try {
+    leaves = fs
+      .readdirSync(dir)
+      .filter(f => f.endsWith('.md'))
+      .sort();
+  } catch {
+    leaves = [];
+  }
   const kit = [];
   for (const f of leaves) {
-    const href = h => (/^\.\.\/scaffold-templates\//.test(h) ? path.posix.join('docs', h.slice(3)) : null);
+    const href = h =>
+      /^\.\.\/scaffold-templates\//.test(h) ? path.posix.join('docs', h.slice(3)) : null;
     kit.push(...tableRows(read(path.join(dir, f)) || '', f.replace(/\.md$/, ''), href));
   }
   const own = [];
@@ -60,15 +86,18 @@ function templateTargets(root) {
   for (const r of kit) {
     const name = r.file.slice('docs/scaffold-templates/'.length).replace(/\.mustache$/, '');
     const mine = path.posix.join(PROJECT, `${name}.mustache`);
-    if (!name.startsWith('project/') && exists(root, mine)) own.push({ ...r, template: `project/${name}`, file: mine, replaces: r.template });
+    if (!name.startsWith('project/') && exists(root, mine))
+      own.push({ ...r, template: `project/${name}`, file: mine, replaces: r.template });
     else rest.push(r);
   }
   const readme = read(path.join(root, PROJECT, 'README.md'));
   if (readme !== null) {
-    const href = h => (/^(\/|[A-Za-z]:)|(^|\/)\.\.(\/|$)/.test(h) ? null : path.posix.join(PROJECT, h));
+    const href = h =>
+      /^(\/|[A-Za-z]:)|(^|\/)\.\.(\/|$)/.test(h) ? null : path.posix.join(PROJECT, h);
     for (const r of tableRows(readme, 'project', href)) {
       const template = r.file.slice('docs/scaffold-templates/'.length).replace(/\.mustache$/, '');
-      if (!own.some(o => o.template === template && o.target === r.target)) own.push({ ...r, template });
+      if (!own.some(o => o.template === template && o.target === r.target))
+        own.push({ ...r, template });
     }
   }
   return [...own, ...rest];

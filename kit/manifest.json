@@ -2659,7 +2659,7 @@
       "template": false,
       "origin": "scripts/scaffold/targets.js",
       "kind": "script",
-      "sha256": "ba337c85331f0bb604c2271c0757fc7ad50c67fe401ca2efcbc4f8bf52578205"
+      "sha256": "77f6bb5e37d18b4521cdd1e96e2b7a900338e71cb849953c6462d85cc21ff2ec"
     },
     {
       "path": "scripts/test/affected-check.test.sh",
