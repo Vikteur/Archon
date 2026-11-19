@@ -98,6 +98,9 @@ export const cliArgOptions: CliArgOptions = {
   contract: { type: 'string' },
   'no-rtk': { type: 'boolean' },
   'no-web': { type: 'boolean' },
+  backlog: { type: 'boolean' },
+  // `archon kit tools`.
+  'no-backlog': { type: 'boolean' },
   stubs: { type: 'string' },
   'stubs-init': { type: 'string' },
   'default-stubs': { type: 'boolean' },

@@ -26,7 +26,7 @@ export const attachmentCommands = {
       description: 'Check kit tools, Copilot auth and trust, MCP servers, hooks and file drift',
     },
     tools: {
-      args: '[path] [--check]',
+      args: '[path] [--check] [--no-backlog]',
       description: 'Run the project scripts/install-tools.sh (--check only verifies)',
     },
     list: {

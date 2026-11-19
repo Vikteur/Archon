@@ -47,6 +47,8 @@ export interface KitAddOptions {
   skipValidate?: boolean;
   /** `kit tools --check`. */
   check?: boolean;
+  /** `kit tools --no-backlog`: the installer leaves Backlog.md out (INSTALL_TOOLS_BACKLOG=0). */
+  noBacklog?: boolean;
   env?: NodeJS.ProcessEnv;
   /** Where the tools and post-install commands write their output; unset streams it to the terminal. */
   output?: OutputSink;
@@ -1257,11 +1259,15 @@ export async function kitCommand(
     return 1;
   }
   const target = targetArg ? resolve(targetArg) : cwd;
+  const tools: KitToolsOptions = {
+    check: options.check,
+    env: options.noBacklog ? { ...process.env, INSTALL_TOOLS_BACKLOG: '0' } : process.env,
+  };
   if (subcommand === 'tools' && hasProjectInstaller(target)) {
-    return await kitToolsCommand(target, { check: options.check });
+    return await kitToolsCommand(target, tools);
   }
   const { BUNDLED_KIT: kit } = await import('../bundled-kit');
-  if (subcommand === 'tools') return await kitToolsCommand(target, { check: options.check, kit });
+  if (subcommand === 'tools') return await kitToolsCommand(target, { ...tools, kit });
   if (subcommand === 'list') return kitListCommand(target, kit);
   if (subcommand === 'doctor') return await kitDoctorCommand(target, kit);
   return await kitAddCommand(target, options, kit);

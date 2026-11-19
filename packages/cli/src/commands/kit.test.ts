@@ -19,6 +19,7 @@ import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { removeTempTree } from '@archon/paths/test-utils';
 import {
+  kitCommand,
   kitToolsCommand,
   applySetOverrides,
   checkMcpServers,
@@ -579,6 +580,23 @@ describe('kit', () => {
       expect(ran).toStartWith('args:--check conf:jq 1.7 home:');
       expect(existsSync(ran.split('home:')[1])).toBe(false);
       expect(await kitToolsCommand(plain, { kit: makeKit() })).toBe(1);
+    });
+    it('--no-backlog runs the installer with INSTALL_TOOLS_BACKLOG=0, and leaves it unset without', async () => {
+      mkdirSync(join(project, 'scripts'));
+      writeFileSync(
+        join(project, 'scripts/install-tools.sh'),
+        'echo "backlog:${INSTALL_TOOLS_BACKLOG-unset}" > env.txt\n'
+      );
+      const saved = process.env.INSTALL_TOOLS_BACKLOG;
+      delete process.env.INSTALL_TOOLS_BACKLOG;
+      try {
+        expect(await kitCommand('tools', project, root, { noBacklog: true })).toBe(0);
+        expect(readFileSync(join(project, 'env.txt'), 'utf-8').trim()).toBe('backlog:0');
+        expect(await kitCommand('tools', project, root, {})).toBe(0);
+        expect(readFileSync(join(project, 'env.txt'), 'utf-8').trim()).toBe('backlog:unset');
+      } finally {
+        if (saved !== undefined) process.env.INSTALL_TOOLS_BACKLOG = saved;
+      }
     });
   });
 

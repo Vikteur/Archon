@@ -43,6 +43,17 @@ const kitSetupFlags: FlagHelp[] = [
   { spec: '--no-web', description: 'Do not start the web views' },
 ];
 
+const kitToolsFlags: FlagHelp[] = [
+  { spec: '--check', description: 'Only report the tools, install nothing' },
+  { spec: '--no-backlog', description: 'Leave Backlog.md out (INSTALL_TOOLS_BACKLOG=0)' },
+];
+
+const kitFlags: Record<string, FlagHelp[]> = {
+  add: kitAddFlags,
+  setup: kitSetupFlags,
+  tools: kitToolsFlags,
+};
+
 export const installHelp: HelpGroup = {
   entries: [
     {
@@ -51,13 +62,10 @@ export const installHelp: HelpGroup = {
       description: 'Start the web UI server (binary installs download server and UI on first run)',
     },
     ...attachmentHelp('skill'),
-    ...attachmentHelp('kit').map(entry =>
-      entry.subcommand === 'add'
-        ? { ...entry, scopedFlags: kitAddFlags }
-        : entry.subcommand === 'setup'
-          ? { ...entry, scopedFlags: kitSetupFlags }
-          : entry
-    ),
+    ...attachmentHelp('kit').map(entry => {
+      const scopedFlags = kitFlags[entry.subcommand ?? ''];
+      return scopedFlags ? { ...entry, scopedFlags } : entry;
+    }),
     ...attachmentHelp('provider'),
     ...attachmentHelp('plugin'),
     {

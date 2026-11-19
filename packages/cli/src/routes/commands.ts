@@ -564,6 +564,7 @@ export async function runKit({
     dryRun: values['dry-run'] === true,
     noTools: values['no-tools'] === true,
     noPostInstall: values['no-post-install'] === true,
+    noBacklog: values['no-backlog'] === true,
     trust: values.trust === true,
     userHooks: values['user-hooks'] === true,
     set: Array.isArray(values.set) ? (values.set as string[]) : [],
