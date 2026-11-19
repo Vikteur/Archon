@@ -547,6 +547,45 @@ describe('kit', () => {
     });
   });
 
+  describe("the repo's own files", () => {
+    const own = 'docs/scaffold-templates/project/domain/id.mustache';
+    it('refuses a kit that ships into docs/scaffold-templates/project/ and writes nothing', async () => {
+      const kit = makeKit();
+      addFile(kit, 'core', own, 'kit text\n');
+      expect(unsafeManifestPath(own)).not.toBeNull();
+      expect(unsafeManifestPath('./docs/scaffold-templates/project/x')).not.toBeNull();
+      expect(unsafeManifestPath('docs/scaffold-templates/domain/id.mustache')).toBeNull();
+      expect(await add({ force: true }, kit)).toBe(1);
+      expect(existsSync(join(project, own))).toBe(false);
+      expect(existsSync(join(project, 'README.md'))).toBe(false);
+      expect(logs.join('\n')).toContain("the repo's own scaffold templates");
+    });
+    it('never removes a file there, not even one the lock lists unedited and with --force', async () => {
+      expect(await add()).toBe(0);
+      mkdirSync(join(project, dirname(own)), { recursive: true });
+      writeFileSync(join(project, own), 'mine\n');
+      const lockPath = join(project, '.archon/kit.lock.json');
+      const lock = JSON.parse(readFileSync(lockPath, 'utf-8')) as { files: Record<string, string> };
+      lock.files[own] = sha('mine\n');
+      writeFileSync(lockPath, JSON.stringify(lock));
+      expect(await add({ force: true })).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('mine\n');
+    });
+    it('never touches a file the manifest does not ship, edited or not, with or without --force', async () => {
+      mkdirSync(join(project, 'docs/scaffold-templates/project/domain'), { recursive: true });
+      writeFileSync(join(project, own), 'mine\n');
+      writeFileSync(join(project, 'notes.md'), 'notes\n');
+      for (const force of [false, true]) {
+        expect(await add({ profiles: ['java'], force })).toBe(0);
+        expect(readFileSync(join(project, own), 'utf-8')).toBe('mine\n');
+        expect(readFileSync(join(project, 'notes.md'), 'utf-8')).toBe('notes\n');
+        expect(Object.keys(readKitLock(project))).not.toContain('notes.md');
+      }
+      expect(await add({ profiles: ['core'] })).toBe(0);
+      expect(readFileSync(join(project, 'notes.md'), 'utf-8')).toBe('notes\n');
+    });
+  });
+
   describe('files the kit no longer ships', () => {
     const without = (kit: Kit, key: string): Kit => {
       delete kit.files[key];

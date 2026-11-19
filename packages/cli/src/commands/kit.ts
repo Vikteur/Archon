@@ -113,8 +113,15 @@ export function shellQuote(word: string): string {
 const RESERVED_PATHS = new Set(['.archon/kit.yaml', '.archon/kit.lock.json']);
 
 /**
+ * The repo's own folders: the kit never ships, overwrites or removes a file in them, so a manifest entry there is
+ * refused and a lock entry there is never pruned (docs/scaffold-templates/project/ holds the repo's own templates).
+ */
+export const PROJECT_OWNED_DIRS = ['docs/scaffold-templates/project/'];
+
+/**
  * Why a manifest path cannot be written inside the project, or null when it can: an absolute path, a
- * drive letter, a `..` segment (either separator) or one of kit add's own files is refused.
+ * drive letter, a `..` segment (either separator), one of kit add's own files or a path in a project-owned folder is
+ * refused. The prune of files the kit dropped skips a lock entry this refuses.
  */
 export function unsafeManifestPath(path: string): string | null {
   if (path === '' || path.startsWith('/') || path.startsWith('\\') || isAbsolute(path)) {
@@ -123,8 +130,10 @@ export function unsafeManifestPath(path: string): string | null {
   if (/^[A-Za-z]:/.test(path)) return 'a drive letter';
   const segments = path.split(/[\\/]/);
   if (segments.includes('..')) return 'a .. segment';
-  if (RESERVED_PATHS.has(segments.filter(seg => seg !== '' && seg !== '.').join('/'))) {
-    return "kit add's own file";
+  const normal = segments.filter(seg => seg !== '' && seg !== '.').join('/');
+  if (RESERVED_PATHS.has(normal)) return "kit add's own file";
+  if (PROJECT_OWNED_DIRS.some(dir => `${normal}/`.startsWith(dir))) {
+    return "in the repo's own scaffold templates (docs/scaffold-templates/project/)";
   }
   return null;
 }

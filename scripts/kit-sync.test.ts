@@ -25,6 +25,7 @@ import {
   mcpFallbackCommands,
   NEVER_SHIP,
   NEVER_SHIP_GROUPS,
+  PROJECT_TEMPLATES,
   neverShipNamesIn,
   parseHookCommand,
   type Rewrite,
@@ -1008,6 +1009,26 @@ describe('sync on a fixture repo', () => {
     expect(bundled).toContain(
       '"java-quarkus/.github/skills/run-app/scripts/smoke.sh": "#!/usr/bin/env bash\\necho ok\\n",'
     );
+  });
+
+  test("the source's own project/ templates never ship, and verify refuses a manifest entry there", () => {
+    const src = fixture();
+    write(src, `${PROJECT_TEMPLATES}a/own.mustache`, 'class {{Name}} {}\n');
+    git(src, 'add', '-A');
+    git(src, 'commit', '-q', '-m', 'own template');
+    expect(classify(`${PROJECT_TEMPLATES}a/own.mustache`, '')).toMatchObject({ exclude: true });
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-own-')));
+    const r = sync(src, out, false, NO_REWRITES);
+    expect(r.kit.failures).toEqual([]);
+    const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8')) as {
+      files: { path: string; profile: string }[];
+    };
+    expect(manifest.files.some(f => f.path.startsWith(PROJECT_TEMPLATES))).toBe(false);
+    expect(verifyKit(out)).toEqual([]);
+    const first = manifest.files[0];
+    if (first) first.path = `${PROJECT_TEMPLATES}x.mustache`;
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
+    expect(verifyKit(out).join('\n')).toContain(`lies in ${PROJECT_TEMPLATES}`);
   });
 
   test('is deterministic', () => {

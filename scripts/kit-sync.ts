@@ -247,6 +247,9 @@ function classifyByList(path: string): Assignment {
   );
 }
 
+/** A repo's own scaffold templates: the kit never ships into this folder (kit.ts PROJECT_OWNED_DIRS). */
+export const PROJECT_TEMPLATES = 'docs/scaffold-templates/project/';
+
 export function classify(
   path: string,
   text: string,
@@ -262,6 +265,9 @@ export function classify(
   if (EXCLUDE.some(p => matches(p, path))) return { exclude: true, why: 'excluded' };
   const claude = classifyClaude(path);
   if (claude) return claude;
+  // The source repo's own templates are its own, as a consumer's are (kit add refuses a kit file there).
+  if (path.startsWith(PROJECT_TEMPLATES))
+    return { exclude: true, why: "the repo's own scaffold templates" };
   if (path.startsWith('docs/scaffold-templates/'))
     return { profile: QUARKUS_TEMPLATE.test(text) ? 'java-quarkus' : 'java', convert: 'copy' };
   if (path.startsWith('docs/code-maps/') && path !== 'docs/code-maps/README.md')
@@ -697,6 +703,10 @@ export function verifyKit(out: string): string[] {
       prev = { rank, path: f.path };
     }
     listed.add(key);
+    if (f.path.startsWith(PROJECT_TEMPLATES))
+      problems.push(
+        `manifest: ${key} lies in ${PROJECT_TEMPLATES}, the repo's own folder (kit add refuses it)`
+      );
     const content = verifyEntry(out, f, problems);
     if (content !== null) files.push({ profile: f.profile, path: f.path, content });
   }
