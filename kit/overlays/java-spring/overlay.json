@@ -51,6 +51,50 @@
     "derivedFrom": ".github/workflows/ci.yml",
     "sourceSha256": "4999b043cd44b5d500ac12b5c951377e33a565280971a7e7580573b2f70e8c45"
   },
+  "docs/code-maps/api-first-controller.md": {
+    "derivedFrom": "docs/code-maps/api-first-controller.md",
+    "sourceSha256": "5284802412769246ec6e3e27c10c1a7d60510dda3ffcc9d33008cd270a6c0a9a"
+  },
+  "docs/code-maps/bean-config-di.md": {
+    "derivedFrom": "docs/code-maps/bean-config-di.md",
+    "sourceSha256": "7a4c01c74eee595f486f293be47189c3a9c45e114873544ffa838da94b9bfe9c"
+  },
+  "docs/code-maps/exception-to-http.md": {
+    "derivedFrom": "docs/code-maps/exception-to-http.md",
+    "sourceSha256": "dda19ab873f6cff29342d7e81f4b837889fa80b84498a3456222e2d6dd33a9dd"
+  },
+  "docs/code-maps/exemplars/customer-controller.md": {
+    "derivedFrom": "docs/code-maps/exemplars/customer-controller.md",
+    "sourceSha256": "da39324580562a3c259c6483ced2b411253ce8482b4cfdad07b0048bec337c03"
+  },
+  "docs/code-maps/exemplars/default-registry-gateway.md": {
+    "derivedFrom": "docs/code-maps/exemplars/default-registry-gateway.md",
+    "sourceSha256": "a9d792ffe26bd1c630ea3f1ae45b7c9ac46f2323ec60e532f829ef778023150b"
+  },
+  "docs/code-maps/exemplars/rest-exception-handler.md": {
+    "derivedFrom": "docs/code-maps/exemplars/rest-exception-handler.md",
+    "sourceSha256": "50c55eb6f06dd6433f400d68941b578534c6c48bca9ce91071c8251df324c95c"
+  },
+  "docs/code-maps/exemplars/sales-region-jpa-repository.md": {
+    "derivedFrom": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
+    "sourceSha256": "c90833311910df432d1b793b7d6a3b9680e4fef7bec33f7a778da729ccd1343a"
+  },
+  "docs/code-maps/exemplars/web-service-config.md": {
+    "derivedFrom": "docs/code-maps/exemplars/web-service-config.md",
+    "sourceSha256": "95f4360dad935558a6bcb7cf37d6bc7707322a6fb9ef8871fef7b03f554bd868"
+  },
+  "docs/code-maps/persistence-repository.md": {
+    "derivedFrom": "docs/code-maps/persistence-repository.md",
+    "sourceSha256": "62efa1f19ea13ed6f11789b76a305ef62b65683ac1bcb228750d150479b104ef"
+  },
+  "docs/code-maps/resilience4j.md": {
+    "derivedFrom": "docs/code-maps/resilience4j.md",
+    "sourceSha256": "c57ecdaad002e02b3cf18733335e5b04412b318317ffa7e366df03c4ba2171a8"
+  },
+  "docs/code-maps/testcontainers.md": {
+    "derivedFrom": "docs/code-maps/testcontainers.md",
+    "sourceSha256": "d77aa6f7a2ad009ede6d20f8ec3400e4900158f0a42dd539a7d9b1217269c586"
+  },
   "docs/scaffold-templates/adapter/controller-command-test.mustache": {
     "derivedFrom": "docs/scaffold-templates/adapter/controller-command-test.mustache",
     "sourceSha256": "22cf2e07affa468613165604ea976220bf558867ead1273a1b1a1ec6ed206615"
