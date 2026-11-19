@@ -74,8 +74,10 @@ git -C "$top" ls-tree -d --name-only origin/main docs/retro/ 2>/dev/null | sed '
 
 # Archon runs (source 1): the gate and close-out answers of each build-feature run.
 echo '[]' > "$tmp/runs.json"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/kit-config.sh"
+build_wf="$(kit_get build_workflow build-feature BUILD_WORKFLOW)"
 if command -v archon >/dev/null 2>&1 && archon workflow runs --json --verbose --limit 1000 > "$tmp/runs.raw" 2>/dev/null; then
-  jq '[.runs[]? | select(.workflow_name == "build-feature") | {id, nodes: [.nodes[]? | select(.nodeId == "auto-merge.gate"
+  jq --arg wf "$build_wf" '[.runs[]? | select(.workflow_name == "build-feature" or .workflow_name == $wf) | {id, nodes: [.nodes[]? | select(.nodeId == "auto-merge.gate"
       or .nodeId == "close-out") | {node: .nodeId, out: (.outputPreview // "")}]}]' "$tmp/runs.raw" > "$tmp/runs.json" 2>/dev/null \
     || echo '[]' > "$tmp/runs.json"
 else

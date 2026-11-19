@@ -2,7 +2,7 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "db58a65141fc4d9c8c14cf3569a128da040d2617"
+    "commit": "4a2906f863ff893027090dd59bcdb8c0e07286c6"
   },
   "profiles": {
     "core": {
@@ -462,7 +462,7 @@
       "template": false,
       "origin": ".archon/scripts/merge-ledger.sh",
       "kind": "script",
-      "sha256": "c70dbaa06d26ea9fef99caa7cbade2f86acaab46bd2969bb0e74b0ebf2eccae1"
+      "sha256": "1118b33e7de2bbbaf155e827b19dec5e9c540fe087a36ca309b15769b7ed0652"
     },
     {
       "path": ".archon/scripts/merge-ready.sh",
@@ -489,7 +489,7 @@
       "template": false,
       "origin": ".archon/scripts/night-preflight.sh",
       "kind": "script",
-      "sha256": "0b31d346438b92c5190035e04a9daeeed06ddfc55ade6597eca0d70dc061b132"
+      "sha256": "e3ca56add38543a339cd50979e999e8191e041b9d9a2e4d3e2cb2544ab124844"
     },
     {
       "path": ".archon/scripts/notify-owner.sh",

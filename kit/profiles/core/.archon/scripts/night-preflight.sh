@@ -35,6 +35,8 @@
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$here/kit-config.sh"
+build_wf="$(kit_get build_workflow build-feature BUILD_WORKFLOW)"
 scripts=${PREFLIGHT_SCRIPTS_DIR:-$here}
 usage() {
   [ -n "${1:-}" ] && echo "night-preflight: $1" >&2
@@ -69,7 +71,7 @@ warn() { echo "warn: $*"; }
 echo "== runs"
 if archon workflow runs --json --verbose --limit 50 > "$tmp/all.json" 2>/dev/null \
   && jq -e '(.runs // .) | type == "array"' "$tmp/all.json" >/dev/null 2>&1; then
-  jq '{runs: [(.runs // .)[] | select(.workflow_name == "build-feature")
+  jq --arg wf "$build_wf" '{runs: [(.runs // .)[] | select(.workflow_name == "build-feature" or .workflow_name == $wf)
     | select(.status | IN("completed", "failed", "cancelled", "rejected") | not)]}' "$tmp/all.json" > "$tmp/runs.json"
   live=$(jq -r '.runs[] | (([.nodes[]? | select(.nodeId == "ticket") | .outputPreview | (try fromjson catch {}) | .task?] | map(select(.)) | first)
     // ((.user_message // "") | capture("(?<t>TASK-[0-9]+(\\.[0-9]+)*)"; "i").t) // "?") as $t | "\(.id) \($t | ascii_upcase) \(.status)"' "$tmp/runs.json")
