@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # One-step tool install (TASK-37): installs every tool listed in scripts/tools.conf on Windows (winget, from Git Bash),
 # on macOS (Homebrew) and on Linux (no sudo: jq, yq and gh as release downloads into ~/.local, npm -g for the npm tools,
-# the installer scripts; git, node, java and docker are only checked and a missing one is warned about). The npm tools are installed at their pinned version; the others come through winget,
+# the installer scripts; git, node, java and docker need sudo there, so they are only checked: a missing one is warned
+# about and counts as failed, exit 1). The npm tools are installed at their pinned version; the others come through winget,
 # Homebrew or their own installer, and are only checked against the version in tools.conf. A tool that is already
 # installed at a fitting version is skipped, so a second run installs nothing. Ends with a summary and the steps that
 # stay manual.
@@ -15,6 +16,9 @@
 #   JQ_VERSION, YQ_VERSION, GH_VERSION   Linux download versions (1.7.1, v4.54.1, 2.63.2)
 #   PROJECT_DIR               the checkout whose scripts/install-hooks.sh switches the git hooks on (default: this repo)
 #   INSTALL_TOOLS_PATH_DIRS   directories put on PATH after a Windows install, colon-separated (default: the usual ones)
+#   AGENT_CLI                 claude | copilot: the agent CLI this project runs (default: agent_cli in .archon/kit.yaml,
+#                             else in .archon/kit.defaults.yaml, else claude). Of the two agent CLIs in tools.conf only
+#                             that one is installed or checked; INSTALL_TOOLS_ALL=1 takes both.
 # Plain bash 3.2 on purpose: a fresh Mac has no newer one. Exit 1 when an install failed (including one that left the
 # tool at a version that does not fit), when a package manager is missing, or when the OS is not supported.
 set -o pipefail
@@ -111,6 +115,29 @@ while IFS= read -r line || [ -n "$line" ]; do
   names+=("$(trim "$name")"); specs+=("$(trim "$spec")"); kinds+=("$(trim "$kind")")
   wins+=("$(trim "$win")"); macs+=("$(trim "$mac")"); checks+=("$(trim "$check")")
 done < "$conf"
+
+# The agent CLI (claude or copilot): read with sed, not yq, since yq may be one of the tools still to install.
+agent_cli=${AGENT_CLI:-}
+for f in "$project/.archon/kit.yaml" "$project/.archon/kit.defaults.yaml"; do
+  [ -z "$agent_cli" ] || break
+  [ -f "$f" ] && agent_cli=$(sed -n 's/^agent_cli:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
+agent_cli=${agent_cli:-claude}
+if [ "${INSTALL_TOOLS_ALL:-0}" != 1 ]; then
+  keep=()
+  for i in "${!names[@]}"; do
+    case "${names[i]}" in claude | copilot) [ "${names[i]}" = "$agent_cli" ] || continue ;; esac
+    keep+=("$i")
+  done
+  if [ "${#keep[@]}" -ne "${#names[@]}" ]; then
+    n2=(); s2=(); k2=(); w2=(); m2=(); c2=()
+    for i in "${keep[@]}"; do
+      n2+=("${names[i]}"); s2+=("${specs[i]}"); k2+=("${kinds[i]}"); w2+=("${wins[i]}"); m2+=("${macs[i]}"); c2+=("${checks[i]}")
+    done
+    names=("${n2[@]}"); specs=("${s2[@]}"); kinds=("${k2[@]}"); wins=("${w2[@]}"); macs=("${m2[@]}"); checks=("${c2[@]}")
+    echo "Agent CLI: $agent_cli (the other one is left out; INSTALL_TOOLS_ALL=1 takes both)"
+  fi
+fi
 
 installed=(); skipped=(); failed=(); notes=()
 todo=()

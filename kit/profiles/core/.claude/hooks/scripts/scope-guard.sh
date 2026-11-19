@@ -66,7 +66,7 @@ deny() { decided=1
 
 [ -f "$policy" ] || allow
 payload="$(cat 2>/dev/null || true)"
-payload="$(hook_normalize_payload "$payload")"
+payload="$(hook_normalize_payload "$payload")" || deny "BLOCKED: the agent scope guard could not read this Copilot tool call (jq missing, or the payload is not a JSON object), and it may come from a fenced agent, so it denies. Install jq and retry."
 # hubRoot: a scope may add {markers, allowedFilePaths}; see "Hub root" in README.md.
 # Outside a subagent there is no agent_type and nothing to fence: skip the jq spawn (it runs on every read too).
 case "$payload" in *'"agent_type"'*) ;; *) allow ;; esac
@@ -74,7 +74,11 @@ case "$payload" in *'"agent_type"'*) ;; *) allow ;; esac
 # One jq spawn for everything (each spawn costs ~300ms on Windows). Fields joined by U+0001, list
 # items by U+0002; trailing sentinel keeps "jq failed" distinguishable from "all empty".
 if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" '
-      (.agent_type // "") as $ag
+      (.agent_type // "") as $ag0
+      | (if $ag0 == "" then null else $pol[0].agents[$ag0] end) as $own
+      # Copilot only: a subagent of a fenced root session whose type has no policy entry (a built-in agent) is fenced
+      # as that root agent (kit_root, from KIT_AGENT), so it cannot step outside the scope of that root.
+      | (if $own == null and .kit_copilot == true and (.kit_root // "") != "" then .kit_root else $ag0 end) as $ag
       | (if $ag == "" then null else $pol[0].agents[$ag] end) as $s
       | (.tool_input // {}) as $a
       | $ag + "\u0001" + (.tool_name // "") + "\u0001"
@@ -88,7 +92,8 @@ if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" '
         + (($s.allowedFilePaths // []) | join("\u0002")) + "\u0001"
         + (($s.commandAllowlist // []) | join("\u0002")) + "\u0001"
         + (($s.hubRoot.markers // []) | join("\u0002")) + "\u0001"
-        + (($s.hubRoot.allowedFilePaths // []) | join("\u0002")) + "\u0001."' 2>/dev/null)"; then
+        + (($s.hubRoot.allowedFilePaths // []) | join("\u0002")) + "\u0001"
+        + (if .kit_copilot == true then "copilot" else "" end) + "\u0001."' 2>/dev/null)"; then
   if ! command -v jq >/dev/null 2>&1; then       # no jq: fail CLOSED (PIN-17-0755), hand-built JSON
     printf '%s' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: jq is not on the PATH, so this guard cannot read the tool call and denies rather than failing open (PIN-17-0755). Install jq and retry."}}'
     decided=1; exit 0
@@ -108,7 +113,8 @@ rglob="${fields%%$'\001'*}";  fields="${fields#*$'\001'}"
 paths="${fields%%$'\001'*}";  fields="${fields#*$'\001'}"
 cmds="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
 hubm="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
-hubp="${fields%%$'\001'*}"
+hubp="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
+origin="${fields%%$'\001'*}"
 
 [ "$mode" = "none" ] && allow
 armed=1
@@ -309,6 +315,8 @@ check_cmd() {
   [ -n "$cmds" ] || deny "BLOCKED: agent '$agent' has no commandAllowlist in $policy_rel, so it may not run shell commands."
   # The quote-aware pass below is quadratic in bash (about 5 s at 16 KB), and a hook that outlives its timeout fails
   # OPEN under Copilot CLI: a longer command is denied rather than read slowly.
+  # The cap is deliberate, on both CLIs: the segment split below is quadratic in bash, and a hook that runs out of time
+  # fails open on Claude Code as on Copilot, so a long enough command would otherwise pass unread.
   [ "${#cmd}" -le "${SCOPE_GUARD_MAX_CMD:-16384}" ] || deny "BLOCKED: agent '$agent' ran a ${#cmd}-character command; this guard reads at most ${SCOPE_GUARD_MAX_CMD:-16384}. Put long text in a file (git commit -F <file>, gh pr create --body-file <file>) and retry."
 
   # One pass that reads quotes as bash does (TASK-62): '…' is plain text; $'…' is text whose \ escapes the next
@@ -351,10 +359,30 @@ check_cmd() {
   allow
 }
 
+# Copilot only: a fenced agent may use only the tools this guard knows. A Copilot tool it cannot read (apply_patch,
+# write_bash, a tool a newer CLI adds) is denied rather than let through; a Claude payload keeps `*) allow`.
+copilot_tool_ok() {  # copilot_tool_ok <tool>: 0 for a harmless built-in or a tool of a configured MCP server
+  case "$1" in
+    Skill|Agent|Task|WebFetch|WebSearch|TodoWrite|task|read_bash|list_bash|stop_bash|report_intent|update_todo|\
+    web_fetch|web_search|fetch_copilot_cli_documentation|ask_user|mcp__*) return 0 ;;
+  esac
+  local s f
+  for f in "$CLAUDE_PROJECT_DIR/.github/mcp.json" "$CLAUDE_PROJECT_DIR/.mcp.json"; do
+    [ -f "$f" ] || continue
+    while IFS= read -r s; do
+      [ -n "$s" ] || continue
+      case "$1" in "$s"/*|"$s"-*|"$s"__*) return 0 ;; esac
+    done < <(jq -r '(.mcpServers // .servers // {}) | keys[]' "$f" 2>/dev/null)
+  done
+  return 1
+}
+
 case "$tool" in
   Write|Edit|MultiEdit|NotebookEdit) check_path ;;
   Bash) check_cmd ;;
   Read|Grep|Glob) check_read ;;
-  *) allow ;;
+  *) [ "$origin" = copilot ] || allow
+     copilot_tool_ok "$tool" || deny "BLOCKED: agent '$agent' may not use the Copilot tool '$tool': the scope guard cannot read what it does, so it denies it for a fenced agent. Use bash, view, create or edit; a new name for one of those belongs in .archon/copilot/tools.json."
+     allow ;;
 esac
 allow

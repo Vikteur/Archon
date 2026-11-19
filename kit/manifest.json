@@ -2,7 +2,7 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "2215529f7cbee65fb90573032ea1e1021eb0bb23"
+    "commit": "f2c943b8d5c123a9254e24a954ced6d5b5d039e3"
   },
   "profiles": {
     "core": {
@@ -390,7 +390,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.js",
       "kind": "script",
-      "sha256": "ac59b70ae671cdbc72d3841d05f990f47ce8d6206a7dd719c3d4c9328e37b178"
+      "sha256": "b63ca127ecd3fab5b232ad30d83865d0512fec995fb949ff67375bd1eaaa02b5"
     },
     {
       "path": ".archon/scripts/kit-config.sh",
@@ -399,7 +399,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.sh",
       "kind": "script",
-      "sha256": "2339a366b647b543b28fdf5b384ffd00bea9410e6283c5d407d3379e280f904e"
+      "sha256": "9c779a3aab654726922ad07a3d1da94cd89b18a3d6eb278178b2eaa868ae3ef1"
     },
     {
       "path": ".archon/scripts/launch-run.sh",
@@ -444,7 +444,7 @@
       "template": true,
       "origin": ".archon/scripts/mcp-setup.sh",
       "kind": "script",
-      "sha256": "088ca47ea18bb0ed89c6233e4e94fba6a21c0628892303681a52791c6488a458"
+      "sha256": "d3f95b056921b038ce6dd04f9b3651d7fcd421b46b1b86e11c5336668121c3db"
     },
     {
       "path": ".archon/scripts/mcp-use-check.js",
@@ -516,7 +516,7 @@
       "template": false,
       "origin": ".archon/scripts/pick-tickets.js",
       "kind": "script",
-      "sha256": "15eb67a80955dc1a11946745910bbe89284115a5cb4a4cf232aa084fcd588a0d"
+      "sha256": "6a9a733f70fb6a8ede3efdbaf22655adf095a75cb963494262926fd2a04f8982"
     },
     {
       "path": ".archon/scripts/plan-context.sh",
@@ -570,7 +570,7 @@
       "template": false,
       "origin": ".archon/scripts/ready-runs.sh",
       "kind": "script",
-      "sha256": "51b8e422e16b154be8e2497e63d57245cab7b93fa9248fe65daf5e73a875e590"
+      "sha256": "f38335b04ac48198125928e3514fa605e9650aea2617f750bb64071b9bfebfe1"
     },
     {
       "path": ".archon/scripts/rebase-and-resume.sh",
@@ -579,7 +579,7 @@
       "template": false,
       "origin": ".archon/scripts/rebase-and-resume.sh",
       "kind": "script",
-      "sha256": "8aca90cf262e8ad941cde69724f913e403fe61cea4aa9d94b69232cbc9f84de5"
+      "sha256": "5ed45d107281ed6522a302d2c338ac8143e4d415d9aa3ab82b599751b879c92c"
     },
     {
       "path": ".archon/scripts/rebase-behind.sh",
@@ -732,7 +732,7 @@
       "template": false,
       "origin": ".archon/scripts/run-watch.js",
       "kind": "script",
-      "sha256": "fdda393de388a09f7dcd3250824d6c743f4e082673db3ddf63c9c885c22a826e"
+      "sha256": "a07981817bc1dc6ad54dd26b0078af199941ab57fa430af62199bc0f5ee81017"
     },
     {
       "path": ".archon/scripts/scaffold-check.js",
@@ -849,7 +849,7 @@
       "template": false,
       "origin": ".archon/scripts/supervisor-judge.sh",
       "kind": "script",
-      "sha256": "65d9d492f2a31c544d4cb4dd292408d7041ce3fdf540c4865f921a01010c5abe"
+      "sha256": "7b6768d54a47e6a6d83ac503c2e1cc2f3c43d17edb58abb0d44781250d91c275"
     },
     {
       "path": ".archon/scripts/supervisor-tick.sh",
@@ -1776,7 +1776,7 @@
       "template": false,
       "origin": ".archon/scripts/test/kit-config.test.sh",
       "kind": "script",
-      "sha256": "134a405a30118e2754adebaa92dbd3134e88356224434f099f2ddb53573a2961"
+      "sha256": "fcc1673f9951a1009fee6bee45eb739d177b32098e14911a0ecd41ff57658514"
     },
     {
       "path": ".archon/scripts/test/launch-run.test.sh",
@@ -1893,7 +1893,7 @@
       "template": false,
       "origin": ".archon/scripts/test/payload.test.sh",
       "kind": "script",
-      "sha256": "8196e6d218f63c424e5bd17c2aeb1b312aca98562ca60bdc2d64dc2875b3eb5f"
+      "sha256": "e83dff826843eb1e16afb8825fee051f465311a0a6d69a7963eb764f79f2fb40"
     },
     {
       "path": ".archon/scripts/test/pick-tickets.test.sh",
@@ -1902,7 +1902,7 @@
       "template": false,
       "origin": ".archon/scripts/test/pick-tickets.test.sh",
       "kind": "script",
-      "sha256": "d2f3862bde2bcb4a52e10888cc481affa508f646f5cbde9d9c3580a3b537986b"
+      "sha256": "53434471a9d8ff4b238859ec1ce7b953df63df603f34c98ad20514302755db7e"
     },
     {
       "path": ".archon/scripts/test/plan-context.test.sh",
@@ -2514,7 +2514,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/payload.sh",
       "kind": "hook",
-      "sha256": "55c79a16a69d81fc51ae9d7049a2db91ddecc38829935c78cd73648e7f93258f"
+      "sha256": "f0b131434cd0ebd86f671d09008f2697a0dbaecd0eac6958dc6390c8aac59a14"
     },
     {
       "path": ".claude/hooks/scripts/scope-guard.sh",
@@ -2523,7 +2523,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "c031da13c485707b09fb67f26f65991212ede1339f009143bd40010066db0da3"
+      "sha256": "26bd1f73a969a2d626f5c307ddf763b870fb53929a1015f28f7f41886560ff44"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
@@ -3072,7 +3072,7 @@
       "template": false,
       "origin": "scripts/install-tools.sh",
       "kind": "script",
-      "sha256": "62a9241511a57881a529d16d4775455a2639f502b67f363b627114f64272a077"
+      "sha256": "aa4b69e17cc038c7ece674143cc7c8d9ef677f2dc6d0dbba1c38e7deb57bc1c9"
     },
     {
       "path": "scripts/test/archon-suites.test.sh",
@@ -3180,7 +3180,7 @@
       "template": false,
       "origin": "scripts/test/install-tools.test.sh",
       "kind": "script",
-      "sha256": "a90829e4799a1b0768d93c7ff8cff83b7e0936b435f7a1fa308a37de4f60d607"
+      "sha256": "3886f0fce8b843b0544f8e910ca4901bd65c1595b1238b6020d8bfb0edb3de8e"
     },
     {
       "path": "scripts/test/pre-push.test.sh",
@@ -4792,7 +4792,7 @@
       "template": true,
       "origin": ".archon/scripts/portal-mcp-setup.sh",
       "kind": "script",
-      "sha256": "60e30a379590e1b6d8c110a437c281052ceae51b8a030b3b330de1ace73ed861"
+      "sha256": "1e85ded37fe6536a47df15251be785e6ec4a4309aeaa7377e32bb5a1eb7971e9"
     },
     {
       "path": ".claude/scripts/contract-pin.sh",

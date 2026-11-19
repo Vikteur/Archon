@@ -161,7 +161,7 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   'scripts/install-tools.sh': [
     ['#   PORTAL_DIR      ', '#   PROJECT_DIR     ', 1],
     ['portal=${PORTAL_DIR:-', 'project=${PROJECT_DIR:-', 1],
-    ['$portal/', '$project/', 2],
+    ['$portal/', '$project/', 4],
     ['cd "$portal"', 'cd "$project"', 1],
     ["Switching on wedding-portal's git hooks", "Switching on the project's git hooks", 1],
     ['failed: wedding-portal hooks', `failed: ${HOOKS}`, 1],

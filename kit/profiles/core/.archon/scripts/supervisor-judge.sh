@@ -15,7 +15,8 @@
 #   invalid  {key, valid: false, error, raw?}: an answer that is no JSON, fails the schema, names another key, or a
 #            target that does not fit its decision
 # The judge never runs a job. The tick logs its answer; what live mode does with it is in docs/archon/supervisor.md.
-# Exit codes: 0 valid, 2 usage, 4 the answer is invalid, 5 claude is missing, failed, timed out or hit the budget.
+# Exit codes: 0 valid, 2 usage, 4 the answer is invalid, 5 the agent CLI (claude or copilot) is missing, failed, timed
+# out or hit the budget.
 # AGENT_CLI (or agent_cli in .archon/kit.yaml) is claude by default; `copilot` runs `copilot -p <prompt> --agent delegator
 # --allow-all-tools --no-ask-user -s` instead, with the read-only limit as --deny-tool and the schema and the case key in the
 # prompt (copilot has no budget cap or schema flag: the answer is checked the same way, here).
@@ -95,9 +96,9 @@ Reply with only the JSON object, no prose. Schema: $(jq -c . "$schema")" --agent
 else
   raw=$(cd "$main" && printf '%s' "$prompt" | timeout "${SUPERVISOR_JUDGE_TIMEOUT:-150}" claude "${args[@]}" 2> /dev/null); rc=$?
 fi
-[ "$rc" -eq 0 ] || invalid 5 "claude exited $rc (failed, timed out or over the budget)" "$raw"
+[ "$rc" -eq 0 ] || invalid 5 "$agent_cli exited $rc (failed, timed out or over the budget)" "$raw"
 printf '%s' "$raw" | jq -e 'type == "object"' > /dev/null 2>&1 || invalid 4 "claude's output is no JSON object" "$raw"
-[ "$(printf '%s' "$raw" | jq -r '.is_error // false')" = true ] && invalid 5 "claude reported an error: $(printf '%s' "$raw" | jq -r '.subtype // .result // "?"' | head -c 200)" "$raw"
+[ "$(printf '%s' "$raw" | jq -r '.is_error // false')" = true ] && invalid 5 "$agent_cli reported an error: $(printf '%s' "$raw" | jq -r '.subtype // .result // "?"' | head -c 200)" "$raw"
 cost=$(printf '%s' "$raw" | jq '.total_cost_usd // null')
 # The answer: the structured output, or the result text when it is a JSON object.
 ans=$(printf '%s' "$raw" | jq -c 'if (.structured_output | type) == "object" then .structured_output

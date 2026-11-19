@@ -57,7 +57,7 @@ refuse() { echo "rebase-and-resume: $1" >&2; emit "$1"; exit 1; }
 json=$("$archon" workflow get "$run" --json --verbose 2>/dev/null) && jq -e . >/dev/null 2>&1 <<< "$json" \
   || refuse "cannot read run $run from archon"
 json=$(jq -c '.run // .' <<< "$json")
-[ "$(jq -r '.workflow_name // ""' <<< "$json")" = "$BUILD_WORKFLOW" ] || refuse "run $run is not a $BUILD_WORKFLOW run"
+case "$(jq -r '.workflow_name // ""' <<< "$json")" in build-feature|"$BUILD_WORKFLOW") ;; *) refuse "run $run is not a $BUILD_WORKFLOW run" ;; esac
 status=$(jq -r '.status // ""' <<< "$json")
 [ "$status" = failed ] || refuse "run $run is $status, not failed"
 wt=$(jq -r '.working_path // ""' <<< "$json")

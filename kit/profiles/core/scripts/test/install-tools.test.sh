@@ -347,5 +347,34 @@ check "L3 summary" said "Installed: jq"
 run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/linux.conf" LOCAL_PREFIX="$root/lp" PATH="$root/curlbin:$PATH"
 check "L3 idempotent: second run installs nothing" said "Nothing to install"
 
+# L4: only the project's agent CLI of claude and copilot is checked (agent_cli in kit.yaml, then kit.defaults.yaml).
+fresh l4
+listed() { grep -qE "^  (ok|missing) +$1( |\$)" <<< "$out"; }  # the tool is checked, installed here or not
+nolisted() { ! listed "$1"; }
+cat > "$root/agents.conf" <<'CONF'
+tool-a  | -  | pkg | tool-a | tool-a | tool-a --version
+claude  | -  | pkg | claude | claude | claude --version
+copilot | -  | pkg | copilot | copilot | copilot --version
+CONF
+mkdir -p "$root/p-copilot/.archon" "$root/p-defaults/.archon" "$root/p-none"
+printf 'agent_cli: "copilot"   # the kit\n' > "$root/p-copilot/.archon/kit.yaml"
+printf 'stack: spring\n' > "$root/p-defaults/.archon/kit.yaml"; printf 'agent_cli: copilot\n' > "$root/p-defaults/.archon/kit.defaults.yaml"
+script_args=--check
+run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-copilot"
+check "L4 kit.yaml copilot: copilot is checked" listed copilot
+check "L4 kit.yaml copilot: claude is left out" nolisted claude
+run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-defaults"
+check "L4 kit.defaults.yaml copilot: claude is left out" nolisted claude
+run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-none"
+check "L4 no kit.yaml: claude is checked" listed claude
+check "L4 no kit.yaml: copilot is left out" nolisted copilot
+check "L4 the other tools stay" said "missing  tool-a"
+run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-copilot" AGENT_CLI=claude
+check "L4 AGENT_CLI wins over kit.yaml" listed claude
+run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-none" INSTALL_TOOLS_ALL=1
+check "L4 INSTALL_TOOLS_ALL=1: both" listed copilot
+check "L4 INSTALL_TOOLS_ALL=1: both (claude)" listed claude
+script_args=
+
 echo "install-tools tests: $pass passed, $fail failed"
 [ "$fail" = 0 ]

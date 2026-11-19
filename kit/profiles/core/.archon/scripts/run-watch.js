@@ -88,7 +88,7 @@ function archonRuns() {
 function describe(events, id, now, rec, ready, replay = false) {
   const ws = events.find(e => e.type === 'workflow_start');
   const name = ws?.workflow_name || rec?.workflow_name;
-  if (name !== BUILD_WORKFLOW) return null;
+  if (name !== BUILD_WORKFLOW && name !== 'build-feature') return null;
   const ended = rec && runLog.ms(rec.completed_at) !== null && runLog.ms(rec.completed_at) <= now;
   const get = replay && !ended ? null : rec;
   const c = runLog.clock(events, { run: id, at: get ? null : now, get, warn: () => {} });

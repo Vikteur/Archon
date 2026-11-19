@@ -8,11 +8,9 @@ pass=0; fail=0
 ok()  { pass=$((pass+1)); }
 bad() { fail=$((fail+1)); echo "FAIL: $1${2:+ -- $2}"; }
 eq() { if [ "$3" = "$2" ]; then ok; else bad "$1" "got [$3], want [$2]"; fi; }
-tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT; mkdir -p "$tmp/empty"
 
 # --- the helper
-# shellcheck source=/dev/null
-( . "$root/.claude/hooks/scripts/payload.sh"; echo "$CLAUDE_PROJECT_DIR" ) > "$tmp/pd1"
 eq "CLAUDE_PROJECT_DIR falls back to the git top level" "$root" "$(cd "$root/.claude" && env -u CLAUDE_PROJECT_DIR bash -c '. "'"$root"'/.claude/hooks/scripts/payload.sh"; echo "$CLAUDE_PROJECT_DIR"')"
 eq "CLAUDE_PROJECT_DIR falls back to PWD outside git" "$tmp" "$(cd "$tmp" && env -u CLAUDE_PROJECT_DIR bash -c '. "'"$root"'/.claude/hooks/scripts/payload.sh"; echo "$CLAUDE_PROJECT_DIR"')"
 eq "an existing CLAUDE_PROJECT_DIR is kept" /keep "$(CLAUDE_PROJECT_DIR=/keep bash -c '. "'"$root"'/.claude/hooks/scripts/payload.sh"; echo "$CLAUDE_PROJECT_DIR"')"
@@ -40,7 +38,30 @@ eq "a root PascalCase payload takes its agent from KIT_AGENT too" developer "$(j
 n="$(KIT_AGENT=delegator norm '{"agentType":"developer","agentId":"a1","toolName":"bash","toolArgs":"{}"}')"
 eq "a subagent's agentType wins over KIT_AGENT" developer "$(jq -r .agent_type <<<"$n")"
 n="$(KIT_AGENT=delegator norm '{"agentId":"a1","toolName":"bash","toolArgs":"{}"}')"
-eq "KIT_AGENT never names a subagent's call" none "$(jq -r '.agent_type // "none"' <<<"$n")"
+eq "a subagent call with no type is fenced as the KIT_AGENT root" delegator "$(jq -r '.agent_type // "none"' <<<"$n")"
+eq "a converted payload names its root (kit_root)" delegator "$(jq -r '.kit_root // "none"' <<<"$n")"
+eq "a converted payload is marked kit_copilot" true "$(jq -r '.kit_copilot // "none"' <<<"$n")"
+eq "a Claude payload gets no kit_copilot mark" none "$(jq -r '.kit_copilot // "none"' <<<"$(norm "$claude")")"
+n="$(norm '{"tool_name":"bash","agent_type":"developer","tool_input":{"command":"x"}}')"
+eq "a native Copilot name in tool_name is mapped (bash -> Bash)" Bash "$(jq -r .tool_name <<<"$n")"
+n="$(norm '{"tool_name": "view", "agent_type": "developer", "tool_input": {"path": "/a"}}')"
+eq "a native name in tool_name, spaced JSON: view -> Read with file_path" "Read /a" "$(jq -r '"\(.tool_name) \(.tool_input.file_path)"' <<<"$n")"
+mcp='{"tool_name":"mcp__codegraph__codegraph_explore","agent_type":"developer","tool_input":{"query":"x"}}'
+eq "a Claude MCP call passes through byte for byte" "$mcp" "$(norm "$mcp")"
+printf '{bad' > "$tmp/bad-tools.json"
+n="$(COPILOT_TOOLS_JSON="$tmp/bad-tools.json" norm '{"agentType":"developer","toolName":"view","toolArgs":{"path":"/p"}}')"
+eq "a tools.json that is not JSON: the built-ins still map, the agent is kept" "Read developer" "$(jq -r '"\(.tool_name) \(.agent_type)"' <<<"$n")"
+printf '{"tools":["bash"]}' > "$tmp/list-tools.json"
+n="$(COPILOT_TOOLS_JSON="$tmp/list-tools.json" norm '{"agentType":"developer","toolName":"bash","toolArgs":"{}"}')"
+eq "a tools.json whose .tools is a list: the built-ins still map" "Bash developer" "$(jq -r '"\(.tool_name) \(.agent_type)"' <<<"$n")"
+rc=0; norm '["agentType"]' >/dev/null || rc=$?
+eq "a Copilot-looking payload that is not an object: exit 3" 3 "$rc"
+nojq="$(PATH="$tmp/empty" CLAUDE_PROJECT_DIR="$root" "$BASH" -c '. "'"$root"'/.claude/hooks/scripts/payload.sh"; hook_normalize_payload "{\"agentType\":\"developer\",\"toolName\":\"bash\"}" >/dev/null; echo "rc=$?"')"
+eq "no jq, a call that names an agent: exit 3" rc=3 "$nojq"
+nojq="$(PATH="$tmp/empty" CLAUDE_PROJECT_DIR="$root" "$BASH" -c '. "'"$root"'/.claude/hooks/scripts/payload.sh"; hook_normalize_payload "{\"toolName\":\"bash\"}" >/dev/null; echo "rc=$?"')"
+eq "no jq, a root call with no agent and no KIT_AGENT: exit 0 (unfenced, as on Claude)" rc=0 "$nojq"
+nojq="$(PATH="$tmp/empty" KIT_AGENT=developer CLAUDE_PROJECT_DIR="$root" "$BASH" -c '. "'"$root"'/.claude/hooks/scripts/payload.sh"; hook_normalize_payload "{\"toolName\":\"bash\"}" >/dev/null; echo "rc=$?"')"
+eq "no jq, a root call under KIT_AGENT: exit 3" rc=3 "$nojq"
 eq "KIT_AGENT leaves a Claude agent_type alone, byte for byte" "$claude" "$(KIT_AGENT=reviewer norm "$claude")"
 n="$(norm '{"toolName":"view","toolArgs":{"path":"/a/b.txt"}}')"
 eq "Copilot view (toolArgs an object): tool_name Read" Read "$(jq -r .tool_name <<<"$n")"
@@ -70,7 +91,7 @@ eq "scope-guard (Copilot bash, a root gradlew task): deny" deny "$(jq -r '.permi
 out="$(run_sg "{\"agentName\":\"developer\",\"cwd\":\"$root\",\"toolName\":\"bash\",\"toolArgs\":\"{\\\"command\\\":\\\"./gradlew :app:test\\\"}\"}")"
 eq "scope-guard (Copilot bash, a module task): no objection" "" "$out"
 out="$(run_sg "{\"cwd\":\"$root\",\"toolName\":\"bash\",\"toolArgs\":\"{\\\"command\\\":\\\"rm -rf /\\\"}\"}")"
-eq "scope-guard (Copilot, no agent): not its business" "" "$out"
+eq "scope-guard (Copilot root session, no KIT_AGENT): not fenced, as a Claude root session" "" "$out"
 # The three ways a Copilot agent reaches the guard; each must fence an out-of-scope write.
 fence="$root/.claude/hooks/agent-scopes.json"
 out="$(run_sg "{\"agentType\":\"developer\",\"agentId\":\"a1\",\"workingDirectory\":\"$root\",\"toolName\":\"create\",\"toolArgs\":{\"path\":\"$fence\"}}")"
@@ -80,16 +101,50 @@ eq "scope-guard (PascalCase PreToolUse, subagent agent_type): deny" deny "$(jq -
 out="$(KIT_AGENT=developer run_sg "{\"workingDirectory\":\"$root\",\"toolName\":\"create\",\"toolArgs\":{\"path\":\"$fence\"}}")"
 eq "scope-guard (root session, agent from KIT_AGENT): deny" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
 out="$(SCOPE_GUARD_MAX_CMD=64 run_sg "$(jq -cn --arg r "$root" '{agentType:"developer",workingDirectory:$r,toolName:"bash",toolArgs:{command:("git status " + ("a" * 80))}}')")"
-eq "scope-guard: a command too long to read in time is denied, not slow" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+eq "scope-guard: a command over SCOPE_GUARD_MAX_CMD (64 here) is denied" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(run_sg "$(jq -cn --arg r "$root" '{agent_type:"developer",tool_name:"Bash",cwd:$r,tool_input:{command:("git status " + ("a" * 16380))}}')")"
+eq "scope-guard (Claude payload): a command over the default cap of 16384 is denied" deny "$(jq -r '.hookSpecificOutput.permissionDecision // "none"' <<<"$out")"
+out="$(run_sg "$(jq -cn --arg r "$root" '{agent_type:"developer",tool_name:"Bash",cwd:$r,tool_input:{command:("git status " + ("a" * 4000))}}')")"
+eq "scope-guard (Claude payload): an allowed 4 KB command is still read and allowed" "" "$out"
+# The fail-open holes the review found; each must now deny.
+out="$(COPILOT_TOOLS_JSON="$tmp/bad-tools.json" run_sg "{\"agentType\":\"developer\",\"workingDirectory\":\"$root\",\"toolName\":\"create\",\"toolArgs\":{\"path\":\"$fence\"}}")"
+eq "scope-guard (tools.json not JSON): a fenced write is still denied" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(run_sg '["agentType","developer"]')"
+eq "scope-guard (unreadable Copilot payload naming an agent): deny" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(run_sg "$(jq -cn --arg r "$root" '{agent_type:"developer",cwd:$r,tool_name:"bash",tool_input:{command:"./gradlew test"}}')")"
+eq "scope-guard (native bash in tool_name): the allowlist applies" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(KIT_AGENT=developer run_sg "{\"agentId\":\"s1\",\"workingDirectory\":\"$root\",\"toolName\":\"create\",\"toolArgs\":{\"path\":\"$fence\"}}")"
+eq "scope-guard (untyped subagent of a fenced root): fenced as the root" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(KIT_AGENT=developer run_sg "{\"agentType\":\"explore\",\"agentId\":\"s1\",\"workingDirectory\":\"$root\",\"toolName\":\"create\",\"toolArgs\":{\"path\":\"$fence\"}}")"
+eq "scope-guard (built-in subagent with no policy, fenced root): fenced as the root" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(run_sg "{\"agentType\":\"explore\",\"agentId\":\"s1\",\"workingDirectory\":\"$root\",\"toolName\":\"create\",\"toolArgs\":{\"path\":\"$tmp/x\"}}")"
+eq "scope-guard (subagent with no policy, no fenced root): not fenced" "" "$out"
+for t in apply_patch write_bash some_new_tool; do
+  out="$(run_sg "{\"agentType\":\"developer\",\"workingDirectory\":\"$root\",\"toolName\":\"$t\",\"toolArgs\":{}}")"
+  eq "scope-guard (fenced agent, Copilot tool $t the guard cannot read): deny" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+done
+for t in report_intent read_bash task; do
+  out="$(run_sg "{\"agentType\":\"developer\",\"workingDirectory\":\"$root\",\"toolName\":\"$t\",\"toolArgs\":{}}")"
+  eq "scope-guard (fenced agent, harmless Copilot tool $t): no objection" "" "$out"
+done
+mkdir -p "$tmp/proj/.github"; printf '{"mcpServers":{"codegraph":{},"contract-api":{}}}' > "$tmp/proj/.github/mcp.json"
+for t in codegraph-codegraph_explore contract-api/search; do
+  out="$(env -u CLAUDE_SCOPE_POLICY CLAUDE_PROJECT_DIR="$tmp/proj" bash "$sg" PreToolUse <<<"{\"agentType\":\"developer\",\"toolName\":\"$t\",\"toolArgs\":{}}")"
+  eq "scope-guard (fenced agent, tool $t of a configured MCP server): no objection" "" "$out"
+done
+out="$(env -u CLAUDE_SCOPE_POLICY CLAUDE_PROJECT_DIR="$tmp/proj" bash "$sg" PreToolUse <<<'{"agentType":"developer","toolName":"evil-server-x","toolArgs":{}}')"
+eq "scope-guard (fenced agent, tool of an unconfigured server): deny" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+out="$(run_sg "$(jq -cn --arg r "$root" '{agent_type:"developer",cwd:$r,tool_name:"SomeFutureTool",tool_input:{}}')")"
+eq "scope-guard (Claude payload, an unknown tool): still no objection (Claude unchanged)" "" "$out"
 cl="$(jq -cn --arg r "$root" '{agent_type:"developer",tool_name:"Bash",cwd:$r,tool_input:{command:"./gradlew test"}}')"
 eq "scope-guard (Claude payload): still denies" deny "$(jq -r '.hookSpecificOutput.permissionDecision' <<<"$(run_sg "$cl")")"
 
 # --- tool-advice with a Copilot payload: refuse mode denies a contract read for the developer
 ta="$root/.claude/hooks/scripts/tool-advice.sh"
-out="$(TOOL_ADVICE_CONTRACT=refuse CLAUDE_PROJECT_DIR=/work/wt bash "$ta" PreToolUse <<<'{"agentName":"developer","toolName":"view","toolArgs":{"path":"/work/wt/contract/dist/openapi.yaml"}}')"
+out="$(TOOL_ADVICE_CONTRACT=refuse CLAUDE_PROJECT_DIR=/work/wt bash "$ta" PreToolUse <<<'{"agentType":"developer","toolName":"view","toolArgs":{"path":"/work/wt/contract/dist/openapi.yaml"}}')"
 eq "tool-advice (Copilot view of contract/, refuse): Copilot-shape deny" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
 eq "tool-advice (Copilot view of contract/, refuse): Claude-shape deny" deny "$(jq -r '.hookSpecificOutput.permissionDecision // "none"' <<<"$out")"
-out="$(CLAUDE_PROJECT_DIR=/work/wt bash "$ta" PreToolUse <<<'{"agentName":"developer","toolName":"bash","toolArgs":"{\"command\":\"grep -rn operationId contract/\"}"}')"
+out="$(CLAUDE_PROJECT_DIR=/work/wt bash "$ta" PreToolUse <<<'{"agentType":"developer","toolName":"bash","toolArgs":"{\"command\":\"grep -rn operationId contract/\"}"}')"
 eq "tool-advice (Copilot bash grep of the contract, report): advice" advice "$(jq -r 'if .hookSpecificOutput.additionalContext then "advice" else "none" end' <<<"$out")"
 
 echo "payload: $pass passed, $fail failed"

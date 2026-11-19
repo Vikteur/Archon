@@ -33,6 +33,15 @@ for impl in sh js; do
   eq "$impl: KIT_ env name by default" fromkit "$(KIT_CONTRACT_REPO=fromkit g contract.repo x)"
   export KIT_CONFIG="$tmp/missing.yaml"
   eq "$impl: no file is the default" claude "$(g agent_cli claude)"
+  mkdir -p "$tmp/d"; printf 'agent_cli: claude\n' > "$tmp/d/kit.yaml"
+  printf 'agent_cli: copilot\nbuild_workflow: from-defaults\ncontract:\n  repo: d/contract\n' > "$tmp/d/kit.defaults.yaml"
+  export KIT_CONFIG="$tmp/d/kit.yaml"
+  eq "$impl: a key kit.yaml leaves out comes from kit.defaults.yaml beside it" from-defaults "$(g build_workflow build-feature)"
+  eq "$impl: a nested key from kit.defaults.yaml" d/contract "$(g contract.repo x)"
+  eq "$impl: kit.yaml wins over kit.defaults.yaml" claude "$(g agent_cli x)"
+  eq "$impl: a key in neither file is the default" dflt "$(g nope dflt)"
+  export KIT_CONFIG="$tmp/d/missing.yaml"
+  eq "$impl: no kit.yaml, the defaults file still answers" copilot "$(g agent_cli claude)"
   unset KIT_CONFIG
 done
 # without yq the shell helper still answers the default

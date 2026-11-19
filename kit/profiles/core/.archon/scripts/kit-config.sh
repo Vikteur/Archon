@@ -6,6 +6,9 @@
 #   kit_get build_workflow build-feature BUILD_WORKFLOW          # an explicit env name as the third argument
 # The file is $KIT_CONFIG, else <repo root>/.archon/kit.yaml (the repo root is git's top level, else $PWD). Reading needs
 # yq (mikefarah v4); with no yq, no file or no such key the default is printed. A null or empty value is "no key".
+# A key the project's kit.yaml leaves out is read from kit.defaults.yaml beside it, the kit's own defaults that
+# `archon kit add` ships (agent_cli: copilot), so a Copilot project's runtime agrees with what kit add rendered; a checkout
+# without that file (wedding-portal) keeps the script's default.
 kit_get() { # kit_get <dotted.key> <default> [ENV_NAME]
   local key="$1" def="${2-}" env="${3:-}" v="" f root
   [ -n "$env" ] || env="KIT_$(printf '%s' "$key" | tr 'a-z.' 'A-Z_')"
@@ -13,9 +16,13 @@ kit_get() { # kit_get <dotted.key> <default> [ENV_NAME]
   if [ -z "$v" ]; then
     f="${KIT_CONFIG:-}"
     if [ -z "$f" ]; then root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"; f="$root/.archon/kit.yaml"; fi
-    if [ -f "$f" ] && command -v yq >/dev/null 2>&1; then
-      v="$(yq -r ".$key // \"\"" "$f" 2>/dev/null)" || v=""
-      [ "$v" != null ] || v=""
+    if command -v yq >/dev/null 2>&1; then
+      for f in "$f" "${f%/*}/kit.defaults.yaml"; do
+        [ -f "$f" ] || continue
+        v="$(yq -r ".$key // \"\"" "$f" 2>/dev/null)" || v=""
+        [ "$v" != null ] || v=""
+        [ -z "$v" ] || break
+      done
     fi
   fi
   printf '%s' "${v:-$def}"

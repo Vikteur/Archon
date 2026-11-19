@@ -80,7 +80,7 @@ function liveRuns() {
   const o = JSON.parse(text);
   const runs = Array.isArray(o) ? o : o && Array.isArray(o.runs) ? o.runs : null;
   if (!runs) throw new Error('no run list in the archon output');
-  return runs.filter(r => r.workflow_name === BUILD_WORKFLOW && !ENDED.has(r.status)).map(r => {
+  return runs.filter(r => (r.workflow_name === BUILD_WORKFLOW || r.workflow_name === 'build-feature') && !ENDED.has(r.status)).map(r => {
     const nodes = Array.isArray(r.nodes) ? r.nodes : [];
     let task = null;
     const ticket = nodes.find(n => n.nodeId === 'ticket');

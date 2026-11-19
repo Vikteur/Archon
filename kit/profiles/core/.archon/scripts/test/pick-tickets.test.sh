@@ -227,6 +227,10 @@ jq -n '{runs: [{id: "x", workflow_name: "build-feature", status: "running", user
   {id: "y", workflow_name: "other", status: "running", nodes: []}]}' > "$root/runs.json"
 caprun --cap 2
 check "M the ticket falls back to the user message; other workflows do not count" $(jq -e '.runs == [{"run":"x","task":"TASK-5","phase":"pre-merge"}] and .room == 1' "$out" >/dev/null; echo $?)
+jq -n '{runs: [{id: "x", workflow_name: "build-feature", status: "running", user_message: "Build TASK-5", nodes: []},
+  {id: "z", workflow_name: "build-feature-copilot", status: "running", user_message: "Build TASK-6", nodes: []}]}' > "$root/runs.json"
+BUILD_WORKFLOW=build-feature-copilot caprun --cap 2
+check "M with BUILD_WORKFLOW set, a Claude and a Copilot run both count to the ceiling" $(jq -e '(.runs | map(.run) | sort) == ["x","z"] and .room == 0' "$out" >/dev/null; echo $?)
 echo 'oops' > "$root/runs.json"
 caprun --cap 2; rc=$?
 check "M an unreadable archon read exits 1" $([ "$rc" -eq 1 ] && grep -q 'cannot read the archon runs' "$root/err" && [ ! -s "$out" ]; echo $?)

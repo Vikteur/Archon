@@ -116,7 +116,7 @@ poll_all() {
   local runs rows id st node at live=0 rec ids=() sts=() nodes=() ats=() i
   runs=$(archon workflow runs --json --limit 50 2>/dev/null) || return 4
   printf '%s' "$runs" | jq -e '.runs | type == "array"' > /dev/null 2>&1 || return 4
-  rows=$(printf '%s' "$runs" | jq -r --arg wf "$BUILD_WORKFLOW" '[.runs[] | select(.workflow_name == $wf)] | reverse | .[]
+  rows=$(printf '%s' "$runs" | jq -r --arg wf "$BUILD_WORKFLOW" '[.runs[] | select(.workflow_name == $wf or .workflow_name == "build-feature")] | reverse | .[]
     | [.id, .status, (if ((.active_nodes // []) | index("merged")) then "merged" else "-" end),
        (.attention.at // .last_activity_at // "-")] | @tsv')
   while IFS=$'\t' read -r id st node at; do

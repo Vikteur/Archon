@@ -9,7 +9,7 @@
 # is contract.server_name of .archon/kit.yaml, default @@KIT_CONTRACT_SERVER_NAME@@); with --status it also
 # appends them all to <file> (build-feature: $ARTIFACTS_DIR/mcp-status.txt, which the tokenomics report reads). Exits 0
 # when it could judge both servers, up or down; 1 only when the checkout or the file cannot be written.
-# MCP_CONTRACT_SETUP and MCP_CODEGRAPH_SETUP override the two setup scripts (the tests).
+# MCP_CONTRACT_SETUP (old name MCP_PORTAL_SETUP, still read) and MCP_CODEGRAPH_SETUP override the two setup scripts (the tests).
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,7 +31,7 @@ run() { # run <script>: its lines through log, and its exit code
   while IFS= read -r l; do [ -n "$l" ] && log "$l"; done <<<"$out"
   return "$rc"
 }
-contract=down; run "${MCP_CONTRACT_SETUP:-$here/contract-mcp-setup.sh}" && contract=up
+contract=down; run "${MCP_CONTRACT_SETUP:-${MCP_PORTAL_SETUP:-$here/contract-mcp-setup.sh}}" && contract=up
 codegraph=down; run "${MCP_CODEGRAPH_SETUP:-$here/codegraph-setup.sh}" && codegraph=up
 
 file=.archon/mcp/build-tools.json
