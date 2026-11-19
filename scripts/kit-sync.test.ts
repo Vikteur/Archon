@@ -1159,3 +1159,28 @@ describe('sync on a fixture repo', () => {
     expect(verifyKit(out)).toEqual([]);
   });
 });
+
+describe('the committed kit', () => {
+  const kit = join(dirname(import.meta.path), '..', 'kit');
+  const manifest = JSON.parse(readFileSync(join(kit, 'manifest.json'), 'utf8')) as {
+    files: { path: string; profile: string }[];
+  };
+  test('git ignores no file the manifest lists', () => {
+    const paths = manifest.files.map(f => `profiles/${f.profile}/${f.path}`);
+    const r = Bun.spawnSync(['git', '-C', kit, 'check-ignore', '--no-index', '--stdin'], {
+      stdin: Buffer.from(paths.join('\n')),
+      stdout: 'pipe',
+    });
+    expect(r.stdout.toString().trim().split('\n').filter(Boolean)).toEqual([]);
+  });
+  test("the agents that scaffold are told --for offers the repo's own templates", () => {
+    for (const agent of ['developer', 'test-writer']) {
+      const text = readFileSync(
+        join(kit, `profiles/java/.github/agents/${agent}.agent.md`),
+        'utf8'
+      );
+      expect(text).toContain('--for <target>');
+      expect(text).toContain("the repo's own under docs/scaffold-templates/project/ included, and");
+    }
+  });
+});

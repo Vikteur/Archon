@@ -966,7 +966,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "61e57fb72bb23ed3102e30fa8f93ca588e2ed227b4099b42f93d96697453b2cd"
+      "sha256": "f5b569771ab3955c30c6b3306c61fdc7f127d14a6cdf08f25977091b48cb6060"
     },
     {
       "path": ".archon/workflows/build-feature.yaml",
@@ -975,7 +975,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature.yaml",
       "kind": "workflow",
-      "sha256": "e7f0370b6beba4ece3525f8c75bd58db05f8a988c6c5919a6182d93aedd5e825"
+      "sha256": "a684f0c10a6a62f8bd74ae6e25cf9d523ccaa3133405f556a5bb9fdafd02f3b1"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1209,7 +1209,7 @@
       "template": false,
       "origin": ".claude/scripts/gate-change-check.sh",
       "kind": "script",
-      "sha256": "aff40301a933b47a1c5fd4e019250a8ce7dc138a8e64ff630e600e300ec579db"
+      "sha256": "2687e34d653ef7f98381ab39fdcecebf1fc9466e088aba421b47494c899a7c26"
     },
     {
       "path": ".claude/scripts/groma-check.sh",
@@ -1596,7 +1596,7 @@
       "template": false,
       "origin": "docs/code-maps/README.md",
       "kind": "doc",
-      "sha256": "dd54fd02c3ed8c5e794434b9596550b010285b15bc01222df70f4b153f847af7"
+      "sha256": "5a2c993824aef014140b735fee65b51ba045bbd3f8d4b419261e720203ac38ba"
     },
     {
       "path": "docs/code-maps/clean-architecture.md",
@@ -1740,7 +1740,7 @@
       "template": false,
       "origin": "scripts/test/gate-change-check.test.sh",
       "kind": "script",
-      "sha256": "6322c12793d3d98161b796c140ec8abcab18fec474cb5dc2b1170c71d0109770"
+      "sha256": "0a845ded2069df40a82e0b56ee8df50f34d815eea6902b50ddcd871aa3e749d8"
     },
     {
       "path": "scripts/test/groma-delta.test.sh",
@@ -1929,7 +1929,7 @@
       "template": true,
       "origin": ".claude/agents/developer.md",
       "kind": "agent",
-      "sha256": "8c73da7b5a3c464c1e35cb7c6b569a2e6c41a2deb8dc5e78693ae727491f9173"
+      "sha256": "254ad6ab7f929bd172bf3ce3c6d95e6189f9d2aff8f17f8a7a06f1828592923d"
     },
     {
       "path": ".github/agents/test-writer.agent.md",
@@ -1938,7 +1938,7 @@
       "template": true,
       "origin": ".claude/agents/test-writer.md",
       "kind": "agent",
-      "sha256": "663b00d8fb581f6418e1a7f0c24f42a2b59a9223420cc06b5d3b8efec3b24c68"
+      "sha256": "b3fe4738e61f94810c793094689d4f088cc59c2910a6ec0d4c8c3d6fee01cbfd"
     },
     {
       "path": ".github/instructions/adapter.instructions.md",
@@ -2623,7 +2623,7 @@
       "template": false,
       "origin": "scripts/scaffold.sh",
       "kind": "script",
-      "sha256": "85db59cfbc101132915dc0100ee3967ff84c5446f0ebb18d3b65f9f3517cc5a0"
+      "sha256": "f0d105fb7eff09c3d4f035709b7655f99962b09aef7c8cff467598de3f1943bc"
     },
     {
       "path": "scripts/scaffold/for.js",
@@ -2659,7 +2659,7 @@
       "template": false,
       "origin": "scripts/scaffold/targets.js",
       "kind": "script",
-      "sha256": "5d81ff45a4401408db3789c642ea518aa542e98a5028140b57ce95a6d8137fad"
+      "sha256": "ba337c85331f0bb604c2271c0757fc7ad50c67fe401ca2efcbc4f8bf52578205"
     },
     {
       "path": "scripts/test/affected-check.test.sh",
@@ -2705,6 +2705,15 @@
       "origin": "scripts/test/pin-proof-check.test.sh",
       "kind": "script",
       "sha256": "d03fa842707b4a05fe25941a7956d7365d3fd1b93c8d6a8651ced3aeacf3a783"
+    },
+    {
+      "path": "scripts/test/scaffold.test.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "f0c6049c17c754fa20cdd2268fdb773061a4b59e7a216128e00904d6e3fc12c3"
     },
     {
       "path": ".github/ci-inputs.yml",

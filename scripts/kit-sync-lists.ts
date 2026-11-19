@@ -4,6 +4,7 @@
  */
 import { mergeRewrites, NOUN_REWRITES, NOUN_TARGETED } from './kit-sync-generic';
 import { STANDALONE_TARGETED } from './kit-sync-standalone-text';
+import { CONSUMER_TARGETED } from './kit-sync-consumer';
 
 export const PROFILES = [
   'core',
@@ -433,10 +434,10 @@ const BASE_TARGETED: Record<string, Rewrite[]> = {
   ],
 };
 
-/** Exact rewrites per source file (the lists above, kit-sync-generic.ts's NOUN_TARGETED and kit-sync-standalone-text.ts's). */
+/** Exact rewrites per source file (the lists above, kit-sync-generic.ts's NOUN_TARGETED, kit-sync-standalone-text.ts's and kit-sync-consumer.ts's). */
 export const TARGETED: Record<string, Rewrite[]> = mergeRewrites(
-  mergeRewrites(BASE_TARGETED, NOUN_TARGETED),
-  STANDALONE_TARGETED
+  mergeRewrites(mergeRewrites(BASE_TARGETED, NOUN_TARGETED), STANDALONE_TARGETED),
+  CONSUMER_TARGETED
 );
 
 /**

@@ -3,5 +3,13 @@
     "derivedFrom": null,
     "sourceSha256": null,
     "createOnly": true
+  },
+  "scripts/scaffold/targets.js": {
+    "derivedFrom": "scripts/scaffold/targets.js",
+    "sourceSha256": "5d81ff45a4401408db3789c642ea518aa542e98a5028140b57ce95a6d8137fad"
+  },
+  "scripts/test/scaffold.test.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
   }
 }

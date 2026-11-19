@@ -78,7 +78,8 @@ tool list did not start: fall back to `Read` and `Grep`, and say so in your summ
   and hang until the 10-minute timeout. Use `find ... -exec <cmd> {} +`, or the Read or Grep tool.
 - **Scaffold before you write by hand** (P2). Also load `code-generation`: its leaf explains the mustache
   templates. Before every new source file, run `scripts/scaffold.sh --for <target>`: it names the templates whose
-  `## Scaffold` Target fits and prints the render command, `scripts/scaffold.sh <template> '<json on one line>'
+  `## Scaffold` Target fits (the repo's own under docs/scaffold-templates/project/ included, and preferred) and
+  prints the render command, `scripts/scaffold.sh <template> '<json on one line>'
   <target>`, with what the path gives filled in. Render the base case and edit it for the edge cases with Edit, never
   by writing the rendered file over whole (the gate counts that as written by hand); when none fits, add the
   `Hand-written:` plan line it prints, and when one targets the file but does not fit, write it by hand with a
