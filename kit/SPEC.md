@@ -3,7 +3,7 @@
 This file is the contract shared by every piece of kit work:
 - the generator `scripts/kit-sync.ts`;
 - the embedder `scripts/generate-bundled-kit.ts`;
-- the CLI commands `archon kit add` and `archon kit doctor`;
+- the CLI commands `archon kit add`, `archon kit doctor` and `archon kit tools`;
 - the hand-written overlays.
 
 Change it only together with every consumer.
@@ -14,6 +14,16 @@ Change it only together with every consumer.
 
 - **Source of truth.** The source repo stays the source. `kit/profiles/**` is **generated**, so never hand-edit it.
 - **Hand-written parts.** Only `kit/overlays/**`, `kit/SPEC.md` and `kit/kit.defaults.yaml` are written by hand.
+- **Tools.** `archon kit tools [path] [--check]` runs the project's `scripts/install-tools.sh` (core), passing `--check` through: it installs the tools the kit's scripts need, or with `--check` only reports what is missing.
+
+## Generator (kit-sync)
+
+- `bun run kit:sync <source-repo>` (`scripts/kit-sync.ts <source-repo> [--check] [--out kit]`) rewrites `profiles/**` and `manifest.json`, and leaves the hand-written files alone.
+- **Reads the source's HEAD.** It reads git-tracked files from the commit `git rev-parse HEAD` names, never the work tree, so one commit gives one kit; uncommitted changes under the scanned roots are a warning. The scanned roots are `.agents/`, `.archon/`, `.claude/`, `.githooks/`, `.github/`, `docs/code-maps/`, `docs/scaffold-templates/` and `scripts/`. Every tracked file under them is assigned to a profile or excluded by the copy lists, or the sync fails. Binary files and symlinks fail it too.
+- **Deterministic.** Sorted output and no timestamps: the same source commit and overlays give the same bytes.
+- `--check` regenerates into a temp dir, diffs it with `kit/` and exits 1 on drift (printing the paths) or on an overlay whose `sourceSha256` no longer matches its `derivedFrom` file.
+- `--verify` needs no source: it checks `manifest.json` against `profiles/**` (sha256, mode, template flag, sort order, no extra or missing file), that every overlay file is synced, and the leak FAIL patterns. `bun run check:kit` runs it and `bun run check:bundled-kit` checks `packages/cli/src/bundled-kit.ts`; both are in `bun run validate`.
+- **Leak check.** The sync fails on a home path (`/home/<owner>`), an owner GitHub account, or a secret-looking token (GitHub, AWS, Slack, Anthropic keys, private keys). It warns on the source's project nouns (wedding, rekord, portal) in `core`, `java` and `java-spring`.
 
 ## Folders
 
@@ -90,6 +100,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 - **Rendering.** `archon kit add` renders placeholders at install time.
 - **Lists.** A list value renders as its items joined with `, `.
 - **Missing keys.** A missing key renders empty, and `kit add` warns about it.
+- **Built-in.** `@@KIT_PROJECT_DIR@@` is not a kit.yaml key: `kit add` renders it as the absolute path of the project it installs into. It replaces the source's main checkout path, for example in the workflows' `denied_tools`.
 - **No overlap.** The syntax never clashes with mustache `{{ }}` or shell `${ }`.
 - **Prefer runtime reads.** A script that can read `.archon/kit.yaml` at runtime should do that, using yq with a default. Use placeholders only where a file can't read config: skill or agent markdown, and JSON hook or MCP files.
 
@@ -128,16 +139,17 @@ contract:
 
 | Source | Target | Rule |
 |---|---|---|
-| `.claude/agents/<n>.md` | `.github/agents/<n>.agent.md` | Frontmatter becomes `name`, `description`, `model`, `tools`, `mcp-servers` and `include-custom-instructions: true`. The model maps opus→`claude-opus-5.5`, sonnet→`claude-sonnet-5.5`, haiku→`claude-haiku-5.5`. Tools map Read/Grep/Glob→`read`+`search`, Edit/Write/MultiEdit/NotebookEdit→`edit`, any `Bash(...)`→`execute`, WebFetch/WebSearch→`web`, `Agent(...)`→`agent`, `mcp__<s>__*`→`<s>/*`, `mcp__<s>__<t>`→`<s>/<t>`, and drops Skill (skills load by name), PushNotification, SendMessage and ListAgents. The `skills:` list becomes a body line `Load these skills first: a, b.`. Each Claude-only tool that is dropped becomes a body note under `## On Copilot CLI`. |
-| `.claude/skills/<n>/**` | `.github/skills/<n>/**` | Copied verbatim. In SKILL.md frontmatter it keeps `name`, `description`, `license` and `allowed-tools`, and drops the rest. A dropped `disallowed-tools` or `disable-model-invocation` is added as a body note under `## On Copilot CLI`. |
+| `.claude/agents/<n>.md` | `.github/agents/<n>.agent.md` | Frontmatter becomes `name`, `description`, `model`, `tools`, `mcp-servers` and `include-custom-instructions: true`. The model maps opus→`claude-opus-5.5`, sonnet→`claude-sonnet-5.5`, haiku→`claude-haiku-5.5`. Tools map Read/Grep/Glob→`read`+`search`, Edit/Write/MultiEdit/NotebookEdit→`edit`, any `Bash(...)`→`execute`, WebFetch/WebSearch→`web`, `Agent(...)`→`agent`, `mcp__<s>__*`→`<s>/*`, `mcp__<s>__<t>`→`<s>/<t>`, and drops Skill (skills load by name), PushNotification, SendMessage and ListAgents. The `skills:` list becomes a body line `Load these skills first: a, b.`. An unknown tool fails the sync. `mcpServers` (a map or a list of one-key maps) becomes `mcp-servers` entries `{type: local, command, args, tools: ["*"], env}`, dropping `alwaysLoad`. Under a closing `## On Copilot CLI` the body notes each Claude-only tool that is dropped, the `Bash(...)` patterns as the shell allowlist to keep to, and the `Agent(...)` names as the only agents to delegate to. The source's contract server name (`portal-api`) becomes `@@KIT_CONTRACT_SERVER_NAME@@` in tools, servers and body. |
+| `.claude/skills/<n>/**` | `.github/skills/<n>/**` | Copied verbatim; `run-wedding-portal` ships as `run-app`. `.claude/skills/archon-cli/**` does not ship (the `.agents/skills/archon-cli` copy does). In SKILL.md frontmatter it keeps `name`, `description`, `license` and `allowed-tools`, and drops the rest. A dropped `disallowed-tools` or `disable-model-invocation` is added as a body note under `## On Copilot CLI`. |
 | `.agents/skills/archon-cli/**` | the same path | Verbatim. |
 | `.claude/settings.json` `hooks` | `.github/hooks/kit.json` | `{"version":1,"hooks":{<event>:[{"type":"command","bash":"bash .github/hooks/dispatch.sh <ClaudeEvent> '<matcher>' <script path> <args>","timeoutSec":N}]}}`. Events map SessionStart→sessionStart, UserPromptSubmit→userPromptSubmitted, PreToolUse→preToolUse, PostToolUse→postToolUse, PostToolUseFailure→postToolUseFailure, SubagentStart→subagentStart, SubagentStop→subagentStop, SessionEnd→sessionEnd, Stop→agentStop. |
-| — | `.github/hooks/dispatch.sh` | Generated, a fixed script. It reads stdin, normalizes the payload with `.claude/hooks/scripts/payload.sh`, applies the Claude matcher regex to the normalized tool name, runs the script with the normalized payload, and translates a Claude `hookSpecificOutput.permissionDecision` into Copilot's top-level `permissionDecision`/`permissionDecisionReason`. |
+| — | `.github/hooks/dispatch.sh` | Generated, a fixed script. It reads stdin, normalizes the payload with `.claude/hooks/scripts/payload.sh`, applies the Claude matcher regex (anchored) to the normalized tool name, runs the script with the normalized payload (from `.claude/hooks` for a script under it, else the project root; a missing script is a no-op), turns a PreToolUse exit 2 into a deny with stderr as the reason, and translates a Claude `hookSpecificOutput.permissionDecision` into Copilot's top-level `permissionDecision`/`permissionDecisionReason`. |
 | `.claude/settings.json` `permissions.deny` | `.archon/copilot/deny.json` | Read by `run-guard.sh`, which enforces it in every session, not only in run worktrees. |
-| `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. |
+| `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. A rule without `paths:` (general) gets `applyTo: "**"`. |
 | MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/portal-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
-| `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | The rewrites of `.archon/scripts/copilot-workflow.js`. Both workflows ship. |
-| Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync.ts`. |
+| `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | Copied when the source tracks it; otherwise generated with `.archon/scripts/copilot-workflow.js`. Both workflows ship. |
+| Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync.ts`. `.github/workflows/ci.yml`, `.github/ci-inputs.yml` and `ci-workflow-check.sh` are Quarkus-built and go to `java-quarkus`. A scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject` goes to `java-quarkus`, every other one to `java`. |
+| Every shipped text file | — | After conversion: `.claude/skills` (either slash) becomes `.github/skills`, `run-wedding-portal` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and both build-feature workflows) and the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime). |
 
 ## What never ships
 
