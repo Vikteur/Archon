@@ -1,4 +1,4 @@
-import type { CopilotClientOptions, SessionConfig } from '@github/copilot-sdk';
+import type { ClientObservabilityOptions, CreateSessionOptions } from '@microsoft/copilot-sdk';
 import {
   EFFORT_LADDER,
   clampEffort,
@@ -12,10 +12,13 @@ import { configStringSchema, parseConfigLenient, parseConfigSchema } from '../..
 /**
  * The reasoning-depth rungs Copilot's SDK accepts, weakest → strongest.
  *
- * The SDK does not export `ReasoningEffort` from its barrel, but its public
- * `SessionConfig` retains the union.
+ * Since copilot-sdk 2.0 `ReasoningEffort` is a plain `string` ("model-defined",
+ * discovered via `listModels()`), so the SDK no longer pins the vocabulary and
+ * there is no union to check completeness against (nor is the alias exported
+ * from the barrel). These are the levels its event docs name, minus `none`,
+ * which Archon's ladder does not request.
  */
-type CopilotEffort = NonNullable<SessionConfig['reasoningEffort']>;
+type CopilotEffort = NonNullable<NonNullable<CreateSessionOptions['inference']>['reasoningEffort']>;
 
 export const COPILOT_EFFORTS = [
   'low',
@@ -25,12 +28,8 @@ export const COPILOT_EFFORTS = [
   'max',
 ] as const satisfies readonly CopilotEffort[];
 
-export type CopilotEffortsAreComplete = AssertNever<
-  Exclude<CopilotEffort, (typeof COPILOT_EFFORTS)[number]>
->;
-
 /** Copilot CLI log levels, imported from the SDK's client options. */
-type CopilotLogLevel = NonNullable<CopilotClientOptions['logLevel']>;
+type CopilotLogLevel = NonNullable<ClientObservabilityOptions['logLevel']>;
 
 const COPILOT_LOG_LEVELS = [
   'none',
@@ -79,7 +78,7 @@ const localFields = {
   enableConfigDiscovery: z.boolean({ error: 'expected a boolean' }).optional(),
   /**
    * Run the project's `.github/hooks/*.json` hooks with Copilot CLI semantics
-   * (the SDK's `enableFileHooks`). A preToolUse hook that denies, exits 2 or
+   * (the SDK's `hooks.enableRepositoryHooks`). A preToolUse hook that denies, exits 2 or
    * errors blocks the tool; a timeout lets it run. Independent of
    * `enableConfigDiscovery`.
    * @default true
@@ -103,7 +102,7 @@ export const configSchemas = {
   snapshot: snapshotConfigSchema(portableFields, localFields),
 };
 
-/** Community provider defaults for GitHub Copilot (@github/copilot-sdk). */
+/** Community provider defaults for GitHub Copilot (@microsoft/copilot-sdk). */
 export type CopilotProviderDefaults = z.output<typeof configSchemas.install>;
 
 /** Parse raw `assistants.copilot` config into typed defaults, dropping invalid values. */

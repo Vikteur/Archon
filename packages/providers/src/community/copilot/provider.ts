@@ -1,13 +1,13 @@
 /**
  * GitHub Copilot provider (community tier).
  *
- * Implements `IAgentProvider` on top of @github/copilot-sdk. Resolves auth +
+ * Implements `IAgentProvider` on top of @microsoft/copilot-sdk. Resolves auth +
  * binary path + reasoning config, translates Archon workflow options
  * (tool restrictions, MCP servers, skills, agents, structured output) to the
  * SDK's `SessionConfig`, creates or resumes a session, and hands the
  * streaming bridge off to `bridgeSession` in `event-bridge.ts`.
  *
- * Module-scope invariant: type-only imports from @github/copilot-sdk. All
+ * Module-scope invariant: type-only imports from @microsoft/copilot-sdk. All
  * value imports (`CopilotClient`, `approveAll`) happen inside `sendQuery()`
  * via dynamic `await import(...)`. `provider-lazy-load.test.ts` asserts this
  * so a future SDK update that reads the filesystem at module load can't
@@ -17,13 +17,15 @@ import type { CredentialStatus } from '@archon/provider-contract';
 import { createLogger } from '@archon/paths';
 import { sessionPreview } from '@archon/provider-contract';
 import type {
+  ClientGitHubOptions,
   CopilotClientOptions,
   CopilotSession,
+  CreateSessionOptions,
   CustomAgentConfig,
   MCPServerConfig,
-  SessionConfig,
+  SpawnedStdioRuntimeConnection,
   SystemMessageConfig,
-} from '@github/copilot-sdk';
+} from '@microsoft/copilot-sdk';
 
 import type {
   IAgentProvider,
@@ -44,11 +46,18 @@ import { mapAllowedTools, mapDeniedTools } from './tool-names';
 import { closeOpenToolCalls } from '../../shared/tool-calls';
 import { failureClassOfThrown, failureResult } from '../../shared/failure';
 
-// `ReasoningEffort` is defined in the SDK but not re-exported from its barrel
-// (as of @github/copilot-sdk@0.2.2), so the vocabulary is mirrored in ./config
-// and pinned there against `CopilotProviderDefaults`. Derive the type from that
-// one array rather than restating the union here.
+// The SDK's `ReasoningEffort` is a plain string since copilot-sdk 2.0, so the
+// vocabulary Archon sends lives in ./config. Derive the type from that one
+// array rather than restating the union here.
 type CopilotReasoningEffort = (typeof COPILOT_EFFORTS)[number];
+
+/**
+ * The options `createSession` / `resumeSession` take. copilot-sdk 2.0 groups
+ * them (`tools`, `skills`, `agents`, `mcp`, `hooks`, `permissions`, `events`,
+ * `inference`); `CreateSessionOptions` is the wider of the two, and every
+ * group Archon sets is shared with `ResumeSessionOptions`.
+ */
+type SessionConfig = CreateSessionOptions;
 
 /**
  * Auth env vars, split by intent.
@@ -169,7 +178,7 @@ function resolveSystemMessage(requestOptions?: SendQueryOptions): SystemMessageC
 
 /**
  * Translate Archon's per-node `allowed_tools` / `denied_tools` (Claude tool
- * names) to Copilot's `availableTools` / `excludedTools` (Copilot built-in
+ * names) to Copilot's `tools.availableTools` / `tools.excludedTools` (Copilot built-in
  * names, see ./tool-names). The SDK always sends `toolFilterPrecedence:
  * "excluded"`, so an excluded tool stays excluded even when also allowed.
  *
@@ -186,7 +195,7 @@ function applyToolRestrictions(
   if (!nodeConfig) return;
   if (nodeConfig.allowed_tools !== undefined) {
     const allowed = mapAllowedTools(nodeConfig.allowed_tools);
-    sessionConfig.availableTools = allowed.tools;
+    sessionConfig.tools = { ...sessionConfig.tools, availableTools: allowed.tools };
     const fresh = firstSightings(allowed.widened);
     if (fresh.length > 0) {
       warnings.push({
@@ -197,7 +206,7 @@ function applyToolRestrictions(
   }
   if (nodeConfig.denied_tools !== undefined) {
     const denied = mapDeniedTools(nodeConfig.denied_tools);
-    sessionConfig.excludedTools = denied.tools;
+    sessionConfig.tools = { ...sessionConfig.tools, excludedTools: denied.tools };
     const fresh = firstSightings(denied.dropped);
     if (fresh.length > 0) {
       warnings.push({
@@ -207,14 +216,17 @@ function applyToolRestrictions(
     }
   }
   getLog().debug(
-    { availableTools: sessionConfig.availableTools, excludedTools: sessionConfig.excludedTools },
+    {
+      availableTools: sessionConfig.tools?.availableTools,
+      excludedTools: sessionConfig.tools?.excludedTools,
+    },
     'copilot.tool_filters_mapped'
   );
 }
 
 /**
  * Translate Archon's `nodeConfig.mcp` (JSON-file path) to Copilot's
- * `SessionConfig.mcpServers`. Reuses the shared `loadMcpConfig` helper so
+ * `SessionConfig.mcp.servers`. Reuses the shared `loadMcpConfig` helper so
  * env-var expansion and missing-var detection behave consistently across
  * providers.
  */
@@ -236,13 +248,13 @@ async function applyMcpServers(
     });
   }
 
-  sessionConfig.mcpServers = servers as Record<string, MCPServerConfig>;
+  sessionConfig.mcp = { ...sessionConfig.mcp, servers: servers as Record<string, MCPServerConfig> };
   getLog().info({ serverNames, missingVars }, 'copilot.mcp_loaded');
 }
 
 /**
  * Translate Archon's `nodeConfig.skills` (string names) to Copilot's
- * `SessionConfig.skillDirectories` (absolute paths). Unresolved names become
+ * `SessionConfig.skills.directories` (absolute paths). Unresolved names become
  * a single system warning so the user notices the typo/missing skill.
  */
 function applySkills(
@@ -267,21 +279,21 @@ function applySkills(
   }
 
   if (paths.length > 0) {
-    sessionConfig.skillDirectories = paths;
+    sessionConfig.skills = { ...sessionConfig.skills, directories: paths };
   }
   getLog().info({ resolved: paths.length, missing }, 'copilot.skills_resolved');
 }
 
 /**
  * Translate Archon's `nodeConfig.agents` (Record<name, AgentDef>) to
- * Copilot's `SessionConfig.customAgents`. Only the fields Copilot's
+ * Copilot's `SessionConfig.agents.definitions`. Only the fields Copilot's
  * `CustomAgentConfig` supports pass through (description, prompt, tools).
  * An agent's `tools` is an allowlist and gets the same Claude-to-Copilot name
  * translation as `allowed_tools`, widened entries warned about once per agent.
  * Archon agent fields Copilot cannot represent (`model`, `disallowedTools`,
  * `skills`, `maxTurns`) surface as one consolidated warning per agent.
  *
- * We do NOT set `SessionConfig.agent` — Archon's workflow model invokes
+ * We do NOT set `SessionConfig.agents.selected` — Archon's workflow model invokes
  * sub-agents via the Task tool, not by switching active agent at session
  * start.
  */
@@ -317,7 +329,7 @@ function applyAgents(
     };
   });
 
-  sessionConfig.customAgents = customAgents;
+  sessionConfig.agents = { ...sessionConfig.agents, definitions: customAgents };
   getLog().info(
     { count: customAgents.length, names: customAgents.map(a => a.name) },
     'copilot.agents_registered'
@@ -338,6 +350,68 @@ function agentTools(name: string, tools: string[], warnings: ProviderWarning[]):
 
 // ─── SessionConfig assembly ─────────────────────────────────────────────────
 
+type CopilotTokenSource = 'copilot-token' | 'generic-token' | 'logged-in-user';
+
+/**
+ * Pick the client's GitHub credential. Auth precedence: see
+ * COPILOT_TOKEN_ENV_KEY / GENERIC_GITHUB_TOKEN_ENV_KEYS docs.
+ */
+function resolveGitHubAuth(
+  copilotConfig: CopilotProviderDefaults,
+  env: Record<string, string>
+): { github: ClientGitHubOptions; tokenSource: CopilotTokenSource } {
+  const copilotToken = resolveCopilotToken(env);
+  if (copilotToken) {
+    return {
+      github: { token: copilotToken, useLoggedInUser: false },
+      tokenSource: 'copilot-token',
+    };
+  }
+  if (copilotConfig.useLoggedInUser !== false) {
+    return { github: { useLoggedInUser: true }, tokenSource: 'logged-in-user' };
+  }
+  const genericGithubToken = resolveGenericGitHubToken(env);
+  return genericGithubToken
+    ? {
+        github: { token: genericGithubToken, useLoggedInUser: false },
+        tokenSource: 'generic-token',
+      }
+    : { github: { useLoggedInUser: false }, tokenSource: 'logged-in-user' };
+}
+
+/**
+ * The client options for one request.
+ *
+ * copilot-sdk 2.0 defaults to an in-process runtime, which cannot take a
+ * per-request env; spawn it over stdio so `env` reaches the agent's shell. A
+ * custom CLI binary (compiled builds) rides the same connection; without one
+ * the SDK spawns its bundled runtime. configDir → baseDirectory (sets
+ * COPILOT_HOME on the runtime). `coding-agent` keeps the built-in tools and
+ * defaults Archon relies on (the SDK requires an explicit mode since 2.0).
+ */
+function buildClientOptions(
+  copilotConfig: CopilotProviderDefaults,
+  env: Record<string, string>,
+  cwd: string,
+  cliPath: string | undefined
+): { clientOpts: CopilotClientOptions; tokenSource: CopilotTokenSource } {
+  const runtime: SpawnedStdioRuntimeConnection = {
+    kind: 'spawned-stdio',
+    env,
+    workingDirectory: cwd,
+    ...(cliPath ? { path: cliPath } : {}),
+    ...(copilotConfig.configDir ? { baseDirectory: copilotConfig.configDir } : {}),
+  };
+  const { github, tokenSource } = resolveGitHubAuth(copilotConfig, env);
+  const clientOpts: CopilotClientOptions = {
+    mode: 'coding-agent',
+    runtime,
+    github,
+    ...(copilotConfig.logLevel ? { observability: { logLevel: copilotConfig.logLevel } } : {}),
+  };
+  return { clientOpts, tokenSource };
+}
+
 /**
  * Single construction site for the Copilot SessionConfig. Callers add new
  * translations as `applyX(sessionConfig, ..., warnings)` calls below — keep
@@ -347,7 +421,7 @@ async function buildSessionConfig(
   copilotConfig: CopilotProviderDefaults,
   requestOptions: SendQueryOptions | undefined,
   cwd: string,
-  approveAll: SessionConfig['onPermissionRequest'],
+  approveAll: NonNullable<SessionConfig['permissions']>['onRequest'],
   warnings: ProviderWarning[],
   env: Record<string, string>
 ): Promise<SessionConfig> {
@@ -364,19 +438,19 @@ async function buildSessionConfig(
 
   const sessionConfig: SessionConfig = {
     model: resolvedModel,
-    reasoningEffort: reasoning.effort,
+    inference: { reasoningEffort: reasoning.effort },
     workingDirectory: cwd,
-    // configDir moved to the client level in copilot-sdk 1.0 (baseDirectory —
-    // sets COPILOT_HOME on the spawned runtime); applied in sendQuery's
+    // configDir lives on the runtime connection (baseDirectory — sets
+    // COPILOT_HOME on the spawned runtime); applied in sendQuery's
     // CopilotClientOptions, not here.
-    streaming: true,
+    events: { streaming: true },
     systemMessage: resolveSystemMessage(requestOptions),
     enableConfigDiscovery: copilotConfig.enableConfigDiscovery ?? false,
     // The runtime loads `<cwd>/.github/hooks/*.json` itself and applies Copilot
     // CLI semantics (deny/exit 2/error block a tool, a timeout does not); its
     // `hook.start` / `hook.end` events reach the stream via the event bridge.
-    enableFileHooks: copilotConfig.fileHooks ?? true,
-    onPermissionRequest: approveAll,
+    hooks: { enableRepositoryHooks: copilotConfig.fileHooks ?? true },
+    permissions: { onRequest: approveAll },
   };
 
   applyToolRestrictions(sessionConfig, requestOptions?.nodeConfig, warnings);
@@ -458,7 +532,7 @@ function buildFriendlyCopilotError(error: unknown, lastSessionError?: string): E
 
 /**
  * GitHub Copilot community provider. Implements `IAgentProvider` on top of
- * `@github/copilot-sdk`, translating Archon workflow options (tools, MCP,
+ * `@microsoft/copilot-sdk`, translating Archon workflow options (tools, MCP,
  * skills, agents, structured output, reasoning) to the SDK's `SessionConfig`,
  * bridging its event stream via `bridgeSession()`, and surfacing provider
  * signals (translation warnings, fork workaround, resume fallback) to the
@@ -528,11 +602,9 @@ export class CopilotProvider implements IAgentProvider {
     const copilotConfig = parseCopilotConfig(assistantConfig);
 
     const mergedEnv = buildCopilotEnv(requestOptions?.env);
-    const copilotToken = resolveCopilotToken(mergedEnv);
-    const genericGithubToken = resolveGenericGitHubToken(mergedEnv);
     const cliPath = await resolveCopilotBinaryPath(copilotConfig.copilotCliPath);
 
-    const sdk = await import('@github/copilot-sdk');
+    const sdk = await import('@microsoft/copilot-sdk');
     const { CopilotClient: copilotClientCtor, approveAll } = sdk;
 
     const warnings: ProviderWarning[] = [];
@@ -561,34 +633,7 @@ export class CopilotProvider implements IAgentProvider {
       ? augmentPromptForJsonSchema(prompt, outputFormat.schema)
       : prompt;
 
-    const clientOpts: CopilotClientOptions = {
-      workingDirectory: cwd,
-      env: mergedEnv,
-    };
-    // copilot-sdk 1.0: a custom CLI binary rides a stdio runtime connection
-    // (replaces the removed `cliPath` option).
-    if (cliPath) clientOpts.connection = { kind: 'stdio', path: cliPath };
-    // configDir override → baseDirectory (sets COPILOT_HOME on the runtime).
-    if (copilotConfig.configDir) clientOpts.baseDirectory = copilotConfig.configDir;
-    // Auth precedence: see COPILOT_TOKEN_ENV_KEY / GENERIC_GITHUB_TOKEN_ENV_KEYS docs.
-    let tokenSource: 'copilot-token' | 'generic-token' | 'logged-in-user';
-    if (copilotToken) {
-      clientOpts.gitHubToken = copilotToken;
-      clientOpts.useLoggedInUser = false;
-      tokenSource = 'copilot-token';
-    } else if (copilotConfig.useLoggedInUser === false) {
-      if (genericGithubToken) {
-        clientOpts.gitHubToken = genericGithubToken;
-        tokenSource = 'generic-token';
-      } else {
-        tokenSource = 'logged-in-user';
-      }
-      clientOpts.useLoggedInUser = false;
-    } else {
-      clientOpts.useLoggedInUser = true;
-      tokenSource = 'logged-in-user';
-    }
-    if (copilotConfig.logLevel) clientOpts.logLevel = copilotConfig.logLevel;
+    const { clientOpts, tokenSource } = buildClientOptions(copilotConfig, mergedEnv, cwd, cliPath);
     const client = new copilotClientCtor(clientOpts);
 
     let session: CopilotSession;
@@ -659,12 +704,12 @@ export class CopilotProvider implements IAgentProvider {
         sessionIdPreview: sessionPreview(session.sessionId),
         model: sessionConfig.model,
         cwd,
-        reasoningEffort: sessionConfig.reasoningEffort,
+        reasoningEffort: sessionConfig.inference?.reasoningEffort,
         hasSystemMessage: sessionConfig.systemMessage !== undefined,
-        mcpServers: sessionConfig.mcpServers ? Object.keys(sessionConfig.mcpServers).length : 0,
-        skills: sessionConfig.skillDirectories?.length ?? 0,
-        fileHooks: sessionConfig.enableFileHooks,
-        agents: sessionConfig.customAgents?.length ?? 0,
+        mcpServers: sessionConfig.mcp?.servers ? Object.keys(sessionConfig.mcp.servers).length : 0,
+        skills: sessionConfig.skills?.directories?.length ?? 0,
+        fileHooks: sessionConfig.hooks?.enableRepositoryHooks,
+        agents: sessionConfig.agents?.definitions?.length ?? 0,
         tokenSource,
         resumed: resumeSessionId !== undefined && !resumeFailed,
       },
