@@ -218,6 +218,68 @@ export function withMcpFallbackScopes(
   return changed ? `${JSON.stringify(doc, null, 2)}\n` : json;
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Scaffold scripts (the kit only)
+// ---------------------------------------------------------------------------------------------------------------
+// A repo keeps its own templates in docs/scaffold-templates/project/ and, beside scripts/scaffold.sh, two scripts of
+// its own that use them: scripts/scaffold/new-context.sh renders a new module set from them, scripts/scaffold/smoke.sh
+// renders every one with its <name>.example.json in a throwaway copy and builds it (--render-only stops after the
+// render). The kit ships neither (they carry the repo's module names); its agents may run them where they exist, and
+// scripts/test/scaffold.test.sh, the wiring check (the kit's, or the repo's own in its place: kit add keeps a project
+// file it did not write), which renders to a temp folder only. An
+// agent that writes production code may scaffold and smoke-build; one that writes tests, plans or reviews may only
+// ask which template fits (--for, read-only) and check that the templates still render.
+
+const SCAFFOLD_FOR = 'scripts/scaffold.sh --for';
+const NEW_CONTEXT = 'scripts/scaffold/new-context.sh';
+const SMOKE = 'scripts/scaffold/smoke.sh';
+const SMOKE_RENDER = `${SMOKE} --render-only`;
+const WIRING = 'scripts/test/scaffold.test.sh';
+
+/** The scaffold command prefixes the kit adds to each agent's shell allowlist (agent-scopes.json form). */
+export const SCAFFOLD_COMMANDS: Readonly<Record<string, readonly string[]>> = {
+  developer: [NEW_CONTEXT, SMOKE, WIRING],
+  'test-writer': [SMOKE_RENDER, WIRING],
+  analyst: [SCAFFOLD_FOR, SMOKE_RENDER, WIRING],
+  reviewer: [SCAFFOLD_FOR, SMOKE_RENDER, WIRING],
+};
+
+/** One agent's kit scaffold commands; none for an agent without a shell (giving it one would widen it). */
+export function scaffoldCommands(name: string, rawTools: unknown): string[] {
+  const tools = listOf(rawTools).map(t => t.trim());
+  if (!tools.some(t => SHELL_TOOL.test(t))) return [];
+  return [...(SCAFFOLD_COMMANDS[name] ?? [])];
+}
+
+/** The body note that says when to run them; it begins with `Scaffold scripts:`. */
+function scaffoldNote(commands: readonly string[]): string[] {
+  if (!commands.length) return [];
+  const when: string[] = [];
+  if (commands.includes(NEW_CONTEXT))
+    when.push(
+      `when the plan adds a new module set, run \`${NEW_CONTEXT}\` (its header gives the arguments; it refuses when a module exists), then render the aggregate's own files one \`scripts/scaffold.sh\` call each`
+    );
+  if (commands.includes(SMOKE))
+    when.push(
+      `after you add or change a template under docs/scaffold-templates/project/, run \`${SMOKE}\` and fix what it reports before you hand over`
+    );
+  if (commands.includes(SCAFFOLD_FOR))
+    when.push(
+      `\`${SCAFFOLD_FOR} <new file>\` names the template a planned or added file should have been rendered from, without writing anything`
+    );
+  if (commands.includes(SMOKE_RENDER) && !commands.includes(SMOKE))
+    when.push(
+      `\`${SMOKE_RENDER}\` checks that every one of the repo's templates still renders with its example, without touching this checkout`
+    );
+  if (commands.includes(WIRING))
+    when.push(
+      `after a template or a \`## Scaffold\` row changes, \`bash ${WIRING}\` checks the wiring (every template linked from a row, \`--for\` and the build's scaffold step find it) without a build`
+    );
+  return [
+    `Scaffold scripts: a repo keeps its own templates in docs/scaffold-templates/project/ (preferred over the kit's, see that folder's README.md) and may keep \`${NEW_CONTEXT}\` (a new module set from them) and \`${SMOKE}\` (every template rendered with its \`<name>.example.json\` in a throwaway copy, then built; \`--render-only\` stops after the render) beside \`scripts/scaffold.sh\`. Where the repo has them: ${when.join('; ')}. A script the repo does not have is not there to run; say so in your report.`,
+  ];
+}
+
 /** The build workflow's MCP paragraph ends on this line; the Copilot workflow adds the CLI fallback after it. */
 const MCP_PROMPT_END =
   /^( *)Grep stays the tool for text, config, logs and strings; without the tools, read as before\.$/gm;
@@ -238,21 +300,30 @@ export function withWorkflowFallback(yaml: string, where: string): string {
   return out;
 }
 
-function agentNotes(t: AgentTools, fallback: readonly string[]): string[] {
+function agentNotes(
+  t: AgentTools,
+  fallback: readonly string[],
+  scaffold: readonly string[] = []
+): string[] {
   const notes: string[] = [];
   if (t.dropped.length)
     notes.push(
       `Claude Code gives this agent tools that Copilot CLI does not have: ${ticks(t.dropped)}. Where these instructions use one, go without it and say so in your report.`
     );
   if (t.bash.length) {
-    const extra = fallback.length
-      ? ` On Copilot CLI the MCP fallback below adds: ${ticks(fallback.map(c => `${c} *`))}.`
-      : '';
+    const extra =
+      (fallback.length
+        ? ` On Copilot CLI the MCP fallback below adds: ${ticks(fallback.map(c => `${c} *`))}.`
+        : '') +
+      (scaffold.length
+        ? ` The kit's scaffold scripts add: ${ticks(scaffold.map(c => `${c} *`))}.`
+        : '');
     notes.push(
       `Claude Code limits this agent's shell to these commands; keep to them: ${ticks(t.bash)}.${extra}`
     );
   }
   notes.push(...fallbackNote(fallback));
+  notes.push(...scaffoldNote(scaffold));
   if (t.delegates.length) notes.push(`Delegate only to these agents: ${ticks(t.delegates)}.`);
   return notes;
 }
@@ -331,8 +402,10 @@ export function convertAgent(
   if (skills.length)
     body = `Load these skills first: ${skills.join(', ')}.\n\n${body.replace(/^\s+/, '')}`;
   const fallback = mcpFallbackCommands(fm.tools);
+  const scaffold = scaffoldCommands(name, fm.tools);
   return (
-    front.join('\n') + withTrailingSection(body, onCopilotSection(agentNotes(tools, fallback)))
+    front.join('\n') +
+    withTrailingSection(body, onCopilotSection(agentNotes(tools, fallback, scaffold)))
   );
 }
 

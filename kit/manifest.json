@@ -1038,7 +1038,7 @@
       "template": false,
       "origin": ".claude/hooks/agent-scopes.json",
       "kind": "hook",
-      "sha256": "4b8f127ca79a3e496cf729693f28122c2a01bc29aa3e83520b2c18f05e3a92d9"
+      "sha256": "3d723a260b89681488106e4d7e38764d4ba575db5b49ff2bf53afda8ac3151d5"
     },
     {
       "path": ".claude/hooks/guard-generated.globs",
@@ -1299,7 +1299,7 @@
       "template": false,
       "origin": ".claude/agents/reviewer.md",
       "kind": "agent",
-      "sha256": "f3fe885fc8b5082f49852ecdb03e458e32898fc868cf48beb964e7d25718205f"
+      "sha256": "fe7f89cf90ea8dd4264a77ab88a2cd16087a409c12f8a46a48a6a66199e887f7"
     },
     {
       "path": ".github/copilot-instructions.md",
@@ -1920,7 +1920,7 @@
       "template": true,
       "origin": ".claude/agents/analyst.md",
       "kind": "agent",
-      "sha256": "33f5ede7274ca8d5514bad63e74601255171838e900783a5ab5464a89464bdcd"
+      "sha256": "538aaff7565173284cb30cf1e044d8c16308b4f9413fbff1bb4798f115b55b70"
     },
     {
       "path": ".github/agents/debugger.agent.md",
@@ -1938,7 +1938,7 @@
       "template": true,
       "origin": ".claude/agents/developer.md",
       "kind": "agent",
-      "sha256": "254ad6ab7f929bd172bf3ce3c6d95e6189f9d2aff8f17f8a7a06f1828592923d"
+      "sha256": "bfaabcf35728fdf5b1af416e58346770598323320a2fabe5546c834ecec80c04"
     },
     {
       "path": ".github/agents/test-writer.agent.md",
@@ -1947,7 +1947,7 @@
       "template": true,
       "origin": ".claude/agents/test-writer.md",
       "kind": "agent",
-      "sha256": "b3fe4738e61f94810c793094689d4f088cc59c2910a6ec0d4c8c3d6fee01cbfd"
+      "sha256": "1878129c5d3530bf1925510927d3b702e89138dcfff3a782e5726bd7f1ab1438"
     },
     {
       "path": ".github/instructions/adapter.instructions.md",

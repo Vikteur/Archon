@@ -26,6 +26,8 @@ import {
   NEVER_SHIP,
   NEVER_SHIP_GROUPS,
   PROJECT_TEMPLATES,
+  SCAFFOLD_COMMANDS,
+  scaffoldCommands,
   neverShipNamesIn,
   parseHookCommand,
   type Rewrite,
@@ -235,6 +237,113 @@ describe('agent conversion', () => {
       /TeleportTool/
     );
   });
+});
+
+describe('scaffold scripts (the kit only)', () => {
+  const tools = ['Read', 'Bash(git add *)'];
+  const as = (name: string, text = AGENT): string =>
+    text.replace('name: developer', `name: ${name}`);
+
+  test('each agent that writes, plans or checks new files gets its scaffold commands, only with a shell', () => {
+    expect(SCAFFOLD_COMMANDS).toEqual({
+      developer: [
+        'scripts/scaffold/new-context.sh',
+        'scripts/scaffold/smoke.sh',
+        'scripts/test/scaffold.test.sh',
+      ],
+      'test-writer': ['scripts/scaffold/smoke.sh --render-only', 'scripts/test/scaffold.test.sh'],
+      analyst: [
+        'scripts/scaffold.sh --for',
+        'scripts/scaffold/smoke.sh --render-only',
+        'scripts/test/scaffold.test.sh',
+      ],
+      reviewer: [
+        'scripts/scaffold.sh --for',
+        'scripts/scaffold/smoke.sh --render-only',
+        'scripts/test/scaffold.test.sh',
+      ],
+    });
+    expect(scaffoldCommands('developer', tools)).toEqual(SCAFFOLD_COMMANDS.developer);
+    expect(scaffoldCommands('reviewer', 'Read, Bash')).toEqual(SCAFFOLD_COMMANDS.reviewer);
+    expect(scaffoldCommands('developer', ['Read', 'Edit'])).toEqual([]);
+    expect(scaffoldCommands('retro', tools)).toEqual([]);
+  });
+
+  test('the shell note names them and a Scaffold scripts note says when to run them, once', () => {
+    const dev = convertAgent(AGENT, 'developer.md');
+    expect(dev).toContain(
+      "The kit's scaffold scripts add: `scripts/scaffold/new-context.sh *`, `scripts/scaffold/smoke.sh *`, `scripts/test/scaffold.test.sh *`."
+    );
+    expect(dev.split('Scaffold scripts:')).toHaveLength(2);
+    expect(dev).toContain('docs/scaffold-templates/project/');
+    expect(dev).toContain('run `scripts/scaffold/new-context.sh`');
+    const rev = convertAgent(as('reviewer'), 'reviewer.md');
+    expect(rev).toContain(
+      "The kit's scaffold scripts add: `scripts/scaffold.sh --for *`, `scripts/scaffold/smoke.sh --render-only *`, `scripts/test/scaffold.test.sh *`."
+    );
+    expect(rev).not.toContain('run `scripts/scaffold/new-context.sh`');
+    expect(convertAgent(as('retro'), 'retro.md')).not.toContain('Scaffold scripts:');
+    const noShell = AGENT.replace('  - Bash(git add *)\n', '');
+    expect(convertAgent(noShell, 'developer.md')).not.toContain('Scaffold scripts:');
+  });
+
+  test.skipIf(!Bun.which('jq'))(
+    "the kit's scope-guard lets each agent run its scaffold commands and no other form",
+    () => {
+      const root = track(mkdtempSync(join(tmpdir(), 'kit-sync-scaffold-')));
+      const hooks = join(import.meta.dir, '../kit/profiles/core/.claude/hooks/scripts');
+      for (const f of ['scope-guard.sh', 'payload.sh'])
+        write(root, `.claude/hooks/scripts/${f}`, readFileSync(join(hooks, f), 'utf8'), true);
+      const policy = withMcpFallbackScopes(
+        '{"agents":{"developer":{"commandAllowlist":["git add"]},"analyst":{"commandAllowlist":["npm test"]},' +
+          '"reviewer":{"commandAllowlist":["git diff"]},"test-writer":{"commandAllowlist":["scripts/scaffold.sh --test"]}}}\n',
+        new Map(Object.entries(SCAFFOLD_COMMANDS))
+      );
+      write(root, '.claude/hooks/agent-scopes.json', policy);
+      const decision = (agent: string, command: string): string => {
+        const payload = JSON.stringify({
+          agent_type: agent,
+          tool_name: 'Bash',
+          tool_input: { command },
+          cwd: root,
+        });
+        const r = Bun.spawnSync(['bash', '.claude/hooks/scripts/scope-guard.sh'], {
+          cwd: root,
+          stdin: Buffer.from(payload),
+          env: { ...process.env, CLAUDE_PROJECT_DIR: root, KIT_AGENT: '' },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        });
+        expect(r.exitCode).toBe(0);
+        return r.stdout.toString().includes('"deny"') ? 'deny' : 'allow';
+      };
+      const cases: [string, string, string][] = [
+        [
+          'developer',
+          'bash scripts/scaffold/new-context.sh --gateway orders Orders com.acme.orders A b',
+          'allow',
+        ],
+        ['developer', 'scripts/scaffold/smoke.sh --keep', 'allow'],
+        ['developer', 'scripts/scaffold/smoke.shx', 'deny'],
+        ['test-writer', 'bash scripts/scaffold/smoke.sh --render-only', 'allow'],
+        ['test-writer', 'scripts/scaffold/smoke.sh', 'deny'],
+        ['test-writer', 'scripts/scaffold/new-context.sh x X a.b A b', 'deny'],
+        ['analyst', 'bash scripts/scaffold.sh --for src/main/java/a/B.java', 'allow'],
+        ['analyst', 'scripts/scaffold.sh domain/id {} src/a.java', 'deny'],
+        ['analyst', 'scripts/scaffold/smoke.sh --render-only', 'allow'],
+        ['reviewer', 'scripts/scaffold.sh --for src/a.java', 'allow'],
+        ['reviewer', 'scripts/scaffold/smoke.sh', 'deny'],
+        ['reviewer', 'scripts/scaffold.sh --for a; rm -rf x', 'deny'],
+        ['reviewer', 'bash scripts/test/scaffold.test.sh', 'allow'],
+        ['test-writer', 'scripts/test/scaffold.test.sh', 'allow'],
+        ['reviewer', 'bash scripts/test/other.test.sh', 'deny'],
+      ];
+      for (const [agent, command, want] of cases)
+        expect(`${agent}: ${command} -> ${decision(agent, command)}`).toBe(
+          `${agent}: ${command} -> ${want}`
+        );
+    }
+  );
 });
 
 describe('MCP fallback (the kit only)', () => {
@@ -994,7 +1103,9 @@ describe('sync on a fixture repo', () => {
       'git add',
       ...CODEGRAPH_CLI,
       CONTRACT_CLI,
+      ...(SCAFFOLD_COMMANDS.developer ?? []),
     ]);
+    expect(agent).toContain('Scaffold scripts:');
     expect(scopes.agents.retro?.commandAllowlist).toEqual(['git log']);
     expect(agent).toContain(
       'command: "env KIT_AGENT=developer bash .github/hooks/dispatch.sh PreToolUse'

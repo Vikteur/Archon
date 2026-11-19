@@ -18,7 +18,10 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query",
-        "node scripts/contract-mcp/cli.mjs"
+        "node scripts/contract-mcp/cli.mjs",
+        "scripts/scaffold.sh --for",
+        "scripts/scaffold/smoke.sh --render-only",
+        "scripts/test/scaffold.test.sh"
       ]
     },
     "closeout": {
@@ -151,7 +154,10 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query",
-        "node scripts/contract-mcp/cli.mjs"
+        "node scripts/contract-mcp/cli.mjs",
+        "scripts/scaffold/new-context.sh",
+        "scripts/scaffold/smoke.sh",
+        "scripts/test/scaffold.test.sh"
       ]
     },
     "github-agent": {
@@ -233,7 +239,10 @@
         "codegraph callers",
         "codegraph callees",
         "codegraph impact",
-        "codegraph query"
+        "codegraph query",
+        "scripts/scaffold.sh --for",
+        "scripts/scaffold/smoke.sh --render-only",
+        "scripts/test/scaffold.test.sh"
       ]
     },
     "test-writer": {
@@ -266,7 +275,9 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query",
-        "node scripts/contract-mcp/cli.mjs"
+        "node scripts/contract-mcp/cli.mjs",
+        "scripts/scaffold/smoke.sh --render-only",
+        "scripts/test/scaffold.test.sh"
       ]
     }
   }

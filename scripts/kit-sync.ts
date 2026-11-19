@@ -35,6 +35,7 @@ import {
   fencedAgents,
   KIT_MODULES,
   mcpFallbackCommands,
+  scaffoldCommands,
   mcpJson,
   parseYaml,
   splitFrontmatter,
@@ -378,7 +379,7 @@ interface AgentContext {
   fallbacks: ReadonlyMap<string, readonly string[]>;
 }
 
-/** Each shipped source agent's MCP fallback commands, by its frontmatter name; an agent with none is left out. */
+/** Each shipped source agent's MCP fallback and kit scaffold commands, by its frontmatter name; an agent with none is left out. */
 function agentFallbacks(src: Source, tracked: ReadonlySet<string>): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const f of src.files.values()) {
@@ -386,8 +387,9 @@ function agentFallbacks(src: Source, tracked: ReadonlySet<string>): Map<string, 
     const text = textOf(f);
     if (classify(f.path, text, tracked).exclude) continue;
     const fm = frontmatterOf(text);
-    const commands = mcpFallbackCommands(fm.tools);
-    if (commands.length && fm.name) out.set(String(fm.name), commands);
+    const name = String(fm.name ?? '');
+    const commands = [...mcpFallbackCommands(fm.tools), ...scaffoldCommands(name, fm.tools)];
+    if (commands.length && name) out.set(name, commands);
   }
   return out;
 }
