@@ -69,3 +69,27 @@ describe('ToolCallItem MCP calls', () => {
     );
   });
 });
+
+describe('ToolCallItem doc reads', () => {
+  const call: InlineToolCall = {
+    name: 'Read',
+    input: { file_path: '/w/run-1/docs/code-maps/clean-code.md', offset: 10, limit: 20 },
+    status: 'completed',
+    durationMs: 7,
+    output: '    10\t# Clean code\n    11\tSmall units.\n',
+  };
+
+  test('renders as a doc row naming the file, its folder, the part read and the lines', () => {
+    const html = render(call);
+    expect(html).toContain('>Doc<');
+    expect(html).toContain('>clean-code.md<');
+    expect(html).toContain('…/run-1/docs/code-maps');
+    expect(html).toContain('lines 10–29');
+    expect(html).toContain('2 lines');
+    expect(html).not.toContain('>Tool<');
+  });
+
+  test('a Read of a code file stays a plain tool row', () => {
+    expect(render({ ...call, input: { file_path: 'src/app.ts' } })).toContain('>Tool<');
+  });
+});

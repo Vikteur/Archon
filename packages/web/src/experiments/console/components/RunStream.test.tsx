@@ -613,7 +613,7 @@ describe('RunStream scripts only', () => {
           providerEvents={providerEvents}
           showToolCalls={false}
           showSystem={false}
-          scriptsOnly={scriptsOnly}
+          only={scriptsOnly ? ['scripts'] : []}
           selectedNodeId={selectedNodeId}
         />
       </StreamContextProvider>
@@ -723,7 +723,7 @@ describe('RunStream prompts only', () => {
           providerEvents={providerEvents}
           showToolCalls={false}
           showSystem={false}
-          promptsOnly={promptsOnly}
+          only={promptsOnly ? ['prompts'] : []}
           selectedNodeId={selectedNodeId}
         />
       </StreamContextProvider>
@@ -751,7 +751,7 @@ describe('RunStream prompts only', () => {
     const html = render(true, 'review');
     expect(html).toContain('Check the seams');
     expect(html).not.toContain('Implement the part');
-    expect(render(true, 'plan')).toContain('No prompts in this node recorded yet.');
+    expect(render(true, 'plan')).toContain('No prompts in this node yet.');
   });
 
   test('counts node prompts and subagent calls', () => {
@@ -834,7 +834,7 @@ describe('RunStream MCP only', () => {
           providerEvents={providerEvents}
           showToolCalls={false}
           showSystem={false}
-          mcpOnly={mcpOnly}
+          only={mcpOnly ? ['mcp'] : []}
           selectedNodeId={selectedNodeId}
         />
       </StreamContextProvider>
@@ -858,6 +858,129 @@ describe('RunStream MCP only', () => {
     expect(runToolCalls([message], providerEvents)).toMatchObject({
       count: 2,
       mcpCount: 1,
+    });
+  });
+});
+
+describe('RunStream kind filter, several kinds', () => {
+  const started = (nodeId: string, timestamp: string): NodeTransitionEvent => ({
+    id: `n:${nodeId}`,
+    runId: 'r1',
+    kind: 'node_transition',
+    timestamp,
+    nodeId,
+    nodeName: nodeId,
+    transition: 'started',
+    durationMs: null,
+    skipReason: null,
+    skipExpr: null,
+    costUsd: null,
+    costPartial: false,
+    costScope: null,
+    stopReason: null,
+    numTurns: null,
+    tokens: null,
+  });
+  const message: Message = {
+    id: 'm1',
+    role: 'assistant',
+    content: 'thinking out loud',
+    timestamp: '2026-10-02T10:00:00.500Z',
+    toolCalls: [],
+    error: null,
+    category: null,
+    dispatch: null,
+    workflowResult: null,
+  };
+  const providerEvents: RunProviderEvents = new Map([
+    [
+      'implement',
+      [
+        record('implement', 'a1', 0, '2026-10-02T10:00:02.100Z', {
+          type: 'tool_call',
+          toolCallId: 'm1',
+          name: 'mcp__portal-api__read',
+          rawInput: { operationId: 'cancelVendorBooking' },
+        }),
+        record('implement', 'a1', 1, '2026-10-02T10:00:02.200Z', {
+          type: 'tool_call_update',
+          toolCallId: 'm1',
+          status: 'completed',
+          output: '{"operationId":"cancelVendorBooking","method":"POST"}',
+        }),
+        record('implement', 'a1', 2, '2026-10-02T10:00:02.300Z', {
+          type: 'tool_call',
+          toolCallId: 'b1',
+          name: 'Bash',
+          rawInput: { command: 'git status' },
+        }),
+        record('implement', 'a1', 3, '2026-10-02T10:00:02.400Z', {
+          type: 'tool_call',
+          toolCallId: 'd1',
+          name: 'Read',
+          rawInput: { file_path: 'docs/memory.md' },
+        }),
+        record('implement', 'a1', 4, '2026-10-02T10:00:02.450Z', {
+          type: 'tool_call_update',
+          toolCallId: 'd1',
+          status: 'completed',
+          output: '     1\t# Memory\n',
+        }),
+      ],
+    ],
+  ]);
+  const events = [
+    started('plan', '2026-10-02T10:00:00.000Z'),
+    started('implement', '2026-10-02T10:00:02.000Z'),
+  ];
+
+  const render = (
+    only: ('prompts' | 'scripts' | 'mcp' | 'docs')[],
+    selectedNodeId = 'all'
+  ): string =>
+    renderToStaticMarkup(
+      <StreamContextProvider value={{ runStartedAt: '2026-10-02T09:59:00.000Z' }}>
+        <RunStream
+          messages={[message]}
+          events={events}
+          nodes={[
+            { node_id: 'plan', state: 'completed' },
+            { node_id: 'implement', state: 'running' },
+          ]}
+          providerEvents={providerEvents}
+          showToolCalls={false}
+          showSystem={false}
+          only={only}
+          selectedNodeId={selectedNodeId}
+        />
+      </StreamContextProvider>
+    );
+
+  test('two kinds picked show the rows of both and nothing else', () => {
+    const html = render(['mcp', 'docs']);
+    expect(html).toContain('portal-api');
+    expect(html).toContain('>memory.md<');
+    expect(html).not.toContain('git status');
+    expect(html).not.toContain('thinking out loud');
+  });
+
+  test('one kind picked leaves the other out', () => {
+    const html = render(['docs']);
+    expect(html).toContain('>memory.md<');
+    expect(html).not.toContain('portal-api');
+  });
+
+  test('nothing of the kinds picked says which kinds', () => {
+    expect(render(['mcp', 'docs'], 'plan')).toContain(
+      'No MCP calls or doc reads in this node yet.'
+    );
+  });
+
+  test('runToolCalls counts the doc reads', () => {
+    expect(runToolCalls([message], providerEvents)).toMatchObject({
+      count: 3,
+      mcpCount: 1,
+      docReadCount: 1,
     });
   });
 });
