@@ -8,10 +8,15 @@
  * Runs in its own bun test invocation — mocks @github/copilot-sdk and
  * @archon/paths process-wide.
  */
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { SessionConfig, SessionEvent } from '@github/copilot-sdk';
+import { removeTempTree } from '@archon/paths/test-utils';
 
 import { createMockLogger } from '../../test/mocks/logger';
+import type { SendQueryOptions } from '../../types';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────
 
@@ -229,7 +234,9 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as { reasoningEffort?: string };
+    const opts = createSessionSpy.mock.calls[0]![0] as {
+      reasoningEffort?: string;
+    };
     expect(opts.reasoningEffort).toBe('high');
   });
 
@@ -250,7 +257,9 @@ describe('CopilotProvider.sendQuery', () => {
       await first;
       await collect(gen);
 
-      const opts = createSessionSpy.mock.calls[0]![0] as { reasoningEffort?: string };
+      const opts = createSessionSpy.mock.calls[0]![0] as {
+        reasoningEffort?: string;
+      };
       expect(opts.reasoningEffort).toBe('max');
     }
   );
@@ -274,7 +283,9 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as { reasoningEffort?: string };
+    const opts = createSessionSpy.mock.calls[0]![0] as {
+      reasoningEffort?: string;
+    };
     expect(opts.reasoningEffort).toBe('low');
   });
 
@@ -744,5 +755,196 @@ describe('CopilotProvider.sendQuery', () => {
     expect(result).toMatchObject({ type: 'result', isError: true, failure: { class: 'unknown' } });
     expect((result as { failure?: { evidence: string } }).failure?.evidence).toContain('kaboom');
     expect(chunks.at(-1)).toEqual({ type: 'settled' });
+  });
+});
+
+// ─── Kit parity: file hooks, tool names, Copilot skill roots ─────────────────
+
+async function runOnce(
+  options: SendQueryOptions,
+  cwd = '/w'
+): Promise<{ opts: SessionConfig; chunks: unknown[] }> {
+  const session = makeFakeSession();
+  nextCreateSessionResult = session;
+  const gen = new CopilotProvider().sendQuery('hi', cwd, undefined, options);
+  const first = gen.next();
+  await new Promise(resolve => setTimeout(resolve, 5));
+  session.resolveSend(undefined);
+  const chunks = [(await first).value, ...(await collect(gen))];
+  const opts = createSessionSpy.mock.calls.at(-1)![0] as SessionConfig;
+  return { opts, chunks };
+}
+
+describe('CopilotProvider kit parity', () => {
+  beforeEach(() => {
+    resetCopilotSingleton();
+    createSessionSpy.mockClear();
+  });
+
+  test('file hooks are on by default (enableFileHooks)', async () => {
+    const { opts } = await runOnce({ model: 'gpt-5' });
+    expect(opts.enableFileHooks).toBe(true);
+  });
+
+  test('fileHooks: false turns the runtime file hooks off', async () => {
+    const { opts } = await runOnce({
+      model: 'gpt-5',
+      assistantConfig: { fileHooks: false },
+    });
+    expect(opts.enableFileHooks).toBe(false);
+  });
+
+  test('a hook.end from the runtime reaches the stream as a hook chunk', async () => {
+    const session = makeFakeSession();
+    nextCreateSessionResult = session;
+    const gen = new CopilotProvider().sendQuery('hi', '/w', undefined, {
+      model: 'gpt-5',
+    });
+    const first = gen.next();
+    await new Promise(resolve => setTimeout(resolve, 5));
+    session.fire(evt('hook.start', { hookInvocationId: 'h1', hookType: 'preToolUse' }));
+    session.fire(
+      evt('hook.end', {
+        hookInvocationId: 'h1',
+        hookType: 'preToolUse',
+        success: false,
+        error: { message: 'boom', source: '.github/hooks/policy.json' },
+      })
+    );
+    session.resolveSend(undefined);
+    const chunks = [(await first).value, ...(await collect(gen))];
+    expect(chunks).toContainEqual({
+      type: 'hook',
+      hookId: 'h1',
+      hookName: '.github/hooks/policy.json',
+      hookEvent: 'preToolUse',
+      status: 'failed',
+    });
+  });
+
+  test('allowed_tools and denied_tools are translated to Copilot tool names', async () => {
+    const { opts } = await runOnce({
+      model: 'gpt-5',
+      nodeConfig: {
+        allowed_tools: ['Read', 'Grep', 'Bash', 'mcp__github__list_issues'],
+        denied_tools: ['Write', 'Edit'],
+      },
+    });
+    expect(opts.availableTools).toEqual(['view', 'grep', 'bash', 'github-list_issues']);
+    expect(opts.excludedTools).toEqual(['create', 'edit']);
+  });
+
+  test('a denied argument pattern is dropped with one warning per process', async () => {
+    const nodeConfig = { denied_tools: ['Bash(git push *)', 'Write'] };
+    const firstRun = await runOnce({ model: 'gpt-5', nodeConfig });
+    expect(firstRun.opts.excludedTools).toEqual(['create']);
+    expect(firstRun.chunks).toContainEqual({
+      type: 'warning',
+      code: 'copilot.denied_tools_dropped',
+      message: expect.stringContaining('Bash(git push *)'),
+    });
+
+    const secondRun = await runOnce({ model: 'gpt-5', nodeConfig });
+    expect(secondRun.opts.excludedTools).toEqual(['create']);
+    expect(
+      secondRun.chunks.some(
+        c => (c as { code?: string } | undefined)?.code === 'copilot.denied_tools_dropped'
+      )
+    ).toBe(false);
+  });
+
+  test('an allowed argument pattern keeps its tool, with a widened warning', async () => {
+    const { opts, chunks } = await runOnce({
+      model: 'gpt-5',
+      nodeConfig: { allowed_tools: ['Bash(git status *)'] },
+    });
+    expect(opts.availableTools).toEqual(['bash']);
+    expect(chunks).toContainEqual({
+      type: 'warning',
+      code: 'copilot.allowed_tools_widened',
+      message: expect.stringContaining('Bash(git status *)'),
+    });
+  });
+
+  describe('skills', () => {
+    const originalHome = process.env.HOME;
+    const originalCopilotHome = process.env.COPILOT_HOME;
+    let root: string;
+    let cwd: string;
+    let home: string;
+
+    const stage = (dir: string, name: string): string => {
+      const skillDir = join(dir, name);
+      mkdirSync(skillDir, { recursive: true });
+      writeFileSync(join(skillDir, 'SKILL.md'), `# ${name}\n`);
+      return skillDir;
+    };
+
+    beforeEach(() => {
+      root = mkdtempSync(join(tmpdir(), 'archon-copilot-skills-'));
+      cwd = join(root, 'project');
+      home = join(root, 'home');
+      mkdirSync(cwd, { recursive: true });
+      mkdirSync(home, { recursive: true });
+      process.env.HOME = home;
+      delete process.env.COPILOT_HOME;
+    });
+
+    afterEach(async () => {
+      if (originalHome === undefined) delete process.env.HOME;
+      else process.env.HOME = originalHome;
+      if (originalCopilotHome === undefined) delete process.env.COPILOT_HOME;
+      else process.env.COPILOT_HOME = originalCopilotHome;
+      await removeTempTree(root);
+    });
+
+    test('resolves a skill from <cwd>/.github/skills', async () => {
+      const dir = stage(join(cwd, '.github', 'skills'), 'review');
+      const { opts } = await runOnce({ model: 'gpt-5', nodeConfig: { skills: ['review'] } }, cwd);
+      expect(opts.skillDirectories).toEqual([dir]);
+    });
+
+    test('resolves a skill from ~/.copilot/skills', async () => {
+      const dir = stage(join(home, '.copilot', 'skills'), 'personal');
+      const { opts } = await runOnce({ model: 'gpt-5', nodeConfig: { skills: ['personal'] } }, cwd);
+      expect(opts.skillDirectories).toEqual([dir]);
+    });
+
+    test('the user skill dir follows configDir, then a request COPILOT_HOME', async () => {
+      const configDir = join(root, 'config-home');
+      const envHome = join(root, 'env-home');
+      const fromConfig = stage(join(configDir, 'skills'), 'a');
+      const fromEnv = stage(join(envHome, 'skills'), 'b');
+
+      const viaConfig = await runOnce(
+        {
+          model: 'gpt-5',
+          assistantConfig: { configDir },
+          env: { COPILOT_HOME: envHome },
+          nodeConfig: { skills: ['a', 'b'] },
+        },
+        cwd
+      );
+      expect(viaConfig.opts.skillDirectories).toEqual([fromConfig]);
+
+      const viaEnv = await runOnce(
+        {
+          model: 'gpt-5',
+          env: { COPILOT_HOME: envHome },
+          nodeConfig: { skills: ['a', 'b'] },
+        },
+        cwd
+      );
+      expect(viaEnv.opts.skillDirectories).toEqual([fromEnv]);
+    });
+
+    test('a missing skill warning names the Copilot roots', async () => {
+      const { chunks } = await runOnce({ model: 'gpt-5', nodeConfig: { skills: ['nope'] } }, cwd);
+      expect(chunks).toContainEqual({
+        type: 'warning',
+        code: 'copilot.skills_missing',
+        message: expect.stringContaining('.github/skills/'),
+      });
+    });
   });
 });

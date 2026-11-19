@@ -78,6 +78,14 @@ const localFields = {
    */
   enableConfigDiscovery: z.boolean({ error: 'expected a boolean' }).optional(),
   /**
+   * Run the project's `.github/hooks/*.json` hooks with Copilot CLI semantics
+   * (the SDK's `enableFileHooks`). A preToolUse hook that denies, exits 2 or
+   * errors blocks the tool; a timeout lets it run. Independent of
+   * `enableConfigDiscovery`.
+   * @default true
+   */
+  fileHooks: z.boolean({ error: 'expected a boolean' }).optional(),
+  /**
    * Reuse the CLI's logged-in user credentials (from `copilot login`) when
    * no explicit token is provided via env vars.
    * @default true
