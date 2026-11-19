@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Tests for build-feature's faster steps and commit rules (R12, R13; roadmap T9, T10; D12): the step-base and
 # review-base nodes (their own bash, read from the workflow and run in a throwaway repo), the per-step AFFECTED_BASE in
-# the build agent's and review's affected-check, the review-tests node, the plan's ban on check-only steps, the model
-# of finalize, the scaffolding rules of the plan and agent prompts (scaffold.sh --for, the two
+# the build agent's and review's affected-check, the review-tests node, the plan's ban on check-only steps, the
+# scaffolding rules of the plan and agent prompts (scaffold.sh --for, the two
 # `Hand-written:` forms, the plan's `Scaffold:` lines and the two nodes that render them), and the denied tools (no agent of a run skips the commit-msg hook; no Monitor, no
 # background command in the agent nodes).
 # Usage: bash .archon/scripts/test/build-feature.test.sh   (exit 0 = all pass)
@@ -126,7 +126,7 @@ check "10 review reads Checks for review" $(grep -q '## Checks for review' <<< "
 
 # 11. No committing agent may skip the hook; the agent nodes may not use Monitor.
 denies() { yq "[.. | select(tag == \"!!map\" and .id == \"$2\") | .denied_tools[]] | join(\" \")" "$1"; }
-for n in write-tests build-step review map-curate fix github-agent; do
+for n in write-tests build-step review map-curate fix; do
   d=$(denies "$wf" "$n"); out="$n: $d"
   check "11 build-feature $n denies --no-verify and commit -n" $([[ "$d" == *'Bash(*--no-verify*)'* && "$d" == *'Bash(*commit -n *)'* ]]; echo $?)
 done
@@ -162,15 +162,9 @@ rm "$art/ci-fix-before.sha"
 out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1); rc=$?
 check "13 fix-made: no before sha counts as a commit made (red-head did not run)" $([ "$rc" -eq 0 ]; echo $?)
 check "13 red-head prints RED_FROM_MAIN" $(cif red-head bash | grep -q 'RED_FROM_MAIN'; echo $?)
-for n in diagnose fix github-agent; do
+for n in diagnose fix; do
   d=$(denies "$wf" "$n"); out="$n: $d"
   check "13 $n cannot push to main or commit tickets" $([[ "$d" == *'Bash(*git push*main*)'* && "$d" == *'Bash(*commit-tickets*)'* && "$d" == *'Bash(*sync-main*)'* ]]; echo $?)
-done
-
-# 14. finalize only fills in a form from files the run wrote: Sonnet (@build), not Opus (2026-10-23).
-for n in finalize; do
-  out="$n: $(node "$n" model)"
-  check "14 $n runs on @build" $([ "$(node "$n" model)" = "@build" ]; echo $?)
 done
 
 # 15. Scaffolding (owner decision 2026-10-23): the test and build agents must run scaffold.sh --for on every new file,

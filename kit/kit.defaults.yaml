@@ -4,11 +4,8 @@
 profiles: [core, java, java-spring, openapi-contract]
 stack: spring # quarkus | spring: the gates that differ per framework branch on it (image, build shape, pin proofs)
 base_branch: main
-owner: "" # .archon/stop/policy.json: the name approvals are recorded for (stop-approve.sh record)
-timezone: UTC # .archon/stop/policy.json and park-ticket.sh: the zone of approval ids and parked notes
 gh_accounts: [] # gh-switch-account skill: the gh accounts to switch between, e.g. [alice, alice-work]
-ntfy_topic: "" # notify-owner.sh
-agent_cli: copilot # supervisor/delegator scripts: claude | copilot
+agent_cli: copilot # install-tools.sh and kit-config.sh: the agent CLI this project runs, claude | copilot
 build_workflow: build-feature-copilot
 java_version: 21
 pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh, either stack: one <item>|<module>|<task>|<class> line each

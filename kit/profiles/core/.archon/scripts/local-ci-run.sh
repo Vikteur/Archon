@@ -121,7 +121,7 @@ if [ -n "$nowait" ]; then
   mkdir -p "$ci_root/no-wait"
   bg_log=$ci_root/no-wait/${sha:0:7}.log
   # Detached (its own session where setsid exists), so the caller's exit or a closed terminal does not stop it.
-  # It runs the main checkout's copy, from there: a run worktree that calls this is deleted at close-out while the
+  # It runs the main checkout's copy, from there: a run worktree that calls this may be deleted while the
   # background run still needs its scripts (1295db9.r1: ci-plan.sh missing).
   launcher=(); command -v setsid > /dev/null && launcher=(setsid)
   self=$main/.archon/scripts/local-ci-run.sh; [ -f "$self" ] || self=${BASH_SOURCE[0]}

@@ -2,7 +2,7 @@
 # The ticket's links to the Groma map in build-feature (TASK-36; P2: a script, not a model). In a repo with a groma/
 # map, adds the branch's changed files to the Backlog ticket's modified files, and the map elements that own them
 # (`groma view <file>`) to its references, keeping what the ticket already holds. Groma then shows the ticket on the
-# map while it is To Do or In Progress. The ticket is edited in the backlog checkout and committed by close-out.
+# map while it is To Do or In Progress. The ticket is edited in the backlog checkout and committed by whoever closes it.
 # A run without a ticket, or a repo without groma/, links nothing. GROMA names the CLI (default: groma).
 # A planned ticket references a container while no component exists; once the ticket gains a component under that
 # container (directly or further up the parent chain), the container reference is removed in the same edit. It stays

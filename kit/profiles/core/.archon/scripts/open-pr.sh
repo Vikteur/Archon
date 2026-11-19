@@ -22,7 +22,7 @@ repo=$(git remote get-url origin | sed -E 's#^.*[:/]([^/]+/[^/]+)$#\1#; s#\.git$
 # the lease refuse, and the run stops instead of overwriting it (TASK-70).
 seen=$(git rev-parse -q --verify "refs/remotes/origin/$branch" || true)
 if ! git push -u --force-with-lease="$branch:$seen" origin "HEAD:refs/heads/$branch" >&2; then
-  echo "Refusing to overwrite origin/$branch: it moved since this run last saw it (${seen:-absent}). Fetch it and rebase onto it, or ask the delegator." >&2
+  echo "Refusing to overwrite origin/$branch: it moved since this run last saw it (${seen:-absent}). Fetch it and rebase onto it, or ask a person." >&2
   exit 1
 fi
 pr=$(gh pr list --repo "$repo" --head "$branch" --state open --json url -q '.[0].url')

@@ -24,7 +24,7 @@ check "config: env switches the hook on through core.hooksPath=.archon/githooks"
   $([ "$count" = 1 ] && [ "$key" = core.hooksPath ] && [ "$value" = .archon/githooks ]; echo $?)
 check "config: background tasks are off for Archon processes" $([ "$(yq '.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS' "$cfg")" = 1 ]; echo $?)
 out=$(grep -n 'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS' "$repo_root/.claude/settings.json" 2>/dev/null)
-check "config: background tasks are not switched off in .claude/settings.json (the delegator's waiter)" $([ -z "$out" ]; echo $?)
+check "config: background tasks are not switched off in .claude/settings.json (a background waiter)" $([ -z "$out" ]; echo $?)
 out=$(grep -n 'hooksPath' "$repo_root/.git/config" 2>/dev/null)
 check "config: the clone has no clone-wide core.hooksPath" $([ -z "$out" ]; echo $?)
 

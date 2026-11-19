@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Read the Backlog ticket a build-feature request names and report its STOP labels (P2: a script, not a model).
 # A ticket still To Do is set In Progress in the backlog checkout, so Backlog shows the run; the change stays
-# uncommitted there and close-out commits it together with Done.
+# uncommitted there, and whoever closes the ticket after the merge commits it.
 #   ticket.sh "<request text>"
 # Writes the ticket to $ARTIFACTS_DIR/ticket.md and prints one JSON line: {"task": "TASK-4.2", "stop": "stop-db-migration"}.
 # A request without a TASK id prints {"task": "", "stop": ""}. A TASK id that Backlog cannot find fails the node.

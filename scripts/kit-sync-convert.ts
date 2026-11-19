@@ -260,6 +260,15 @@ function agentNotes(t: AgentTools, fallback: readonly string[]): string[] {
 /** The source's agent fences; scope-guard.sh reads them under both CLIs. */
 export const AGENT_SCOPES = '.claude/hooks/agent-scopes.json';
 
+/** `.claude/hooks/agent-scopes.json` without the fences of the given agents (agents the kit does not ship). */
+export function withoutAgentScopes(json: string, agents: readonly string[]): string {
+  const doc = JSON.parse(json) as { agents?: Record<string, unknown> };
+  const drop = agents.filter(a => doc.agents && a in doc.agents);
+  if (!drop.length) return json;
+  for (const a of drop) delete doc.agents?.[a];
+  return `${JSON.stringify(doc, null, 2)}\n`;
+}
+
 /** The agents `.claude/hooks/agent-scopes.json` fences: the keys of its `agents` map. */
 export function fencedAgents(json: string | undefined): Set<string> {
   if (json === undefined) return new Set();
@@ -419,33 +428,39 @@ function dispatchEntry(event: string, matcher: string, h: Record<string, unknown
   return { type: 'command', bash, timeoutSec: Number(h.timeout ?? 60) };
 }
 
-function eventEntries(event: string, groups: unknown): unknown[] {
+/** True for a hook script or a deny rule the kit leaves out (it names a file that never ships). */
+export type Drop = (text: string) => boolean;
+const keepAll: Drop = () => false;
+
+function eventEntries(event: string, groups: unknown, drop: Drop): unknown[] {
   const out: unknown[] = [];
   for (const group of (groups as Record<string, unknown>[] | undefined) ?? []) {
     const matcher = String(group.matcher ?? '');
-    for (const h of (group.hooks as Record<string, unknown>[] | undefined) ?? [])
+    for (const h of (group.hooks as Record<string, unknown>[] | undefined) ?? []) {
+      if (h.type === 'command' && drop(parseHookCommand(String(h.command ?? '')).script)) continue;
       out.push(dispatchEntry(event, matcher, h));
+    }
   }
   return out;
 }
 
-/** settings.json `hooks` -> `.github/hooks/kit.json`. */
-export function convertHooks(settings: Record<string, unknown>): string {
+/** settings.json `hooks` -> `.github/hooks/kit.json`, without the hooks whose script `drop` names. */
+export function convertHooks(settings: Record<string, unknown>, drop: Drop = keepAll): string {
   const hooks = (settings.hooks ?? {}) as Record<string, unknown>;
   const out: Record<string, unknown[]> = {};
   for (const [event, groups] of Object.entries(hooks)) {
     const target = EVENT_MAP[event];
     if (!target) throw new Error(`no Copilot event for Claude hook event ${event}`);
-    const entries = eventEntries(event, groups);
+    const entries = eventEntries(event, groups, drop);
     if (entries.length) (out[target] ??= []).push(...entries);
   }
   return `${JSON.stringify({ version: 1, hooks: out }, null, 2)}\n`;
 }
 
-/** settings.json `permissions.deny` -> `.archon/copilot/deny.json`. */
-export function convertDeny(settings: Record<string, unknown>): string {
+/** settings.json `permissions.deny` -> `.archon/copilot/deny.json`, without the rules `drop` names. */
+export function convertDeny(settings: Record<string, unknown>, drop: Drop = keepAll): string {
   const perms = (settings.permissions ?? {}) as Record<string, unknown>;
-  const deny = Array.isArray(perms.deny) ? perms.deny.map(String) : [];
+  const deny = (Array.isArray(perms.deny) ? perms.deny.map(String) : []).filter(d => !drop(d));
   return `${JSON.stringify(deny, null, 2)}\n`;
 }
 

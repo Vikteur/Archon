@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Tests for .archon/scripts/push-guard.sh (owner decision 2026-10-20, D14 and its exemption): a push to main is refused
-# unless every commit it adds stays inside one exempt script's paths (backlog/, docs/retro/, docs/tokenomics/,
-# .archon/stop/approvals/), or a
+# unless every commit it adds stays inside one exempt script's paths (backlog/, docs/retro/, docs/tokenomics/), or a
 # root-owned, unexpired, unused allow entry names the pushed commit. Throwaway git repos with a bare remote; the guard under test is
 # a copy whose allow folder is a temp folder and whose owner uid is this user's (the real one is /etc and root, which a
 # test cannot write: the same reason an agent cannot).
@@ -92,17 +91,11 @@ commit() { # commit <subject> <path>...: one commit writing each path
 pushed() { [ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)" ]; }
 fresh; commit "backlog: TASK-1 done" "backlog/tasks/task-1 - x.md"
 git push -q origin main 2> "$root/err"
-check "9 a backlog/-only commit (commit-tickets, close-out) is exempt" $(pushed && grep -q "exempt" "$root/err"; echo $?)
+check "9 a backlog/-only commit (a ticket commit) is exempt" $(pushed && grep -q "exempt" "$root/err"; echo $?)
 commit "retro: TASK-1" docs/retro/TASK-1/lessons-learned.md docs/retro/README.md
 commit "chore(tokenomics): reports" docs/tokenomics/ledger/day.json
 git push -q origin main 2> "$root/err"
 check "9 a retro commit then a token report commit: each fits one entry" $(pushed; echo $?)
-commit "stop: owner approvals 2026-11-19-1200.json (in chat)" .archon/stop/approvals/2026-11-19-1200.json
-git push -q origin main 2> "$root/err"
-check "9 an approvals-only commit (stop-approve.sh record) is exempt" $(pushed; echo $?)
-fresh; commit "stop: approvals and a policy edit" .archon/stop/approvals/x.json .archon/stop/policy.json
-git push -q origin main 2> "$root/err"
-check "9 an approvals commit that also edits the policy is refused" $(! pushed && grep -q "policy.json" "$root/err"; echo $?)
 
 # 10. Escapes: an arbitrary push dressed up as an exempt one is refused, whatever its subject says.
 fresh; commit "chore(backlog): TASK-2" backlog/tasks/t2.md src/App.java
@@ -134,11 +127,11 @@ check "10 a merge commit is refused even when it changes only backlog/" $(! push
 allow "$(git rev-parse HEAD)"
 git push -q origin main 2> "$root/err"
 check "10 an owner allow lets a non-exempt push through" $(pushed; echo $?)
-check "10 the exempt list in the guard is fixed (no override)" $(grep -q '"commit-tickets.sh, close-out.sh|backlog/"' "$script" \
+check "10 the exempt list in the guard is fixed (no override)" $(grep -q '"ticket commits|backlog/"' "$script" \
   && ! grep -qE 'EXEMPT=\$|EXEMPT\+=' "$script"; echo $?)
 
-# 11. paths prints the exempt prefixes, the one list merge-turn.sh reads.
-check "11 paths prints the exempt prefixes" $([ "$(bash "$script" paths | tr '\n' ' ')" = "backlog/ docs/retro/ docs/tokenomics/ .archon/stop/approvals/ " ]; echo $?)
+# 11. paths prints the exempt prefixes, one per line.
+check "11 paths prints the exempt prefixes" $([ "$(bash "$script" paths | tr '\n' ' ')" = "backlog/ docs/retro/ docs/tokenomics/ " ]; echo $?)
 
 # 8. The installed hook refuses every push when the guard is missing from the main checkout.
 mv .archon/scripts/push-guard.sh "$root/away.sh"

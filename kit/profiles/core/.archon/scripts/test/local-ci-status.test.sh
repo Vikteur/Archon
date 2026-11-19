@@ -40,7 +40,7 @@ echo "${QUEUE_STATE:-running #1 pid 1}"
 STUB
 
 # The checkout: main's ci.yml has the jobs build and lint. commit <name> <jobs...>: a commit on a side branch whose
-# ci.yml has those jobs; sets sha. The checkout stays on main, as the delegator's main checkout does.
+# ci.yml has those jobs; sets sha. The checkout stays on main, as a main checkout does.
 dir="$root/repo"; log="$root/gh.log"
 git init -q -b main "$dir"
 git -C "$dir" config user.name t; git -C "$dir" config user.email t@t

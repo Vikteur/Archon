@@ -40,8 +40,6 @@ deny_cases=(
   "cd $main && git status"
   "cd $main; ls"
   "git -C $main status"
-  'bash .archon/scripts/commit-tickets.sh TASK-1'
-  'bash .archon/scripts/sync-main.sh'
   'backlog task edit 12 -s Done'
 )
 for c in "${deny_cases[@]}"; do

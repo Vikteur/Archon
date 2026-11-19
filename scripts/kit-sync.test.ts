@@ -18,14 +18,14 @@ import {
   convertHooks,
   convertRule,
   convertSkillMd,
-  DELEGATOR_NIGHT_STEP,
   DISPATCH_SH,
   fencedAgents,
   KIT_MODULES,
   leakCheck,
   mcpFallbackCommands,
   NEVER_SHIP,
-  neverShipRefs,
+  NEVER_SHIP_GROUPS,
+  neverShipNamesIn,
   parseHookCommand,
   type Rewrite,
   snapshot,
@@ -33,8 +33,17 @@ import {
   verifyKit,
   WORKFLOW_FALLBACK,
   withMcpFallbackScopes,
+  withoutAgentScopes,
   withWorkflowFallback,
 } from './kit-sync';
+import {
+  BUILD_WORKFLOW,
+  COPILOT_WORKFLOW,
+  cutTail,
+  insertPlanApproval,
+  standaloneWorkflow,
+  TAIL_IDS,
+} from './kit-sync-standalone';
 
 const track = trackTempRoots();
 
@@ -746,35 +755,47 @@ describe('leak check', () => {
 });
 
 describe('never-ship files', () => {
-  test('night-preflight is in no profile', () => {
+  test('every never-ship path is in no profile, also a suite of one', () => {
     for (const p of NEVER_SHIP)
       expect(classify(p, '')).toEqual({ exclude: true, why: 'never ships' });
-    expect(NEVER_SHIP).toContain('.archon/scripts/night-preflight.sh');
+    for (const p of [
+      '.archon/scripts/night-preflight.sh',
+      '.archon/scripts/pick-tickets.js',
+      '.archon/scripts/auto-merge.sh',
+      '.archon/scripts/stop-check.sh',
+      '.archon/systemd/delegator-supervisor.timer',
+      '.claude/agents/delegator.md',
+      '.archon/scripts/copilot-workflow.js',
+    ])
+      expect(NEVER_SHIP).toContain(p);
   });
 
-  test("the delegator's night step 6 is dropped and step 7 renumbered", () => {
-    const night = [
-      '5. Commit the ticket edits.',
-      '6. The owner runs `night-preflight.sh` (it is no delegator tool). Start nothing until the owner says it printed GO;',
-      '   help fix each NO-GO it names.',
-      '7. **Build the list one ticket after another** (`pick-tickets.js`)',
-      '',
-    ].join('\n');
-    const out = applyRewrites('.claude/agents/delegator.md', night, [DELEGATOR_NIGHT_STEP]);
-    expect(out).toBe(
-      '5. Commit the ticket edits.\n6. **Build the list one ticket after another** (`pick-tickets.js`)\n'
-    );
-    expect(neverShipRefs({ profile: 'core', path: 'x', content: out })).toEqual([]);
+  test('the groups hold no path twice, and keep the tools a person runs', () => {
+    const all = Object.values(NEVER_SHIP_GROUPS).flat();
+    expect(new Set(all).size).toBe(all.length);
+    for (const kept of [
+      '.archon/scripts/stop-run.sh',
+      '.archon/scripts/answer-blocked.sh',
+      '.archon/scripts/cleanup-merged.sh',
+    ])
+      expect(NEVER_SHIP).not.toContain(kept);
   });
 
-  test('a changed night step fails the sync loudly', () => {
-    const drifted = '6. The owner runs `night-preflight.sh` first.\n7. **Build the list\n';
-    expect(() =>
-      applyRewrites('.claude/agents/delegator.md', drifted, [DELEGATOR_NIGHT_STEP])
-    ).toThrow(/rewrite expected 1 of .*found 0/);
+  test('names a script, an agent by either file and a systemd unit by its stem, never a test or a look-alike', () => {
+    expect(neverShipNamesIn('run `bash .archon/scripts/merge-ready.sh 12`')).toEqual([
+      'merge-ready.sh',
+    ]);
+    expect(neverShipNamesIn('see .github/agents/delegator.agent.md')).toEqual([
+      'delegator.agent.md',
+    ]);
+    expect(neverShipNamesIn('systemctl --user start delegator-supervisor.timer')).toEqual([
+      'delegator-supervisor',
+    ]);
+    expect(neverShipNamesIn('run my-auto-merge.sh or auto-merge.shx')).toEqual([]);
+    expect(neverShipNamesIn('auto-merge.test.sh, and the auto-merge node')).toEqual([]);
   });
 
-  test('a shipped reference to a never-ship script fails, but the fence test may deny it', () => {
+  test('a shipped reference to a never-ship script fails the leak check', () => {
     const r = leakCheck([
       { profile: 'core', path: 'docs/a.md', content: 'ok\nrun `night-preflight.sh` first' },
       {
@@ -782,16 +803,110 @@ describe('never-ship files', () => {
         path: 'docs/b.md',
         content: 'the night-preflight-ish word and night-list.txt',
       },
-      {
-        profile: 'core',
-        path: '.archon/scripts/test/delegator-fence.test.sh',
-        content: `case_ "no night-preflight.sh" deny "$(cmd_ 'bash night-preflight.sh')"\nallow night-preflight.sh`,
-      },
+      { profile: 'core', path: 'docs/c.md', content: 'x\ny\nthen `wait-merge.sh` pings the owner' },
     ]);
     expect(r.failures).toEqual([
       'core/docs/a.md:2: names never-ship night-preflight.sh',
-      'core/.archon/scripts/test/delegator-fence.test.sh:2: names never-ship night-preflight.sh',
+      'core/docs/c.md:3: names never-ship wait-merge.sh',
     ]);
+  });
+
+  test('a never-ship agent loses its fence, the others keep theirs', () => {
+    const json = JSON.stringify({
+      version: 1,
+      agents: { delegator: { a: 1 }, developer: { b: 2 } },
+    });
+    const out = withoutAgentScopes(json, ['delegator', 'gone']);
+    expect(JSON.parse(out)).toEqual({ version: 1, agents: { developer: { b: 2 } } });
+    expect(withoutAgentScopes(json, ['gone'])).toBe(json);
+  });
+});
+
+describe('standalone build workflow', () => {
+  const head = [
+    'name: build-feature',
+    'nodes:',
+    '  - id: stop-route',
+    '    bash: echo route',
+    '',
+    '  # implement the parts',
+    '  - id: implement',
+    '    depends_on: [stop-route]',
+    '    prompt: build it',
+    '',
+    '  - id: ready',
+    '    depends_on: [implement]',
+    '    bash: echo ready',
+    '',
+  ];
+  const tail = TAIL_IDS.flatMap((id, i) => [
+    `  # ${id} comment`,
+    `  - id: ${id}`,
+    `    depends_on: [${i ? TAIL_IDS[i - 1] : 'ready'}]`,
+    '    bash: echo',
+    '',
+  ]);
+  const wf = [...head, ...tail].join('\n');
+
+  test('cuts every node after ready, with its comment block', () => {
+    const out = cutTail('w.yaml', wf);
+    expect(out).toBe(`${head.join('\n').replace(/\n+$/, '')}\n`);
+    for (const id of TAIL_IDS) expect(out).not.toContain(`id: ${id}`);
+  });
+
+  test('a tail it does not know, or a missing tail node, fails', () => {
+    expect(() => cutTail('w.yaml', `${wf}  - id: extra\n    bash: echo\n`)).toThrow(
+      /nodes after ready are/
+    );
+    expect(() => cutTail('w.yaml', wf.replace('  - id: finalize\n', '  - id: finalise\n'))).toThrow(
+      /nodes after ready are/
+    );
+    expect(() => cutTail('w.yaml', head.join('\n'))).toThrow(
+      /expected node auto-merge once, found 0/
+    );
+  });
+
+  test('puts the plan approval before implement, which runs only on approve', () => {
+    const out = insertPlanApproval('w.yaml', cutTail('w.yaml', wf));
+    const ids = [...out.matchAll(/^ {2}- id: ([\w-]+)$/gm)].map(m => m[1]);
+    expect(ids).toEqual(['stop-route', 'plan-approval', 'plan-rejected', 'implement', 'ready']);
+    expect(out).toContain('    wait:\n      form: approval\n');
+    expect(out).toContain(`    when: "$plan-approval.output.decision == 'reject'"\n    cancel: `);
+    expect(out).toContain(
+      '  # implement the parts\n  - id: implement\n    depends_on: [plan-approval]\n    when: "$plan-approval.output.decision == \'approve\'"\n'
+    );
+    expect(out.indexOf('  - id: plan-approval')).toBeLessThan(
+      out.indexOf('  # implement the parts')
+    );
+  });
+
+  test('fails when implement no longer waits on stop-route alone', () => {
+    expect(() =>
+      insertPlanApproval(
+        'w.yaml',
+        wf.replace('depends_on: [stop-route]', 'depends_on: [stop-route, plan]')
+      )
+    ).toThrow(/expected implement to depend on \[stop-route\] once, found 0/);
+  });
+
+  test('another workflow passes unchanged', () => {
+    expect(standaloneWorkflow('.archon/workflows/other.yaml', wf)).toBe(wf);
+  });
+
+  test('the shipped workflows stop for the plan approval, end at ready and keep the same nodes', () => {
+    const idsOf = (p: string): string[] =>
+      [
+        ...readFileSync(join(import.meta.dir, '..', 'kit', 'profiles', 'core', p), 'utf8').matchAll(
+          /^ {2}- id: ([\w-]+)$/gm
+        ),
+      ].map(m => m[1] ?? '');
+    const claude = idsOf(BUILD_WORKFLOW);
+    const copilot = idsOf(COPILOT_WORKFLOW);
+    expect(copilot).toEqual(claude);
+    expect(claude.at(-1)).toBe('ready');
+    for (const id of TAIL_IDS) expect(claude).not.toContain(id);
+    expect(claude.indexOf('plan-approval')).toBe(claude.indexOf('stop-route') + 1);
+    expect(claude.indexOf('implement')).toBeGreaterThan(claude.indexOf('plan-rejected'));
   });
 });
 

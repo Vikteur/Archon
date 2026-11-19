@@ -138,7 +138,7 @@ Without setup they run `archon kit tools` instead, which installs `backlog` as b
 | Instructions | `.github/instructions/`, `.github/copilot-instructions.md`, `AGENTS.md` | Layer rules and project facts that Copilot reads on every run. |
 | MCP servers | `.github/mcp.json` | Two servers: `codegraph` (code navigation) and `contract-api` (the OpenAPI contract, when that profile is on). |
 | Workflows | `build-feature-copilot` and related | Archon workflows that run the build with Copilot nodes. |
-| Scripts | `.archon/scripts/`, `scripts/` | Delegator, STOP policy, merge, CI-by-SHA and tool installer scripts. |
+| Scripts | `.archon/scripts/`, `scripts/` | Run, CI-by-SHA, pull request, retro and tool installer scripts. There is no ticket picker, night run or merge queue: a person starts each run and a team member merges. |
 | Scaffold templates | Mustache templates in the kit (`java` profile and its overlays) | Starter code for new layers, rendered from `.archon/kit.yaml`. |
 
 The kit also writes `.archon/kit.yaml` (the project's settings), `.archon/kit.defaults.yaml`
@@ -189,12 +189,9 @@ The defaults below suit a Spring Boot Gradle project.
 | `profiles` | `[core, java, java-spring, openapi-contract]` | The profiles installed. `kit add --profile` replaces this list. |
 | `stack` | `spring` | `quarkus` or `spring`. The gates that differ per framework branch on it. |
 | `base_branch` | `main` | The branch that runs target and rebase against. |
-| `owner` | `""` | The name STOP approvals are recorded for (`stop-approve.sh record`). |
-| `timezone` | `UTC` | The time zone of approval ids and parked notes. |
 | `gh_accounts` | `[]` | The `gh` accounts the `gh-switch-account` skill switches between. |
-| `ntfy_topic` | `""` | The ntfy topic `notify-owner.sh` posts to. Empty means no push. |
-| `agent_cli` | `copilot` | `claude` or `copilot`. The delegator and supervisor scripts use it. |
-| `build_workflow` | `build-feature-copilot` | The workflow the delegator starts for each ticket. |
+| `agent_cli` | `copilot` | `claude` or `copilot`. `install-tools.sh` and `kit-config.sh` use it. |
+| `build_workflow` | `build-feature-copilot` | The build workflow you start for a ticket. |
 | `java_version` | `21` | The Java version the build and CI use. |
 | `pin_proofs` | `.archon/pin-proofs.txt` | The file of pin proofs read by `pin-proof-check.sh`. |
 | `build_shape.modules` | `"-"` | The Gradle modules the build-shape check expects, space-separated. `-` turns the check off. |
@@ -222,7 +219,7 @@ Set a value at install time with `--set`:
 
 ```bash
 archon kit add . --profile core,java,java-spring,openapi-contract \
-  --set contract.repo=acme/contract --set owner=alice --trust
+  --set contract.repo=acme/contract --trust
 ```
 
 `kit add` records each `--profile` and `--set` in `kit.yaml`. It keeps the rest of your
@@ -313,6 +310,45 @@ After a manual `kit add`, do these steps:
 Check the first two steps again after any change to the tools, the login or the folder
 trust.
 
+## Running a build
+
+Start one run per Backlog ticket:
+
+```bash
+archon workflow run build-feature-copilot --detach "TASK-12"
+```
+
+The run plans the ticket and then **stops once for a person to approve the plan**. The
+`plan-approval` step shows the ticket, the plan (`plan.md` in the run's artifacts) and the
+STOP items the ticket or the plan touches. Answer it in the Archon console, or:
+
+```bash
+archon workflow attention --watch          # the runs that wait for you
+archon workflow approve <run-id> "notes for the agents"
+archon workflow reject <run-id> "why"      # ends the run; no code is written
+```
+
+The approval text reaches the agents as reviewer notes. After a rejection, fix the ticket
+and start a new run. Run builds in a worktree: a run in a container cannot pause for the
+approval.
+
+After the approval the run builds the parts, opens a draft pull request, checks CI by
+commit SHA, fixes a red run (at most three rounds) and marks the pull request ready for
+review. **The run ends there; it never merges.** A team member then:
+
+1. reviews and merges the pull request;
+2. closes the Backlog ticket and commits the backlog change (the run leaves its ticket
+   edit uncommitted in the backlog checkout);
+3. runs `bash .archon/scripts/cleanup-merged.sh <branch>` to delete the run's branch and
+   worktree. It deletes nothing that is not in the base branch, so it refuses a squash
+   merge; merge with a merge commit or a fast-forward, or delete them by hand.
+
+A red head or a merge conflict at the ready step fails the run, so a person sees it. To
+stop a run that waits, `bash .archon/scripts/stop-run.sh <run-id> "<why>"` rejects it and
+keeps the reason. A run that stops on a `BLOCKED:` question fails and names its plan;
+answer it with `bash .archon/scripts/answer-blocked.sh <plan.md> "<answer>"`, then
+`archon workflow resume <run-id>`.
+
 ## What `archon kit doctor` checks
 
 `archon kit doctor [path]` reports these, one line each:
@@ -337,8 +373,6 @@ profiles and which ones are installed here. The flags and exit codes are in the
   list does not enforce it. If the hook is not wired, the allowlist is not enforced.
 - **Root session.** A plain `copilot` session with no `--agent` selected is not fenced by
   any agent scope. Select an agent for work that should be fenced.
-- **Notifications.** The delegator's push notifications and its agent messaging are
-  Claude-only. On Copilot, `notify-owner.sh` sends through ntfy, so set `ntfy_topic`.
 - **An organization's MCP registry policy.** A Copilot account whose organization sets an
   MCP registry allows only the servers that registry lists. Copilot then says
   `2 MCP servers were blocked by policy: 'codegraph', 'contract-api' (Not found in registry <url>)`.

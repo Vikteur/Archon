@@ -17,13 +17,10 @@ applyTo: "**"
   (none yet), anything touching authentication/authorization/the access matrix, encryption or what gets logged where
   personal data could be involved, deleting a branch/worktree/history/the audit trail that is not all in main, secrets,
   production config once something runs in production, or a push to main the owner did not allow (except a ticket,
-  retro or token-report commit inside its own path: `push-guard.sh` holds the list). An approval binds
-  only as an entry `stop-approve.sh record` wrote in `.archon/stop/approvals/` from the owner's own chat words (the list
-  round, at most 7 days, `stop-check.sh` judges it); an item not approved holds the merge. One exception: a
-  `build-feature` run's own steps, which the owner approved in advance (2026-10-17, `docs/memory.md`): its GitHub
-  agent rebases the run's own branch onto main on a conflict and force-pushes it with a lease, and the run deletes its
-  own branch and worktree after the merge. The run never merges: the merge script does when nothing is unapproved, or
-  the owner (2026-10-18, TASK-58; 2026-10-20).
+  retro or token-report commit inside its own path: `push-guard.sh` holds the list). One exception: a
+  `build-feature` run's own steps once a person approved its plan: its GitHub agent rebases the run's own branch onto
+  main on a conflict and force-pushes it with a lease. The run never merges: a team member reviews and merges its
+  pull request.
   Approval is per action, not per session, and silence is not approval. Everything else is ordinary
   work — do it. None of the above is caught by a green build: a dropped column and a leaked personal identifier
   both pass CI.

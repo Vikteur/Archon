@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Delete a branch and its worktree once all their content is merged (P2: a script, not a model; owner decision
-# 2026-10-18, docs/memory.md, TASK-55: the delegator cleans up only through this script).
+# Delete a branch and its worktree once all their content is merged (P2: a script, not a model; a person
+# cleans up through it after the merge).
 #   cleanup-merged.sh [--dry-run] <branch> [<worktree>]
 # Run it from any checkout of the repo. The worktree defaults to the one that has <branch> checked out.
 # It deletes nothing unless every check passes, and then deletes the worktree, the local branch and the branch on

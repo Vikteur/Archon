@@ -6,7 +6,7 @@
 #     rebased false: the branch already contains origin/<base>, nothing was done.
 #     pushed true: the rebase changed the branch and it has an upstream, so it was pushed with --force-with-lease
 #     (the build-feature run's own branch, owner decision 2026-10-17; never the base or a protected branch).
-#     --no-push: rebase only, never push (pushed is false); the caller pushes, as rebase-behind.sh does with
+#     --no-push: rebase only, never push (pushed is false); the caller pushes, e.g. with
 #     force-push.sh.
 # The fetch is tried 3 times, REBASE_FETCH_WAIT seconds apart (default 5): a lost connection or a ref lock held by a
 # concurrent fetch in the same clone passes. Exit 3, with git's error on stderr, when all 3 fail: nothing was rebased,

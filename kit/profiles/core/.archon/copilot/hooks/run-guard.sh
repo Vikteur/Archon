@@ -14,7 +14,7 @@
 #   - changes into the main checkout (`cd <main> &&`, `cd <main>;`) or runs `git -C <main>`; the main checkout is the first
 #     entry of `git worktree list --porcelain` run in the session folder (never hard-coded);
 #   - names commit-tickets or sync-main;
-#   - runs `backlog task` without BACKLOG_CWD= (the close-out node runs it with BACKLOG_CWD, the other nodes never do).
+#   - runs `backlog task` without BACKLOG_CWD= (a script that edits a ticket runs it with BACKLOG_CWD, a node never does).
 # Input (stdin JSON): Claude names (tool_name, tool_input.command, cwd) or Copilot's (toolName, toolArgs as object or JSON
 # string, cwd or workingDirectory). Deny: JSON with permissionDecision "deny" on stdout (top level and in hookSpecificOutput)
 # and the reason on stderr with exit 2 (Copilot denies on exit 2). Anything unreadable inside a run is a deny; outside a run
@@ -126,7 +126,7 @@ for (const seg of cmd.split(/&&|\|\||[;|\n]/)) {
     }
   }
 }
-if (/(^|[^A-Za-z0-9_-])backlog\s+task\b/.test(cmd) && !/BACKLOG_CWD=/.test(cmd)) deny("backlog task without BACKLOG_CWD= (only the close-out node runs it)");
+if (/(^|[^A-Za-z0-9_-])backlog\s+task\b/.test(cmd) && !/BACKLOG_CWD=/.test(cmd)) deny("backlog task without BACKLOG_CWD= (only a ticket script runs it)");
 console.log("ALLOW");
 ' 2>/dev/null) || verdict=$'DENY\tthe guard failed before it could decide'
 

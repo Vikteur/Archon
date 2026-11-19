@@ -115,9 +115,6 @@ const SOURCE_MODULES =
 
 /** Exact per-file noun rewrites in comments and messages; merged into TARGETED. */
 export const NOUN_TARGETED: Record<string, Rewrite[]> = {
-  '.archon/scripts/pick-tickets.js': [
-    ['element id such as `portal-backend`', 'element id such as `orders-backend`', 1],
-  ],
   '.archon/scripts/retro-umbrella.sh': [
     [
       'was the umbrella repo weddingapp until its docs moved into wedding-portal (2026-10-17), so',
@@ -127,18 +124,6 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   ],
   '.archon/scripts/ticket.sh': [
     ['The Backlog lives in the wedding-portal repo.', 'The Backlog lives in this repo.', 1],
-  ],
-  '.archon/scripts/wait-merge.sh': [
-    ['main checkout (the wedding-portal one)', "main checkout (this repo's)", 1],
-  ],
-  '.archon/scripts/park-ticket.sh': [
-    ['"Parked <Brussels time>: <why>"', '"Parked <local time>: <why>"', 1],
-    ['TZ=Europe/Brussels date', 'TZ=@@KIT_TIMEZONE@@ date', 1],
-  ],
-  '.archon/stop/policy.json': [
-    ['"owner": "Viktor Van Steenweghen",', '"owner": "@@KIT_OWNER@@",', 1],
-    ['"timezone": "Europe/Brussels",', '"timezone": "@@KIT_TIMEZONE@@",', 1],
-    ['"rekord-contract",', '"@@KIT_CONTRACT_REPO@@",', 1],
   ],
   '.claude/scripts/groma-check.sh': [
     ["is weddingapp's\n# scripts/web-uis.sh.)", 'is\n# scripts/web-uis.sh.)', 1],
@@ -217,10 +202,6 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   ],
   '.claude/scripts/contract-pin.sh': [
     ['# Checks the rekord-contract checkout out', '# Checks the contract checkout out', 1],
-  ],
-  // park-ticket.sh stamps the install's timezone (kit key timezone), not the source's CET/CEST.
-  '.archon/scripts/test/park-ticket.test.sh': [
-    ['[0-9:]+ CES?T: held', '[0-9:]+ [A-Z][A-Za-z0-9+-]*: held', 1],
   ],
   // A case about the source's own ci-inputs.yml (its test-data gate input); an install's inputs have no such gate.
   'scripts/test/ci-plan.test.sh': [

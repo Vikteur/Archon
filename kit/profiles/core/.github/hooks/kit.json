@@ -6,11 +6,6 @@
         "type": "command",
         "bash": "bash .github/hooks/dispatch.sh SessionStart '' .claude/hooks/scripts/audit-log.sh sessionStart",
         "timeoutSec": 10
-      },
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/dispatch.sh SessionStart '' .archon/scripts/delegator-session.sh sessionStart",
-        "timeoutSec": 30
       }
     ],
     "userPromptSubmitted": [
@@ -90,18 +85,6 @@
         "type": "command",
         "bash": "bash .github/hooks/dispatch.sh SessionEnd '' .claude/hooks/scripts/audit-log.sh sessionEnd",
         "timeoutSec": 10
-      },
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/dispatch.sh SessionEnd '' .archon/scripts/delegator-session.sh sessionEnd",
-        "timeoutSec": 30
-      }
-    ],
-    "agentStop": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/dispatch.sh Stop '' .archon/scripts/delegator-session.sh stop",
-        "timeoutSec": 30
       }
     ]
   }

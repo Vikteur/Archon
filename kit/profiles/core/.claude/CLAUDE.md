@@ -55,19 +55,12 @@ short on purpose, because a STOP rule people route around protects nothing:
 - **a push to @@KIT_BASE_BRANCH@@** the owner did not allow, except a ticket, retro or token-report commit that stays
   inside its own path (`push-guard.sh` enforces it; its list is the source of truth).
 
-The STOP policy as data is `.archon/stop/policy.json`. The list round asks the owner in chat about every likely item
-of the list's tickets, labelled or not, before the list starts. An approval binds only as an entry in
-`.archon/stop/approvals/` that `stop-approve.sh record` wrote from the owner's own chat words (by the owner's chat
-session or the delegator, never a build run), for that ticket and item (governance: and the named paths), valid until
-the merge and at most 7 days; `stop-check.sh` is the verdict, and an item not approved holds the merge and pings the
-owner.
-
-One standing exception, the `@@KIT_BUILD_WORKFLOW@@` workflow, when the owner approved its runs in advance: a run does
-not pause on these items. Its plan names the STOP items the ticket touches in the pull request, it rebases the run's
-own branch onto the base on a conflict and force-pushes it with a lease, and after the merge the run deletes its own
-branch and worktree. The run never merges its own pull request: once every review is done and CI on the head is green
-it waits, and the merge script merges it at once when `stop-check.sh` finds no unapproved STOP item, or the owner
-does. The exception covers that workflow's own steps only: an agent outside it still stops here.
+One standing exception, the `@@KIT_BUILD_WORKFLOW@@` workflow: its runs stop once, for a person to approve the plan,
+and that approval shows the STOP items the ticket labels or the plan names. An approved run does not pause on them
+again: its pull request names them, it rebases the run's own branch onto the base on a conflict and force-pushes it
+with a lease. The run never merges its own pull request: it ends once CI on the head is green and the pull request is
+ready for review, and a team member reviews, merges it and closes the ticket. The exception covers that workflow's
+own steps only: an agent outside it still stops here.
 
 Everything else is ordinary work — do it. This rule exists because none of the above is caught by a
 green build: a dropped column and a leaked personal identifier both pass CI.

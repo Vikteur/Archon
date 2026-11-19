@@ -876,7 +876,7 @@ check "20 --post --audit runs a finished commit" $(grep -q 'description=running 
 t68_commit superseded; c5=$C
 t68_status "$c5" error "superseded: PR #7 head is now abcdef1, not run"
 run --post "$c5"
-check "20 a superseded commit is run (recover-run.sh starts a run on it)" $(grep -q 'description=running since' "$root/gh.log" \
+check "20 a superseded commit is run (a new --post starts a run on it)" $(grep -q 'description=running since' "$root/gh.log" \
   && ! grep -q "not run again" <<<"$out" && [ -s "$root/out/${c5:0:7}/summary.txt" ]; echo $?)
 
 t68_commit dead; c3=$C

@@ -3,7 +3,7 @@
 # processes through .archon/config.yaml `env` (GIT_CONFIG_COUNT/KEY_0/VALUE_0: core.hooksPath=.archon/githooks), never
 # clone-wide: a clone-wide core.hooksPath would also turn on .githooks/pre-push (the groma check) in every checkout.
 #   commit-msg <message file>
-# 1. Outside a linked worktree (the main checkout, where close-out and the reports commit) it does nothing.
+# 1. Outside a linked worktree (the main checkout, where tickets and the reports are committed) it does nothing.
 # 2. The Conventional Commit subject check, .githooks/commit-msg: exit 1 refuses the commit.
 # 3. The commit-shape rule of the test-first gate, `tdd-check.sh --staged`: a feat/fix/refactor commit that changes a
 #    test source file needs a `Test fix:` body line. Exit 1 refuses the commit.

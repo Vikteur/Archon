@@ -39,6 +39,7 @@ import {
   parseYaml,
   splitFrontmatter,
   withMcpFallbackScopes,
+  withoutAgentScopes,
   withWorkflowFallback,
 } from './kit-sync-convert';
 import { depsCheck, judgeDeps } from './kit-sync-deps';
@@ -50,6 +51,7 @@ import {
   suiteSubject,
 } from './kit-sync-tests';
 import { genericThisRepo, PATH_REWRITES, PATH_SKIP, renamePath } from './kit-sync-generic';
+import { BUILD_WORKFLOW, COPILOT_WORKFLOW, standaloneWorkflow } from './kit-sync-standalone';
 import {
   AGENT_PROFILES,
   EXCLUDE,
@@ -60,6 +62,7 @@ import {
   LEAF_PROFILES,
   leakCheck,
   NEVER_SHIP,
+  neverShipNamesIn,
   POST_INSTALL,
   PROFILE_META,
   PROFILES,
@@ -250,6 +253,8 @@ export function classify(
   files: ReadonlySet<string> = new Set()
 ): Assignment {
   if (NEVER_SHIP.includes(path)) return { exclude: true, why: 'never ships' };
+  if (isSuitePath(path) && NEVER_SHIP.includes(suiteOf(path)))
+    return { exclude: true, why: 'its suite never ships' };
   if (isSuitePath(path)) {
     const a = classifySuite(path, files, p => classify(p, '', files));
     return a.exclude ? a : { profile: a.profile, convert: 'copy' };
@@ -337,10 +342,15 @@ function copilotWorkflowFromScript(src: Source): string {
   }
 }
 
-const COPILOT_WORKFLOW = '.archon/workflows/build-feature-copilot.yaml';
-const BUILD_WORKFLOW = '.archon/workflows/build-feature.yaml';
-
 type NewFile = Omit<KitFile, 'template' | 'kind'> & { kind?: Kind };
+
+/** A hook script or deny rule that names a never-ship file is left out of the converted settings. */
+const namesNeverShip = (text: string): boolean => neverShipNamesIn(text).length > 0;
+
+/** The source agents that never ship; their fences are dropped from agent-scopes.json. */
+const NEVER_SHIP_AGENTS = NEVER_SHIP.filter(p => /^\.claude\/agents\/[^/]+\.md$/.test(p)).map(p =>
+  basename(p, '.md')
+);
 
 const kitFile = (f: NewFile): KitFile => ({
   ...f,
@@ -383,10 +393,11 @@ function convertText(
   rewrites: Rewrite[],
   ctx: AgentContext
 ): string {
-  let text = applyRewrites(f.path, raw, rewrites);
+  let text = standaloneWorkflow(f.path, applyRewrites(f.path, raw, rewrites));
   if (/^docs\/code-maps\/[^/]+\.md$/.test(f.path))
     text = genericThisRepo(f.path, convert.profile, text);
-  if (f.path === AGENT_SCOPES) text = withMcpFallbackScopes(text, ctx.fallbacks);
+  if (f.path === AGENT_SCOPES)
+    text = withMcpFallbackScopes(withoutAgentScopes(text, NEVER_SHIP_AGENTS), ctx.fallbacks);
   if (f.path === COPILOT_WORKFLOW) text = withWorkflowFallback(text, f.path);
   if (convert.convert === 'agent') text = convertAgent(text, f.path, ctx.fenced);
   else if (convert.convert === 'rule')
@@ -404,7 +415,7 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
   const tracked = new Set(src.files.keys());
   const scopes = src.files.get(AGENT_SCOPES);
   const ctx: AgentContext = {
-    fenced: fencedAgents(scopes && textOf(scopes)),
+    fenced: fencedAgents(scopes && withoutAgentScopes(textOf(scopes), NEVER_SHIP_AGENTS)),
     fallbacks: agentFallbacks(src, tracked),
   };
   for (const f of [...src.files.values()].sort((a, b) => (a.path < b.path ? -1 : 1))) {
@@ -428,10 +439,13 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
 function copilotWorkflow(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[] {
   if (src.files.has(COPILOT_WORKFLOW) || !src.files.has(BUILD_WORKFLOW)) return [];
   const text = withWorkflowFallback(
-    applyRewrites(
+    standaloneWorkflow(
       COPILOT_WORKFLOW,
-      copilotWorkflowFromScript(src),
-      rewrites[COPILOT_WORKFLOW] ?? []
+      applyRewrites(
+        COPILOT_WORKFLOW,
+        copilotWorkflowFromScript(src),
+        rewrites[COPILOT_WORKFLOW] ?? []
+      )
     ),
     COPILOT_WORKFLOW
   );
@@ -459,7 +473,7 @@ function settingsFiles(src: Source): KitFile[] {
       mode: '0644',
       origin,
       kind: 'hook',
-      content: convertHooks(settings),
+      content: convertHooks(settings, namesNeverShip),
     }),
     kitFile({
       path: '.archon/copilot/deny.json',
@@ -467,7 +481,7 @@ function settingsFiles(src: Source): KitFile[] {
       mode: '0644',
       origin,
       kind: 'config',
-      content: convertDeny(settings),
+      content: convertDeny(settings, namesNeverShip),
     }),
   ];
 }
