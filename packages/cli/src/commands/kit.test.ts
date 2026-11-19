@@ -186,6 +186,16 @@ describe('kit', () => {
       );
       expect(logs.some(l => l.includes('@@KIT_BRANCHES@@'))).toBe(false);
     });
+    it('records --profile in an existing kit.yaml, keeping its own text', async () => {
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), '# mine\nbase_branch: dev\n');
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      const text = readFileSync(join(project, '.archon/kit.yaml'), 'utf-8');
+      expect(text).toContain('# mine');
+      expect(text).toContain('base_branch: dev');
+      expect(text).toMatch(/profiles:/);
+      expect(text).toContain('java');
+    });
     it('later profile wins, modes apply, rerun is unchanged', async () => {
       expect(await add({ profiles: ['java'] })).toBe(0);
       expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# java wins\n');

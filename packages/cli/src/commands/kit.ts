@@ -369,10 +369,11 @@ export async function kitAddCommand(
     relative: string,
     content: string,
     mode: string | null,
-    createOnly = false
+    createOnly = false,
+    always = false
   ): FileState => {
     const dest = join(project, relative);
-    const state = existingFileState(dest, content, options.force ?? false, createOnly);
+    const state = existingFileState(dest, content, always || (options.force ?? false), createOnly);
     if (state) return state;
     if (!dry) {
       mkdirSync(dirname(dest), { recursive: true });
@@ -382,7 +383,9 @@ export async function kitAddCommand(
     return 'written';
   };
 
-  results.push({ path: KIT_YAML, state: write(KIT_YAML, kitYamlText, null) });
+  // kit.yaml is the project's own text plus this command's --profile and --set edits, so it is
+  // always written: keeping it would drop the profiles that kit doctor reads back.
+  results.push({ path: KIT_YAML, state: write(KIT_YAML, kitYamlText, null, false, true) });
 
   // 4. Files, in profile order; the last profile carrying a path wins.
   const missing = new Set<string>();
@@ -871,7 +874,13 @@ export async function kitDoctorCommand(
     });
   } else {
     try {
-      const profiles = resolveProfiles(kit, stringList(config.profiles));
+      // A kit.yaml without profiles installed the kit defaults' profiles, as kit add does.
+      const recorded = stringList(config.profiles);
+      const defaults = parseYaml(kit.defaults) as Record<string, unknown> | null;
+      const profiles = resolveProfiles(
+        kit,
+        recorded.length > 0 ? recorded : stringList(defaults?.profiles)
+      );
       const drift = computeDrift(project, kit, profiles);
       const bad = [
         ...drift.missing.map(p => `missing ${p}`),
