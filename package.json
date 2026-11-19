@@ -34,7 +34,7 @@
     "check:sqlite-vintages": "bun run scripts/generate-sqlite-vintages.ts --check",
     "check:schema-upgrades": "bun run scripts/check-schema-upgrades.ts",
     "lens-yield": "bun run scripts/lens-yield.ts",
-    "test:install": "bash scripts/test-install.sh && bash scripts/test-install-local.sh && bash scripts/test-install-copilot-kit.sh",
+    "test:install": "bash scripts/test-install.sh && bash scripts/test-install-local.sh && bash scripts/test-install-copilot-kit.sh && bash scripts/test-update-copilot-kit.sh",
     "test": "bun run scripts/repo-tests.ts",
     "test:watch": "bun --filter @archon/server test:watch",
     "type-check": "bun --filter '*' type-check && bun x tsc --noEmit -p scripts/tsconfig.json && bun x tsc --noEmit -p .archon/scripts/tsconfig.json && bun x tsc --noEmit -p .archon/workflows/tsconfig.json",

@@ -11,6 +11,7 @@ import {
   readFileSync,
   statSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
   realpathSync,
 } from 'fs';
@@ -506,6 +507,111 @@ describe('kit', () => {
     });
   });
 
+  describe('the merged .archon/config.yaml', () => {
+    const withConfig = (text: string): Kit => {
+      const kit = makeKit();
+      addFile(kit, 'core', '.archon/config.yaml', text);
+      return kit;
+    };
+    it('stays the kit own after the alias merge, so a newer kit updates it', async () => {
+      expect(await add({}, withConfig('# kit config v1\n'))).toBe(0);
+      expect(readFileSync(join(project, '.archon/config.yaml'), 'utf-8')).toContain('@scout');
+      logs.length = 0;
+      expect(await add({}, withConfig('# kit config v2\n'))).toBe(0);
+      const text = readFileSync(join(project, '.archon/config.yaml'), 'utf-8');
+      expect(text).toContain('# kit config v2');
+      expect(text).toContain('@scout');
+      expect(logs.join('\n')).not.toContain('kept (differs)  .archon/config.yaml');
+    });
+    it('a lock from before holds the unmerged hash: the merged file still counts as the kit own', async () => {
+      expect(await add({}, withConfig('# kit config v1\n'))).toBe(0);
+      const lockPath = join(project, '.archon/kit.lock.json');
+      const lock = JSON.parse(readFileSync(lockPath, 'utf-8')) as { files: Record<string, string> };
+      lock.files['.archon/config.yaml'] = sha('# kit config v1\n');
+      writeFileSync(lockPath, JSON.stringify(lock));
+      logs.length = 0;
+      expect(await add({}, withConfig('# kit config v1\n'))).toBe(0);
+      expect(logs.join('\n')).not.toContain('kept (differs)  .archon/config.yaml');
+      expect(readKitLock(project)['.archon/config.yaml']).toBe(
+        sha(readFileSync(join(project, '.archon/config.yaml'), 'utf-8'))
+      );
+    });
+    it('is kept once the project edited it', async () => {
+      expect(await add({}, withConfig('# kit config v1\n'))).toBe(0);
+      const path = join(project, '.archon/config.yaml');
+      writeFileSync(path, `${readFileSync(path, 'utf-8')}# mine\n`);
+      logs.length = 0;
+      expect(await add({}, withConfig('# kit config v2\n'))).toBe(0);
+      expect(readFileSync(path, 'utf-8')).toContain('# mine');
+      expect(logs.join('\n')).toContain('kept (differs)  .archon/config.yaml');
+    });
+  });
+
+  describe('files the kit no longer ships', () => {
+    const without = (kit: Kit, key: string): Kit => {
+      delete kit.files[key];
+      kit.manifest.files = kit.manifest.files.filter(f => `${f.profile}/${f.path}` !== key);
+      return kit;
+    };
+    it('removes an unedited one and the folders it leaves empty, and drops its lock entry', async () => {
+      const first = makeKit();
+      addFile(first, 'core', 'old/deep/gone.sh', 'old\n');
+      expect(await add({}, first)).toBe(0);
+      expect(existsSync(join(project, 'old/deep/gone.sh'))).toBe(true);
+      logs.length = 0;
+      expect(await add({}, makeKit())).toBe(0);
+      expect(existsSync(join(project, 'old'))).toBe(false);
+      expect(readKitLock(project)['old/deep/gone.sh']).toBeUndefined();
+      expect(logs.join('\n')).toContain('removed  old/deep/gone.sh');
+      expect(logs.join('\n')).toContain('1 removed (no longer in the kit)');
+    });
+    it('keeps an edited one, lists it on every run, and forgets it once the project removed it', async () => {
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      writeFileSync(join(project, 'src.txt'), 'my edit\n');
+      const newer = (): Kit => without(makeKit(), 'java/src.txt');
+      for (let run = 0; run < 2; run++) {
+        logs.length = 0;
+        expect(await add({ profiles: ['java'], force: true }, newer())).toBe(0);
+        expect(readFileSync(join(project, 'src.txt'), 'utf-8')).toBe('my edit\n');
+        expect(logs.join('\n')).toContain('kept (no longer in the kit)  src.txt');
+        expect(readKitLock(project)['src.txt']).toBe(sha('java file\n'));
+      }
+      unlinkSync(join(project, 'src.txt'));
+      expect(await add({ profiles: ['java'] }, newer())).toBe(0);
+      expect(readKitLock(project)['src.txt']).toBeUndefined();
+    });
+    it('a dry run says what it would remove and removes nothing', async () => {
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      logs.length = 0;
+      expect(
+        await add({ profiles: ['java'], dryRun: true }, without(makeKit(), 'java/src.txt'))
+      ).toBe(0);
+      expect(existsSync(join(project, 'src.txt'))).toBe(true);
+      expect(logs.join('\n')).toContain('would be removed  src.txt');
+      expect(readKitLock(project)['src.txt']).toBe(sha('java file\n'));
+    });
+    it('leaving a profile out removes its untouched files', async () => {
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      expect(await add({ profiles: ['core'] })).toBe(0);
+      expect(existsSync(join(project, 'src.txt'))).toBe(false);
+      expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# core\n');
+    });
+    it('never removes through a symlink, nor a lock path outside the project', async () => {
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      const outside = join(root, 'outside.txt');
+      writeFileSync(outside, 'java file\n');
+      unlinkSync(join(project, 'src.txt'));
+      symlinkSync(outside, join(project, 'src.txt'));
+      const lockPath = join(project, '.archon/kit.lock.json');
+      const lock = JSON.parse(readFileSync(lockPath, 'utf-8')) as { files: Record<string, string> };
+      lock.files['../outside.txt'] = sha('java file\n');
+      writeFileSync(lockPath, JSON.stringify(lock));
+      expect(await add({ profiles: ['java'] }, without(makeKit(), 'java/src.txt'))).toBe(0);
+      expect(readFileSync(outside, 'utf-8')).toBe('java file\n');
+      expect(logs.join('\n')).toContain('skipped (symlink)  src.txt');
+    });
+  });
+
   describe('--set', () => {
     it('keeps numbers-looking values as strings; coerces only booleans and lists', () => {
       expect(coerceScalar('20.10')).toBe('20.10');
@@ -643,7 +749,7 @@ describe('kit', () => {
       await add({ profiles: ['java'] });
       writeFileSync(join(project, 'README.md'), 'changed\n');
       chmodSync(join(project, 'scripts/run.sh'), 0o755);
-      Bun.spawnSync(['rm', join(project, 'src.txt')]);
+      unlinkSync(join(project, 'src.txt'));
       const kit = makeKit();
       const drift = computeDrift(project, kit, resolveProfiles(kit, ['java']));
       expect(drift.modified).toEqual(['README.md']);

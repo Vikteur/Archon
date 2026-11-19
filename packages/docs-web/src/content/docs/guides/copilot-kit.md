@@ -61,6 +61,59 @@ script then cannot log `gh` in for you.
 A rerun is safe: it updates what is already there. The script ends with a list of its
 warnings, and writes its log to `~/.archon/logs/install-copilot-kit-<timestamp>.log`.
 
+## Update a machine with one command
+
+`archon-kit-update` updates a machine that was installed before: Archon, the kit in the
+backend and frontend, and the tools. It needs no options, because it reads the repositories,
+the contract, the profiles and the Backlog.md answer from the last `archon kit setup`
+(`~/.archon/kit-setup.json`). The installer links the command into `~/.local/bin`. On a
+machine installed before the command existed, run it once from the clone, or with curl:
+
+```bash
+bash ~/archon/scripts/update-copilot-kit.sh
+# or
+bash <(curl -fsSL https://raw.githubusercontent.com/Vikteur/Archon/local/console/scripts/update-copilot-kit.sh)
+```
+
+After that first run, `archon-kit-update` is on the `PATH`. `archon-kit-update --dry-run`
+fetches and lists the new Archon commits and the plan, and changes nothing.
+
+`scripts/update-copilot-kit.sh` does these steps in order:
+
+1. **Checks**: the machine, the saved answers, and that no build run is running. A run
+   that waits for its plan approval does not count. `--force` updates anyway.
+2. **Archon**: fast-forwards the clone to the fork's `local/console`. When there is
+   something new, it builds and installs it with `install-local.sh`. It then runs the
+   clone's newest copy of itself for the steps below.
+3. **The repositories**: pulls the contract, backend and frontend when their tree is clean
+   (fast-forward only).
+4. **`archon kit setup`**: runs it again with the saved answers. A kit file you edited is
+   kept. A kit file the kit no longer ships is removed when you never edited it (see
+   [Rerunning and upgrading](#rerunning-and-upgrading)). The step lists every file it
+   removed or kept.
+5. **`archon kit doctor`**: checks the backend.
+6. **The commit**: commits the update on a new branch (`chore/archon-kit-<archon commit>`)
+   in each repository whose tree was clean before the run. It never pushes.
+7. **The server**: restarts a running `archon serve` with the same arguments, so it runs
+   the new build.
+
+| Option | Effect |
+|--------|--------|
+| `--backend`, `--frontend`, `--contract <path>` | Use other paths than the saved ones (`--frontend ''` for none). |
+| `--archon-dir <path>` | Use another Archon clone (default: the clone the script is in, else `~/archon`). |
+| `--branch <name>` | Use another branch name for the commit. |
+| `--no-pull` | Do not pull the repositories first. |
+| `--no-tools` | Do not update the tools (jq, yq, gh, node, codegraph, copilot, rtk, ...). |
+| `--no-commit` | Leave the update uncommitted. |
+| `--no-restart` | Leave a running `archon serve` on the old build. |
+| `--web` | Start the MCP Inspectors at the end. |
+| `--rebuild` | Rebuild Archon even when the clone is up to date. |
+| `--force` | Update even while a build run is running. |
+| `--dry-run` | Print what would be updated, change nothing. |
+
+Push the commit branch and merge it like any other change. The log is in
+`~/.archon/logs/update-copilot-kit-<timestamp>.log`.
+
 ## Install with `archon kit setup`
 
 `archon kit setup` is the main way to install the kit. It asks four questions in the
@@ -232,6 +285,11 @@ of what the kit wrote. On a rerun, `kit add` compares each file with the lock:
 
 - A file that still holds what the kit wrote is updated to the newer kit.
 - A file the project edited is kept. The command lists it as `kept (differs)`.
+- A file the lock records that the newer kit no longer ships is removed, with the folders
+  that are then empty, when it still holds what the kit wrote. If you edited it, it is kept
+  and listed as `kept (no longer in the kit)` on every run, until you remove it.
+- `.archon/config.yaml` counts as the kit's after `kit add` merges its aliases and file hooks
+  into it, so a newer kit still updates it.
 - A file that differs and has no lock entry (it predates the lock, or the project wrote it) is
   kept too. One line counts them; review them and rerun with `--force` to take the kit's version.
 - Line ends do not count: a CRLF checkout of an unedited file is still the kit's.

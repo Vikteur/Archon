@@ -20,8 +20,10 @@ import {
   mkdtempSync,
   realpathSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
+  rmdirSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -66,6 +68,8 @@ export const KIT_DEFAULTS = '.archon/kit.defaults.yaml';
 /** What kit add last wrote, path → sha256: a file still holding it is the kit's own, so a newer kit updates it. */
 export const KIT_LOCK = join('.archon', 'kit.lock.json');
 const DISPATCH = '.github/hooks/dispatch.sh';
+/** The project's Archon config: a kit file that kit add then merges the aliases and file hooks into. */
+const PROJECT_CONFIG = '.archon/config.yaml';
 
 export function readKitLock(projectPath: string): Record<string, string> {
   try {
@@ -484,7 +488,14 @@ export async function kitToolsCommand(
 
 // ---------------------------------------------------------------------------
 
-type FileState = 'written' | 'unchanged' | 'kept' | 'skipped (symlink)' | 'skipped (outside)';
+type FileState =
+  | 'written'
+  | 'unchanged'
+  | 'kept'
+  | 'removed'
+  | 'kept (no longer in the kit)'
+  | 'skipped (symlink)'
+  | 'skipped (outside)';
 
 /**
  * What `kit add` does with a file the project may already hold: null writes it. A create-only file (manifest
@@ -499,6 +510,36 @@ export function existingFileState(
   if (!existsSync(dest)) return null;
   if (toLf(readFileSync(dest, 'utf-8')) === toLf(content)) return 'unchanged';
   return force && !createOnly ? null : 'kept';
+}
+
+/**
+ * A file kit add wrote (lock hash `hash`) that the kit no longer ships: 'removed' when it still holds that content
+ * (dry: it would be), 'kept (no longer in the kit)' when the project edited it, a skip when it is a link or lies
+ * outside the project, null when it is already gone. Folders the removal leaves empty go too, up to the project.
+ */
+export function pruneFile(
+  project: string,
+  relative: string,
+  hash: string,
+  dry: boolean
+): FileState | null {
+  const problem = destinationProblem(project, relative);
+  if (problem !== null) return problem === 'symlink' ? 'skipped (symlink)' : 'skipped (outside)';
+  const dest = join(project, relative);
+  if (!existsSync(dest) || !statSync(dest).isFile()) return null;
+  if (contentHash(readFileSync(dest, 'utf-8')) !== hash) return 'kept (no longer in the kit)';
+  if (dry) return 'removed';
+  rmSync(dest);
+  const root = resolve(project);
+  for (
+    let dir = dirname(dest);
+    dir !== root && dir.startsWith(`${root}${sep}`);
+    dir = dirname(dir)
+  ) {
+    if (readdirSync(dir).length > 0) break;
+    rmdirSync(dir);
+  }
+  return 'removed';
 }
 
 export async function kitAddCommand(
@@ -604,11 +645,14 @@ export async function kitAddCommand(
       if (lock[relative] !== undefined) nextLock[relative] = lock[relative];
       return problem === 'symlink' ? 'skipped (symlink)' : 'skipped (outside)';
     }
-    // A file that still holds what kit add last wrote there was never edited: a newer kit replaces it.
+    // A file that still holds what kit add last wrote there was never edited: a newer kit replaces it. A config.yaml
+    // that is the kit's text plus the merge is the kit's too (a lock from before the merged hash was recorded).
+    const held =
+      lock[relative] !== undefined && existsSync(dest) ? readFileSync(dest, 'utf-8') : null;
     const untouched =
-      lock[relative] !== undefined &&
-      existsSync(dest) &&
-      contentHash(readFileSync(dest, 'utf-8')) === lock[relative];
+      held !== null &&
+      (contentHash(held) === lock[relative] ||
+        (relative === PROJECT_CONFIG && toLf(held) === toLf(mergedConfigText(content, kit))));
     const state = existingFileState(
       dest,
       content,
@@ -659,6 +703,61 @@ export async function kitAddCommand(
   for (const key of [...missing].sort()) {
     console.warn(`Warning: kit.yaml has no value for @@KIT_${key}@@, rendered empty`);
   }
+
+  // 4b. Files kit add wrote that the kit no longer ships (a newer kit dropped them, or a profile was left out). One
+  // that still holds what kit add wrote is the kit's own and goes; one the project edited stays, with its lock entry,
+  // so the next run lists it again until the project removes it. --force never removes an edited file.
+  for (const relative of Object.keys(lock).sort()) {
+    if (Object.hasOwn(nextLock, relative) || unsafeManifestPath(relative) !== null) continue;
+    const state = pruneFile(project, relative, lock[relative] ?? '', dry);
+    if (state === null) continue;
+    if (state !== 'removed') nextLock[relative] = lock[relative] ?? '';
+    results.push({ path: relative, state });
+  }
+
+  const count = (state: FileState): number => results.filter(r => r.state === state).length;
+  for (const result of results.filter(r => r.state !== 'written' && r.state !== 'unchanged')) {
+    const label =
+      result.state === 'kept'
+        ? 'kept (differs)'
+        : result.state === 'removed' && dry
+          ? 'would be removed'
+          : result.state;
+    console.log(`  ${label}  ${result.path}`);
+  }
+  const skipped = count('skipped (symlink)') + count('skipped (outside)');
+  const gone = count('removed');
+  const stale = count('kept (no longer in the kit)');
+  console.log(
+    `Files: ${count('written')} ${dry ? 'would be written' : 'written'}, ${count('unchanged')} unchanged, ${count('kept')} kept (differs)` +
+      (count('kept') > 0 ? ' (use --force to overwrite)' : '') +
+      (gone > 0 ? `, ${gone} ${dry ? 'would be removed' : 'removed'} (no longer in the kit)` : '') +
+      (stale > 0
+        ? `, ${stale} no longer in the kit but edited, kept (remove ${stale === 1 ? 'it' : 'them'} yourself)`
+        : '') +
+      (skipped > 0
+        ? `, ${skipped} skipped (a symlink or outside the project, never written through)`
+        : '')
+  );
+  if (keptUnlocked.length > 0) {
+    console.log(
+      `${keptUnlocked.length} ${keptUnlocked.length === 1 ? 'file predates' : 'files predate'} the kit lock and ${keptUnlocked.length === 1 ? 'differs' : 'differ'} from the kit; review ${keptUnlocked.length === 1 ? 'it' : 'them'} and rerun with --force to take the kit's version`
+    );
+  }
+
+  // 5. Aliases and the Copilot file hooks in .archon/config.yaml. When kit add owns that file (it holds what the lock
+  // records), the lock records the merged text: else the next run reads the merge as the project's edit and keeps
+  // the file, so a newer kit's config.yaml would never land.
+  const configPath = join(project, PROJECT_CONFIG);
+  const ownedConfig =
+    !dry &&
+    nextLock[PROJECT_CONFIG] !== undefined &&
+    existsSync(configPath) &&
+    contentHash(readFileSync(configPath, 'utf-8')) === nextLock[PROJECT_CONFIG];
+  mergeProjectConfig(project, kit, dry);
+  if (ownedConfig && existsSync(configPath)) {
+    nextLock[PROJECT_CONFIG] = contentHash(readFileSync(configPath, 'utf-8'));
+  }
   if (!dry) {
     const files = Object.fromEntries(
       Object.entries(nextLock).sort(([a], [b]) => a.localeCompare(b))
@@ -672,27 +771,6 @@ export async function kitAddCommand(
       console.warn(`Warning: ${KIT_LOCK} is a symlink or lies outside the project, not written`);
     }
   }
-
-  const count = (state: FileState): number => results.filter(r => r.state === state).length;
-  for (const result of results.filter(r => r.state !== 'written' && r.state !== 'unchanged')) {
-    console.log(`  ${result.state === 'kept' ? 'kept (differs)' : result.state}  ${result.path}`);
-  }
-  const skipped = count('skipped (symlink)') + count('skipped (outside)');
-  console.log(
-    `Files: ${count('written')} ${dry ? 'would be written' : 'written'}, ${count('unchanged')} unchanged, ${count('kept')} kept (differs)` +
-      (count('kept') > 0 ? ' (use --force to overwrite)' : '') +
-      (skipped > 0
-        ? `, ${skipped} skipped (a symlink or outside the project, never written through)`
-        : '')
-  );
-  if (keptUnlocked.length > 0) {
-    console.log(
-      `${keptUnlocked.length} ${keptUnlocked.length === 1 ? 'file predates' : 'files predate'} the kit lock and ${keptUnlocked.length === 1 ? 'differs' : 'differ'} from the kit; review ${keptUnlocked.length === 1 ? 'it' : 'them'} and rerun with --force to take the kit's version`
-    );
-  }
-
-  // 5. Aliases and the Copilot file hooks in .archon/config.yaml.
-  mergeProjectConfig(project, kit, dry);
 
   // 6. Tools.
   const installTools = join(project, 'scripts', 'install-tools.sh');
@@ -824,8 +902,17 @@ export function enableFileHooks(existing: string): FileHooksResult {
   return { text: doc.toString(), state: 'added' };
 }
 
+/** A config.yaml text with the kit's aliases and the Copilot file hooks merged in, as mergeProjectConfig writes it. */
+export function mergedConfigText(text: string, kit: Kit): string {
+  const merged =
+    Object.keys(kit.manifest.aliases).length === 0
+      ? text
+      : mergeAliases(text, kit.manifest.aliases).text;
+  return enableFileHooks(merged).text;
+}
+
 function mergeProjectConfig(project: string, kit: Kit, dry: boolean): void {
-  const configPath = join(project, '.archon', 'config.yaml');
+  const configPath = join(project, PROJECT_CONFIG);
   try {
     const existing = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
     const merged =

@@ -192,6 +192,11 @@ for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
   printf '\n# install-copilot-kit: PATH\nexport PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"\n' >> "$rc"
   ok "added ~/.bun/bin and ~/.local/bin to PATH in $rc"
 done
+if [ -f "$ARCHON_DIR/scripts/update-copilot-kit.sh" ]; then
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$ARCHON_DIR/scripts/update-copilot-kit.sh" "$HOME/.local/bin/archon-kit-update"
+  ok "archon-kit-update updates this machine later (Archon, the kit, the tools)"
+fi
 
 # ---------------------------------------------------------------- 4. contract
 step "4/9 Contract repository"
@@ -281,6 +286,7 @@ Next:
   - Work in Copilot:  cd $BACKEND && copilot     then /agent to pick an agent, /mcp for the servers
   - Build something:  cd $BACKEND && archon workflow run build-feature-copilot "what to build"
   - Stop the MCP Inspectors: cd $BACKEND && bash scripts/web-uis.sh stop
+  - Update this machine later (Archon, the kit, the tools): archon-kit-update
   - If /mcp says the servers are "blocked by policy", that is your organization's registry;
     the agents fall back to the codegraph and contract CLIs by themselves.
 Log: $LOG
