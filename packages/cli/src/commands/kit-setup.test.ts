@@ -83,6 +83,7 @@ describe('kit setup', () => {
   let lines: string[];
   let stderr: string[];
   let kitAddOptions: Parameters<KitSetupDeps['kitAdd']>[1][];
+  let toolEnvs: NodeJS.ProcessEnv[];
   let failWhen: (call: Call) => boolean;
 
   beforeEach(() => {
@@ -106,6 +107,7 @@ describe('kit setup', () => {
     lines = [];
     stderr = [];
     kitAddOptions = [];
+    toolEnvs = [];
     failWhen = () => false;
   });
 
@@ -113,10 +115,14 @@ describe('kit setup', () => {
     await removeTempTree(root);
   });
 
-  /** A UI that records every line; `answers` script the text prompts in order. */
+  /**
+   * A UI that records every line; `answers` script the text prompts in order, `confirm` answers the last
+   * confirmation and `backlog` the Backlog.md question (absent: its default).
+   */
   function recordingUi(
     answers: (string | symbol)[] = [],
-    confirm: boolean | symbol = true
+    confirm: boolean | symbol = true,
+    backlog?: boolean | symbol
   ): SetupUi {
     const cancelled = Symbol('cancel');
     return {
@@ -134,7 +140,13 @@ describe('kit setup', () => {
         if (problem !== undefined) throw new Error(`validate refused ${answer}: ${problem}`);
         return answer;
       },
-      confirm: async () => (typeof confirm === 'symbol' ? cancelled : confirm),
+      confirm: async options => {
+        lines.push(`confirm ${options.message} [${options.initialValue ?? ''}]`);
+        const answer = options.message.includes('Backlog.md')
+          ? (backlog ?? options.initialValue ?? false)
+          : confirm;
+        return typeof answer === 'symbol' ? cancelled : answer;
+      },
       isCancel: (value): value is symbol => typeof value === 'symbol',
       cancel: message => void lines.push(`cancel ${message}`),
       spinner: () => ({
@@ -161,8 +173,9 @@ describe('kit setup', () => {
         return failWhen(call) ? 1 : 0;
       },
       loadKit: async () => makeKit(),
-      tools: async (dir, _kit, output) => {
+      tools: async (dir, _kit, output, toolsEnv) => {
         calls.push({ command: 'tools', args: [], cwd: dir });
+        toolEnvs.push(toolsEnv);
         output('tools installed\n');
         return 0;
       },
@@ -299,20 +312,17 @@ describe('kit setup', () => {
       expect(() => mergeMcpServer('{nope', 'codegraph', entry)).toThrow();
     });
 
-    it('saves only the three paths and the profiles, and reads them back', () => {
-      saveSetupDefaults(archonHome, {
+    it('saves only the three paths, the profiles and the Backlog.md answer, and reads them back', () => {
+      const saved = {
         backend: '/b',
         frontend: '',
         contract: '/c.yaml',
         profiles: ['core'],
-      });
-      expect(JSON.parse(readFileSync(setupDefaultsPath(archonHome), 'utf-8'))).toEqual({
-        backend: '/b',
-        frontend: '',
-        contract: '/c.yaml',
-        profiles: ['core'],
-      });
-      expect(readSetupDefaults(archonHome).profiles).toEqual(['core']);
+        backlog: true,
+      };
+      saveSetupDefaults(archonHome, saved);
+      expect(JSON.parse(readFileSync(setupDefaultsPath(archonHome), 'utf-8'))).toEqual(saved);
+      expect(readSetupDefaults(archonHome)).toEqual(saved);
       expect(readSetupDefaults(join(root, 'nowhere'))).toEqual({});
     });
   });
@@ -358,11 +368,13 @@ describe('kit setup', () => {
         profiles: ['core', 'java', 'java-spring', 'openapi-contract'],
         trust: true,
         noTools: true,
-        set: [`contract.spec_path=${contract}`],
+        set: [`contract.spec_path=${contract}`, 'backlog=false'],
       });
+      expect(toolEnvs[0]?.INSTALL_TOOLS_BACKLOG).toBe('0');
 
       const config = kitYaml();
       expect((config.contract as Record<string, unknown>).spec_path).toBe(contract);
+      expect(config.backlog).toBe(false);
       expect((config.codegraph as Record<string, unknown>).extra_projects).toEqual([frontend]);
       expect(readFileSync(join(backend, '.archon', 'kit.yaml'), 'utf-8')).toContain('# the spec');
 
@@ -383,13 +395,25 @@ describe('kit setup', () => {
       expect(out).toContain(logFile());
       expect(out).toContain('/login');
       expect(out).toContain('outro Setup done.');
+      expect(out).toContain('Backlog.md: off');
+      expect(out).toContain('ok Tools: installed (without Backlog.md)');
 
       expect(JSON.parse(readFileSync(setupDefaultsPath(archonHome), 'utf-8'))).toEqual({
         backend,
         frontend,
         contract,
         profiles: ['core', 'java', 'java-spring', 'openapi-contract'],
+        backlog: false,
       });
+    });
+
+    it('--backlog switches Backlog.md on: the tools env, kit.yaml, the summary and the saved answer', async () => {
+      expect(await kitSetupCommand(flags({ backlog: true, noWeb: true }), deps())).toBe(0);
+      expect(toolEnvs[0]?.INSTALL_TOOLS_BACKLOG).toBe('1');
+      expect(kitAddOptions[0]?.set).toContain('backlog=true');
+      expect(kitYaml().backlog).toBe(true);
+      expect(lines.join('\n')).toContain('Backlog.md: on');
+      expect(readSetupDefaults(archonHome).backlog).toBe(true);
     });
 
     it('skips the tools, the rtk hooks and the web views on --no-tools, --no-rtk and --no-web', async () => {
@@ -471,8 +495,9 @@ describe('kit setup', () => {
         frontend: '',
         contract,
         profiles: ['core'],
+        backlog: true,
       });
-      const ui = recordingUi(['~/code/backend', '~/code/frontend', '../openapi.yaml']);
+      const ui = recordingUi(['~/code/backend', '~/code/frontend', '../openapi.yaml'], true, false);
       const code = await kitSetupCommand(
         { noWeb: true },
         deps({ interactive: true, ui, cwd: join(root, 'home') })
@@ -484,13 +509,24 @@ describe('kit setup', () => {
       );
       expect(out).toContain('prompt Frontend repository (empty to skip) []');
       expect(out).toContain(`[${contract}]`);
+      expect(out).toContain('confirm Use Backlog.md for tickets? [true]');
       expect(readSetupDefaults(archonHome)).toEqual({
         backend,
         frontend,
         contract,
         profiles: ['core'],
+        backlog: false,
       });
+      expect(kitYaml().backlog).toBe(false);
       expect(kitAddOptions[0]?.profiles).toEqual(['core']);
+    });
+
+    it('asks about Backlog.md with No as the default when nothing was saved', async () => {
+      const ui = recordingUi([backend, '', contract]);
+      expect(await kitSetupCommand({ noWeb: true }, deps({ interactive: true, ui }))).toBe(0);
+      expect(lines.join('\n')).toContain('confirm Use Backlog.md for tickets? [false]');
+      expect(toolEnvs[0]?.INSTALL_TOOLS_BACKLOG).toBe('0');
+      expect(readSetupDefaults(archonHome).backlog).toBe(false);
     });
 
     it('rejects a frontend that is the backend while it is typed', async () => {
@@ -511,12 +547,18 @@ describe('kit setup', () => {
       expect(
         await kitSetupCommand(flags(), deps({ interactive: true, ui: recordingUi([], false) }))
       ).toBe(0);
+      expect(
+        await kitSetupCommand(
+          {},
+          deps({ interactive: true, ui: recordingUi([backend, '', contract], true, cancelled) })
+        )
+      ).toBe(0);
       expect(calls).toEqual([]);
       expect(existsSync(setupDefaultsPath(archonHome))).toBe(false);
       expect(
         existsSync(join(archonHome, 'logs')) ? readdirSync(join(archonHome, 'logs')) : []
       ).toEqual([]);
-      expect(lines.filter(line => line.startsWith('cancel'))).toHaveLength(2);
+      expect(lines.filter(line => line.startsWith('cancel'))).toHaveLength(3);
     });
 
     it('--yes skips the confirmation in a terminal', async () => {

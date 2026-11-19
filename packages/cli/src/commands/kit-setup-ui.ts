@@ -24,7 +24,7 @@ export interface SetupUi {
     initialValue?: string;
     validate: (value: string | undefined) => string | undefined;
   }): Promise<string | symbol | undefined>;
-  confirm(options: { message: string }): Promise<boolean | symbol>;
+  confirm(options: { message: string; initialValue?: boolean }): Promise<boolean | symbol>;
   isCancel(value: unknown): value is symbol;
   cancel(message: string): void;
   spinner(): SetupSpinner;

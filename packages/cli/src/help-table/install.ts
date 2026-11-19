@@ -37,6 +37,7 @@ const kitSetupFlags: FlagHelp[] = [
     spec: '--profile <a,b,c>',
     description: 'Kit profiles (default: last run, then core,java,java-spring,openapi-contract)',
   },
+  { spec: '--backlog', description: 'Use Backlog.md for tickets (absent: off)' },
   { spec: '--yes', description: 'Skip the confirmation' },
   { spec: '--no-tools', description: 'Skip the tool installer' },
   { spec: '--no-rtk', description: 'Skip the rtk hooks' },

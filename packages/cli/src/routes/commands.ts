@@ -593,6 +593,7 @@ async function runKitSetup(
         .split(',')
         .map(name => name.trim())
         .filter(Boolean),
+      backlog: values.backlog === true,
       yes: values.yes === true,
       noTools: values['no-tools'] === true,
       noRtk: values['no-rtk'] === true,

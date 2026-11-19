@@ -1,7 +1,8 @@
 /**
  * `archon kit setup` - the guided install of the Copilot kit.
  *
- * A terminal dialog asks for the backend repository, the frontend repository (optional) and the API contract file,
+ * A terminal dialog asks for the backend repository, the frontend repository (optional), the API contract file and
+ * whether to use Backlog.md (default no),
  * then installs the tools, puts the kit into the backend, points it at the contract, indexes both repositories for
  * CodeGraph, gives the frontend the codegraph MCP server, adds the rtk hooks, checks every MCP server and starts the
  * web views. Flags answer the dialog for a run without a terminal. Each step's output goes to a log file under the
@@ -55,15 +56,16 @@ const WEB_UIS = 'scripts/web-uis.sh';
 
 export const KIT_SETUP_USAGE = `Usage: archon kit setup [--backend <path> --contract <file>] [options]
 
-Asks for the backend repository, the frontend repository and the API contract file, then installs the
-tools, the kit, the contract MCP server, the CodeGraph indexes, the rtk hooks and the web views.
-Without a terminal, --backend and --contract are required.
+Asks for the backend repository, the frontend repository, the API contract file and whether to use
+Backlog.md, then installs the tools, the kit, the contract MCP server, the CodeGraph indexes, the rtk
+hooks and the web views. Without a terminal, --backend and --contract are required.
 
 Options:
   --backend <path>     Backend git repository (gets the kit)
   --frontend <path>    Frontend git repository (gets the codegraph MCP server; empty or absent skips it)
   --contract <file>    OpenAPI contract (.yaml, .yml or .json with a top-level openapi key)
   --profile <a,b,c>    Kit profiles (default: the last run's, else ${DEFAULT_SETUP_PROFILES.join(',')})
+  --backlog            Use Backlog.md for tickets (absent: off; kit.yaml gets backlog: false)
   --yes                Skip the confirmation
   --no-tools           Skip the tool installer
   --no-rtk             Skip the rtk hooks
@@ -134,6 +136,8 @@ export interface SetupDefaults {
   frontend?: string;
   contract?: string;
   profiles?: string[];
+  /** Whether the last run used Backlog.md. */
+  backlog?: boolean;
 }
 
 export function setupDefaultsPath(archonHome: string): string {
@@ -154,19 +158,20 @@ export function readSetupDefaults(archonHome: string): SetupDefaults {
       profiles: Array.isArray(data.profiles)
         ? data.profiles.filter((p): p is string => typeof p === 'string')
         : undefined,
+      backlog: typeof data.backlog === 'boolean' ? data.backlog : undefined,
     };
   } catch {
     return {};
   }
 }
 
-/** Only the three paths and the profiles: the file never holds anything else. */
+/** Only the three paths, the profiles and the Backlog.md answer: the file never holds anything else. */
 export function saveSetupDefaults(archonHome: string, answers: Required<SetupDefaults>): void {
   mkdirSync(archonHome, { recursive: true });
-  const { backend, frontend, contract, profiles } = answers;
+  const { backend, frontend, contract, profiles, backlog } = answers;
   writeFileSync(
     setupDefaultsPath(archonHome),
-    `${JSON.stringify({ backend, frontend, contract, profiles }, null, 2)}\n`
+    `${JSON.stringify({ backend, frontend, contract, profiles, backlog }, null, 2)}\n`
   );
 }
 
@@ -271,6 +276,8 @@ export interface KitSetupOptions {
   frontend?: string;
   contract?: string;
   profiles?: string[];
+  /** `--backlog`: use Backlog.md; absent, it is off. */
+  backlog?: boolean;
   yes?: boolean;
   noRtk?: boolean;
   noWeb?: boolean;
@@ -285,8 +292,8 @@ export interface KitSetupDeps {
   ui: SetupUi;
   run: Runner;
   loadKit: () => Promise<Kit>;
-  /** The tool installer (kit tools) for the backend. */
-  tools: (backend: string, kit: Kit, output: OutputSink) => Promise<number>;
+  /** The tool installer (kit tools) for the backend, with its environment. */
+  tools: (backend: string, kit: Kit, output: OutputSink, env: NodeJS.ProcessEnv) => Promise<number>;
   kitAdd: typeof kitAddCommand;
   checkMcp: (dir: string) => Promise<DoctorCheck[]>;
   which: (command: string) => boolean;
@@ -304,7 +311,8 @@ export function defaultSetupDeps(cwd: string, env: NodeJS.ProcessEnv = process.e
     ui: interactive ? clackUi : plainUi(),
     run: spawnRunner,
     loadKit: async () => (await import('../bundled-kit')).BUNDLED_KIT,
-    tools: (backend, kit, output) => kitToolsCommand(backend, { kit, output }),
+    tools: (backend, kit, output, toolsEnv) =>
+      kitToolsCommand(backend, { kit, output, env: toolsEnv }),
     kitAdd: kitAddCommand,
     checkMcp: dir => checkMcpServers(dir),
     which: command => onPath(command, env),
@@ -349,6 +357,7 @@ interface Answers {
   backend: string;
   frontend: string | null;
   contract: string;
+  backlog: boolean;
 }
 
 /** The dialog: each answer is checked as it is typed; a cancel resolves null. */
@@ -388,11 +397,17 @@ async function askAnswers(
     validate: value => errorOf(checkContractPath(value, cwd, home)),
   });
   if (ui.isCancel(contract)) return null;
+  const backlog = await ui.confirm({
+    message: 'Use Backlog.md for tickets?',
+    initialValue: options.backlog ?? saved.backlog ?? false,
+  });
+  if (ui.isCancel(backlog)) return null;
   const frontendText = String(frontend ?? '').trim();
   return {
     backend: backendPath,
     frontend: frontendText === '' ? null : expandPath(frontendText, cwd, home),
     contract: expandPath(String(contract), cwd, home),
+    backlog: backlog === true,
   };
 }
 
@@ -409,7 +424,12 @@ function flagAnswers(options: KitSetupOptions, cwd: string, home: string): Answe
   }
   const contract = checkContractPath(options.contract, cwd, home);
   if (!contract.ok) return `--contract: ${contract.error}`;
-  return { backend: backend.path, frontend, contract: contract.path };
+  return {
+    backend: backend.path,
+    frontend,
+    contract: contract.path,
+    backlog: options.backlog === true,
+  };
 }
 
 function pickProfiles(options: KitSetupOptions, saved: SetupDefaults): string[] {
@@ -487,6 +507,7 @@ function summary(options: KitSetupOptions, answers: Answers, profiles: string[])
     `Frontend:  ${answers.frontend ?? '(skipped)'}`,
     `Contract:  ${answers.contract}`,
     `Profiles:  ${profiles.join(', ')}`,
+    `Backlog.md: ${answers.backlog ? 'on' : 'off'}`,
     '',
     `Steps: ${steps.join(', ')}`,
   ].join('\n');
@@ -525,7 +546,7 @@ function startRun(options: KitSetupOptions, deps: KitSetupDeps, prepared: Prepar
   const logPath = join(logDir, `kit-setup-${stamp(deps.now())}.log`);
   const log: OutputSink = text => appendFileSync(logPath, text);
   log(
-    `archon kit setup\nbackend ${answers.backend}\nfrontend ${answers.frontend ?? '-'}\ncontract ${answers.contract}\n`
+    `archon kit setup\nbackend ${answers.backend}\nfrontend ${answers.frontend ?? '-'}\ncontract ${answers.contract}\nbacklog ${answers.backlog}\n`
   );
   const repos: [string, string][] = [['backend', answers.backend]];
   if (answers.frontend !== null) repos.push(['frontend', answers.frontend]);
@@ -588,13 +609,19 @@ async function eachRepo(run: SetupRun, body: (dir: string) => Promise<void>): Pr
 async function toolsStep(run: SetupRun): Promise<void> {
   if (run.options.noTools) return skip(run, 'Tools', '--no-tools');
   await step(run, 'Tools', async () => {
-    const code = await run.deps.tools(run.backend, run.kit, run.log);
+    const env = { ...run.deps.env, INSTALL_TOOLS_BACKLOG: run.backlog ? '1' : '0' };
+    const code = await run.deps.tools(run.backend, run.kit, run.log, env);
     if (code !== 0) throw new Error(`the tool installer exited with ${code}`);
-    return 'installed';
+    return run.backlog ? 'installed' : 'installed (without Backlog.md)';
   });
 }
 
-/** The kit into the backend; the contract path goes in with it, so its post-install steps see it. */
+/** The kit.yaml keys setup owns: the contract path and whether Backlog.md is on. */
+function kitYamlSets(run: SetupRun): string[] {
+  return [`contract.spec_path=${run.contract}`, `backlog=${run.backlog}`];
+}
+
+/** The kit into the backend; the kit.yaml keys go in with it, so its post-install steps see them. */
 async function kitStep(run: SetupRun): Promise<void> {
   await step(run, 'Kit', async () => {
     const options = {
@@ -603,7 +630,7 @@ async function kitStep(run: SetupRun): Promise<void> {
       noTools: true,
       env: run.deps.env,
       output: run.log,
-      set: [`contract.spec_path=${run.contract}`],
+      set: kitYamlSets(run),
     };
     const code = await withConsoleTo(run.log, () => run.deps.kitAdd(run.backend, options, run.kit));
     if (code !== 0) throw new Error(`kit add exited with ${code}`);
@@ -614,10 +641,7 @@ async function kitStep(run: SetupRun): Promise<void> {
 async function contractStep(run: SetupRun): Promise<void> {
   await step(run, 'Contract', async () => {
     const { backend, contract, kit, profiles } = run;
-    writeKitYaml(
-      backend,
-      applySetOverrides(kitYamlText(backend, kit, profiles), [`contract.spec_path=${contract}`])
-    );
+    writeKitYaml(backend, applySetOverrides(kitYamlText(backend, kit, profiles), kitYamlSets(run)));
     const script = CONTRACT_SETUP_SCRIPTS.find(path => existsSync(join(backend, path)));
     if (script === undefined) {
       if (!resolveProfiles(kit, profiles).includes('openapi-contract')) {
