@@ -96,6 +96,12 @@ check "2 a changed step with an entry that does not name ci.yml fails" "$([ "$rc
 new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml
 printf -- '- ci.yml: the groma step is stricter\n' >> docs/memory.md; commit; run main
 check "2 a bullet without a dated heading is no entry" "$([ "$rc" -eq 1 ] && said 'adds no decision entry'; echo $?)"
+new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml
+printf '\n## Decisions\n\n### 2026-10-21 — the groma step is stricter\n- ci.yml: the groma step\n' >> docs/memory.md; commit; run main
+check "2 a ### entry under a ## Decisions section counts" "$([ "$rc" -eq 0 ] && said 'gate-change-check: ok'; echo $?)"
+new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml
+printf '\n#### 2026-10-21 — too deep\n- ci.yml: the groma step\n' >> docs/memory.md; commit; run main
+check "2 a #### heading is no entry" "$([ "$rc" -eq 1 ] && said 'adds no decision entry'; echo $?)"
 
 # 3. ci-inputs.yml.
 new_repo; sed -i 's/# the manifest/# the input manifest/' .github/ci-inputs.yml; commit; run main
