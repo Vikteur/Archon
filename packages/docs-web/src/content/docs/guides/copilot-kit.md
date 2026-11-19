@@ -19,25 +19,27 @@ separate product. Its files live in the Archon fork (`Vikteur/Archon`, folder `k
 
 ## Install with `archon kit setup`
 
-`archon kit setup` is the main way to install the kit. It asks three questions in the
-terminal and checks each answer as you type it:
+`archon kit setup` is the main way to install the kit. It asks four questions in the
+terminal and checks each path as you type it:
 
 1. **Backend repository**: a git checkout. The kit goes here.
 2. **Frontend repository**: a git checkout, or empty to skip it.
 3. **API contract file**: an OpenAPI file (`.yaml`, `.yml` or `.json`) with a top-level
    `openapi` key.
+4. **Use Backlog.md for tickets?**: yes or no. The default is no.
 
 A path may start with `~`. A relative path is read against the current folder. On a
 rerun, the dialog offers the last answers. They are kept in `~/.archon/kit-setup.json`
-(the three paths and the profiles, nothing else).
+(the three paths, the profiles and the Backlog.md answer, nothing else). The summary
+before the confirmation shows `Backlog.md: on` or `off`.
 
 After you confirm the summary, it runs these steps, each with a spinner:
 
 | Step | What it does |
 |------|--------------|
-| Tools | Runs the kit's tool installer for the backend (`archon kit tools`). |
+| Tools | Runs the kit's tool installer for the backend (`archon kit tools`), with `INSTALL_TOOLS_BACKLOG=0` when Backlog.md is off, so `backlog` is not installed. |
 | Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract` unless you pick others. |
-| Contract | Sets `contract.spec_path` in the backend's `.archon/kit.yaml` to the absolute contract path, then runs `.archon/scripts/contract-mcp-setup.sh`. |
+| Contract | Sets `contract.spec_path` in the backend's `.archon/kit.yaml` to the absolute contract path and `backlog` to `true` or `false`, then runs `.archon/scripts/contract-mcp-setup.sh`. |
 | CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
 | Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
 | rtk hooks | Runs `rtk init --copilot` in each repository, when `rtk` is on `PATH`. It never installs the global hooks. |
@@ -66,6 +68,7 @@ archon kit setup --backend ~/code/backend --frontend ~/code/frontend \
 | `--frontend <path>` | The frontend repository; leave it out to skip the frontend |
 | `--contract <file>` | The OpenAPI contract file |
 | `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--backlog` | Use Backlog.md for tickets; leave it out for off (`backlog: false` in `kit.yaml`) |
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
 | `--no-rtk` | Skip the rtk hooks |
@@ -76,6 +79,8 @@ prints its usage and exits 2.
 
 Both installers, `scripts/install.sh` and `scripts/install-local.sh`, start
 `archon kit setup` at the end when they run in a terminal. Pass `--no-setup` to skip it.
+Without setup they run `archon kit tools` instead, which installs `backlog` as before. Pass
+`--no-backlog` to leave it out there too (`install.sh` also reads `ARCHON_NO_BACKLOG=1`).
 
 ## What the kit installs
 
@@ -210,7 +215,9 @@ this order:
 
 1. **Tools.** `scripts/install-tools.sh` checks and installs git, gh, node, jq, yq, java,
    docker, copilot, archon, backlog, groma and codegraph. Pass `--no-tools` to skip it.
-   `archon kit tools` runs the same script on its own.
+   `archon kit tools` runs the same script on its own. It leaves `backlog` out when
+   `backlog: false` is in `.archon/kit.yaml` (or the kit defaults), or when you run
+   `archon kit tools --no-backlog` (`INSTALL_TOOLS_BACKLOG=0`).
 2. **Code index.** `codegraph-setup.sh` builds the CodeGraph index of the project.
 3. **Contract MCP.** `npm ci` installs the contract server. Then `contract-mcp-setup.sh`
    finds the contract. A contract in your own tree at `contract.spec_path` is used as it
@@ -266,7 +273,8 @@ trust.
 
 `archon kit doctor [path]` reports these, one line each:
 
-- Tools and their versions, as `scripts/install-tools.sh --check` sees them.
+- Tools and their versions, as `scripts/install-tools.sh --check` sees them. With
+  `backlog: false` in `kit.yaml`, `backlog` is reported as skipped (off), not as missing.
 - Copilot login.
 - Folder trust in `~/.copilot/config.json`.
 - Each MCP server in `.github/mcp.json`, by a `tools/list` call. A server that does not

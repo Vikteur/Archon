@@ -135,9 +135,11 @@ prompt guidance. It is also installed automatically during
 
 The guided install of the bundled GitHub Copilot kit, and the main way to install it. It
 asks for the backend repository (a git checkout), the frontend repository (optional) and
-the OpenAPI contract file, and checks each answer as it is typed. After a confirmation it
-installs the tools, installs the kit into the backend (`kit add --trust`), sets
-`contract.spec_path` to the absolute contract path and runs the contract MCP setup, builds
+the OpenAPI contract file, and checks each answer as it is typed. Then it asks whether to
+use Backlog.md for tickets (default no). After a confirmation it installs the tools
+(without `backlog` when Backlog.md is off), installs the kit into the backend
+(`kit add --trust`), sets `contract.spec_path` to the absolute contract path and `backlog`
+to `true` or `false` in `kit.yaml`, runs the contract MCP setup, builds
 the CodeGraph index of both repositories, gives the frontend the codegraph MCP server,
 folder trust and a `codegraph.extra_projects` entry in the backend's `kit.yaml`, runs
 `rtk init --copilot` in each repository, checks every MCP server and starts the web views.
@@ -157,13 +159,14 @@ archon kit setup --backend ~/code/backend --contract ~/code/contract/dist/openap
 | `--frontend <path>` | Frontend git repository; leave it out to skip the frontend |
 | `--contract <file>` | OpenAPI contract: `.yaml`, `.yml` or `.json` with a top-level `openapi` key |
 | `--profile a,b,c` | Kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--backlog` | Use Backlog.md for tickets (absent: off, `backlog: false` in `kit.yaml`) |
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
 | `--no-rtk` | Skip the rtk hooks |
 | `--no-web` | Do not start the web views |
 
-The answers are saved in `<archon home>/kit-setup.json` (the three paths and the
-profiles). Each step's output goes to `<archon home>/logs/kit-setup-<time>.log`; a failed
+The answers are saved in `<archon home>/kit-setup.json` (the three paths, the
+profiles and the Backlog.md answer). Each step's output goes to `<archon home>/logs/kit-setup-<time>.log`; a failed
 step names that log, and the later steps still run. Without a terminal, `--backend` and
 `--contract` are required.
 
@@ -207,12 +210,13 @@ reported as `kept (differs)` unless `--force` is given. Then it runs
 | `--trust` | Add the project to `trustedFolders` in `$COPILOT_HOME/config.json` (default `~/.copilot`) |
 | `--user-hooks` | Write `$COPILOT_HOME/hooks/archon-kit-run-guard.json` so the run guard loads in untrusted folders |
 
-`kit tools [path] [--check]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code. In a folder without that script it runs the kit's bundled installer and tool list from a temp folder instead, which switches on no git hooks. `add` and `doctor` reuse it.
+`kit tools [path] [--check] [--no-backlog]` runs `bash scripts/install-tools.sh` (with `--check` to only verify) in the project, streams its output and exits with its code. `--no-backlog` runs it with `INSTALL_TOOLS_BACKLOG=0`, so `backlog` is left out; without it the script reads `backlog:` from `.archon/kit.yaml`, then the kit defaults, and installs it unless that says `false`. In a folder without that script it runs the kit's bundled installer and tool list from a temp folder instead, which switches on no git hooks. `add` and `doctor` reuse it.
 
 `@@KIT_PROJECT_DIR@@` is built in: it renders as the absolute (real) project path and is never read from `kit.yaml`.
 
 `doctor` exits non-zero when a required check fails. It runs `scripts/install-tools.sh --check`
-when the project has one, checks Copilot auth (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or a logged-in
+when the project has one (otherwise it checks the tools itself, and reports `backlog` as
+skipped when `kit.yaml` says `backlog: false`), checks Copilot auth (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or a logged-in
 user in `config.json`) and folder trust, starts each server in `.github/mcp.json` and runs MCP
 `initialize` and `tools/list` (20 s limit), checks that `.github/hooks/kit.json` scripts exist,
 and compares installed files with the kit's checksums.
