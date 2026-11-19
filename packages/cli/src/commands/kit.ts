@@ -46,9 +46,14 @@ export interface KitAddOptions {
   /** `kit tools --check`. */
   check?: boolean;
   env?: NodeJS.ProcessEnv;
+  /** Where the tools and post-install commands write their output; unset streams it to the terminal. */
+  output?: OutputSink;
 }
 
-const KIT_YAML = join('.archon', 'kit.yaml');
+/** Receives a child command's output, stdout and stderr interleaved as they come. */
+export type OutputSink = (text: string) => void;
+
+export const KIT_YAML = join('.archon', 'kit.yaml');
 /**
  * The kit defaults, beside kit.yaml: the project's scripts (kit-config.sh, kit-config.js) read a key kit.yaml
  * leaves out from here at runtime, so it ships as a lock-tracked kit file of its own.
@@ -374,7 +379,7 @@ export function winningFiles(
 // Process helpers
 // ---------------------------------------------------------------------------
 
-function isGitRepo(path: string): boolean {
+export function isGitRepo(path: string): boolean {
   const result = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
     cwd: path,
     encoding: 'utf-8',
@@ -382,17 +387,23 @@ function isGitRepo(path: string): boolean {
   return result.status === 0 && result.stdout.trim() === 'true';
 }
 
-function streamCommand(
+/** Run `bash -c command`: its output streams to the terminal, or to `output` when one is given (stdin then closed). */
+export function streamCommand(
   command: string,
   cwd: string,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  output?: OutputSink
 ): Promise<number> {
   return new Promise(resolveExit => {
     const child = spawn('bash', ['-c', command], {
       cwd,
       env,
-      stdio: 'inherit',
+      stdio: output ? ['ignore', 'pipe', 'pipe'] : 'inherit',
     });
+    if (output) {
+      child.stdout?.on('data', chunk => output(String(chunk)));
+      child.stderr?.on('data', chunk => output(String(chunk)));
+    }
     child.on('error', () => resolveExit(127));
     child.on('close', code => resolveExit(code ?? 1));
   });
@@ -419,19 +430,20 @@ export function hasProjectInstaller(targetPath: string): boolean {
 export async function kitToolsCommand(
   targetPath: string,
   check = false,
-  kit?: Kit
+  kit?: Kit,
+  output?: OutputSink
 ): Promise<number> {
   const project = resolve(targetPath);
   const flag = check ? ' --check' : '';
   if (existsSync(join(project, INSTALL_TOOLS))) {
-    return await streamCommand(`bash ${INSTALL_TOOLS}${flag}`, project);
+    return await streamCommand(`bash ${INSTALL_TOOLS}${flag}`, project, process.env, output);
   }
   const installer = kit?.files[BUNDLED_INSTALLER];
   const toolsConf = kit?.files[BUNDLED_TOOLS_CONF];
   if (installer === undefined || toolsConf === undefined) {
-    console.error(
-      `Error: ${join(project, INSTALL_TOOLS)} not found. Install the kit first: archon kit add ${project}`
-    );
+    const message = `Error: ${join(project, INSTALL_TOOLS)} not found. Install the kit first: archon kit add ${project}`;
+    if (output) output(`${message}\n`);
+    else console.error(message);
     return 1;
   }
   const temp = mkdtempSync(join(tmpdir(), 'archon-kit-tools-'));
@@ -439,11 +451,15 @@ export async function kitToolsCommand(
     mkdirSync(join(temp, 'scripts'));
     writeFileSync(join(temp, INSTALL_TOOLS), installer);
     writeFileSync(join(temp, 'scripts', 'tools.conf'), toolsConf);
-    console.log(`No ${INSTALL_TOOLS} in ${project}; running the kit's bundled tool installer`);
-    return await streamCommand(`bash ${shellQuote(join(temp, INSTALL_TOOLS))}${flag}`, project, {
-      ...process.env,
-      PROJECT_DIR: temp,
-    });
+    const notice = `No ${INSTALL_TOOLS} in ${project}; running the kit's bundled tool installer`;
+    if (output) output(`${notice}\n`);
+    else console.log(notice);
+    return await streamCommand(
+      `bash ${shellQuote(join(temp, INSTALL_TOOLS))}${flag}`,
+      project,
+      { ...process.env, PROJECT_DIR: temp },
+      output
+    );
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
@@ -669,7 +685,7 @@ export async function kitAddCommand(
   const installTools = join(project, 'scripts', 'install-tools.sh');
   if (!options.noTools && !dry && existsSync(installTools)) {
     console.log('\nRunning scripts/install-tools.sh');
-    const code = await kitToolsCommand(project);
+    const code = await kitToolsCommand(project, false, undefined, options.output);
     if (code !== 0) console.warn(`Warning: scripts/install-tools.sh exited with ${code}`);
   }
 
@@ -678,7 +694,7 @@ export async function kitAddCommand(
   if (!options.noPostInstall && !dry) {
     for (const step of kit.manifest.postInstall.filter(s => profiles.includes(s.profile))) {
       console.log(`\nRunning ${step.run}`);
-      const code = await streamCommand(step.run, project);
+      const code = await streamCommand(step.run, project, process.env, options.output);
       if (code !== 0) {
         if (step.optional) console.warn(`Warning: optional step failed (${code}): ${step.run}`);
         else {
@@ -893,7 +909,7 @@ function versionOf(command: string, args: string[]): string | null {
   return (result.stdout || result.stderr).trim().split('\n')[0] ?? '';
 }
 
-function onPath(command: string, env: NodeJS.ProcessEnv): boolean {
+export function onPath(command: string, env: NodeJS.ProcessEnv): boolean {
   for (const dir of (env.PATH ?? '').split(delimiter)) {
     if (dir && existsSync(join(dir, command))) return true;
   }
