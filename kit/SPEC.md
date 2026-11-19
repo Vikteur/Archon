@@ -1,7 +1,7 @@
 # Copilot kit: layout and contract
 
 This file is the contract shared by every piece of kit work:
-- the generator `scripts/kit-sync.ts`;
+- the generator `scripts/kit-sync.ts` (its copy lists and rewrites in `scripts/kit-sync-lists.ts`, the conversions in `scripts/kit-sync-convert.ts`, source and overlay reading in `scripts/kit-sync-source.ts`);
 - the embedder `scripts/generate-bundled-kit.ts`;
 - the CLI commands `archon kit add`, `archon kit doctor` and `archon kit tools`;
 - the hand-written overlays.
@@ -148,7 +148,7 @@ contract:
 | `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. A rule without `paths:` (general) gets `applyTo: "**"`. |
 | MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/portal-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
 | `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | Copied when the source tracks it; otherwise generated with `.archon/scripts/copilot-workflow.js`. Both workflows ship. |
-| Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync.ts`. `.github/workflows/ci.yml`, `.github/ci-inputs.yml` and `ci-workflow-check.sh` are Quarkus-built and go to `java-quarkus`. A scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject` goes to `java-quarkus`, every other one to `java`. |
+| Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync-lists.ts`. `.github/workflows/ci.yml`, `.github/ci-inputs.yml` and `ci-workflow-check.sh` are Quarkus-built and go to `java-quarkus`. A scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject` goes to `java-quarkus`, every other one to `java`. |
 | Every shipped text file | — | After conversion: `.claude/skills` (either slash) becomes `.github/skills`, `run-wedding-portal` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and both build-feature workflows) and the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime). |
 
 ## What never ships
