@@ -45,7 +45,8 @@
     ],
     [
       "src/commands/kit.test.ts",
-      "src/routes/kit.test.ts"
+      "src/routes/kit.test.ts",
+      "src/commands/kit-setup.test.ts"
     ],
     [
       "src/commands/image-chat-plugin.test.ts"
