@@ -1,0 +1,36 @@
+---
+name: domain-to-dto-mapper-tests
+description: Parameterized mapper tests fed by object-mothers, asserting field by field. Use when testing a layer mapper.
+---
+# Domain-to-DTO mapper tests
+
+## When to use
+Verifying a mapper that converts a domain object to a transport DTO (or back): every field carried,
+nulls/optionals/collections handled, enums translated.
+
+## How
+- **Scaffold the base case first.** If the code map has a `## Scaffold` section, render each listed
+  template with the scaffold script, filling its variables from the ticket and plan. Then hand-write only
+  what that section says the template leaves out (edge cases, extra rules, imports).
+- Drive inputs from object-mothers ([[object-mother-builders]]); assert the DTO **field by field**, not
+  by a serialized blob, so a wrong/dropped field is obvious.
+- Use `@ParameterizedTest` for the variants (empty collections, absent optionals, each enum value).
+- Cover the round-trip if a reverse mapper exists (domain → DTO → domain is stable).
+- Keep the mapper pure (no I/O); the test needs no application context.
+
+## Pattern signals (discovery cues)
+Test classes named `*DomainToDTOMapperTest` / `*MapperTest`; `@ParameterizedTest` + `@MethodSource`;
+inputs from `*Mother`; per-field `assertThat(dto.getX()).isEqualTo(...)`.
+
+## Project specifics → see docs
+- Code map (mapper exemplars, parameterization style) → `docs/code-maps/domain-to-dto-mapper-tests.md` *(per-repo map; if marked `kind: worked-example`, follow its structure and map its pseudonymized names to this repo's own)*
+
+## Guardrails (what NOT to do)
+- Don't hand-write what a scaffold template generates, and don't patch around a wrong template in its output — fix the template.
+- Don't assert on a whole serialized JSON string — assert fields.
+- Don't skip the null/empty/enum edge cases — that's where mappers break.
+- Don't boot the application (`@SpringBootTest`) for a pure mapper test.
+
+## Definition of done
+- [ ] Base case rendered from the code map's scaffold templates; only the edge cases are hand-written.
+- [ ] Field-by-field assertions, parameterized edge cases, mother-fed inputs, no application context; reverse round-trip covered if applicable.
