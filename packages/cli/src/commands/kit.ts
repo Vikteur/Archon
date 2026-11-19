@@ -882,7 +882,8 @@ export function kitListCommand(cwd: string, kit: Kit): number {
 // ---------------------------------------------------------------------------
 
 export interface DoctorCheck {
-  status: 'ok' | 'fail' | 'warn';
+  /** `skip`: switched off in the project's config, so not checked. */
+  status: 'ok' | 'fail' | 'warn' | 'skip';
   name: string;
   detail: string;
 }
@@ -927,6 +928,26 @@ export function onPath(command: string, env: NodeJS.ProcessEnv): boolean {
     if (dir && existsSync(join(dir, command))) return true;
   }
   return false;
+}
+
+/**
+ * Where the project switches Backlog.md off (`backlog: false` in kit.yaml, else in the kit defaults beside it),
+ * or null when it is on: absent, it stays on, as scripts/install-tools.sh reads it.
+ */
+export function backlogSwitchedOff(projectPath: string): string | null {
+  for (const file of [KIT_YAML, KIT_DEFAULTS]) {
+    const path = join(projectPath, file);
+    if (!existsSync(path)) continue;
+    let value: unknown;
+    try {
+      value = (parseYaml(readFileSync(path, 'utf-8')) as Record<string, unknown> | null)?.backlog;
+    } catch {
+      continue;
+    }
+    if (value === false) return file;
+    if (value === true) return null;
+  }
+  return null;
 }
 
 export function checkTools(
@@ -988,7 +1009,14 @@ export function checkTools(
   check('gh', true, ['--version']);
   check('copilot', true, ['--version']);
   check('codegraph', true, ['--version']);
-  check('backlog', true, ['--version']);
+  const backlogOff = backlogSwitchedOff(projectPath);
+  if (backlogOff === null) check('backlog', true, ['--version']);
+  else
+    checks.push({
+      status: 'skip',
+      name: 'backlog',
+      detail: `off (backlog: false in ${backlogOff})`,
+    });
   check('groma', true, ['--version']);
   check('java', false, ['-version']);
   check('docker', false, ['--version']);
@@ -1228,7 +1256,7 @@ export async function kitDoctorCommand(
     }
   }
 
-  const mark = { ok: '✓', fail: '✗', warn: '!' } as const;
+  const mark = { ok: '✓', fail: '✗', warn: '!', skip: '-' } as const;
   for (const c of checks) console.log(`${mark[c.status]} ${c.name}: ${c.detail}`);
   const failed = checks.filter(c => c.status === 'fail').length;
   console.log(

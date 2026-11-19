@@ -19,6 +19,8 @@ import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { removeTempTree } from '@archon/paths/test-utils';
 import {
+  backlogSwitchedOff,
+  checkTools,
   kitCommand,
   kitToolsCommand,
   applySetOverrides,
@@ -37,6 +39,7 @@ import {
   renderTemplate,
   resolveProfiles,
   trustFolder,
+  type DoctorCheck,
   type Kit,
 } from './kit';
 
@@ -601,6 +604,22 @@ describe('kit', () => {
   });
 
   describe('doctor pieces', () => {
+    it('checks backlog unless kit.yaml (or the kit defaults) switches it off', () => {
+      const backlog = (): DoctorCheck | undefined =>
+        checkTools(project, { PATH: '' }).find(c => c.name === 'backlog');
+      expect(backlog()).toMatchObject({ status: 'fail', detail: 'not found on PATH' });
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.defaults.yaml'), 'backlog: false\n');
+      expect(backlogSwitchedOff(project)).toBe('.archon/kit.defaults.yaml');
+      writeFileSync(join(project, '.archon/kit.yaml'), 'backlog: true\n');
+      expect(backlog()?.status).toBe('fail');
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\nbacklog: false\n');
+      expect(backlog()).toEqual({
+        status: 'skip',
+        name: 'backlog',
+        detail: 'off (backlog: false in .archon/kit.yaml)',
+      });
+    });
     it('probes a stdio MCP server and counts tools; reports a broken one', async () => {
       mkdirSync(join(project, '.github'), { recursive: true });
       const server = resolve(dirname(import.meta.path), 'fixtures/kit-mcp-server.js');
