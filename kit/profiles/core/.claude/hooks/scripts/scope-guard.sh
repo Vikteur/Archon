@@ -19,6 +19,15 @@
 #                heredoc form used for commit/PR messages. Quotes and \ escapes are read as bash
 #                reads them, so single-quoted text is free and an escaped quote opens no string.
 #
+# The project's additions: .claude/hooks/agent-scopes.local.json, beside the kit's agent-scopes.json, may only ADD
+# command prefixes to agents agent-scopes.json already fences: {"agents": {"<agent>": {"commandAllowlist": [...]}}}
+# (and a "_comment"). Its entries are added to the agent's list; nothing it holds removes or replaces one, so a kit
+# update that adds an entry still reaches the agent. Anything else is refused: another key (allowedFilePaths,
+# readPaths, hubRoot, a new top-level key), an agent agent-scopes.json does not fence, an entry that is empty, holds a
+# shell operator, or starts with a wrapper or a bare interpreter that runs any code (env, xargs, sudo, bash -c,
+# node -e, ...), or a file that is not JSON. A refused file denies every call of a fenced agent with the reason until it
+# is fixed (fail closed): a typo never widens a fence, and it never passes unseen. No agent may write it (below).
+#
 # Who is fenced: the `agent_type` field Claude Code puts on every event fired inside a subagent (or a
 # session started with `--agent`). No agent_type, or an agent with no entry → not this hook's
 # business (exit 0, no output — normal permission flow applies).
@@ -41,12 +50,11 @@ here="$(cd "$(dirname "$0")" && pwd)"
   hook_deny_json() { jq -cn --arg r "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'; }
 }
 policy="${CLAUDE_SCOPE_POLICY:-$here/../agent-scopes.json}"
-# A local policy may narrow the fences: agent-scopes.local.json (gitignored) wins while it exists. Its one writer,
-# agent-feature's test-ban.sh, was removed 2026-10-20 (owner decision D19); developer-fence.test.sh keeps it tested.
 policy_rel=".claude/hooks/agent-scopes.json"
-if [ -z "${CLAUDE_SCOPE_POLICY:-}" ] && [ -f "$here/../agent-scopes.local.json" ]; then
-  policy="$here/../agent-scopes.local.json"; policy_rel=".claude/hooks/agent-scopes.local.json"
-fi
+# The project's additions (see the header). A test that names its policy names its additions too (CLAUDE_SCOPE_LOCAL),
+# so the project's own file never changes a suite's verdict.
+if [ -n "${CLAUDE_SCOPE_POLICY:-}" ]; then local_policy="${CLAUDE_SCOPE_LOCAL:-}"; else local_policy="$here/../agent-scopes.local.json"; fi
+[ -n "$local_policy" ] && [ -f "$local_policy" ] || local_policy=/dev/null
 
 decided=0
 armed=0
@@ -73,13 +81,53 @@ case "$payload" in *'"agent_type"'*) ;; *) allow ;; esac
 
 # One jq spawn for everything (each spawn costs ~300ms on Windows). Fields joined by U+0001, list
 # items by U+0002; trailing sentinel keeps "jq failed" distinguishable from "all empty".
-if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" '
-      (.agent_type // "") as $ag0
+if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" --rawfile loc "$local_policy" '
+      # Why the projects agent-scopes.local.json is refused, or "" (no file, or a valid one); see the header.
+      def wrapper: IN("env", "eval", "exec", "xargs", "sudo", "su", "doas", "command", "builtin", "nohup", "timeout",
+        "time", "nice", "setsid", "script");
+      def interpreter: IN("bash", "sh", "zsh", "dash", "ksh", "node", "deno", "bun", "npx", "python", "python3",
+        "perl", "ruby", "php", "pwsh", "powershell");
+      def entry_error($k):
+        if type != "string" then "agents.\($k).commandAllowlist holds a value that is not a string"
+        elif test("^\\s*$") then "agents.\($k).commandAllowlist holds an empty entry, which would allow every command"
+        elif test("[;&|`$<>\n(){}]") then "agents.\($k).commandAllowlist entry \"\(.)\" holds a shell operator"
+        else (sub("^\\s+"; "") | split(" ") | map(select(. != ""))) as $w
+          | if ($w[0] | wrapper) or ($w[0] | startswith("-"))
+              then "agents.\($k).commandAllowlist entry \"\(.)\" starts with \($w[0]), which runs any command"
+            elif ($w[0] | interpreter) and (($w | length) == 1 or ($w[1] | startswith("-")))
+              then "agents.\($k).commandAllowlist entry \"\(.)\" is a bare interpreter, which runs any code: name the script"
+            else empty end
+        end;
+      def local_error:
+        if $loc == "" then ""
+        else (try ($loc | fromjson) catch "\u0000") as $l
+          | if $l == "\u0000" then "it is not valid JSON"
+            elif ($l | type) != "object" then "it is not a JSON object"
+            elif ([$l | keys[] | select(. != "agents" and . != "_comment")] | length) > 0
+              then "it may hold only \"agents\" (and \"_comment\"), not \"" + ([$l | keys[] | select(. != "agents" and . != "_comment")] | join("\", \"")) + "\""
+            elif ($l.agents | type) != "object" then "\"agents\" must be an object"
+            else [ $l.agents | to_entries[] | .key as $k | .value as $v
+                | if $pol[0].agents[$k] == null
+                    then "it adds the agent \"\($k)\", which agent-scopes.json does not fence: only a fenced agent can be given commands"
+                  elif ($v | type) != "object" then "agents.\($k) must be an object"
+                  elif ([$v | keys[] | select(. != "commandAllowlist")] | length) > 0
+                    then "agents.\($k) may set only commandAllowlist, not \"" + ([$v | keys[] | select(. != "commandAllowlist")] | join("\", \"")) + "\": no other fence changes here"
+                  elif ($v.commandAllowlist | type) != "array" then "agents.\($k).commandAllowlist must be a list of command prefixes"
+                  else ($v.commandAllowlist[] | entry_error($k))
+                  end ] | (.[0] // "")
+            end
+        end;
+      local_error as $lerr
+      | (if $lerr == "" and $loc != "" then ($loc | fromjson | .agents) else {} end) as $adds
+      | (.agent_type // "") as $ag0
       | (if $ag0 == "" then null else $pol[0].agents[$ag0] end) as $own
       # Copilot only: a subagent of a fenced root session whose type has no policy entry (a built-in agent) is fenced
       # as that root agent (kit_root, from KIT_AGENT), so it cannot step outside the scope of that root.
       | (if $own == null and .kit_copilot == true and (.kit_root // "") != "" then .kit_root else $ag0 end) as $ag
-      | (if $ag == "" then null else $pol[0].agents[$ag] end) as $s
+      | (if $ag == "" then null else $pol[0].agents[$ag] end) as $s0
+      # The project adds command prefixes; the kit list stays whole.
+      | (if $s0 == null or $adds[$ag] == null then $s0
+         else $s0 + {commandAllowlist: (($s0.commandAllowlist // []) + $adds[$ag].commandAllowlist)} end) as $s
       | (.tool_input // {}) as $a
       | $ag + "\u0001" + (.tool_name // "") + "\u0001"
         + ($a.file_path // $a.notebook_path // $a.path // "") + "\u0001"
@@ -93,7 +141,8 @@ if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" '
         + (($s.commandAllowlist // []) | join("\u0002")) + "\u0001"
         + (($s.hubRoot.markers // []) | join("\u0002")) + "\u0001"
         + (($s.hubRoot.allowedFilePaths // []) | join("\u0002")) + "\u0001"
-        + (if .kit_copilot == true then "copilot" else "" end) + "\u0001."' 2>/dev/null)"; then
+        + (if .kit_copilot == true then "copilot" else "" end) + "\u0001"
+        + $lerr + "\u0001."' 2>/dev/null)"; then
   if ! command -v jq >/dev/null 2>&1; then       # no jq: fail CLOSED (PIN-17-0755), hand-built JSON
     printf '%s' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: jq is not on the PATH, so this guard cannot read the tool call and denies rather than failing open (PIN-17-0755). Install jq and retry."}}'
     decided=1; exit 0
@@ -114,10 +163,12 @@ paths="${fields%%$'\001'*}";  fields="${fields#*$'\001'}"
 cmds="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
 hubm="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
 hubp="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
-origin="${fields%%$'\001'*}"
+origin="${fields%%$'\001'*}"; fields="${fields#*$'\001'}"
+local_error="${fields%%$'\001'*}"
 
 [ "$mode" = "none" ] && allow
 armed=1
+[ -z "$local_error" ] || deny "BLOCKED: .claude/hooks/agent-scopes.local.json is refused, so every call of a fenced agent is denied until it is fixed: $local_error. It may only add command prefixes to the commandAllowlist of agents .claude/hooks/agent-scopes.json fences. A person fixes it; no agent may write it."
 
 # ── Hub root (marker-based) ──────────────────────────────────────────────────────────────────────
 # An agent whose scope carries `hubRoot` {markers, allowedFilePaths} may write inside any directory

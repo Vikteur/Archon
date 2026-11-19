@@ -897,6 +897,15 @@
       "sha256": "bb4ab7c9758ed65600b7b491ef56722b4518072597f268a4df68dcc2fb53e57f"
     },
     {
+      "path": ".archon/scripts/test/scope-local.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "9827341e2d31240cab23e4b934d332cf2d9f4fda102fb7778b53df5f3133282e"
+    },
+    {
       "path": ".archon/scripts/test/script-calls.test.sh",
       "profile": "core",
       "mode": "0755",
@@ -1110,7 +1119,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "26bd1f73a969a2d626f5c307ddf763b870fb53929a1015f28f7f41886560ff44"
+      "sha256": "92912e4dff5ea9e9d34f03b2682d3c04ed81bf7dc420cf9ecfb8bbb4fe348d6b"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",

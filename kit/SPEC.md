@@ -225,3 +225,31 @@ generated `build-feature-copilot.yaml`):
 - **Checked.** The cut expects exactly those tail ids after `ready`, `implement` to depend on `stop-route` once, and
   every text rewrite to match its count; a result that still reads a cut node's output or names a cut script or the
   delegator fails the sync.
+
+## The project's command additions (`agent-scopes.local.json`)
+
+`.claude/hooks/agent-scopes.json` is the kit's file: `kit add` replaces it on every update. A project that needs an
+agent to run one more command (its own build task, a script of its own) writes `.claude/hooks/agent-scopes.local.json`
+beside it and commits it; the kit never writes, prunes or overwrites it. scope-guard (overlay
+`kit/overlays/core/.claude/hooks/scripts/scope-guard.sh`) reads it as **additions only**:
+
+```json
+{"_comment": "why", "agents": {"<an agent agent-scopes.json fences>": {"commandAllowlist": ["./gradlew lintKotlin", "node tools/check.mjs"]}}}
+```
+
+- Each entry is appended to that agent's `commandAllowlist` (an agent without a list gets one). The kit's entries stay:
+  nothing in the file removes or replaces one, so a kit update that adds an entry still reaches the agent.
+- Refused, as a deny with the reason on every call of a fenced agent until a person fixes the file (fail closed): a file
+  that is not JSON or not an object; a top-level key other than `agents` and `_comment`; an agent `agent-scopes.json`
+  does not fence (adding an agent); any agent key other than `commandAllowlist` (`allowedFilePaths`, `readPaths`,
+  `hubRoot`, a deny list, ...); an entry that is not a string, is empty, holds a shell operator
+  (`; & | \` $ < > ( ) { }` or a newline), starts with a wrapper that runs any command (`env`, `xargs`, `sudo`,
+  `eval`, `exec`, `timeout`, ...) or an option, or is a bare interpreter (`bash`, `sh -c`, `node -e`, `python3 -c`, ...).
+  A call outside any agent, and an agent agent-scopes.json does not fence, are never touched.
+- No agent may write it (the existing `agent-scopes*.json` write guard).
+- A suite that names its policy (`CLAUDE_SCOPE_POLICY`) reads no project additions unless it also names them
+  (`CLAUDE_SCOPE_LOCAL`), so the project's file never changes a suite's verdict.
+- Tested by `.archon/scripts/test/scope-local.test.sh` (kit-only).
+
+Before this, the file replaced `agent-scopes.json` whole, a narrowing hook for wedding-portal's removed `test-ban.sh`;
+the kit drops that meaning (no kit file writes it).
