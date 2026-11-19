@@ -10,7 +10,7 @@ import {
 import { useNavigate, useParams } from 'react-router';
 import { useKeymap, type Binding } from '../lib/keymap';
 import { RunDetailHeader } from '../components/RunDetailHeader';
-import { RunStream, runToolCalls } from '../components/RunStream';
+import { RunStream, runPromptCount, runToolCalls } from '../components/RunStream';
 import { RunActionBar } from '../components/RunActionBar';
 import { StreamToolbar, type DetailView } from '../components/StreamToolbar';
 import { ApprovalContext } from '../components/ApprovalContext';
@@ -52,6 +52,7 @@ const TOGGLE_KEYS = {
   toolCalls: 'archon.console.showToolCalls',
   system: 'archon.console.showSystem',
   scriptsOnly: 'archon.console.scriptsOnly',
+  promptsOnly: 'archon.console.promptsOnly',
   view: 'archon.console.detailView',
   node: 'archon.console.runNodeFilter',
 } as const;
@@ -132,6 +133,7 @@ interface RunDetailKeymap {
   toggleToolCalls: () => void;
   toggleSystem: () => void;
   toggleScriptsOnly: () => void;
+  togglePromptsOnly: () => void;
 }
 
 function useRunDetailKeymap({
@@ -141,6 +143,7 @@ function useRunDetailKeymap({
   toggleToolCalls,
   toggleSystem,
   toggleScriptsOnly,
+  togglePromptsOnly,
 }: RunDetailKeymap): void {
   const bindings = useMemo<readonly Binding[]>(
     () => [
@@ -168,6 +171,7 @@ function useRunDetailKeymap({
       { keys: ['t'], label: 'Toggle tool calls', run: toggleToolCalls },
       { keys: ['s'], label: 'Toggle system', run: toggleSystem },
       { keys: ['x'], label: 'Toggle scripts only', run: toggleScriptsOnly },
+      { keys: ['o'], label: 'Toggle prompts only', run: togglePromptsOnly },
       {
         keys: ['a'],
         label: 'Approve',
@@ -183,7 +187,15 @@ function useRunDetailKeymap({
       { keys: ['Escape'], label: 'Back to runs', run: goBack },
       { keys: ['h'], label: 'Back to runs', run: goBack },
     ],
-    [isPaused, goBack, setViewPersist, toggleToolCalls, toggleSystem, toggleScriptsOnly]
+    [
+      isPaused,
+      goBack,
+      setViewPersist,
+      toggleToolCalls,
+      toggleSystem,
+      toggleScriptsOnly,
+      togglePromptsOnly,
+    ]
   );
   useKeymap({ bindings });
 }
@@ -355,6 +367,9 @@ export function RunDetailPage(): ReactElement {
   const [scriptsOnly, setScriptsOnly] = useState<boolean>(() =>
     readToggle(TOGGLE_KEYS.scriptsOnly, false)
   );
+  const [promptsOnly, setPromptsOnly] = useState<boolean>(
+    () => readToggle(TOGGLE_KEYS.promptsOnly, false) && !readToggle(TOGGLE_KEYS.scriptsOnly, false)
+  );
   const [view, setView] = useState<DetailView>(() => readView());
   const [selectedNodeId, setSelectedNodeId] = useState<string>(() => readNodeFilter());
 
@@ -525,13 +540,30 @@ export function RunDetailPage(): ReactElement {
       return next;
     });
   }, []);
-  const toggleScriptsOnly = useCallback((): void => {
-    setScriptsOnly(v => {
-      const next = !v;
-      writeToggle(TOGGLE_KEYS.scriptsOnly, next);
-      return next;
-    });
+  // "Scripts only" and "Prompts only" each show one kind of row: turning one on turns
+  // the other off.
+  const applyScriptsOnly = useCallback((next: boolean): void => {
+    setScriptsOnly(next);
+    writeToggle(TOGGLE_KEYS.scriptsOnly, next);
+    if (next) {
+      setPromptsOnly(false);
+      writeToggle(TOGGLE_KEYS.promptsOnly, false);
+    }
   }, []);
+  const applyPromptsOnly = useCallback((next: boolean): void => {
+    setPromptsOnly(next);
+    writeToggle(TOGGLE_KEYS.promptsOnly, next);
+    if (next) {
+      setScriptsOnly(false);
+      writeToggle(TOGGLE_KEYS.scriptsOnly, false);
+    }
+  }, []);
+  const toggleScriptsOnly = useCallback((): void => {
+    applyScriptsOnly(!scriptsOnly);
+  }, [applyScriptsOnly, scriptsOnly]);
+  const togglePromptsOnly = useCallback((): void => {
+    applyPromptsOnly(!promptsOnly);
+  }, [applyPromptsOnly, promptsOnly]);
   useRunDetailKeymap({
     isPaused,
     goBack,
@@ -539,6 +571,7 @@ export function RunDetailPage(): ReactElement {
     toggleToolCalls,
     toggleSystem,
     toggleScriptsOnly,
+    togglePromptsOnly,
   });
 
   if (runId === undefined) {
@@ -568,7 +601,12 @@ export function RunDetailPage(): ReactElement {
 
   const { run, events, nodes } = detail;
   const messageList = messages ?? [];
-  const { count: toolCallCount, scriptCount } = runToolCalls(messageList, providerEvents);
+  const {
+    count: toolCallCount,
+    scriptCount,
+    promptCallCount,
+  } = runToolCalls(messageList, providerEvents);
+  const promptCount = runPromptCount(events, promptCallCount);
 
   const toolbar = (
     <StreamToolbar
@@ -587,10 +625,10 @@ export function RunDetailPage(): ReactElement {
       toolCallCount={toolCallCount}
       scriptCount={scriptCount}
       scriptsOnly={scriptsOnly}
-      onToggleScriptsOnly={next => {
-        setScriptsOnly(next);
-        writeToggle(TOGGLE_KEYS.scriptsOnly, next);
-      }}
+      onToggleScriptsOnly={applyScriptsOnly}
+      promptCount={promptCount}
+      promptsOnly={promptsOnly}
+      onTogglePromptsOnly={applyPromptsOnly}
       messageCount={messageList.length}
       artifactCount={artifactFiles?.length ?? null}
       nodeOptions={nodeOptions}
@@ -641,6 +679,7 @@ export function RunDetailPage(): ReactElement {
                         showToolCalls={showToolCalls}
                         showSystem={showSystem}
                         scriptsOnly={scriptsOnly}
+                        promptsOnly={promptsOnly}
                         selectedNodeId={selectedNodeId}
                       />
                     </div>

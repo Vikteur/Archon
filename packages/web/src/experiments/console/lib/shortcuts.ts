@@ -37,6 +37,7 @@ export const SHORTCUTS: readonly KeymapGroup[] = [
       { keys: ['t'], label: 'Toggle tool calls' },
       { keys: ['s'], label: 'Toggle system events' },
       { keys: ['x'], label: 'Toggle scripts only' },
+      { keys: ['o'], label: 'Toggle prompts only' },
       { keys: ['a'], label: 'Approve (paused only)' },
       { keys: ['r'], label: 'Reject (paused only)' },
       { keys: ['Escape'], label: 'Back to runs' },

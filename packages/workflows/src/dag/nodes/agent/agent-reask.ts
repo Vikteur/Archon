@@ -10,6 +10,7 @@ import {
   structuredOutputPass,
   NodeFailure,
 } from '../../ai-turn';
+import { recordNodePrompt } from '../../node-prompt';
 import { runStreamPass, type AgentAttemptState, type AgentPassContext } from './agent-stream';
 
 /** The attempt's usage summed over every pass. */
@@ -45,6 +46,10 @@ export async function runUntilStructuredOutputValid(
   let reaskAttempt = 0;
   let reaskPrompt = finalPrompt;
   while (true) {
+    recordNodePrompt(pc.ctx, pc.stepName, reaskPrompt, {
+      attemptId: pc.attemptEvents.attemptId,
+      reask: reaskAttempt,
+    });
     try {
       await runStreamPass(
         pc,

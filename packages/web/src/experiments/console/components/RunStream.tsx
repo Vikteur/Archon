@@ -15,10 +15,13 @@ import type {
   SystemEvent,
   ErrorEvent,
   TextEvent,
+  PromptEvent,
 } from '../primitives/event';
 import type { ProviderEvent, ProviderEventRecord, RunProviderEvents } from '../lib/provider-events';
 import { StreamCard } from './StreamCard';
 import { scriptCallOf } from '../lib/script-run';
+import { promptCallOf } from '../lib/prompt-call';
+import { PromptItem, nodePromptNote } from './PromptItem';
 
 interface RunStreamProps {
   messages: Message[];
@@ -34,6 +37,12 @@ interface RunStreamProps {
    * `showToolCalls` and `showSystem`. The node filter still applies.
    */
   scriptsOnly?: boolean;
+  /**
+   * Show only the prompts agents were given (node prompts and subagent calls), under
+   * their node's divider; overrides `showToolCalls` and `showSystem`. The node filter
+   * still applies.
+   */
+  promptsOnly?: boolean;
   /** `'all'` shows every node; otherwise restrict the stream to one node's entries. */
   selectedNodeId: string;
 }
@@ -78,6 +87,7 @@ type TimelineEntry =
       nodeId: string;
     }
   | { kind: 'text'; key: string; at: number; event: TextEvent }
+  | { kind: 'prompt'; key: string; at: number; event: PromptEvent; nodeName: string }
   | { kind: 'artifact'; key: string; at: number; event: ArtifactEvent }
   | { kind: 'system'; key: string; at: number; event: SystemEvent | ErrorEvent }
   | { kind: 'system_row'; key: string; at: number; row: SystemRow };
@@ -168,6 +178,8 @@ export function runToolCalls(
   count: number;
   /** How many of the shown calls ran a script. */
   scriptCount: number;
+  /** How many of the shown calls handed a subagent a prompt. */
+  promptCallCount: number;
 } {
   const fromProviderEvents = pairProviderToolCalls(providerEvents);
   const showInline = fromProviderEvents.length === 0;
@@ -179,12 +191,23 @@ export function runToolCalls(
     showInline,
     count: calls.length,
     scriptCount: calls.filter(isScriptCall).length,
+    promptCallCount: calls.filter(isPromptCall).length,
   };
 }
 
 /** Whether a tool call is a shell command that runs a script (lib/script-run.ts). */
 export function isScriptCall(call: InlineToolCall): boolean {
   return scriptCallOf(call.input) !== null;
+}
+
+/** Whether a tool call handed a subagent its prompt (lib/prompt-call.ts). */
+export function isPromptCall(call: InlineToolCall): boolean {
+  return promptCallOf(call) !== null;
+}
+
+/** How many prompts a run's log shows: the node prompts plus the subagent calls. */
+export function runPromptCount(events: readonly RunEvent[], promptCallCount: number): number {
+  return events.filter(e => e.kind === 'prompt').length + promptCallCount;
 }
 
 function messageEntries(messages: readonly Message[], showInline: boolean): TimelineEntry[] {
@@ -317,6 +340,7 @@ export function RunStream({
   showToolCalls,
   showSystem,
   scriptsOnly = false,
+  promptsOnly = false,
   selectedNodeId,
 }: RunStreamProps): ReactElement {
   // Single source for the folded nodes — consumed by both the timeline (one
@@ -359,7 +383,7 @@ export function RunStream({
       });
     }
 
-    entries.push(...runEventEntries(events));
+    entries.push(...runEventEntries(events, nodeRuns));
     entries.sort((a, b) => a.at - b.at);
     return entries;
   }, [messages, events, nodeRuns, toolCalls, providerEvents, showSystem]);
@@ -381,27 +405,42 @@ export function RunStream({
     if (selectedNodeId === 'all') return true;
     if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
     if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+    if (e.kind === 'prompt' && e.event.nodeId !== null) return e.event.nodeId === selectedNodeId;
     return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
   };
 
-  const visible = scriptsOnly
-    ? scriptEntries(timeline, inSelectedNode)
-    : timeline.filter(e => {
-        if (e.kind === 'tool' && !showToolCalls) return false;
-        if (e.kind === 'system' && !showSystem) return false;
-        if (e.kind === 'system_row' && !showSystem) return false;
-        // Node filter: isolate one node. Node markers, hooks and tools from provider events
-        // match by identity; every node-blind entry (prose, artifacts, system rows,
-        // legacy message-inline tools) falls back to the node's time window so a
-        // node's whole slice of the timeline stays visible.
-        if (selectedNodeId !== 'all') {
-          if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
-          if (e.kind === 'hook') return e.nodeId === selectedNodeId;
-          if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
-          return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
-        }
-        return true;
-      });
+  const visible = promptsOnly
+    ? onlyEntries(timeline, isPromptEntry, inSelectedNode)
+    : scriptsOnly
+      ? onlyEntries(timeline, isScriptEntry, inSelectedNode)
+      : timeline.filter(e => {
+          if (e.kind === 'tool' && !showToolCalls) return false;
+          if (e.kind === 'system' && !showSystem) return false;
+          if (e.kind === 'system_row' && !showSystem) return false;
+          // Node filter: isolate one node. Node markers, hooks and tools from provider events
+          // match by identity; every node-blind entry (prose, artifacts, system rows,
+          // legacy message-inline tools) falls back to the node's time window so a
+          // node's whole slice of the timeline stays visible.
+          if (selectedNodeId !== 'all') {
+            if (e.kind === 'node') return e.node.nodeId === selectedNodeId;
+            if (e.kind === 'hook') return e.nodeId === selectedNodeId;
+            if (e.kind === 'tool' && e.nodeId !== null) return e.nodeId === selectedNodeId;
+            if (e.kind === 'prompt' && e.event.nodeId !== null)
+              return e.event.nodeId === selectedNodeId;
+            return nodeWindow !== null && e.at >= nodeWindow.start && e.at < nodeWindow.end;
+          }
+          return true;
+        });
+
+  if (visible.length === 0 && promptsOnly) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-center">
+        <p className="text-sm text-text-tertiary">
+          No prompts{selectedNodeId !== 'all' ? ' in this node' : ''} recorded yet.
+        </p>
+      </div>
+    );
+  }
 
   if (visible.length === 0 && scriptsOnly) {
     return (
@@ -470,10 +509,13 @@ export function groupByNode(visible: readonly TimelineEntry[]): GroupedTimeline 
       current = byId.get(e.node.nodeId);
       continue;
     }
-    const owner =
+    const ownerId =
       (e.kind === 'tool' && e.nodeId !== null) || e.kind === 'hook'
-        ? (byId.get(e.nodeId ?? '') ?? current)
-        : current;
+        ? e.nodeId
+        : e.kind === 'prompt'
+          ? e.event.nodeId
+          : null;
+    const owner = ownerId !== null ? (byId.get(ownerId) ?? current) : current;
     if (owner === undefined) preamble.push(e);
     else owner.entries.push(e);
   }
@@ -547,29 +589,57 @@ function NodeSections({
   );
 }
 
+function isScriptEntry(e: TimelineEntry): boolean {
+  return e.kind === 'tool' && isScriptCall(e.call);
+}
+
+function isPromptEntry(e: TimelineEntry): boolean {
+  return e.kind === 'prompt' || (e.kind === 'tool' && isPromptCall(e.call));
+}
+
+function entryNodeId(e: TimelineEntry): string | null {
+  if (e.kind === 'tool') return e.nodeId;
+  if (e.kind === 'prompt') return e.event.nodeId;
+  return null;
+}
+
 /**
- * The script calls of a timeline, each node's under its divider. A node with no script
- * call keeps no divider, so the list reads as one script run after another.
+ * The entries of a timeline that `match` picks (script calls, prompts), each node's under
+ * its divider. A node with none keeps no divider, so the list reads as one after another.
  */
-function scriptEntries(
+function onlyEntries(
   timeline: readonly TimelineEntry[],
+  match: (e: TimelineEntry) => boolean,
   keep: (e: TimelineEntry) => boolean
 ): TimelineEntry[] {
-  const scripts = timeline.filter(e => e.kind === 'tool' && isScriptCall(e.call) && keep(e));
-  const nodesWithScripts = new Set(
-    scripts.flatMap(e => (e.kind === 'tool' && e.nodeId !== null ? [e.nodeId] : []))
+  const picked = timeline.filter(e => match(e) && keep(e));
+  const nodesWithPicked = new Set(
+    picked.flatMap(e => {
+      const id = entryNodeId(e);
+      return id !== null ? [id] : [];
+    })
   );
-  const scriptSet = new Set(scripts);
+  const pickedSet = new Set(picked);
   return timeline.filter(
-    e => (e.kind === 'node' && nodesWithScripts.has(e.node.nodeId) && keep(e)) || scriptSet.has(e)
+    e => (e.kind === 'node' && nodesWithPicked.has(e.node.nodeId) && keep(e)) || pickedSet.has(e)
   );
 }
 
-function runEventEntries(events: RunEvent[]): TimelineEntry[] {
+function runEventEntries(events: RunEvent[], nodeRuns: readonly NodeRun[]): TimelineEntry[] {
+  const nodeNames = new Map(nodeRuns.map(r => [r.nodeId, r.nodeName]));
   const entries: TimelineEntry[] = [];
   for (const e of events) {
     const at = new Date(e.timestamp).getTime();
-    if (e.kind === 'artifact') {
+    if (e.kind === 'prompt') {
+      const nodeName = (e.nodeId !== null ? nodeNames.get(e.nodeId) : undefined) ?? e.nodeId;
+      entries.push({
+        kind: 'prompt',
+        key: `pr:${e.id}`,
+        at,
+        event: e,
+        nodeName: nodeName ?? 'node',
+      });
+    } else if (e.kind === 'artifact') {
       entries.push({ kind: 'artifact', key: `a:${e.id}`, at, event: e });
     } else if (e.kind === 'text') {
       entries.push({ kind: 'text', key: `text:${e.id}`, at, event: e });
@@ -632,6 +702,18 @@ function renderTimelineEntry(entry: TimelineEntry): ReactElement {
     }
     case 'node': {
       return renderNodeDivider(entry);
+    }
+    case 'prompt': {
+      return (
+        <PromptItem
+          key={entry.key}
+          prompt={entry.event.prompt}
+          recipient={entry.nodeName}
+          note={nodePromptNote(entry.event.reask, entry.event.iteration)}
+          timestamp={entry.event.timestamp}
+          truncatedFrom={entry.event.truncatedFrom}
+        />
+      );
     }
     case 'system': {
       const ev = entry.event;

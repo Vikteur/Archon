@@ -21,3 +21,23 @@ describe('ToolCallItem disclosure', () => {
     expect(render({ name: 'Bash', input: {} })).not.toContain('<button');
   });
 });
+
+describe('ToolCallItem subagent prompts', () => {
+  test('an Agent call renders as a prompt row naming the subagent', () => {
+    const html = render({
+      name: 'Agent',
+      input: {
+        prompt: 'Review the diff\nthen report',
+        subagent_type: 'reviewer',
+        description: 'Review',
+      },
+      status: 'completed',
+      output: 'Looks good',
+    });
+    expect(html).toContain('Subagent prompt');
+    expect(html).toContain('reviewer');
+    expect(html).toContain('Review the diff');
+    expect(html).toContain('2 lines');
+    expect(html).not.toContain('then report');
+  });
+});

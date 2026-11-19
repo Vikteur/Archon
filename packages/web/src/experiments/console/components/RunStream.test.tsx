@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { RunStream, pairProviderToolCalls, runToolCalls } from './RunStream';
+import { RunStream, pairProviderToolCalls, runPromptCount, runToolCalls } from './RunStream';
 import type { ProviderEventRecord, RunProviderEvents } from '../lib/provider-events';
 import { mergeProviderEventRecords } from '../lib/provider-events';
 import type { Message } from '../primitives/message';
@@ -641,6 +641,123 @@ describe('RunStream scripts only', () => {
 
   test('runToolCalls counts the script calls', () => {
     expect(runToolCalls([message], providerEvents)).toMatchObject({ count: 3, scriptCount: 1 });
+  });
+});
+
+describe('RunStream prompts only', () => {
+  const started = (nodeId: string, timestamp: string): NodeTransitionEvent => ({
+    id: `n:${nodeId}`,
+    runId: 'r1',
+    kind: 'node_transition',
+    timestamp,
+    nodeId,
+    nodeName: nodeId,
+    transition: 'started',
+    durationMs: null,
+    skipReason: null,
+    skipExpr: null,
+    costUsd: null,
+    costPartial: false,
+    costScope: null,
+    stopReason: null,
+    numTurns: null,
+    tokens: null,
+  });
+  const message: Message = {
+    id: 'm1',
+    role: 'assistant',
+    content: 'thinking out loud',
+    timestamp: '2026-10-02T10:00:00.500Z',
+    toolCalls: [],
+    error: null,
+    category: null,
+    dispatch: null,
+    workflowResult: null,
+  };
+  const providerEvents: RunProviderEvents = new Map([
+    [
+      'review',
+      [
+        record('review', 'a1', 0, '2026-10-02T10:00:03.100Z', {
+          type: 'tool_call',
+          toolCallId: 'r1',
+          name: 'Agent',
+          rawInput: { prompt: 'Check the seams', subagent_type: 'reviewer' },
+        }),
+        record('review', 'a1', 1, '2026-10-02T10:00:03.200Z', {
+          type: 'tool_call',
+          toolCallId: 'r2',
+          name: 'Bash',
+          rawInput: { command: 'scripts/scaffold.sh x' },
+        }),
+      ],
+    ],
+  ]);
+  const prompt = toRunEvent({
+    id: 'p1',
+    workflow_run_id: 'r1',
+    step_index: null,
+    step_name: 'implement',
+    event_type: 'node_prompt',
+    data: { prompt: 'Implement the part\nwith tests', reask: 1 },
+    created_at: '2026-10-02T10:00:02.050Z',
+  });
+  const events = [
+    started('plan', '2026-10-02T10:00:00.000Z'),
+    started('implement', '2026-10-02T10:00:02.000Z'),
+    prompt,
+    started('review', '2026-10-02T10:00:03.000Z'),
+  ];
+
+  const render = (promptsOnly: boolean, selectedNodeId = 'all'): string =>
+    renderToStaticMarkup(
+      <StreamContextProvider value={{ runStartedAt: '2026-10-02T09:59:00.000Z' }}>
+        <RunStream
+          messages={[message]}
+          events={events}
+          nodes={[
+            { node_id: 'plan', state: 'completed' },
+            { node_id: 'implement', state: 'completed' },
+            { node_id: 'review', state: 'running' },
+          ]}
+          providerEvents={providerEvents}
+          showToolCalls={false}
+          showSystem={false}
+          promptsOnly={promptsOnly}
+          selectedNodeId={selectedNodeId}
+        />
+      </StreamContextProvider>
+    );
+
+  test('shows only node prompts and subagent prompts, under their node dividers', () => {
+    const html = render(true);
+    expect(html).toContain('Implement the part');
+    expect(html).toContain('re-ask 1');
+    expect(html).toContain('Check the seams');
+    expect(html).toContain('Subagent prompt');
+    expect(html).not.toContain('scaffold.sh');
+    expect(html).not.toContain('thinking out loud');
+    expect(html).not.toContain('>plan<');
+  });
+
+  test('off, node prompts still show in the log', () => {
+    const html = render(false);
+    expect(html).toContain('thinking out loud');
+    expect(html).toContain('Implement the part');
+    expect(html).not.toContain('Check the seams');
+  });
+
+  test('the node filter applies', () => {
+    const html = render(true, 'review');
+    expect(html).toContain('Check the seams');
+    expect(html).not.toContain('Implement the part');
+    expect(render(true, 'plan')).toContain('No prompts in this node recorded yet.');
+  });
+
+  test('counts node prompts and subagent calls', () => {
+    const { promptCallCount } = runToolCalls([message], providerEvents);
+    expect(promptCallCount).toBe(1);
+    expect(runPromptCount(events, promptCallCount)).toBe(2);
   });
 });
 

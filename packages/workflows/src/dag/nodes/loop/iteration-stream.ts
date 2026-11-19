@@ -24,6 +24,7 @@ import { stripCompletionTags } from '../../../executor-shared';
 import { safeSendMessage } from '../../../platform-messages';
 import { withStaleResumeRetry } from '../../../stale-resume';
 import { getLog } from '../../log';
+import { recordNodePrompt } from '../../node-prompt';
 import { sumTokenUsage } from '../../usage';
 import { resolveRunInputs, nodeTemplateReferences } from '../../references';
 import { shouldContinueStreamingForStatus, CANCEL_CHECK_INTERVAL_MS } from '../../run-control';
@@ -438,6 +439,11 @@ async function consumeIterationStream(
   const { attempt, watchdogResets } = scope;
   const { providerEvents } = attempt;
   const finalPrompt = attemptPrompt(run, state, i, listings, scope.position.reask);
+  recordNodePrompt(ctx, run.stepName, finalPrompt, {
+    attemptId: run.attemptEvents.attemptId,
+    reask: scope.position.reask.attempt,
+    iteration: i,
+  });
   const pass = structuredOutputPass(
     scope.position.reask.attempt,
     scope.position.resumeSessionId,

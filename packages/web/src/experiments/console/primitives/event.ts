@@ -15,7 +15,8 @@ export type RunEventKind =
   | 'node_transition'
   | 'approval'
   | 'error'
-  | 'system';
+  | 'system'
+  | 'prompt';
 
 interface RunEventBase {
   id: string;
@@ -103,7 +104,20 @@ export interface SystemEvent extends RunEventBase {
   detail: string;
 }
 
+/** The prompt an AI node (or one AI loop iteration) sent its provider: the engine's `node_prompt`. */
+export interface PromptEvent extends RunEventBase {
+  kind: 'prompt';
+  prompt: string;
+  /** 0 for the node's own prompt; n for the n-th structured-output re-ask. */
+  reask: number;
+  /** The AI loop iteration that sent it; null outside a loop. */
+  iteration: number | null;
+  /** The prompt's full length when the engine cut it; null when it is whole. */
+  truncatedFrom: number | null;
+}
+
 export type RunEvent =
+  | PromptEvent
   | TextEvent
   | ToolCallEvent
   | ArtifactEvent
@@ -327,6 +341,20 @@ function toCleanupWarning(raw: RawWorkflowEvent, base: EventBase): TextEvent {
   return textEvent(base, warningText(warnings, '⚠️ Workflow cleanup warnings'));
 }
 
+function toPrompt(raw: RawWorkflowEvent, base: EventBase): RunEvent {
+  const data = raw.data;
+  const prompt = readStringOrNull(data, 'prompt');
+  if (prompt === null) return toFallback(raw, base);
+  return {
+    ...base,
+    kind: 'prompt',
+    prompt,
+    reask: readNumberOrNull(data, 'reask') ?? 0,
+    iteration: readNumberOrNull(data, 'iteration'),
+    truncatedFrom: data.truncated === true ? readNumberOrNull(data, 'length') : null,
+  };
+}
+
 /** Unmapped events: their text when they carry one, otherwise the raw payload behind the System toggle. */
 function toFallback(raw: RawWorkflowEvent, base: EventBase): RunEvent {
   const data = raw.data;
@@ -363,6 +391,7 @@ const EVENT_MAPPERS = new Map<string, EventMapper>([
       ),
   ],
   ['error', toError],
+  ['node_prompt', toPrompt],
   ['workflow_started', workflowLifecycle(() => 'Workflow started')],
   ['workflow_completed', workflowLifecycle(() => 'Workflow completed')],
   ['workflow_failed', workflowLifecycle(() => 'Workflow failed')],
