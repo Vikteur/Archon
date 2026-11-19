@@ -73,6 +73,12 @@ describe('parseCopilotConfig', () => {
     expect(parseCopilotConfig({ enableConfigDiscovery: 1 })).toEqual({});
   });
 
+  test('parses fileHooks boolean and drops a non-boolean', () => {
+    expect(parseCopilotConfig({ fileHooks: false })).toEqual({ fileHooks: false });
+    expect(parseCopilotConfig({ fileHooks: true })).toEqual({ fileHooks: true });
+    expect(parseCopilotConfig({ fileHooks: 'no' })).toEqual({});
+  });
+
   test('parses useLoggedInUser boolean', () => {
     expect(parseCopilotConfig({ useLoggedInUser: true })).toEqual({ useLoggedInUser: true });
     expect(parseCopilotConfig({ useLoggedInUser: false })).toEqual({ useLoggedInUser: false });
@@ -108,6 +114,7 @@ describe('parseCopilotConfig', () => {
       copilotCliPath: '/bin/copilot',
       configDir: '/etc/copilot',
       enableConfigDiscovery: true,
+      fileHooks: false,
       useLoggedInUser: false,
       logLevel: 'debug',
     } satisfies Required<CopilotProviderDefaults>;

@@ -332,11 +332,33 @@ assistants:
     copilotCliPath: /absolute/path/to/copilot
     configDir: /absolute/path/to/copilot-config   # default: the SDK's own, usually ~/.copilot
     enableConfigDiscovery: false   # default false; true loads the repo's .copilot/ MCP servers and skills
+    fileHooks: true                # default true; false stops the repo's .github/hooks/*.json from running
     useLoggedInUser: true          # default true; false allows GH_TOKEN or GITHUB_TOKEN
     logLevel: error                # none, error, warning, info, debug or all
 ```
 
 Copilot has no session-fork API. When Archon asks for a fork on retry, it starts a fresh session and posts a warning.
+
+### Copilot skills, hooks and tool names
+
+A node's `skills:` names resolve against Copilot's own skill directories as well as the shared ones. Archon searches, first match wins: `<cwd>/.github/skills/`, `<cwd>/.agents/skills/`, `<cwd>/.claude/skills/`, then `<copilot home>/skills/`, `~/.agents/skills/`, `~/.claude/skills/`. The Copilot home is `configDir` when set, else `COPILOT_HOME`, else `~/.copilot`. Only Copilot reads `.github/skills/` and the Copilot home; Claude's skill roots are unchanged. `archon validate workflows` checks Copilot skills against the shared roots only, so it warns that a skill that lives only in `.github/skills/` or the Copilot home is not found; the run still loads it.
+
+With `fileHooks: true` (the default), the Copilot runtime runs the project's `.github/hooks/*.json` hooks in Archon sessions with Copilot CLI semantics:
+
+- A `preToolUse` hook that answers `{"permissionDecision":"deny"}`, exits with code 2, or fails with another non-zero exit blocks the tool call.
+- A hook that times out lets the call run.
+
+Each hook shows up in the run as a hook event (started, then succeeded or failed). A failed hook names its hook file. A blocked call ends as a failed tool call that carries the hook's reason. This is separate from a workflow node's `hooks:` field, which Copilot does not support.
+
+Workflows name tools the Claude way. Archon translates `allowed_tools`, `denied_tools` and each inline agent's `tools` (under `agents:`) to Copilot's built-in names: `Read`→`view`, `Write`→`create`, `Edit` and `MultiEdit`→`edit`, `Bash`→`bash`, `BashOutput`→`read_bash`, `KillShell`→`stop_bash`, `Glob`→`glob`, `Grep`→`grep`, `WebFetch`→`web_fetch`, `Agent` and `Task`→`task`, `Skill`→`skill`, `ListAgents`→`list_agents`, `SendMessage`→`write_agent`. An MCP tool `mcp__<server>__<tool>` becomes `<server>-<tool>`. Any other name passes through unchanged, so Copilot's own names work too.
+
+Copilot filters tools by name only, so a few entries cannot be translated exactly:
+
+- An argument pattern such as `Bash(git push *)` in `denied_tools` is dropped, so it does not deny all of `bash`. Enforce it with a `preToolUse` hook in `.github/hooks/`.
+- A whole MCP server (`mcp__github` or `mcp__github__*`) in `denied_tools` is dropped too.
+- In `allowed_tools` and an agent's `tools`, a pattern keeps its whole tool (`Bash(git status *)` allows `bash`), and a whole MCP server allows every MCP tool.
+
+Archon warns once per process about each such entry. A non-empty `allowed_tools` never turns into an empty list.
 
 ## Per-user credentials and AI Settings
 

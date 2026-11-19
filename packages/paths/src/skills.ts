@@ -37,6 +37,42 @@ export function skillSearchRoots(cwd: string): string[] {
   ];
 }
 
+/**
+ * Copilot's skill search order: the cross-provider roots of
+ * {@link skillSearchRoots} plus the two Copilot CLI conventions, which only the
+ * Copilot provider reads (Claude never sees `.github/skills`).
+ *
+ * Order (first match wins per name):
+ *   1. `<cwd>/.github/skills/<name>/`     — project-local, Copilot convention
+ *   2. `<cwd>/.agents/skills/<name>/`
+ *   3. `<cwd>/.claude/skills/<name>/`
+ *   4. `<copilotHome>/skills/<name>/`     — user-global, Copilot convention
+ *   5. `~/.agents/skills/<name>/`
+ *   6. `~/.claude/skills/<name>/`
+ *
+ * `copilotHome` is the caller's resolved Copilot home (`COPILOT_HOME`, or the
+ * provider's `configDir`); when absent it is `$COPILOT_HOME`, else `~/.copilot`.
+ */
+export function copilotSkillSearchRoots(
+  cwd: string,
+  options: { copilotHome?: string } = {}
+): string[] {
+  const home = process.env.HOME ?? homedir();
+  const copilotHome =
+    nonEmpty(options.copilotHome) ?? nonEmpty(process.env.COPILOT_HOME) ?? join(home, '.copilot');
+  return [
+    join(cwd, '.github', 'skills'),
+    ...projectSkillSearchRoots(cwd),
+    join(copilotHome, 'skills'),
+    join(home, '.agents', 'skills'),
+    join(home, '.claude', 'skills'),
+  ];
+}
+
+function nonEmpty(value: string | undefined): string | undefined {
+  return value !== undefined && value.trim().length > 0 ? value : undefined;
+}
+
 /** The project-local half of {@link skillSearchRoots}. */
 export function projectSkillSearchRoots(cwd: string): string[] {
   return [join(cwd, '.agents', 'skills'), join(cwd, '.claude', 'skills')];

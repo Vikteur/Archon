@@ -5,7 +5,13 @@ import { join } from 'node:path';
 
 import { removeTempTree } from './test-utils';
 
-import { parseSettingSources, resolveSkillDirectories } from './skills';
+import {
+  copilotSkillSearchRoots,
+  parseSettingSources,
+  resolveSkillDirectories,
+  resolveSkillDirectoriesFromRoots,
+  skillSearchRoots,
+} from './skills';
 
 type FakeWorld = {
   root: string;
@@ -139,6 +145,97 @@ describe('resolveSkillDirectories', () => {
     const result = resolveSkillDirectories(fake.cwd, ['zeta']);
     expect(result.paths).toEqual([]);
     expect(result.missing).toEqual(['zeta']);
+  });
+});
+
+describe('copilotSkillSearchRoots', () => {
+  const originalHome = process.env.HOME;
+  const originalCopilotHome = process.env.COPILOT_HOME;
+  let fake: ReturnType<typeof makeFakeWorld>;
+
+  const stageAt = (dir: string, name: string): string => {
+    const skillDir = join(dir, name);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), `# ${name}\n`);
+    return skillDir;
+  };
+
+  beforeEach(() => {
+    fake = makeFakeWorld();
+    process.env.HOME = fake.home;
+    delete process.env.COPILOT_HOME;
+  });
+
+  afterEach(async () => {
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
+    if (originalCopilotHome === undefined) delete process.env.COPILOT_HOME;
+    else process.env.COPILOT_HOME = originalCopilotHome;
+    await removeTempTree(fake.root);
+  });
+
+  test('adds .github/skills and ~/.copilot/skills around the shared roots', () => {
+    expect(copilotSkillSearchRoots(fake.cwd)).toEqual([
+      join(fake.cwd, '.github', 'skills'),
+      join(fake.cwd, '.agents', 'skills'),
+      join(fake.cwd, '.claude', 'skills'),
+      join(fake.home, '.copilot', 'skills'),
+      join(fake.home, '.agents', 'skills'),
+      join(fake.home, '.claude', 'skills'),
+    ]);
+  });
+
+  test('reads the user skill dir from COPILOT_HOME', () => {
+    process.env.COPILOT_HOME = join(fake.root, 'copilot-home');
+    expect(copilotSkillSearchRoots(fake.cwd)).toContain(join(fake.root, 'copilot-home', 'skills'));
+  });
+
+  test('an explicit copilotHome wins over COPILOT_HOME', () => {
+    process.env.COPILOT_HOME = join(fake.root, 'env-home');
+    const roots = copilotSkillSearchRoots(fake.cwd, {
+      copilotHome: join(fake.root, 'config'),
+    });
+    expect(roots).toContain(join(fake.root, 'config', 'skills'));
+    expect(roots).not.toContain(join(fake.root, 'env-home', 'skills'));
+  });
+
+  test('an empty COPILOT_HOME falls back to ~/.copilot', () => {
+    process.env.COPILOT_HOME = '';
+    expect(copilotSkillSearchRoots(fake.cwd)).toContain(join(fake.home, '.copilot', 'skills'));
+  });
+
+  test('resolves a skill that only .github/skills provides', () => {
+    const dir = stageAt(join(fake.cwd, '.github', 'skills'), 'gh-only');
+    expect(
+      resolveSkillDirectoriesFromRoots(copilotSkillSearchRoots(fake.cwd), ['gh-only'])
+    ).toEqual({ paths: [dir], missing: [] });
+  });
+
+  test('resolves a skill that only the Copilot home provides', () => {
+    const dir = stageAt(join(fake.home, '.copilot', 'skills'), 'user-copilot');
+    expect(
+      resolveSkillDirectoriesFromRoots(copilotSkillSearchRoots(fake.cwd), ['user-copilot'])
+    ).toEqual({ paths: [dir], missing: [] });
+  });
+
+  test('.github/skills wins over .agents/skills for the same name', () => {
+    const gh = stageAt(join(fake.cwd, '.github', 'skills'), 'dup');
+    fake.stageSkill('cwd', '.agents', 'dup');
+    expect(
+      resolveSkillDirectoriesFromRoots(copilotSkillSearchRoots(fake.cwd), ['dup']).paths
+    ).toEqual([gh]);
+  });
+
+  test('the shared roots never include the Copilot-only directories', () => {
+    stageAt(join(fake.cwd, '.github', 'skills'), 'gh-only');
+    stageAt(join(fake.home, '.copilot', 'skills'), 'user-copilot');
+    const roots = skillSearchRoots(fake.cwd);
+    expect(roots).not.toContain(join(fake.cwd, '.github', 'skills'));
+    expect(roots).not.toContain(join(fake.home, '.copilot', 'skills'));
+    expect(resolveSkillDirectories(fake.cwd, ['gh-only', 'user-copilot'])).toEqual({
+      paths: [],
+      missing: ['gh-only', 'user-copilot'],
+    });
   });
 });
 

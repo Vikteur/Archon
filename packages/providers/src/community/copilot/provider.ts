@@ -33,13 +33,14 @@ import type {
   SendQueryOptions,
 } from '../../types';
 import { loadMcpConfig } from '../../mcp/config';
-import { resolveSkillDirectories } from '@archon/paths/skills';
+import { copilotSkillSearchRoots, resolveSkillDirectoriesFromRoots } from '@archon/paths/skills';
 import { augmentPromptForJsonSchema } from '../../shared/structured-output';
 import { COPILOT_CAPABILITIES } from './capabilities';
 import { COPILOT_EFFORTS, parseCopilotConfig, type CopilotProviderDefaults } from './config';
 import { clampEffort } from '@archon/provider-contract';
 import { resolveCopilotBinaryPath } from './binary-resolver';
 import { bridgeSession } from './event-bridge';
+import { mapAllowedTools, mapDeniedTools } from './tool-names';
 import { closeOpenToolCalls } from '../../shared/tool-calls';
 import { failureClassOfThrown, failureResult } from '../../shared/failure';
 
@@ -76,7 +77,21 @@ function getLog(): ReturnType<typeof createLogger> {
  * so each request sees correct per-request env vars.
  */
 export function resetCopilotSingleton(): void {
-  // no-op
+  warnedToolEntries.clear();
+}
+
+/**
+ * Tool entries already warned about in this process. The same workflow runs the
+ * same `denied_tools` on every node, so each untranslatable entry is announced
+ * once rather than on every turn; later sightings only reach the debug log.
+ */
+const warnedToolEntries = new Set<string>();
+
+/** `scope` keeps an agent's entries apart from the node's own lists. */
+function firstSightings(entries: string[], scope = ''): string[] {
+  const fresh = entries.filter(entry => !warnedToolEntries.has(`${scope}\0${entry}`));
+  for (const entry of fresh) warnedToolEntries.add(`${scope}\0${entry}`);
+  return fresh;
 }
 
 // ─── Env + auth ─────────────────────────────────────────────────────────────
@@ -153,22 +168,48 @@ function resolveSystemMessage(requestOptions?: SendQueryOptions): SystemMessageC
 // ─── Translations ───────────────────────────────────────────────────────────
 
 /**
- * Translate Archon's per-node `allowed_tools` / `denied_tools` to Copilot's
- * `availableTools` / `excludedTools`. Copilot's spec: `availableTools` takes
- * precedence over `excludedTools`; we pass both through when present and let
- * the SDK enforce precedence.
+ * Translate Archon's per-node `allowed_tools` / `denied_tools` (Claude tool
+ * names) to Copilot's `availableTools` / `excludedTools` (Copilot built-in
+ * names, see ./tool-names). The SDK always sends `toolFilterPrecedence:
+ * "excluded"`, so an excluded tool stays excluded even when also allowed.
+ *
+ * Argument patterns (`Bash(git push *)`) and whole MCP servers have no exact
+ * Copilot form: denied ones are dropped (a preToolUse file hook enforces them),
+ * allowed ones keep their broader tool. Each such entry is warned about once
+ * per process.
  */
 function applyToolRestrictions(
   sessionConfig: SessionConfig,
-  nodeConfig: SendQueryOptions['nodeConfig']
+  nodeConfig: SendQueryOptions['nodeConfig'],
+  warnings: ProviderWarning[]
 ): void {
   if (!nodeConfig) return;
   if (nodeConfig.allowed_tools !== undefined) {
-    sessionConfig.availableTools = nodeConfig.allowed_tools;
+    const allowed = mapAllowedTools(nodeConfig.allowed_tools);
+    sessionConfig.availableTools = allowed.tools;
+    const fresh = firstSightings(allowed.widened);
+    if (fresh.length > 0) {
+      warnings.push({
+        code: 'copilot.allowed_tools_widened',
+        message: `Copilot filters tools by name only, so these allowed_tools entries allow their whole tool: ${fresh.join(', ')}.`,
+      });
+    }
   }
   if (nodeConfig.denied_tools !== undefined) {
-    sessionConfig.excludedTools = nodeConfig.denied_tools;
+    const denied = mapDeniedTools(nodeConfig.denied_tools);
+    sessionConfig.excludedTools = denied.tools;
+    const fresh = firstSightings(denied.dropped);
+    if (fresh.length > 0) {
+      warnings.push({
+        code: 'copilot.denied_tools_dropped',
+        message: `Copilot filters tools by name only and ignored these denied_tools entries: ${fresh.join(', ')}. Enforce them with a preToolUse hook in .github/hooks/.`,
+      });
+    }
   }
+  getLog().debug(
+    { availableTools: sessionConfig.availableTools, excludedTools: sessionConfig.excludedTools },
+    'copilot.tool_filters_mapped'
+  );
 }
 
 /**
@@ -208,16 +249,20 @@ function applySkills(
   sessionConfig: SessionConfig,
   nodeConfig: SendQueryOptions['nodeConfig'],
   cwd: string,
+  copilotHome: string | undefined,
   warnings: ProviderWarning[]
 ): void {
   if (!nodeConfig?.skills || nodeConfig.skills.length === 0) return;
 
-  const { paths, missing } = resolveSkillDirectories(cwd, nodeConfig.skills);
+  const { paths, missing } = resolveSkillDirectoriesFromRoots(
+    copilotSkillSearchRoots(cwd, { copilotHome }),
+    nodeConfig.skills
+  );
 
   if (missing.length > 0) {
     warnings.push({
       code: 'copilot.skills_missing',
-      message: `Copilot ignored missing skills: ${missing.join(', ')}. Expected a directory with SKILL.md under .agents/skills/ or .claude/skills/ (project or home).`,
+      message: `Copilot ignored missing skills: ${missing.join(', ')}. Expected a directory with SKILL.md under .github/skills/, .agents/skills/ or .claude/skills/ (project), or under the Copilot home's skills/, ~/.agents/skills/ or ~/.claude/skills/.`,
     });
   }
 
@@ -231,6 +276,8 @@ function applySkills(
  * Translate Archon's `nodeConfig.agents` (Record<name, AgentDef>) to
  * Copilot's `SessionConfig.customAgents`. Only the fields Copilot's
  * `CustomAgentConfig` supports pass through (description, prompt, tools).
+ * An agent's `tools` is an allowlist and gets the same Claude-to-Copilot name
+ * translation as `allowed_tools`, widened entries warned about once per agent.
  * Archon agent fields Copilot cannot represent (`model`, `disallowedTools`,
  * `skills`, `maxTurns`) surface as one consolidated warning per agent.
  *
@@ -266,7 +313,7 @@ function applyAgents(
       name,
       description: def.description,
       prompt: def.prompt,
-      ...(def.tools !== undefined ? { tools: def.tools } : {}),
+      ...(def.tools !== undefined ? { tools: agentTools(name, def.tools, warnings) } : {}),
     };
   });
 
@@ -275,6 +322,18 @@ function applyAgents(
     { count: customAgents.length, names: customAgents.map(a => a.name) },
     'copilot.agents_registered'
   );
+}
+
+function agentTools(name: string, tools: string[], warnings: ProviderWarning[]): string[] {
+  const allowed = mapAllowedTools(tools);
+  const fresh = firstSightings(allowed.widened, `agent:${name}`);
+  if (fresh.length > 0) {
+    warnings.push({
+      code: 'copilot.agent_tools_widened',
+      message: `Copilot filters tools by name only, so these tools entries of agent '${name}' allow their whole tool: ${fresh.join(', ')}.`,
+    });
+  }
+  return allowed.tools;
 }
 
 // ─── SessionConfig assembly ─────────────────────────────────────────────────
@@ -289,7 +348,8 @@ async function buildSessionConfig(
   requestOptions: SendQueryOptions | undefined,
   cwd: string,
   approveAll: SessionConfig['onPermissionRequest'],
-  warnings: ProviderWarning[]
+  warnings: ProviderWarning[],
+  env: Record<string, string>
 ): Promise<SessionConfig> {
   const reasoning = resolveCopilotReasoning(requestOptions?.nodeConfig, copilotConfig);
   if (reasoning.warning) {
@@ -312,12 +372,19 @@ async function buildSessionConfig(
     streaming: true,
     systemMessage: resolveSystemMessage(requestOptions),
     enableConfigDiscovery: copilotConfig.enableConfigDiscovery ?? false,
+    // The runtime loads `<cwd>/.github/hooks/*.json` itself and applies Copilot
+    // CLI semantics (deny/exit 2/error block a tool, a timeout does not); its
+    // `hook.start` / `hook.end` events reach the stream via the event bridge.
+    enableFileHooks: copilotConfig.fileHooks ?? true,
     onPermissionRequest: approveAll,
   };
 
-  applyToolRestrictions(sessionConfig, requestOptions?.nodeConfig);
+  applyToolRestrictions(sessionConfig, requestOptions?.nodeConfig, warnings);
   await applyMcpServers(sessionConfig, requestOptions?.nodeConfig, cwd, warnings);
-  applySkills(sessionConfig, requestOptions?.nodeConfig, cwd, warnings);
+  // The user skill dir follows the runtime's COPILOT_HOME: `configDir` sets it
+  // (client baseDirectory), else the env the runtime is spawned with.
+  const copilotHome = copilotConfig.configDir ?? (env.COPILOT_HOME || undefined);
+  applySkills(sessionConfig, requestOptions?.nodeConfig, cwd, copilotHome, warnings);
   applyAgents(sessionConfig, requestOptions?.nodeConfig, warnings);
 
   return sessionConfig;
@@ -474,7 +541,8 @@ export class CopilotProvider implements IAgentProvider {
       requestOptions,
       cwd,
       approveAll,
-      warnings
+      warnings,
+      mergedEnv
     );
 
     // Flush translation warnings before session creation so the user sees
@@ -595,6 +663,7 @@ export class CopilotProvider implements IAgentProvider {
         hasSystemMessage: sessionConfig.systemMessage !== undefined,
         mcpServers: sessionConfig.mcpServers ? Object.keys(sessionConfig.mcpServers).length : 0,
         skills: sessionConfig.skillDirectories?.length ?? 0,
+        fileHooks: sessionConfig.enableFileHooks,
         agents: sessionConfig.customAgents?.length ?? 0,
         tokenSource,
         resumed: resumeSessionId !== undefined && !resumeFailed,
