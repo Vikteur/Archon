@@ -193,6 +193,12 @@ export const SDK_TYPE_EXCEPTIONS: readonly SdkTypeException[] = [
       'Engine-owned JSON value domain for workflow bindings and validation; generic JSON vocabulary, not a provider boundary copy.',
   },
   {
+    file: 'packages/workflows/src/schemas/gate-node.ts',
+    name: 'DecisionOption',
+    kind: 'independent',
+    reason: 'Archon gate-node answer option, not a Copilot decisions RPC option.',
+  },
+  {
     file: 'packages/workflows/src/schemas/provider-options.ts',
     name: 'SandboxSettings',
     kind: 'boundary',

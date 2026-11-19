@@ -1,18 +1,23 @@
 /**
- * CopilotProvider end-to-end test with a fully mocked @github/copilot-sdk.
+ * CopilotProvider end-to-end test with a fully mocked @microsoft/copilot-sdk.
  *
  * Covers: streaming chunks flow through the async generator, resume
  * fallback on missing session, abort wiring, unsupported-option log-warn,
  * missing-model throw, terminal result chunk carries sessionId + tokens.
  *
- * Runs in its own bun test invocation — mocks @github/copilot-sdk and
+ * Runs in its own bun test invocation — mocks @microsoft/copilot-sdk and
  * @archon/paths process-wide.
  */
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SessionConfig, SessionEvent } from '@github/copilot-sdk';
+import type {
+  CopilotClientOptions,
+  CreateSessionOptions as SessionConfig,
+  SessionEvent,
+  SpawnedStdioRuntimeConnection,
+} from '@microsoft/copilot-sdk';
 import { removeTempTree } from '@archon/paths/test-utils';
 
 import { createMockLogger } from '../../test/mocks/logger';
@@ -107,19 +112,24 @@ const resumeSessionSpy = mock((_id: string, _opts: unknown): Promise<FakeSession
   return Promise.resolve(nextResumeSessionResult);
 });
 
-let lastClientOpts: Record<string, unknown> | undefined;
+let lastClientOpts: CopilotClientOptions | undefined;
 class FakeCopilotClient {
   createSession = createSessionSpy;
   resumeSession = resumeSessionSpy;
-  constructor(opts: Record<string, unknown>) {
+  constructor(opts: CopilotClientOptions) {
     lastClientOpts = opts;
   }
+}
+
+/** The runtime connection the provider handed the client (always spawned stdio). */
+function lastRuntime(): SpawnedStdioRuntimeConnection | undefined {
+  return lastClientOpts?.runtime as SpawnedStdioRuntimeConnection | undefined;
 }
 
 // Capture the onPermissionRequest passed into createSession.
 const approveAllStub = mock(() => ({ kind: 'approved' }));
 
-mock.module('@github/copilot-sdk', () => ({
+mock.module('@microsoft/copilot-sdk', () => ({
   CopilotClient: FakeCopilotClient,
   approveAll: approveAllStub,
 }));
@@ -204,13 +214,9 @@ describe('CopilotProvider.sendQuery', () => {
     const chunks = [(await firstNext).value, ...(await collect(gen))];
 
     expect(createSessionSpy).toHaveBeenCalledTimes(1);
-    const opts = createSessionSpy.mock.calls[0]![0] as {
-      model: string;
-      streaming: boolean;
-      workingDirectory: string;
-    };
+    const opts = createSessionSpy.mock.calls[0]![0] as SessionConfig;
     expect(opts.model).toBe('gpt-5');
-    expect(opts.streaming).toBe(true);
+    expect(opts.events?.streaming).toBe(true);
     expect(opts.workingDirectory).toBe('/work/dir');
     expect(session.prompt).toBe('hello');
     expect(chunks.some(c => c && typeof c === 'object' && 'type' in c && c.type === 'result')).toBe(
@@ -234,10 +240,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as {
-      reasoningEffort?: string;
-    };
-    expect(opts.reasoningEffort).toBe('high');
+    const opts = createSessionSpy.mock.calls[0]![0] as SessionConfig;
+    expect(opts.inference?.reasoningEffort).toBe('high');
   });
 
   test.each(['max', 'ultra', 'persistent'] as const)(
@@ -257,10 +261,8 @@ describe('CopilotProvider.sendQuery', () => {
       await first;
       await collect(gen);
 
-      const opts = createSessionSpy.mock.calls[0]![0] as {
-        reasoningEffort?: string;
-      };
-      expect(opts.reasoningEffort).toBe('max');
+      const opts = createSessionSpy.mock.calls[0]![0] as SessionConfig;
+      expect(opts.inference?.reasoningEffort).toBe('max');
     }
   );
 
@@ -283,10 +285,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as {
-      reasoningEffort?: string;
-    };
-    expect(opts.reasoningEffort).toBe('low');
+    const opts = createSessionSpy.mock.calls[0]![0] as SessionConfig;
+    expect(opts.inference?.reasoningEffort).toBe('low');
   });
 
   test.each([
@@ -623,15 +623,17 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBeUndefined();
-    expect(lastClientOpts?.useLoggedInUser).toBe(true);
-    // copilot-sdk 1.0 rename guard: sessions must run in the request cwd via
-    // `workingDirectory` (was `cwd` pre-1.0 — a silent revert would strand
+    expect(lastClientOpts?.github?.token).toBeUndefined();
+    expect(lastClientOpts?.github?.useLoggedInUser).toBe(true);
+    // copilot-sdk 2.0 placement guard: the runtime must run in the request cwd
+    // via the connection's `workingDirectory` (a silent revert would strand
     // sessions in the server's cwd).
-    expect(lastClientOpts?.workingDirectory).toBe('/w');
-    // Dev mode resolves no custom CLI binary → no stdio connection override
-    // (the SDK uses its bundled runtime).
-    expect(lastClientOpts?.connection).toBeUndefined();
+    expect(lastClientOpts?.mode).toBe('coding-agent');
+    expect(lastRuntime()?.kind).toBe('spawned-stdio');
+    expect(lastRuntime()?.workingDirectory).toBe('/w');
+    // Dev mode resolves no custom CLI binary → no path override
+    // (the SDK spawns its bundled runtime).
+    expect(lastRuntime()?.path).toBeUndefined();
   });
 
   test("a run's identity in the request env reaches the Copilot runtime the agent's shell runs in", async () => {
@@ -652,11 +654,14 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.env).toMatchObject(identity);
-    expect(lastClientOpts?.baseDirectory).toBeUndefined();
+    // 2.0 defaults to an in-process runtime that cannot take this env, so the
+    // provider must keep spawning it over stdio with the merged env.
+    expect(lastRuntime()?.kind).toBe('spawned-stdio');
+    expect(lastRuntime()?.env).toMatchObject(identity);
+    expect(lastRuntime()?.baseDirectory).toBeUndefined();
   });
 
-  test('configDir override → client baseDirectory (COPILOT_HOME), sdk-1.0 placement', async () => {
+  test('configDir override → runtime baseDirectory (COPILOT_HOME), sdk-2.0 placement', async () => {
     const session = makeFakeSession();
     nextCreateSessionResult = session;
 
@@ -671,7 +676,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.baseDirectory).toBe('/custom/copilot-home');
+    expect(lastRuntime()?.baseDirectory).toBe('/custom/copilot-home');
   });
 
   test('COPILOT_GITHUB_TOKEN is always used (intent signal)', async () => {
@@ -695,8 +700,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBe('ghp_copilot');
-    expect(lastClientOpts?.useLoggedInUser).toBe(false);
+    expect(lastClientOpts?.github?.token).toBe('ghp_copilot');
+    expect(lastClientOpts?.github?.useLoggedInUser).toBe(false);
   });
 
   test('useLoggedInUser:false opts into generic GH_TOKEN', async () => {
@@ -715,8 +720,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBe('ghp_testtoken');
-    expect(lastClientOpts?.useLoggedInUser).toBe(false);
+    expect(lastClientOpts?.github?.token).toBe('ghp_testtoken');
+    expect(lastClientOpts?.github?.useLoggedInUser).toBe(false);
   });
 
   test('assistantConfig.useLoggedInUser=true overrides env token', async () => {
@@ -735,8 +740,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBeUndefined();
-    expect(lastClientOpts?.useLoggedInUser).toBe(true);
+    expect(lastClientOpts?.github?.token).toBeUndefined();
+    expect(lastClientOpts?.github?.useLoggedInUser).toBe(true);
   });
 
   test('a sendAndWait rejection ends the turn in a typed failure, then settled', async () => {
@@ -781,9 +786,9 @@ describe('CopilotProvider kit parity', () => {
     createSessionSpy.mockClear();
   });
 
-  test('file hooks are on by default (enableFileHooks)', async () => {
+  test('file hooks are on by default (hooks.enableRepositoryHooks)', async () => {
     const { opts } = await runOnce({ model: 'gpt-5' });
-    expect(opts.enableFileHooks).toBe(true);
+    expect(opts.hooks?.enableRepositoryHooks).toBe(true);
   });
 
   test('fileHooks: false turns the runtime file hooks off', async () => {
@@ -791,7 +796,7 @@ describe('CopilotProvider kit parity', () => {
       model: 'gpt-5',
       assistantConfig: { fileHooks: false },
     });
-    expect(opts.enableFileHooks).toBe(false);
+    expect(opts.hooks?.enableRepositoryHooks).toBe(false);
   });
 
   test('a hook.end from the runtime reaches the stream as a hook chunk', async () => {
@@ -830,14 +835,14 @@ describe('CopilotProvider kit parity', () => {
         denied_tools: ['Write', 'Edit'],
       },
     });
-    expect(opts.availableTools).toEqual(['view', 'grep', 'bash', 'github-list_issues']);
-    expect(opts.excludedTools).toEqual(['create', 'edit']);
+    expect(opts.tools?.availableTools).toEqual(['view', 'grep', 'bash', 'github-list_issues']);
+    expect(opts.tools?.excludedTools).toEqual(['create', 'edit']);
   });
 
   test('a denied argument pattern is dropped with one warning per process', async () => {
     const nodeConfig = { denied_tools: ['Bash(git push *)', 'Write'] };
     const firstRun = await runOnce({ model: 'gpt-5', nodeConfig });
-    expect(firstRun.opts.excludedTools).toEqual(['create']);
+    expect(firstRun.opts.tools?.excludedTools).toEqual(['create']);
     expect(firstRun.chunks).toContainEqual({
       type: 'warning',
       code: 'copilot.denied_tools_dropped',
@@ -845,7 +850,7 @@ describe('CopilotProvider kit parity', () => {
     });
 
     const secondRun = await runOnce({ model: 'gpt-5', nodeConfig });
-    expect(secondRun.opts.excludedTools).toEqual(['create']);
+    expect(secondRun.opts.tools?.excludedTools).toEqual(['create']);
     expect(
       secondRun.chunks.some(
         c => (c as { code?: string } | undefined)?.code === 'copilot.denied_tools_dropped'
@@ -858,7 +863,7 @@ describe('CopilotProvider kit parity', () => {
       model: 'gpt-5',
       nodeConfig: { allowed_tools: ['Bash(git status *)'] },
     });
-    expect(opts.availableTools).toEqual(['bash']);
+    expect(opts.tools?.availableTools).toEqual(['bash']);
     expect(chunks).toContainEqual({
       type: 'warning',
       code: 'copilot.allowed_tools_widened',
@@ -880,7 +885,7 @@ describe('CopilotProvider kit parity', () => {
         },
       },
     });
-    expect(opts.customAgents).toEqual([
+    expect(opts.agents?.definitions).toEqual([
       {
         name: 'reviewer',
         description: 'Reviews',
@@ -900,7 +905,7 @@ describe('CopilotProvider kit parity', () => {
       },
     };
     const firstRun = await runOnce({ model: 'gpt-5', nodeConfig });
-    expect(firstRun.opts.customAgents?.map(agent => agent.tools)).toEqual([
+    expect(firstRun.opts.agents?.definitions?.map(agent => agent.tools)).toEqual([
       ['bash', 'mcp:*'],
       ['bash'],
     ]);
@@ -935,7 +940,7 @@ describe('CopilotProvider kit parity', () => {
       model: 'gpt-5',
       nodeConfig: { agents: { none: { description: 'N', prompt: 'N.', tools: [] } } },
     });
-    expect(opts.customAgents?.[0]?.tools).toEqual([]);
+    expect(opts.agents?.definitions?.[0]?.tools).toEqual([]);
   });
 
   describe('skills', () => {
@@ -973,13 +978,13 @@ describe('CopilotProvider kit parity', () => {
     test('resolves a skill from <cwd>/.github/skills', async () => {
       const dir = stage(join(cwd, '.github', 'skills'), 'review');
       const { opts } = await runOnce({ model: 'gpt-5', nodeConfig: { skills: ['review'] } }, cwd);
-      expect(opts.skillDirectories).toEqual([dir]);
+      expect(opts.skills?.directories).toEqual([dir]);
     });
 
     test('resolves a skill from ~/.copilot/skills', async () => {
       const dir = stage(join(home, '.copilot', 'skills'), 'personal');
       const { opts } = await runOnce({ model: 'gpt-5', nodeConfig: { skills: ['personal'] } }, cwd);
-      expect(opts.skillDirectories).toEqual([dir]);
+      expect(opts.skills?.directories).toEqual([dir]);
     });
 
     test('the user skill dir follows configDir, then a request COPILOT_HOME', async () => {
@@ -997,7 +1002,7 @@ describe('CopilotProvider kit parity', () => {
         },
         cwd
       );
-      expect(viaConfig.opts.skillDirectories).toEqual([fromConfig]);
+      expect(viaConfig.opts.skills?.directories).toEqual([fromConfig]);
 
       const viaEnv = await runOnce(
         {
@@ -1007,7 +1012,7 @@ describe('CopilotProvider kit parity', () => {
         },
         cwd
       );
-      expect(viaEnv.opts.skillDirectories).toEqual([fromEnv]);
+      expect(viaEnv.opts.skills?.directories).toEqual([fromEnv]);
     });
 
     test('a missing skill warning names the Copilot roots', async () => {

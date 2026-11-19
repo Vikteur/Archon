@@ -312,9 +312,9 @@ assistants:
 No Archon maintainer owns GitHub Copilot. It keeps working. See [Deprecated providers](#deprecated-providers).
 :::
 
-Archon drives the Copilot CLI through `@github/copilot-sdk`. You need an active Copilot subscription.
+Archon drives the Copilot CLI through `@microsoft/copilot-sdk` 2.x (the successor of the deprecated `@github/copilot-sdk`). You need an active Copilot subscription.
 
-A source install gets the CLI with `bun install`. For a compiled Archon, install it with `npm install -g @github/copilot`. Archon finds it through `COPILOT_BIN_PATH`, then `assistants.copilot.copilotCliPath`, then `~/.archon/vendor/copilot/copilot` (`copilot.exe` on Windows), then common install locations.
+A source install gets the CLI with `bun install`. For a compiled Archon, install it with `npm install -g @github/copilot`. The SDK speaks runtime protocol 4 only, so the CLI must be recent enough to report it (1.0.114 does); an older CLI fails at start with `SDK protocol version mismatch`. Archon finds it through `COPILOT_BIN_PATH`, then `assistants.copilot.copilotCliPath`, then `~/.archon/vendor/copilot/copilot` (`copilot.exe` on Windows), then common install locations.
 
 Copilot picks its credential in this order:
 

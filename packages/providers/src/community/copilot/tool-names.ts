@@ -14,7 +14,7 @@
 
 /**
  * Claude tool name → Copilot built-in tool name. The Copilot names are the ones
- * the bundled runtime (`@github/copilot-sdk` 1.0.16) lists from `tools.list`:
+ * the bundled runtime (`@microsoft/copilot-sdk` 1.0.16) lists from `tools.list`:
  * bash, read_bash, stop_bash, list_bash, glob, grep, create, edit, view,
  * web_fetch, skill, task, read_agent, write_agent, list_agents. A name missing
  * here passes through unchanged, so a Copilot-native name (`bash`) also works.
