@@ -10,7 +10,6 @@ import { reEsc, SRC } from './kit-sync-source-name';
 export const PROFILES = [
   'core',
   'java',
-  'java-quarkus',
   'java-spring',
   'openapi-contract',
   'mijn-gezondheid',
@@ -46,15 +45,10 @@ export const PROFILE_META: Record<
     description:
       'Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents.',
   },
-  'java-quarkus': {
-    requires: ['java'],
-    description:
-      'The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus scaffold templates, the CI workflow and run-app.',
-  },
   'java-spring': {
     requires: ['java'],
     description:
-      'The java-quarkus paths rewritten for Spring Boot, from the hand-written kit/overlays/java-spring.',
+      'The Spring Boot framework skills (bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, run-app), their code-map leaves, the Spring scaffold templates and the CI workflow, from the hand-written kit/overlays/java-spring.',
   },
   'openapi-contract': {
     requires: ['core'],
@@ -69,7 +63,8 @@ export const PROFILE_META: Record<
   },
 };
 
-export const EXCLUSIVE: Profile[][] = [['java-quarkus', 'java-spring']];
+/** Groups of which a set holds at most one profile: none since the Quarkus profile went (owner decision 2026-11-20). */
+export const EXCLUSIVE: Profile[][] = [];
 
 export const POST_INSTALL: { profile: Profile; run: string; optional: boolean }[] = [
   { profile: 'core', run: 'bash scripts/install-hooks.sh', optional: true },
@@ -270,13 +265,14 @@ export const SKILL_PROFILES: Record<string, Profile> = {
   'usecase-bdd-spec': 'java',
   'usecase-orchestration': 'java',
   'validation-notification-result': 'java',
-  'api-first-controller': 'java-quarkus',
-  'bean-config-di': 'java-quarkus',
-  'exception-to-http': 'java-quarkus',
-  'persistence-repository': 'java-quarkus',
-  resilience4j: 'java-quarkus',
-  testcontainers: 'java-quarkus',
-  [SRC.runSkill]: 'java-quarkus',
+  // The source's originals are written for its own framework; java-spring's overlay ships the Spring copy.
+  'api-first-controller': 'java-spring',
+  'bean-config-di': 'java-spring',
+  'exception-to-http': 'java-spring',
+  'persistence-repository': 'java-spring',
+  resilience4j: 'java-spring',
+  testcontainers: 'java-spring',
+  [SRC.runSkill]: 'java-spring',
   'contract-agent-readiness': 'openapi-contract',
   'contract-db-parity': 'openapi-contract',
   'contract-slice': 'openapi-contract',
@@ -363,7 +359,6 @@ export const FILES: Record<Profile, string[]> = {
     'scripts/scaffold.sh',
     'scripts/scaffold/**',
   ],
-  'java-quarkus': ['.github/ci-inputs.yml', '.github/workflows/ci.yml'],
   'java-spring': [],
   'openapi-contract': [
     '.archon/scripts/portal-mcp-setup.sh',
@@ -379,8 +374,11 @@ export const FILES: Record<Profile, string[]> = {
   'mijn-gezondheid': [],
 };
 
-/** A scaffold template that names one of these is Quarkus-flavoured; every other template is stack-neutral. */
-export const QUARKUS_TEMPLATE = /io\.quarkus|jakarta\.ws\.rs|jakarta\.enterprise|jakarta\.inject/;
+/**
+ * A source scaffold template that names one of these is written for the source's own framework: it goes to java-spring,
+ * whose hand-written overlay ships the Spring template at that path. Every other template is stack-neutral (java).
+ */
+export const FRAMEWORK_TEMPLATE = /io\.quarkus|jakarta\.ws\.rs|jakarta\.enterprise|jakarta\.inject/;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Rewrites
@@ -522,7 +520,7 @@ const LEAK_FAIL: [string, RegExp][] = [
   ['API key', /\bsk-(ant-)?[A-Za-z0-9_-]{32,}/],
 ];
 const LEAK_WARN = new RegExp(`${reEsc(SRC.word)}|rekord|portal`, 'gi');
-const LEAK_WARN_FREE: Profile[] = ['java-quarkus', 'openapi-contract'];
+const LEAK_WARN_FREE: Profile[] = ['openapi-contract'];
 
 export interface LeakReport {
   failures: string[];

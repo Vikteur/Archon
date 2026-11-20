@@ -7,8 +7,7 @@
 # origin/main and maps each changed file to its tests:
 #   - <module>/...: `:<module>:test` for that Gradle module and every module that depends on it. The slow sets are
 #     chosen by JUnit tag, never by class name, with the shared tag rule (.archon/scripts/test-task.sh): a changed test file
-#     tagged `integration`, `quarkus-unit-test` or `resource-test` runs its module's `integrationTest`, `startupTest` or
-#     `resourceTest` (the start-up tag only on the quarkus stack, kit key `stack`; a spring build has no startupTest); when an
+#     tagged `integration` or `resource-test` runs its module's `integrationTest` or `resourceTest`; when an
 #     *-adapter module or application changed, every affected module also runs the slow sets its tests are tagged
 #     for. A root Gradle file (build.gradle.kts, settings.gradle.kts, gradle/, gradlew) changes every module.
 #     The kit ships no gradle.properties: a project that turns the configuration cache on there
@@ -105,7 +104,7 @@ module_set=" $(printf '%s ' $modules)"
 
 is_it_module() { case "$1" in *-adapter|application) return 0 ;; *) return 1 ;; esac; }
 
-# slow_tasks <file...>: ":<module>:<task>" for each test file whose tag puts it in integrationTest, startupTest or resourceTest.
+# slow_tasks <file...>: ":<module>:<task>" for each test file whose tag puts it in integrationTest or resourceTest.
 slow_tasks() {
   local f t files=()
   for f in "$@"; do
@@ -201,7 +200,7 @@ if [ "$it" -eq 1 ] && [ -n "$affected" ]; then
 fi
 tasks=""
 for m in $affected; do tasks="$tasks :$m:test"; done
-for t in integrationTest startupTest resourceTest; do
+for t in integrationTest resourceTest; do
   for s in $(printf '%s\n' $slow | grep ":$t\$" | sort -u); do tasks="$tasks $s"; done
 done
 

@@ -1,8 +1,7 @@
 // Step-order gate on the plan (P2: a script, not a model; owner decision 2026-10-23, docs/memory.md): a step that adds
 // a port also delivers its adapter. A use case is a bean, so a port injected with no implementation fails every test
-// that boots the app's DI container (Quarkus: "Unsatisfied dependency"; Spring: UnsatisfiedDependencyException, no
-// qualifying bean) until the adapter's step (TASK-7.4, TASK-48.8), and the run blocks mid-loop. The rule holds on both
-// stacks (kit key `stack`), so nothing here reads it.
+// that boots the app's DI container (UnsatisfiedDependencyException, no qualifying bean) until the adapter's step
+// (TASK-7.4, TASK-48.8), and the run blocks mid-loop.
 //   node plan-order.js <plan.md>
 // A port is a name ending in Repository or Gateway, or the file of a `-usecase/src/main/java/**/repository/<Name>.java`
 // path, that a step names and no tracked file holds yet (git ls-files, from the checkout). Its adapter is

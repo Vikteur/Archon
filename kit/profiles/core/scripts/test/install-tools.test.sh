@@ -281,13 +281,14 @@ setver tool-a 2.88.1; setver tool-b 22.0.0; setver tool-c 1.53.0; setver tool-d 
 run PATH="$root/bin:$(dirname "$(command -v git)"):/usr/bin:/bin"
 check "I14 exit 0 without a manager" [ "$rc" = 0 ]
 
-# I15: the real scripts/tools.conf: 14 tools, known kinds, every column filled.
+# I15: the real scripts/tools.conf: 16 tools, known kinds, every column filled.
 conf=$(sed -e 's/#.*//' "$real_conf" | grep -v '^[[:space:]]*$')
 out="$conf"
-check "I15 14 tools" [ "$(grep -c . <<< "$conf")" = 14 ]
+check "I15 16 tools" [ "$(grep -c . <<< "$conf")" = 16 ]
 check "I15 order" [ "$(cut -d'|' -f1 <<< "$conf" | tr -d ' ' | tr '\n' ' ')" = \
-  "git gh node jq yq java docker claude copilot archon backlog codegraph rtk mcp-inspector " ]
-check "I15 six columns, none empty" [ -z "$(awk -F'|' 'NF != 6 { print; next } { for (i = 1; i <= 6; i++) { v = $i; gsub(/[[:space:]]/, "", v); if (v == "") print } }' <<< "$conf")" ]
+  "git gh node jq yq gitleaks java docker claude copilot archon backlog codegraph rtk mcp-inspector spectral " ]
+check "I15 six columns, or seven with a kit profile, none empty" [ -z "$(awk -F'|' 'NF != 6 && NF != 7 { print; next } { for (i = 1; i <= NF; i++) { v = $i; gsub(/[[:space:]]/, "", v); if (v == "") print } } NF == 7 { v = $7; gsub(/[[:space:]]/, "", v); if (v !~ /^(core|java|java-spring|openapi-contract|mijn-gezondheid)$/) print }' <<< "$conf")" ]
+check "I15 only spectral names a profile: openapi-contract" [ "$(awk -F'|' 'NF == 7 { gsub(/[[:space:]]/, ""); print $1 "|" $7 }' <<< "$conf")" = "spectral|openapi-contract" ]
 check "I15 known kinds" [ -z "$(cut -d'|' -f3 <<< "$conf" | tr -d ' ' | grep -vxE 'pkg|npm|script')" ]
 pin() { awk -F'|' -v n="$1" '{ gsub(/ /, "", $1); gsub(/ /, "", $2) } $1 == n { print $2 }' <<< "$conf"; }
 check "I15 rtk is pinned to 1.1.0 (not 1.2.x)" [ "$(pin rtk)" = 1.1.0 ]
@@ -295,6 +296,9 @@ check "I15 rtk installs from the v1.1.0 install script" grep -q '| https://raw.g
 check "I15 rtk comes from winget on Windows" grep -q '^rtk .*| winget:rtk-ai.rtk ' <<< "$conf"
 check "I15 rtk is never cargo-installed" [ -z "$(grep -i cargo <<< "$conf")" ]
 check "I15 the inspector is pinned to 2.13.0" [ "$(pin mcp-inspector)" = 2.13.0 ]
+check "I15 spectral is the pinned Stoplight CLI from npm" [ "$(pin spectral)" = 6.17.1 ]
+check "I15 spectral is the official npm package" grep -q '^spectral .*| npm .*@stoplight/spectral-cli .*| spectral --version | openapi-contract$' <<< "$conf"
+check "I15 gitleaks: winget, brew, a major prefix" grep -q '^gitleaks *| 8\. *| pkg *| Gitleaks.Gitleaks *| gitleaks *| gitleaks version$' <<< "$conf"
 check "I15 the inspector is the official npm package" grep -q '^mcp-inspector .*| npm .*@modelcontextprotocol/inspector .*mcp-inspector --version' <<< "$conf"
 project_agents="$here/../../AGENTS.md"
 if [ ! -f "$project_agents" ]; then
@@ -372,7 +376,7 @@ copilot | -  | pkg | copilot | copilot | copilot --version
 CONF
 mkdir -p "$root/p-copilot/.archon" "$root/p-defaults/.archon" "$root/p-none"
 printf 'agent_cli: "copilot"   # the kit\n' > "$root/p-copilot/.archon/kit.yaml"
-printf 'stack: spring\n' > "$root/p-defaults/.archon/kit.yaml"; printf 'agent_cli: copilot\n' > "$root/p-defaults/.archon/kit.defaults.yaml"
+printf 'base_branch: main\n' > "$root/p-defaults/.archon/kit.yaml"; printf 'agent_cli: copilot\n' > "$root/p-defaults/.archon/kit.defaults.yaml"
 script_args=--check
 run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-copilot"
 check "L4 kit.yaml copilot: copilot is checked" listed copilot
@@ -396,7 +400,7 @@ backlog | -  | pkg | backlog | backlog | backlog --version
 CONF
 mkdir -p "$root/p-nob/.archon" "$root/p-nobdef/.archon"
 printf 'backlog: false   # no task board\n' > "$root/p-nob/.archon/kit.yaml"
-printf 'stack: spring\n' > "$root/p-nobdef/.archon/kit.yaml"; printf 'backlog: false\n' > "$root/p-nobdef/.archon/kit.defaults.yaml"
+printf 'base_branch: main\n' > "$root/p-nobdef/.archon/kit.yaml"; printf 'backlog: false\n' > "$root/p-nobdef/.archon/kit.defaults.yaml"
 run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-none"
 check "L5 no setting: backlog is checked" listed backlog
 check "L5 no setting: no off line" nosaid "Backlog.md: off"
@@ -411,6 +415,90 @@ run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-nob" INSTALL_TOOLS_BACK
 check "L5 INSTALL_TOOLS_BACKLOG=1 wins over kit.yaml" listed backlog
 run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-none" INSTALL_TOOLS_BACKLOG=0
 check "L5 INSTALL_TOOLS_BACKLOG=0: left out" nolisted backlog
+script_args=
+
+# P: a tools.conf row with a profile column is kept only when that kit profile is installed: INSTALL_TOOLS_PROFILES, else
+# profiles in kit.yaml (either YAML form), then kit.defaults.yaml; no profiles known anywhere: every row is kept.
+cat > "$root/profile.conf" <<'CONF'
+tool-a  | -      | pkg | tool-a  | tool-a  | tool-a --version
+tool-c  | 1.53.0 | npm | tool-c  | tool-c  | tool-c --version | openapi-contract
+CONF
+mkdir -p "$root/p-block/.archon" "$root/p-flow/.archon" "$root/p-other/.archon" "$root/p-pdef/.archon"
+printf 'profiles:\n  - core # the base\n  - "openapi-contract"\n\nbase_branch: main\n' > "$root/p-block/.archon/kit.yaml"
+printf "profiles: [core, 'openapi-contract'] # flow\n" > "$root/p-flow/.archon/kit.yaml"
+printf 'profiles:\n  - core\n  - java\nopenapi-contract: no\n  - openapi-contract\n' > "$root/p-other/.archon/kit.yaml"
+printf 'base_branch: main\n' > "$root/p-pdef/.archon/kit.yaml"; printf 'profiles: [core, java]\n' > "$root/p-pdef/.archon/kit.defaults.yaml"
+fresh p
+script_args=--check
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-block"
+check "P block list with the profile: the tool is checked" listed tool-c
+check "P block list with the profile: reported missing" said "Check: missing or wrong version: tool-a tool-c"
+check "P block list with the profile: no left-out line" nosaid "left out"
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-flow"
+check "P flow list with the profile: the tool is checked" listed tool-c
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-other"
+check "P the list ends at the next key: the tool is left out" nolisted tool-c
+check "P left out: said, with its profile" said "left out: tool-c (openapi-contract)"
+check "P left out: the other tools stay" listed tool-a
+check "P left out: not reported missing" grep -qxF "Check: missing or wrong version: tool-a" <<< "$out"
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-pdef"
+check "P kit.defaults.yaml without the profile: left out" nolisted tool-c
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-none"
+check "P no profiles known: every row is kept" listed tool-c
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-other" INSTALL_TOOLS_PROFILES=core,openapi-contract
+check "P INSTALL_TOOLS_PROFILES wins over kit.yaml" listed tool-c
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-block" INSTALL_TOOLS_PROFILES="core java"
+check "P INSTALL_TOOLS_PROFILES without the profile: left out" nolisted tool-c
+script_args=
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-other"
+ok=1; [ "$rc" = 0 ] && ! grep -q 'tool-c' "$log" && logged "winget install --id tool-a $winget_flags" && ok=0
+check "P an install leaves it out too" [ "$ok" = 0 ]
+run TOOLS_CONF="$root/profile.conf" PROJECT_DIR="$root/p-block"
+check "P an install with the profile takes it at its pin" logged "npm install -g tool-c@1.53.0"
+
+# G: Linux gitleaks: the pinned release tarball into the prefix, checked against the release's checksums file.
+fresh g
+mkdir -p "$root/glp/bin" "$root/gcurl" "$root/gpkg"
+printf '#!/usr/bin/env bash\necho 8.30.1\n' > "$root/gpkg/gitleaks"; chmod +x "$root/gpkg/gitleaks"
+tar -czf "$root/gitleaks.tgz" -C "$root/gpkg" gitleaks
+gsum=$(sha256sum "$root/gitleaks.tgz" | cut -d' ' -f1)
+cat > "$root/gcurl/curl" <<STUB
+#!/usr/bin/env bash
+echo "\$*" >> "\$LOG"
+while [ \$# -gt 0 ]; do [ "\$1" = -o ] && o=\$2; shift; done
+case "\$o" in "") exit 22 ;; esac
+case "\${GSUMS:-good}" in
+  good) sum=$gsum ;; bad) sum=0000000000000000000000000000000000000000000000000000000000000000 ;;
+esac
+case "\$(tail -n 1 "\$LOG")" in
+  *_checksums.txt) printf '%s  gitleaks_8.30.1_linux_x64.tar.gz\n%s  gitleaks_8.30.1_linux_arm64.tar.gz\n' "\$sum" "\$sum" > "\$o" ;;
+  *) cp "$root/gitleaks.tgz" "\$o" ;;
+esac
+STUB
+chmod +x "$root/gcurl/curl"
+cat > "$root/gitleaks.conf" <<CONF
+gitleaks | 8. | pkg | Gitleaks.Gitleaks | gitleaks | $root/glp/bin/gitleaks version
+CONF
+run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/gitleaks.conf" LOCAL_PREFIX="$root/glp" PATH="$root/gcurl:$PATH"
+check "G exit 0" [ "$rc" = 0 ]
+check "G the pinned release tarball" grep -qE 'gitleaks/gitleaks/releases/download/v8\.30\.1/gitleaks_8\.30\.1_linux_(x64|arm64)\.tar\.gz$' "$log"
+check "G its checksums file" grep -q 'gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt$' "$log"
+check "G installed into the prefix, executable" [ -x "$root/glp/bin/gitleaks" ]
+check "G summary" said "Installed: gitleaks"
+run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/gitleaks.conf" LOCAL_PREFIX="$root/glp" PATH="$root/gcurl:$PATH"
+check "G idempotent: second run installs nothing" said "Nothing to install"
+rm -f "$root/glp/bin/gitleaks"; fresh g2
+run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/gitleaks.conf" LOCAL_PREFIX="$root/glp" PATH="$root/gcurl:$PATH" GSUMS=bad
+ok=1; [ "$rc" = 1 ] && said "checksum mismatch for gitleaks_8.30.1_linux_" && [ ! -e "$root/glp/bin/gitleaks" ] \
+  && said "Failed: gitleaks" && ok=0
+check "G a checksum mismatch fails and installs nothing" [ "$ok" = 0 ]
+fresh g3
+run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/gitleaks.conf" LOCAL_PREFIX="$root/glp" PATH="$root/gcurl:$PATH" GITLEAKS_VERSION=v8.29.0
+check "G GITLEAKS_VERSION picks another release (a leading v is dropped)" grep -q 'releases/download/v8.29.0/gitleaks_8.29.0_linux_' "$log"
+script_args=--check; fresh g4; rm -f "$root/glp/bin/gitleaks"
+run INSTALL_TOOLS_OS=linux TOOLS_CONF="$root/gitleaks.conf" LOCAL_PREFIX="$root/glp" PATH="$root/gcurl:$PATH"
+ok=1; [ "$rc" = 1 ] && said "Check: missing or wrong version: gitleaks" && [ "$(calls)" = 0 ] && [ ! -e "$root/glp/bin/gitleaks" ] && ok=0
+check "G --check reports gitleaks missing and downloads nothing" [ "$ok" = 0 ]
 script_args=
 
 # R: the rtk row of tools.conf: winget on Windows, its pinned install script (OSS edition, checksum left on) elsewhere.

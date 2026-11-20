@@ -20,7 +20,7 @@
 version: 1
 
 # Inputs of every job: the planner, its manifest, the runner and the gate that reads its statuses, the workflow (whole
-# file in v1), .gitattributes, and the kit config the scripts branch on (kit key stack, java_version, contract.*).
+# file in v1), .gitattributes, and the kit config the scripts branch on (kit keys java_version, contract.*).
 always:
   - .github/ci-inputs.yml
   - .github/workflows/ci.yml
@@ -35,8 +35,9 @@ jobs:
   test:
     # Every module's src/ and build file, the Gradle wrapper and settings, config/; the gates after Gradle run
     # .claude/scripts/: pin-proof-check.sh reads .archon/pin-proofs.txt, build-shape-check.sh docs/memory.md and the
-    # boot jar. No contract: this is the job of a project without the openapi-contract profile, which ships its own
-    # ci-inputs.yml at this path.
+    # boot jar. The lines marked for the openapi-contract profile are kept only where it is installed:@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+    # generated-untracked-check.sh's git reads .gitignore, ci-gate.sh contract-lint the project's own .spectral.yaml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+    # when the contract has none, and the job reads the contract at its pin.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
     inputs:
       - "*/src/**"
       - "*.gradle.kts"
@@ -49,8 +50,12 @@ jobs:
       - .claude/scripts/
       - .archon/pin-proofs.txt
       - docs/memory.md
+      - .gitignore@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - .spectral.yaml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - .spectral.yml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
     exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
     readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
+    contract: true@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
 
   archon-scripts:
     # ci-workflow-check.sh reads .github/, the build file and docs/memory.md; the .archon suites read the checkout, so

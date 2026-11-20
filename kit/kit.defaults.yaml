@@ -2,7 +2,6 @@
 # project and renders the kit's @@KIT_<KEY>@@ placeholders from it; scripts read it at runtime with yq
 # (.archon/scripts/kit-config.sh). Hand-written: the defaults suit a Spring Boot Gradle project.
 profiles: [core, java, java-spring, openapi-contract, mijn-gezondheid]
-stack: spring # quarkus | spring: the gates that differ per framework branch on it (build shape, pin proofs)
 base_branch: main
 gh_accounts: [] # gh-switch-account skill: the gh accounts to switch between, e.g. [alice, alice-work]
 agent_cli: copilot # install-tools.sh and kit-config.sh: the agent CLI this project runs, claude | copilot
@@ -17,7 +16,7 @@ local_ci: true
 # pasted ticket text as its ticket (ticket.sh), and backlog/ is no bookkeeping folder (ci-skip.sh, affected-check.sh).
 backlog: true
 java_version: 26 # kit add takes JavaLanguageVersion.of(N) of build.gradle.kts, buildSrc/ or build-logic/; set to another, it refuses
-pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh, either stack: one <item>|<module>|<task>|<class> line each
+pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh: one <item>|<module>|<task>|<class> line each
 build_shape: # build-shape-check.sh; "-" turns one check off, with a notice
   modules: "-" # the settings.gradle.kts modules, space-separated, e.g. "application order-adapter order-domain"
   memory_marker: "-" # a docs/memory.md decision id the build shape must name
@@ -31,7 +30,7 @@ modules: # layer globs, used by the .github/instructions applyTo fields and the 
   platform: "**/platform/**"
 generated_globs: ["**/build/generated/**"]
 ci: # .github/workflows/ci.yml and ci-workflow-check.sh
-  gradle_line: "./gradlew test integrationTest build" # the Gradle run of CI's test job, every task named, none excluded
+  gradle_line: "./gradlew test integrationTest build" # CI's test-job Gradle run, every task named, none excluded (build-shape-check.sh's tasks)
 gates: # .claude/scripts/ci-gate.sh (kit/SPEC.md, Report-only gates): report prints a finding and passes, block fails the
   # job. Every gate ships report; switching one to block is a gate change (a dated docs/memory.md entry, gate-change-check.sh).
   tests_ran: report # the test job's JUnit XML counts more than zero tests

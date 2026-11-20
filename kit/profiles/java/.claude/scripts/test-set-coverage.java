@@ -1,6 +1,6 @@
 // The test-set coverage gate (CI plan C19, D11; run by .claude/scripts/test-set-coverage.sh, never on its own).
 //
-// build.gradle.kts skips a slow test set (integrationTest, startupTest, resourceTest) when no compiled test class of the
+// build.gradle.kts skips a slow test set (integrationTest, resourceTest) when no compiled test class of the
 // module holds the set's tag name as bytes (PR #113). That scan is cheap but blind to a tag that reaches a test only
 // through a type compiled elsewhere: a meta-annotation, a superclass or an interface from another module, or an
 // enclosing class of a @Nested test. This program reads the compiled classes with the JDK's class-file API, works out
