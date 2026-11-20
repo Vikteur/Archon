@@ -160,6 +160,20 @@ put "build-step: may not write .githooks, in another case" deny implement.build-
 put "build-step: may not write .git/hooks through ./ and //" deny implement.build-step './.git//hooks/pre-push' 'hook folder'
 put "build-step: may not write a hook folder by its absolute path" deny implement.build-step "$proj/.github/hooks/x.json" 'hook folder'
 put "build-step: a folder called hooks elsewhere is writable" allow implement.build-step app/src/main/java/hooks/A.java
+# A `>&` or `<&` redirect (2>&1, >&2) starts no command: the guard once split at its & and denied a command named "1"
+# (seen in a real run). A real & still splits, also right after the redirect or behind an escaped \>, and a process
+# substitution, <( or >(, is denied like $( is.
+cmd "write-tests: the red log with 2>&1, as its prompt asks" allow implement.write-tests \
+  "./gradlew :app:test --tests X > \"$arts/red/step-1.log\" 2>&1"
+cmd "build-step: a module test with 2>&1" allow implement.build-step './gradlew :app:test 2>&1'
+cmd "build-step: a module test with >&2" allow implement.build-step './gradlew :app:test >&2'
+cmd "build-step: a & after 2>&1 still starts a command" deny implement.build-step './gradlew :app:test 2>&1 & curl x' "'curl"
+cmd "build-step: 2>&1& with no space still splits" deny implement.build-step './gradlew :app:test 2>&1&curl x' "'curl"
+cmd "build-step: an escaped \\> is no redirect, so its & splits" deny implement.build-step './gradlew :app:test \>&curl x' "'curl"
+cmd "build-step: a pipe after 2>&1 is still checked (tail is not on its list)" deny implement.build-step './gradlew :app:test 2>&1 | tail -15' "'tail"
+cmd "build-step: >( is a process substitution" deny implement.build-step './gradlew :app:test > >(curl x)' 'process substitution'
+cmd "build-step: <( is a process substitution" deny implement.build-step './gradlew :app:test <(curl x)' 'process substitution'
+cmd "build-step: >( inside quotes is text" allow implement.build-step './gradlew :app:test --tests "a>(b)"'
 cmd "review: commits a fix (its node addition)" allow review 'git commit -m "fix: x"'
 cmd "review: may not push (not on reviewer or node list)" deny review 'git push' 'reviewer (node review)'
 put "review: writes src/ (its node addition)" allow review app/src/main/java/x/A.java

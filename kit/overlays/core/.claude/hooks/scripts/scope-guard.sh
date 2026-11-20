@@ -13,7 +13,8 @@
 #   Read/Grep/   the path read or searched must fall inside the agent's `readPaths` (`dir/` = prefix,
 #   Glob         `~/dir/` = prefix under the home folder, otherwise exact path or glob). A Grep or
 #                Glob must name its path. `readPaths` absent = read anything.
-#   Bash         every command segment (split on ; && || | & and newlines, outside quotes) must
+#   Bash         every command segment (split on ; && || | & and newlines, outside quotes; the & of a
+#                `>&`/`<&` redirect such as 2>&1 splits nothing, and <( or >( is denied) must
 #                start with an entry of the agent's `commandAllowlist`. `cd` is always allowed.
 #                Command substitution outside single quotes is denied except the `$(cat <<'EOF' … )`
 #                heredoc form used for commit/PR messages. Quotes and \ escapes are read as bash
@@ -553,10 +554,11 @@ check_cmd() {
       cmd="${cmd/"$m"/KIT_RUN_FILE}"
     done
   fi
-  local i c q="" seg="" n=${#cmd}
+  local i c q="" seg="" n=${#cmd} rd=0 po
   i=0
   while [ "$i" -lt "$n" ]; do
     c="${cmd:$i:1}"
+    po=$rd; rd=0   # po=1: the character before this one was a > or < outside quotes and not escaped
     case "$q" in
       "'") seg="$seg$c"; [ "$c" = "'" ] && q="" ;;
       "\$'")
@@ -574,7 +576,16 @@ check_cmd() {
           case "$c" in
             "'"|'"') q="$c"; seg="$seg$c" ;;
             '$') if [ "${cmd:$((i + 1)):1}" = "'" ]; then q="\$'"; i=$((i + 1)); seg="$seg\$'"; else seg="$seg$c"; fi ;;
-            ';'|'&'|'|'|$'\n')
+            # `>&` and `<&` (2>&1, >&2) copy a file descriptor: the & starts no command, so it stays in the segment.
+            '&') if [ "$po" -eq 1 ]; then seg="$seg$c"; else
+                   seg="${seg#"${seg%%[![:space:]]*}"}"
+                   seg_allowed "$seg" || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
+                   seg=""; fi ;;
+            # <( and >( run a command in a process substitution, which hides it like $( does.
+            '(') [ "$po" -eq 1 ] && deny "BLOCKED: agent '$agent' may not use process substitution (<( or >( ) — it can hide a command outside the allowlist."
+                 seg="$seg$c" ;;
+            '>'|'<') rd=1; seg="$seg$c" ;;
+            ';'|'|'|$'\n')
               seg="${seg#"${seg%%[![:space:]]*}"}"
               seg_allowed "$seg" || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
               seg="" ;;
