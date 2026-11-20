@@ -26,6 +26,9 @@ description: |
 # code-generation; the skill-check node fails the run when one was never loaded.
 # The plan itself always loads clean-architecture, and design-review and the contract skills (openapi-contract profile)
 # only when the request needs them.
+# The write-tests and build-step lists follow the installed profiles too: a skill a profile ships carries that
+# profile's line marker (java, java-spring), so `kit add` drops it where the profile is not installed and a node never
+# names a skill the project does not have (no copilot.skills_missing warning).
 # Scaffolding (P2): before writing a new file, the test and build agents run `scripts/scaffold.sh --for <path>`, which
 # names each scaffold template whose `## Scaffold` Target in docs/code-maps matches the path and prints the command that
 # renders it, and render its base case with that command. It is mandatory (owner decisions 2026-10-18 and 2026-10-23):
@@ -364,8 +367,15 @@ nodes:
           # Commits go through the commit-shape hook: no agent of a run skips it, and no background command or
           # Monitor stands in for a foreground run.
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Monitor"]
-          skills: [tdd-loop, jvm-testing, object-mother-builders, usecase-bdd-spec, testcontainers,
-                    archunit-fitness, domain-to-dto-mapper-tests, code-generation]
+          skills:
+            - tdd-loop
+            - jvm-testing # profile java@@KIT_IF_PROFILE_JAVA@@
+            - object-mother-builders # profile java@@KIT_IF_PROFILE_JAVA@@
+            - usecase-bdd-spec # profile java@@KIT_IF_PROFILE_JAVA@@
+            - testcontainers # profile java-spring@@KIT_IF_PROFILE_JAVA_SPRING@@
+            - archunit-fitness # profile java@@KIT_IF_PROFILE_JAVA@@
+            - domain-to-dto-mapper-tests # profile java@@KIT_IF_PROFILE_JAVA@@
+            - code-generation
           mcp: { path: .archon/mcp/build-tools.json, optional: true }
           prompt: |
             Request: $ARGUMENTS
@@ -465,10 +475,23 @@ nodes:
           idle_timeout: 1200000
           effort: medium
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Monitor"]
-          skills: [clean-code, java, domain-modeling, validation-notification-result, domain-events,
-                    usecase-orchestration, api-first-controller, domain-dto-mapper, persistence-repository,
-                    jpa-entity-mapping, flyway-migrations, resilience4j, bean-config-di, exception-to-http,
-                    conventional-commits, code-generation]
+          skills:
+            - clean-code
+            - java # profile java@@KIT_IF_PROFILE_JAVA@@
+            - domain-modeling # profile java@@KIT_IF_PROFILE_JAVA@@
+            - validation-notification-result # profile java@@KIT_IF_PROFILE_JAVA@@
+            - domain-events # profile java@@KIT_IF_PROFILE_JAVA@@
+            - usecase-orchestration # profile java@@KIT_IF_PROFILE_JAVA@@
+            - api-first-controller # profile java-spring@@KIT_IF_PROFILE_JAVA_SPRING@@
+            - domain-dto-mapper # profile java@@KIT_IF_PROFILE_JAVA@@
+            - persistence-repository # profile java-spring@@KIT_IF_PROFILE_JAVA_SPRING@@
+            - jpa-entity-mapping # profile java@@KIT_IF_PROFILE_JAVA@@
+            - flyway-migrations # profile java@@KIT_IF_PROFILE_JAVA@@
+            - resilience4j # profile java-spring@@KIT_IF_PROFILE_JAVA_SPRING@@
+            - bean-config-di # profile java-spring@@KIT_IF_PROFILE_JAVA_SPRING@@
+            - exception-to-http # profile java-spring@@KIT_IF_PROFILE_JAVA_SPRING@@
+            - conventional-commits
+            - code-generation
           mcp: { path: .archon/mcp/build-tools.json, optional: true }
           prompt: |
             Request: $ARGUMENTS
