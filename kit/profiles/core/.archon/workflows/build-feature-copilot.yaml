@@ -695,8 +695,9 @@ nodes:
       Request: $ARGUMENTS
       Write the summary of the pull request for the changes on this branch to $ARTIFACTS_DIR/pr-summary.md: two to
       four sentences on what changed and why, plain text, no headings, and no line that starts with "STOP items".
-      pr-body.sh builds the rest of the description from the branch and the plan (the ticket, the test commits, the
-      owner decisions, the merge section). Do not push and do not open the pull request; return only the title.
+      pr-body.sh builds the rest of the description from the branch (the ticket, the test commits, the merge section),
+      and pr-refresh.sh adds the plan's owner decisions once CI is green. Do not push and do not open the pull request;
+      return only the title.
     output_format:
       type: object
       properties:

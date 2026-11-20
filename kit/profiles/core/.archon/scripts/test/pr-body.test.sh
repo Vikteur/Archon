@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for .archon/scripts/pr-body.sh against a throwaway repo: the pull request body from its template (the model's
-# summary, the ticket, the test commits, the owner decisions word for word, the pr-refresh block, Merge, the footer),
-# and the pr-text and open-pr nodes that use it.
+# summary, the ticket, the test commits, the pr-refresh block, Merge, the footer; no `## Decisions`, which pr-refresh.sh
+# alone writes: a body pr-body.sh made and pr-refresh.sh refreshed has exactly one), and the pr-text and open-pr nodes.
 # Usage: bash .archon/scripts/test/pr-body.test.sh   (exit 0 = all pass)
 set -uo pipefail
 export GIT_CONFIG_COUNT=2
@@ -59,14 +59,30 @@ check "2 the test commits, oldest first, no code commit" \
   $(grep -A6 '^## Tests' "$body" | grep -x -- '- test(step 1): a blank name is refused' >/dev/null \
     && grep -qx -- '- test: the guard holds on update' "$body" && ! grep -qx -- '- feat: refuse a blank name' "$body" \
     && [ "$(grep -n 'test(step 1)' "$body" | cut -d: -f1)" -lt "$(grep -n 'test: the guard' "$body" | cut -d: -f1)" ]; echo $?)
-check "2 the decisions word for word" $(grep -qx '## Decisions' "$body" \
-  && grep -qxF -- '- 2026-11-20, the owner: a blank name is refused, not trimmed.' "$body"; echo $?)
+check "2 no Decisions section: pr-refresh.sh writes it (owner decision 2026-11-20)" $(! grep -q 'Decisions' "$body" \
+  && ! grep -qF -- 'a blank name is refused, not trimmed.' "$body"; echo $?)
 check "2 not the steps" $(! grep -q '^## Steps' "$body"; echo $?)
 check "2 the empty pr-refresh block before Merge" \
   $(s=$(grep -nx '<!-- pr-refresh:start -->' "$body" | cut -d: -f1); e=$(grep -nx '<!-- pr-refresh:end -->' "$body" | cut -d: -f1)
     m=$(grep -nx '## Merge' "$body" | cut -d: -f1); [ -n "$s" ] && [ "$e" -eq $((s+1)) ] && [ "$m" -gt "$e" ]; echo $?)
 check "2 Merge: a team member merges, never the workflow" $(grep -A3 '^## Merge' "$body" | tr '\n' ' ' | grep -q 'A team member reviews and merges.*never merges it itself.*requesting changes'; echo $?)
 check "2 ends with the footer" $(tail -1 "$body" | grep -qx '🤖 Generated with GitHub Copilot through Archon (build-feature-copilot)'; echo $?)
+
+# 2b. That body refreshed by pr-refresh.sh (gh stubbed): exactly one `## Decisions`, inside the block, holding the
+# decisions word for word, and still one after a second refresh.
+mkdir -p "$root/bin"; printf '#!/usr/bin/env bash\nexit 0\n' > "$root/bin/gh"; chmod +x "$root/bin/gh"
+refresh() { out=$(PATH="$root/bin:$PATH" ARTIFACTS_DIR="$art" bash "$here/pr-refresh.sh" 7 main "$body" 2>&1); rc=$?; }
+refresh
+check "2b refresh: exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "2b refresh: exactly one Decisions section" $([ "$(grep -cx '## Decisions' "$body")" -eq 1 ]; echo $?)
+check "2b refresh: the decisions word for word, once, inside the block" \
+  $([ "$(grep -cxF -- '- 2026-11-20, the owner: a blank name is refused, not trimmed.' "$body")" -eq 1 ] \
+    && awk '/pr-refresh:start/{on=1} /pr-refresh:end/{on=0} on && /^## Decisions$/{d=1} on && d && /a blank name is refused, not trimmed\.$/{f=1} END{exit !f}' "$body"; echo $?)
+refresh
+check "2b second refresh: still one Decisions section" $([ "$(grep -cx '## Decisions' "$body")" -eq 1 ] \
+  && [ "$(grep -cF -- 'a blank name is refused, not trimmed.' "$body")" -eq 1 ]; echo $?)
+check "2b refresh: the body around the block kept" $(head -1 "$body" | grep -qx 'Refuses a blank name on create and update.' \
+  && grep -qx 'Backlog ticket: TASK-7' "$body" && grep -qx '## Merge' "$body"; echo $?)
 
 # 3. No summary, no ticket, no plan, no test commit.
 git checkout -q main
