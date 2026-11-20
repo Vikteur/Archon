@@ -7,8 +7,9 @@ open. Unless a line says "verified", the facts come from the report of the lane 
 
 ## The measured run (step 3 of [plan.md])
 
-Three `build-feature-copilot` runs on the scratch project, 2026-11-20, each driven by a Sonnet subagent with an
-isolated Archon. None is complete, so the baseline is not replaced.
+Four `build-feature-copilot` runs on the scratch project, 2026-11-20, each driven by a Sonnet subagent with an
+isolated Archon. Run 4 is the first to reach `ready`. The baseline is not replaced: its CI went red twice on gaps that
+are not the change's, and the two ci-fix rounds make up most of its time and tokens.
 
 - **Run 1, `8c961580…`** (kit `56763529a`) stopped at `tdd-check`: the kit update commit was in its branch range,
   because the real push guard refused the update's push to the scratch project's `main`, as it should (verified).
@@ -24,6 +25,20 @@ isolated Archon. None is complete, so the baseline is not replaced.
   runs between a build-side miss and the next build agent passed and removed `skills-missing.md`, so no retry could see
   the miss. Fixed below. Iteration 1 per node: explore 33 s, 368k, 9 turns; plan 54 s, 470k, 10; write-tests 32 s,
   423k, 11; build-step 25 s, 311k, 9. The loop's ten rounds took 140 calls and about 5.1M input tokens.
+- **Run 4, `28ae4a05…`** (kit `9d15cce5a`) completed in 910 s, plan approval 43 s included: one `implement` round,
+  scratch PR #6 marked ready, `local-ci/test success in 6s on Vikteur; 4 tests` on head `1b45432` (verified). CI went
+  red twice first; the two ci-fix rounds (diagnose 346 s, fix 132 s) are 478 s and about 3.05M of 5.66M input tokens:
+  - the scratch project had no `integrationTest` task, which the default `ci.gradle_line` runs; the fix agent added it.
+  - `build-shape-check.sh` (java profile) assumes a multi-module build: it asks for `:application:bootJar`, an
+    `application/build.gradle.kts` with the Spring Boot plugin and a `@SpringBootApplication` under
+    `application/src/main/java`. A single-module project fails it. **Open.** The fix agent then edited the kit-owned
+    `.claude/scripts/build-shape-check.sh` and its test in the run's branch; no fence stops a run from changing a
+    kit-owned file. **Open.**
+  Per node, run 4 against run B: explore 24.1 s, 187k, 5 [28.2 s, 201k, 6]; plan 59.4 s, 535k, 11 [31.0 s, 234k, 6];
+  write-tests 33.1 s, 468k, 12 [30.9 s, 263k, 7]; build-step 24.4 s, 302k, 8 [23.3 s, 296k, 8]; review 122.1 s,
+  1.05M, 27 [70.3 s, 267k, 8]; pr-text 8.9 s, 75k, 3 [10.9 s, 102k, 4]. 140 calls, 55,883 output tokens and 1344 cost
+  units [50, 21,669, 372]. These numbers are the subagent's, from `copilot-usage.js`; I checked the run status, the PR
+  and the CI statuses only.
 
 Per node: wall time, Copilot input tokens, turns. Run 2 against baseline run B of
 `kit/profiles/core/.archon/copilot/baseline.md` and run 1:
@@ -55,6 +70,16 @@ plan and review are still heavier: review ran `gradlew test` 7 times for a one-e
   - 11 `ls`/`cat`/`echo` compounds, despite the prompt line; 6 build-step `./gradlew test | tail` (the developer list
     has `./gradlew :` only; it fell back to affected-check); 4 compounds after `;`; 1 `echo` in plan.
   - 1 explore `grep` with 5 paths, denied by design, but its reason reads "jq failed", like a guard crash.
+- **Run 4's denies: 20, and 20 `DENY` records**, each naming its node: plan 1, write-tests 2, build-step 2, review 2,
+  diagnose 7, fix 6. `cat`/`ls`/`echo` 10, `git` 4 (1 the write-tests `git log` above), `./gradlew test` 2 (build-step
+  and fix), and 2 `grep` calls with a 3-path list, whose reason still reads "jq failed". `| tail -<n>` and `| head -<n>`
+  went through 11 times, and `git --no-pager log`/`diff` were allowed (diagnose, pr-text). Copilot also sent
+  `read_bash` (2 calls), which `tools.json` does not map. **Open.**
+- **Run 4 also showed:** a `local-ci/<job>` pending status reads `queued #260 pos 1` on a scratch PR (#260 is not a PR
+  of that repo; not looked into), and one `archon-scripts` red on `340419d` (`ci-local.test.sh`: the Archon git env does
+  not reach the job), green on the commits before and after it. `kit doctor` in the run's worktree reports the
+  workflow file as modified, though it is byte-identical to `main`'s, where doctor reports no drift. All three:
+  **open, cause unknown.**
 - **The audit records held no denies in runs 1 and 2.** The `.apm-audit` records come from postToolUse, which a denied
   call never reaches. They name the node (`"node":"<node>"`). A deny named the node only in its message, and only
   Copilot's own session log (`events.jsonl`) kept it. The guard now writes the deny record itself (below).
@@ -65,8 +90,8 @@ plan and review are still heavier: review ran `gradlew test` 7 times for a one-e
   genuine warning (5 hand searches, no CodeGraph).
 - **Tool names Copilot sent:** `bash`, `view`, `glob`, `grep`, `edit`, `create`, `skill`, and MCP tools as
   `<server>-<tool>`. Not compared with `tools.json` entry by entry.
-- **Not verified:** the `; <n> tests` local-ci status, CI running Gradle, `ready` and the CI-fix loop (no run reached
-  `ci`), the `<(`/`>(` deny and the list-of-one `grep` in a real run (only in the suites), and a second workflow with
+- **Not verified:** the `## Misses of the last round` path in a real run (run 4 had no miss), that run 4's pushes went
+  through the guard (a passing guard is silent; a dry-run probe was not permitted), the `<(`/`>(` deny and the list-of-one `grep` in a real run (only in the suites), and a second workflow with
   `fileHooks` (the kit has none).
 - **Fixed on this branch from what the runs found:**
   - `pr-body.sh` writes its note to stderr; `pr-body.test.sh` case 2b checks stdout stays empty (fails on the old
