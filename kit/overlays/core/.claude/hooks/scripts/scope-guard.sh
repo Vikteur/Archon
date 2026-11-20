@@ -15,7 +15,9 @@
 #                Glob must name its path. `readPaths` absent = read anything.
 #   Bash         every command segment (split on ; && || | & and newlines, outside quotes; the & of a
 #                `>&`/`<&` redirect such as 2>&1 splits nothing, and <( or >( is denied) must
-#                start with an entry of the agent's `commandAllowlist`. `cd` is always allowed.
+#                start with an entry of the agent's `commandAllowlist`. `cd` is always allowed, and so is
+#                `tail` or `head` with count options only right after a single | (`| tail -15`).
+#                `git --no-pager <cmd>` is read as `git <cmd>`.
 #                Command substitution outside single quotes is denied except the `$(cat <<'EOF' … )`
 #                heredoc form used for commit/PR messages. Quotes and \ escapes are read as bash
 #                reads them, so single-quoted text is free and an escaped quote opens no string.
@@ -85,7 +87,33 @@ trap 'emit_fallback_deny; exit 0' EXIT
 allow() { decided=1; exit 0; }
 deny() { decided=1
   hook_deny_json "$1"
+  deny_record "$1"
   exit 0
+}
+
+# A denied call never reaches postToolUse, so audit-log.sh never records it: the guard appends a DENY record to the
+# session's audit trail itself, in the form of audit-log.sh's TOOL record (tool, the arg cut to 200 bytes a line, the
+# node) plus the deny reason. Only when <project>/.apm-audit/sessions exists (audit-log.sh made it at sessionStart): the
+# guard creates no audit folder. It never changes the decision: every step is defensive, and a failure writes nothing.
+# A subagent's own fence (the nested run below) writes its own record; the outer run only passes that deny on.
+deny_record() {  # deny_record <reason>
+  local d="${CLAUDE_PROJECT_DIR:-}/.apm-audit/sessions" rec sid
+  [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$d" ] && command -v jq >/dev/null 2>&1 || return 0
+  rec="$(printf '%s' "${payload:-}" | jq -c --arg r "$1" --arg ag "${agent:-}" --arg nd "${node:-}" '
+    def cut: gsub("\r"; "") | split("\n") | map(if utf8bytelength > 200 then .[0:200] else . end) | join("\n");
+    (.tool_input // {}) as $a
+    | {type: "DENY", event: "preToolUse",
+       session: ((.session_id // .sessionId // "") | tostring | gsub("[^A-Za-z0-9._-]"; "") | .[0:64]
+                 | if . == "" then "unknown" else . end),
+       agent: $ag, ts: ((.timestamp // "") | tostring), loggedAt: (now | todate)}
+      + (if ($nd | test("^[A-Za-z0-9_-]+$")) then {node: $nd} else {} end)
+      + {tool: ((.tool_name // "") | tostring),
+         arg: (($a.command // $a.file_path // $a.notebook_path // $a.path // $a.pattern // ($a | tostring)) | tostring | cut),
+         reason: $r}' 2>/dev/null)" || return 0
+  [ -n "$rec" ] || return 0
+  sid="$(printf '%s' "$rec" | jq -r .session 2>/dev/null)" || return 0
+  [[ $sid =~ ^[A-Za-z0-9._-]+$ ]] || return 0
+  printf '%s\n' "$rec" >> "$d/$sid.jsonl" 2>/dev/null || true
 }
 
 node="${KIT_NODE:-}"
@@ -503,7 +531,15 @@ norm_cmd() {  # strip a leading interpreter and ./ so `bash ./scripts/x.sh` matc
   local s="$1"
   case "$s" in "bash "*|"sh "*) s="${s#* }"; s="${s#"${s%%[![:space:]]*}"}" ;; esac
   s="${s#./}"
+  # `git --no-pager <cmd>` is `git <cmd>`: the flag only turns the pager off (owner, 2026-11-20)
+  case "$s" in "git --no-pager "*) s="git ${s#git --no-pager }" ;; esac
   printf '%s' "$s"
+}
+
+# A read-only filter after a single pipe (owner, 2026-11-20): `| tail -15`, `| head -n 30`. Options only: no file
+# operand (it would read a file outside the read fence), no -f/-F, no redirect, and never after || or alone.
+pipe_filter() {  # pipe_filter <segment> — 0 for tail or head with only count options
+  [[ $1 =~ ^(tail|head)([[:space:]]+(-[0-9]+|-[nc][[:space:]]*[+-]?[0-9]+|--(lines|bytes)=[+-]?[0-9]+))*[[:space:]]*$ ]]
 }
 
 seg_allowed() {  # seg_allowed <segment> — 0 when the segment starts with an allowlisted command
@@ -554,7 +590,7 @@ check_cmd() {
       cmd="${cmd/"$m"/KIT_RUN_FILE}"
     done
   fi
-  local i c q="" seg="" n=${#cmd} rd=0 po
+  local i c q="" seg="" n=${#cmd} rd=0 po pp=0   # pp=1: this segment follows a single |
   i=0
   while [ "$i" -lt "$n" ]; do
     c="${cmd:$i:1}"
@@ -579,16 +615,20 @@ check_cmd() {
             # `>&` and `<&` (2>&1, >&2) copy a file descriptor: the & starts no command, so it stays in the segment.
             '&') if [ "$po" -eq 1 ]; then seg="$seg$c"; else
                    seg="${seg#"${seg%%[![:space:]]*}"}"
-                   seg_allowed "$seg" || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
-                   seg=""; fi ;;
+                   { seg_allowed "$seg" || { [ "$pp" -eq 1 ] && pipe_filter "$seg"; }; } || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
+                   seg=""; pp=0; fi ;;
             # <( and >( run a command in a process substitution, which hides it like $( does.
             '(') [ "$po" -eq 1 ] && deny "BLOCKED: agent '$agent' may not use process substitution (<( or >( ) — it can hide a command outside the allowlist."
                  seg="$seg$c" ;;
             '>'|'<') rd=1; seg="$seg$c" ;;
             ';'|'|'|$'\n')
               seg="${seg#"${seg%%[![:space:]]*}"}"
-              seg_allowed "$seg" || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
-              seg="" ;;
+              { seg_allowed "$seg" || { [ "$pp" -eq 1 ] && pipe_filter "$seg"; }; } || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
+              seg=""; pp=0
+              # a single | (or |&) pipes into the next segment; || is one separator, after which nothing is piped
+              if [ "$c" = '|' ]; then
+                case "${cmd:$((i + 1)):1}" in '|') i=$((i + 1)) ;; '&') i=$((i + 1)); pp=1 ;; *) pp=1 ;; esac
+              fi ;;
             *) seg="$seg$c" ;;
           esac
         fi ;;
@@ -596,7 +636,7 @@ check_cmd() {
     i=$((i + 1))
   done
   seg="${seg#"${seg%%[![:space:]]*}"}"
-  seg_allowed "$seg" || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
+  { seg_allowed "$seg" || { [ "$pp" -eq 1 ] && pipe_filter "$seg"; }; } || deny "BLOCKED: agent '$agent' may not run '${seg%% *}…' — allowed commands: $(printf '%s' "$cmds" | tr '\002' ',' | sed 's/,/, /g') ($policy_rel)."
   allow
 }
 

@@ -170,7 +170,45 @@ cmd "build-step: a module test with >&2" allow implement.build-step './gradlew :
 cmd "build-step: a & after 2>&1 still starts a command" deny implement.build-step './gradlew :app:test 2>&1 & curl x' "'curl"
 cmd "build-step: 2>&1& with no space still splits" deny implement.build-step './gradlew :app:test 2>&1&curl x' "'curl"
 cmd "build-step: an escaped \\> is no redirect, so its & splits" deny implement.build-step './gradlew :app:test \>&curl x' "'curl"
-cmd "build-step: a pipe after 2>&1 is still checked (tail is not on its list)" deny implement.build-step './gradlew :app:test 2>&1 | tail -15' "'tail"
+cmd "build-step: a pipe after 2>&1 is still checked (sort is not on its list)" deny implement.build-step './gradlew :app:test 2>&1 | sort' "'sort"
+# tail and head with count options only, right after a single | (owner, 2026-11-20): never alone, never after || or ;,
+# never with a file, -f or a redirect, and what follows them is still checked.
+cmd "build-step: tail -15 after a pipe" allow implement.build-step './gradlew :app:test 2>&1 | tail -15'
+cmd "build-step: head -n 30 after a pipe" allow implement.build-step './gradlew :app:test | head -n 30'
+cmd "build-step: tail -n +5 after |&" allow implement.build-step './gradlew :app:test |& tail -n +5'
+cmd "build-step: tail then head after pipes" allow implement.build-step './gradlew :app:test | tail -40 | head -5'
+cmd "build-step: tail alone reads a file" deny implement.build-step 'tail -5 build.log' "'tail"
+cmd "build-step: tail with a file after a pipe" deny implement.build-step './gradlew :app:test | tail -5 build.log' "'tail"
+cmd "build-step: tail -f after a pipe" deny implement.build-step './gradlew :app:test | tail -f' "'tail"
+cmd "build-step: tail with a redirect after a pipe" deny implement.build-step './gradlew :app:test | tail -5 > out.txt' "'tail"
+cmd "build-step: tail after || is no pipe" deny implement.build-step './gradlew :app:test || tail -5' "'tail"
+cmd "build-step: tail after ; is no pipe" deny implement.build-step './gradlew :app:test; tail -5' "'tail"
+cmd "build-step: a command after tail is still checked" deny implement.build-step './gradlew :app:test | tail -5 | curl x' "'curl"
+# git --no-pager <cmd> is git <cmd> (owner, 2026-11-20): it meets the same list, no more.
+cmd "pr-text: git --no-pager log (its node addition)" allow pr-text 'git --no-pager log --oneline 8dedd27..HEAD'
+cmd "build-step: git --no-pager diff (the developer list)" allow implement.build-step 'git --no-pager diff --stat'
+cmd "write-tests: git --no-pager log is still not on the test-writer list" deny implement.write-tests 'git --no-pager log' "'git"
+cmd "build-step: another git option in front is not stripped" deny implement.build-step 'git --no-pager -c core.pager=x log' "'git"
+# A deny is recorded in the session's audit trail (postToolUse never sees it), with the node, once audit-log.sh has made
+# the folder; every deny above ran without it, and the guard made none.
+if [ ! -e "$proj/.apm-audit" ]; then ok "deny record: no audit folder, so none is made"; else bad "deny record: no audit folder, so none is made"; fi
+mkdir -p "$proj/.apm-audit/sessions"
+sg implement.build-step 'Write|Edit|MultiEdit|NotebookEdit|Bash' \
+  "$(jq -cn --arg d "$proj" '{toolName:"bash",toolArgs:{command:"./gradlew :app:test | sort"},cwd:$d,sessionId:"sess-1"}')" ""
+rec="$proj/.apm-audit/sessions/sess-1.jsonl"
+if [ "$(decision)" = deny ] && [ -f "$rec" ] && jq -e -s 'length == 1 and .[0].type == "DENY" and .[0].event == "preToolUse"
+    and .[0].node == "build-step" and .[0].tool == "Bash" and .[0].arg == "./gradlew :app:test | sort"
+    and (.[0].reason | contains("sort"))' "$rec" >/dev/null 2>&1; then ok "deny record: one DENY record with the node, tool, arg and reason"
+else bad "deny record: one DENY record with the node, tool, arg and reason" "$(cat "$rec" 2>/dev/null)"; fi
+sg implement.build-step 'Write|Edit|MultiEdit|NotebookEdit|Bash' \
+  "$(jq -cn --arg d "$proj" '{toolName:"bash",toolArgs:{command:"git status"},cwd:$d,sessionId:"sess-1"}')" ""
+if [ "$(wc -l < "$rec")" -eq 1 ]; then ok "deny record: an allowed call writes none"; else bad "deny record: an allowed call writes none" "$(cat "$rec")"; fi
+long="$(printf 'x%.0s' $(seq 1 300))"
+sg implement.build-step 'Write|Edit|MultiEdit|NotebookEdit|Bash' \
+  "$(jq -cn --arg d "$proj" --arg c "sort $long" '{toolName:"bash",toolArgs:{command:$c},cwd:$d,sessionId:"sess/../2"}')" ""
+if [ "$(jq -r '.arg | utf8bytelength' "$proj/.apm-audit/sessions/sess..2.jsonl" 2>/dev/null)" = 200 ]; then
+  ok "deny record: the session id is made path-safe and the arg cut to 200 bytes"
+else bad "deny record: the session id is made path-safe and the arg cut to 200 bytes" "$(ls "$proj/.apm-audit/sessions")"; fi
 cmd "build-step: >( is a process substitution" deny implement.build-step './gradlew :app:test > >(curl x)' 'process substitution'
 cmd "build-step: <( is a process substitution" deny implement.build-step './gradlew :app:test <(curl x)' 'process substitution'
 cmd "build-step: >( inside quotes is text" allow implement.build-step './gradlew :app:test --tests "a>(b)"'
