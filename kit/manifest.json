@@ -825,7 +825,7 @@
       "template": false,
       "origin": ".archon/scripts/test/node-fence.test.sh",
       "kind": "script",
-      "sha256": "8566f6ff6df9aa499d683af8f892b2893cf9011d4884d91857fce88cf7471dff"
+      "sha256": "b31d23ef6189a82626f7aa35d5875056e9c58c06dacbf8c0d376f12e6f50e2ad"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -1087,7 +1087,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "7727c1ce2b8e901e5afdeb342cded16767d985669c34c29b1eadd4a21013ab6a"
+      "sha256": "88e883c3fddcb9cd5b6997804a17d4361b9bc58cd13c85853e6b3c8d544ec79c"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1222,7 +1222,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "78b7606f4730bf916fd686816b6b246c126475a7b02c1849593e92ccdced8f8b"
+      "sha256": "2a8f827c1edefc118354bd86543d5e111fb149b5fdb04fb6812990222f5d5298"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
