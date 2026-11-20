@@ -155,7 +155,16 @@
       "template": false,
       "origin": ".archon/copilot/README.md",
       "kind": "doc",
-      "sha256": "ae96bfb857ca8e5ae2541601cb207efac57028c5ca51e7e5167f1e49d654136a"
+      "sha256": "aafe8aa6ff83586c6255302748e89b2f007e85be9106d3fddb15691b749685f3"
+    },
+    {
+      "path": ".archon/copilot/baseline.md",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "doc",
+      "sha256": "c1e436a001387cef30236dbec770112902789e132c9100662e6407e6cc1d7011"
     },
     {
       "path": ".archon/copilot/deny.json",
@@ -173,7 +182,7 @@
       "template": false,
       "origin": ".archon/copilot/hooks/run-guard.sh",
       "kind": "hook",
-      "sha256": "66ff0bdda3bb2304a7db66bd968a2ad54229aa3b8957fb1bbf09c96040af389f"
+      "sha256": "6e5b3cb1be10ef15896641ee8c0c2900d25ad5ec6069e5e8d14a5581e5603ed6"
     },
     {
       "path": ".archon/copilot/tools.json",
@@ -182,7 +191,7 @@
       "template": false,
       "origin": ".archon/copilot/tools.json",
       "kind": "config",
-      "sha256": "e78d55181320d34324fc5f755179ea8de5181d802f22da197839a1b66e928aba"
+      "sha256": "b6d117a6e03c08729f4ee19568c4b59eb59a94e5324abe350bd00a05fef2529f"
     },
     {
       "path": ".archon/githooks/commit-msg",
@@ -636,7 +645,7 @@
       "template": false,
       "origin": ".archon/scripts/test/commit-msg.test.sh",
       "kind": "script",
-      "sha256": "2b8aea1aafc5e13a67bf9378e18da0522557254e78065d74f30a9a716a90f819"
+      "sha256": "0e3652a609232e7307b244e403e016101f1d3c874ba5d4a34e0174ed17836e41"
     },
     {
       "path": ".archon/scripts/test/copilot-audit.test.sh",
@@ -654,7 +663,7 @@
       "template": false,
       "origin": ".archon/scripts/test/copilot-guard.test.sh",
       "kind": "script",
-      "sha256": "154e68f8880b45c82b6dc04e953a70048670b81d8aea493297be093f493db06c"
+      "sha256": "1be4df140cd231ff4d43af134f3ebcb1a7edc160364a4e2185818ee8d5a47b41"
     },
     {
       "path": ".archon/scripts/test/fixtures/copilot-audit/empty.jsonl",
@@ -746,7 +755,7 @@
       "template": false,
       "origin": ".archon/scripts/test/payload.test.sh",
       "kind": "script",
-      "sha256": "76bd656670dd34af5f03f07d52455e894ed940ea0e18bdcf4f923d659ac65bd7"
+      "sha256": "c8f827a6f2391fe2a8d55af1307c4d54cdd85458087d0f65261444b98b90bde5"
     },
     {
       "path": ".archon/scripts/test/plan-context.test.sh",
@@ -1089,7 +1098,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/payload.sh",
       "kind": "hook",
-      "sha256": "b47652a7ded85ef2dd84bd1d5b6a744efe0951b849fbc3086b39cec2da688e60"
+      "sha256": "8a5f74e7fb7b747338ad6bc50e347e1c2688887e60d3ce67008dd5392c1e6aea"
     },
     {
       "path": ".claude/hooks/scripts/scope-guard.sh",
@@ -1219,11 +1228,20 @@
     {
       "path": ".githooks/commit-msg",
       "profile": "core",
-      "mode": "0644",
+      "mode": "0755",
       "template": false,
       "origin": ".githooks/commit-msg",
       "kind": "hook",
       "sha256": "b156884fac0d80cf8043eddb1d306ce02e8ec681d412b1d8363841a13b9982ae"
+    },
+    {
+      "path": ".githooks/pre-push",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "hook",
+      "sha256": "c75d393303a2bd4a2867572f0ef4108532004514d00296d7b92b65d620af7d1d"
     },
     {
       "path": ".github/agents/design-critic.agent.md",
@@ -1286,7 +1304,7 @@
       "template": false,
       "origin": null,
       "kind": "hook",
-      "sha256": "7195bafe0f7136832ae71671654acd6af9910b9b4522df1a2f2a5a7df5dfeec7"
+      "sha256": "68f17f7245fc90178583b04ea513050e88eb0465728ca99dfd4201610e420eed"
     },
     {
       "path": ".github/hooks/kit.json",
@@ -1615,7 +1633,7 @@
       "template": false,
       "origin": "scripts/install-hooks.sh",
       "kind": "script",
-      "sha256": "3cb26214b3d9f5519813e9ac8bfe6fe0b558d6d0a1e0ea895a6ac5b9bc4a8244"
+      "sha256": "406a0bea45028bfd9a6479099388d265eadfd81db99c957ccbc7231217551cb0"
     },
     {
       "path": "scripts/install-tools.sh",

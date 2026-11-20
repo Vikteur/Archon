@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for .archon/copilot/hooks/run-guard.sh (the Copilot-only PreToolUse guard) and its registration file
 # .github/hooks/archon-run-guard.json: JSON samples in both field spellings (Claude: tool_name/tool_input.command,
-# Copilot: toolName/toolArgs) are fed to the guard from a real temp main checkout and a real run worktree under a
+# Copilot: toolName/toolArgs, and the batched toolCalls form) are fed to the guard from a real temp main checkout and a real run worktree under a
 # /.archon/workspaces/ path. Inside a run the safety subset is refused (exit 2 + permissionDecision deny), ordinary
 # commands pass; outside a run everything passes.
 # Usage: bash .archon/scripts/test/copilot-guard.test.sh   (exit 0 = all pass)
@@ -77,6 +77,23 @@ check "native preToolUse input is denied with permissionDecision deny on stdout"
 native=$(node -e 'console.log(JSON.stringify({timestamp:1,cwd:process.argv[1],toolName:"view",toolArgs:"{\"path\":\"/x\"}"}))' "$run")
 feed "$run" "$native"; check "native non-shell tool passes" "$([ "$rc" -eq 0 ]; echo $?)"
 
+# the batched preToolUse input Copilot CLI 1.0.114 sends: exactly {cwd, sessionId, toolCalls: [{id, name, args}]}, args
+# an object; one payload can hold several calls. Every call is judged; one refused call refuses the batch.
+batch() { # batch <cwd> <command>...: one bash call per command, then a skill call
+  node -e 'const [cwd,...cmds]=process.argv.slice(1);console.log(JSON.stringify({sessionId:"s",cwd,toolCalls:[...cmds.map((c,i)=>({id:"t"+i,name:"bash",args:{command:c,description:"d"}})),{id:"tk",name:"skill",args:{skill:"clean-code"}}]}))' "$@"; }
+feed "$run" "$(batch "$run" 'git status' 'git push origin main')"
+check "batch: a refused second call refuses the batch" "$([ "$rc" -eq 2 ] && grep -q 'git push to main' <<< "$out"; echo $?)"
+feed "$run" "$(batch "$run" 'git commit --no-verify -m x' 'git status')"
+check "batch: a refused first call refuses the batch" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(batch "$run" 'git status' 'git log -1')"
+check "batch: ordinary calls pass" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+feed "$run" "$(node -e 'console.log(JSON.stringify({sessionId:"s",cwd:process.argv[1],toolCalls:[]}))' "$run")"
+check "batch: an empty toolCalls array passes" "$([ "$rc" -eq 0 ]; echo $?)"
+feed "$run" "$(node -e 'console.log(JSON.stringify({sessionId:"s",cwd:process.argv[1],toolCalls:[{id:"a",name:"bash",args:{}}]}))' "$run")"
+check "batch: a shell call without a command is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$main" "$(batch "$main" 'git push origin main')"
+check "batch: outside a run it passes" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+
 # the deny reason names the guard on stderr and has the Copilot JSON shape
 feed "$run" "$(claude 'git push origin main' "$run")"
 check "deny reason on stderr" "$(grep -q 'run-guard.sh: git push to main' <<< "$out"; echo $?)"
@@ -121,6 +138,8 @@ dfeed "$(node -e 'console.log(JSON.stringify({tool_name:"Edit",tool_input:{file_
 check "deny.json: Edit glob denies" "$([ "$rc" -eq 2 ]; echo $?)"
 dfeed "$(node -e 'console.log(JSON.stringify({tool_name:"WebFetch",tool_input:{url:"x"},cwd:process.argv[1]}))' "$main")"
 check "deny.json: a bare tool name denies every call" "$([ "$rc" -eq 2 ]; echo $?)"
+dfeed "$(node -e 'console.log(JSON.stringify({sessionId:"s",cwd:process.argv[1],toolCalls:[{id:"a",name:"view",args:{path:"src/A.java"}},{id:"b",name:"view",args:{path:".env"}}]}))' "$main")"
+check "deny.json: a batch with one denied view of .env is denied" "$([ "$rc" -eq 2 ]; echo $?)"
 dfeed 'not json'; check "deny.json: unreadable input outside a run still allows" "$([ "$rc" -eq 0 ]; echo $?)"
 printf 'not json' > "$main/.archon/copilot/deny.json"; dfeed "$(claude 'git push origin x' "$main")"; check "deny.json: an unreadable list denies nothing" "$([ "$rc" -eq 0 ]; echo $?)"
 printf '%s' '["Bash(*--no-verify*)"]' > "$main/.archon/copilot/deny.json"

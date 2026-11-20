@@ -16,7 +16,8 @@
 #   - names commit-tickets or sync-main;
 #   - runs `backlog task` without BACKLOG_CWD= (a script that edits a ticket runs it with BACKLOG_CWD, a node never does).
 # Input (stdin JSON): Claude names (tool_name, tool_input.command, cwd) or Copilot's (toolName, toolArgs as object or JSON
-# string, cwd or workingDirectory). Deny: JSON with permissionDecision "deny" on stdout (top level and in hookSpecificOutput)
+# string, cwd or workingDirectory), or Copilot's batched preToolUse (CLI 1.0.114: {cwd, sessionId, toolCalls: [{id, name,
+# args}, ...]}): every call of the batch is checked, and the first one refused refuses the batch. Deny: JSON with permissionDecision "deny" on stdout (top level and in hookSpecificOutput)
 # and the reason on stderr with exit 2 (Copilot denies on exit 2). Anything unreadable inside a run is a deny; outside a run
 # it is an allow. A deny is final: there is no switch to turn the guard off.
 set -uo pipefail
@@ -66,67 +67,72 @@ const denyFile = process.env.RUN_GUARD_DENY || path.join(root, ".archon", "copil
 try { const d = JSON.parse(fs.readFileSync(denyFile, "utf8")); if (Array.isArray(d)) patterns = d.filter(x => typeof x === "string"); } catch { /* no list, or not readable: none */ }
 if (!run && !patterns.length) { console.log("ALLOW"); process.exit(0); }
 if (!o || typeof o !== "object") { console.log(run ? "DENY\tthe hook input is not readable JSON" : "ALLOW"); process.exit(0); }
-let tool = String(o.tool_name || o.toolName || "");
+// one entry per tool call: a batch (toolCalls) holds several, any other payload one
+const calls = Array.isArray(o.toolCalls)
+  ? o.toolCalls.map(c => (c && typeof c === "object" ? { tool: String(c.name || ""), args: c.args } : { tool: "", args: undefined }))
+  : [{ tool: String(o.tool_name || o.toolName || ""), args: o.tool_input !== undefined ? o.tool_input : o.toolArgs }];
 // Copilot tool names to Claude names, through the same map the audit uses (.archon/copilot/tools.json)
 let toolMap = { view: "Read", create: "Write", edit: "Edit", str_replace_editor: "Edit", grep: "Grep", glob: "Glob" };
 try { toolMap = Object.assign(toolMap, JSON.parse(fs.readFileSync(path.join(root, ".archon", "copilot", "tools.json"), "utf8")).tools || {}); } catch { /* built-in names only */ }
-const mapped = toolMap[tool.toLowerCase()];
-const claudeTool = mapped ? (typeof mapped === "string" ? mapped : mapped.as) : (/^(bash|shell|powershell|run_shell_command|run_in_terminal)$/i.test(tool) ? "Bash" : tool);
-let args = o.tool_input !== undefined ? o.tool_input : o.toolArgs;
-if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = { command: args }; } }
-const isShell = claudeTool === "Bash";
-const cmd = args && typeof args === "object" ? (args.command || args.cmd || "") : "";
-const target = args && typeof args === "object" ? String(args.file_path || args.path || "") : "";
-const globRe = g => new RegExp("^" + g.replace(/:\*$/, "*").replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$", "s");
-const blocks = (pat, t, val) => { // pat is `Tool` or `Tool(glob)`
-  const m = /^([A-Za-z_][\w-]*)(?:\((.*)\))?$/s.exec(pat);
-  if (!m || m[1] !== t) return false;
-  return m[2] === undefined || m[2] === "" ? true : globRe(m[2].replace(/^\.\//, "")).test(String(val).replace(/^\.\//, ""));
-};
-for (const pat of patterns) {
-  if (blocks(pat, claudeTool, isShell ? cmd : target)) { console.log("DENY\tthe project deny list (.archon/copilot/deny.json) holds " + pat); process.exit(0); }
-}
-if (!run) { console.log("ALLOW"); process.exit(0); }
-if (!isShell) { console.log("ALLOW"); process.exit(0); }
-if (typeof cmd !== "string" || !cmd.trim()) { console.log("DENY\tthe shell command is not readable in the hook input"); process.exit(0); }
-const deny = why => { console.log("DENY\t" + why); process.exit(0); };
-
-// the main checkout: first entry of `git worktree list --porcelain` in the session folder
-let main = process.env.RUN_GUARD_MAIN || "";
-if (!main) {
-  for (const d of dirs.filter(inRun)) {
-    try {
-      const out = execFileSync("git", ["-C", d, "worktree", "list", "--porcelain"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-      const m = /^worktree (.+)$/m.exec(out);
-      if (m) { main = m[1]; break; }
-    } catch { /* try the next folder */ }
+let main = null; // the main checkout, looked up once
+const check = (tool, args) => {
+  const mapped = toolMap[tool.toLowerCase()];
+  const claudeTool = mapped ? (typeof mapped === "string" ? mapped : mapped.as) : (/^(bash|shell|powershell|run_shell_command|run_in_terminal)$/i.test(tool) ? "Bash" : tool);
+  if (typeof args === "string") { try { args = JSON.parse(args); } catch { args = { command: args }; } }
+  const isShell = claudeTool === "Bash";
+  const cmd = args && typeof args === "object" ? (args.command || args.cmd || "") : "";
+  const target = args && typeof args === "object" ? String(args.file_path || args.path || "") : "";
+  const globRe = g => new RegExp("^" + g.replace(/:\*$/, "*").replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$", "s");
+  const blocks = (pat, t, val) => { // pat is `Tool` or `Tool(glob)`
+    const m = /^([A-Za-z_][\w-]*)(?:\((.*)\))?$/s.exec(pat);
+    if (!m || m[1] !== t) return false;
+    return m[2] === undefined || m[2] === "" ? true : globRe(m[2].replace(/^\.\//, "")).test(String(val).replace(/^\.\//, ""));
+  };
+  for (const pat of patterns) {
+    if (blocks(pat, claudeTool, isShell ? cmd : target)) { console.log("DENY\tthe project deny list (.archon/copilot/deny.json) holds " + pat); process.exit(0); }
   }
-}
-const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const protectedBranches = ["main"].concat((process.env.RUN_GUARD_PROTECTED || "").split(/\s+/).filter(Boolean));
+  if (!run || !isShell) return;
+  if (typeof cmd !== "string" || !cmd.trim()) { console.log("DENY\tthe shell command is not readable in the hook input"); process.exit(0); }
+  const deny = why => { console.log("DENY\t" + why); process.exit(0); };
 
-if (/--no-verify/.test(cmd)) deny("--no-verify skips the commit hooks");
-if (/(^|[^A-Za-z0-9_-])(commit-tickets|sync-main)/.test(cmd)) deny("commit-tickets and sync-main write to the main checkout");
-if (main) {
-  const m = esc(main);
-  if (new RegExp("(^|[\\s;&|(])cd\\s+[\"\x27]?" + m + "(/[^\\s;&|\"\x27]*)?[\"\x27]?\\s*(&&|;|\\|\\||$)").test(cmd)) deny("a run never works in the main checkout " + main);
-  if (new RegExp("git\\s+(-[A-Za-z]\\s+\\S+\\s+)*-C\\s*[\"\x27]?" + m + "([/\\s\"\x27]|$)").test(cmd)) deny("git -C on the main checkout " + main);
-}
-for (const seg of cmd.split(/&&|\|\||[;|\n]/)) {
-  const t = seg.trim().split(/\s+/);
-  const gi = t.indexOf("git");
-  if (gi < 0) continue;
-  const rest = t.slice(gi + 1);
-  if (rest.includes("commit") && rest.some(x => /^-[A-Za-z]*n[A-Za-z]*$/.test(x))) deny("git commit -n skips the commit hooks");
-  if (rest.includes("push")) {
-    for (const x of rest.slice(rest.indexOf("push") + 1)) {
-      const ref = x.replace(/^["\x27]+|["\x27]+$/g, "").replace(/^\+/, "");
-      const dst = ref.includes(":") ? ref.slice(ref.lastIndexOf(":") + 1) : ref;
-      if (!ref.startsWith("-") && protectedBranches.some(b => dst === b || dst === "refs/heads/" + b)) deny("git push to " + dst + ": a run pushes its own branch only");
+  // the main checkout: first entry of `git worktree list --porcelain` in the session folder
+  if (main === null) {
+    main = process.env.RUN_GUARD_MAIN || "";
+    for (const d of main ? [] : dirs.filter(inRun)) {
+      try {
+        const out = execFileSync("git", ["-C", d, "worktree", "list", "--porcelain"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+        const m = /^worktree (.+)$/m.exec(out);
+        if (m) { main = m[1]; break; }
+      } catch { /* try the next folder */ }
     }
   }
-}
-if (/(^|[^A-Za-z0-9_-])backlog\s+task\b/.test(cmd) && !/BACKLOG_CWD=/.test(cmd)) deny("backlog task without BACKLOG_CWD= (only a ticket script runs it)");
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const protectedBranches = ["main"].concat((process.env.RUN_GUARD_PROTECTED || "").split(/\s+/).filter(Boolean));
+
+  if (/--no-verify/.test(cmd)) deny("--no-verify skips the commit hooks");
+  if (/(^|[^A-Za-z0-9_-])(commit-tickets|sync-main)/.test(cmd)) deny("commit-tickets and sync-main write to the main checkout");
+  if (main) {
+    const m = esc(main);
+    if (new RegExp("(^|[\\s;&|(])cd\\s+[\"\x27]?" + m + "(/[^\\s;&|\"\x27]*)?[\"\x27]?\\s*(&&|;|\\|\\||$)").test(cmd)) deny("a run never works in the main checkout " + main);
+    if (new RegExp("git\\s+(-[A-Za-z]\\s+\\S+\\s+)*-C\\s*[\"\x27]?" + m + "([/\\s\"\x27]|$)").test(cmd)) deny("git -C on the main checkout " + main);
+  }
+  for (const seg of cmd.split(/&&|\|\||[;|\n]/)) {
+    const t = seg.trim().split(/\s+/);
+    const gi = t.indexOf("git");
+    if (gi < 0) continue;
+    const rest = t.slice(gi + 1);
+    if (rest.includes("commit") && rest.some(x => /^-[A-Za-z]*n[A-Za-z]*$/.test(x))) deny("git commit -n skips the commit hooks");
+    if (rest.includes("push")) {
+      for (const x of rest.slice(rest.indexOf("push") + 1)) {
+        const ref = x.replace(/^["\x27]+|["\x27]+$/g, "").replace(/^\+/, "");
+        const dst = ref.includes(":") ? ref.slice(ref.lastIndexOf(":") + 1) : ref;
+        if (!ref.startsWith("-") && protectedBranches.some(b => dst === b || dst === "refs/heads/" + b)) deny("git push to " + dst + ": a run pushes its own branch only");
+      }
+    }
+  }
+  if (/(^|[^A-Za-z0-9_-])backlog\s+task\b/.test(cmd) && !/BACKLOG_CWD=/.test(cmd)) deny("backlog task without BACKLOG_CWD= (only a ticket script runs it)");
+};
+for (const c of calls) check(c.tool, c.args);
 console.log("ALLOW");
 ' 2>/dev/null) || verdict=$'DENY\tthe guard failed before it could decide'
 
