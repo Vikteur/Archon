@@ -124,10 +124,25 @@ check "7 no log: exit 0" "$rc"
 check "7 no log: said so" $(grep -qF 'No Archon log for this run: nothing counted.' "$md"; echo $?)
 node "$script" "$art" > /dev/null 2>&1; check "7 usage error exits 2" $([ $? -eq 2 ]; echo $?)
 
+# 7b. A Copilot run: its lower-case tool names count as the Claude tools of .archon/copilot/tools.json (grep's folder in
+# `paths`, view's file in `path`); without the map they would count nothing.
+fresh; status up up
+times 3 explore grep '{"pattern":"SignInUseCase","paths":"identity-usecase/src/main"}'
+call explore glob '{"pattern":"**/*.java"}'
+call explore bash '{"command":"grep -rn Session identity-adapter/src; sed -n 1,9p docs/memory.md"}'
+call explore view '{"path":"/w/worktrees/run1/identity-domain/src/main/java/C.java"}'
+call explore view '{"path":"contract/openapi.yaml"}'
+call explore bash '{"command":"codegraph explore \"SignInUseCase\""}'
+gate; check "7b Copilot names counted" $(row explore | grep -qF '| explore | 0 | 1 | 3 | 1 | 1 | 1 | 1 |'; echo $?)
+COPILOT_TOOLS="$root/none.json" gate
+check "7b without tools.json the names count as they are" $(row explore | grep -qF '| explore | 0 | 0 | 0 | 0 | 0 | 0 | 0 |'; echo $?)
+
 # 8. The workflow runs it after plan, report only, and stop-route waits for it.
 wf="$here/../workflows/build-feature-copilot.yaml"
 check "8 mcp-use node after plan" $(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf" | grep -qF 'depends_on: [plan]'; echo $?)
-check "8 report only" $(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf" | grep -qF 'mcp-use-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" explore plan || true'; echo $?)
+node8=$(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf")
+check "8 report only, a failure named on stderr" $(echo "$node8" | grep -qF 'mcp-use-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" explore plan \' \
+  && echo "$node8" | grep -qF '|| echo "mcp-use-check.js failed; the run has no mcp-use.md" >&2'; echo $?)
 check "8 stop-route does not wait for it (report only)" $(grep -A1 '^  - id: stop-route$' "$wf" | grep -qxF '    depends_on: [plan-check]'; echo $?)
 
 echo "mcp-use-check: $pass passed, $fail failed"

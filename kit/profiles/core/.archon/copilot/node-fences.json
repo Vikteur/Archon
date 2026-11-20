@@ -1,0 +1,31 @@
+{
+  "_comment": "Owner-editable map from an Archon workflow node to the agent whose fence (.claude/hooks/agent-scopes.json) its Copilot session gets (owner decision 2026-11-20: apply the existing agent fences to the workflow nodes). .github/hooks/dispatch.sh names the node from ARCHON_NODE_EXECUTION (the last segment of its path: implement.build-step is build-step) as KIT_NODE on preToolUse only; .claude/hooks/scripts/scope-guard.sh then fences every call of that session as the node's agent, a subagent of another fenced type by its own fence as well. A node may add, to its agent's fence only, what build-feature-copilot.yaml's own prompt for that node tells it to do and the fence lacks: commandAllowlist prefixes (the rules of agent-scopes.local.json: no shell operator, wrapper or bare interpreter), allowedFilePaths (a repo-relative path or glob, or $RUN_ARTIFACTS/ for the run's own artifacts folder, <archon home>/workspaces/<owner>/<repo>/artifacts/runs/$WORKFLOW_ID/; an agent that may write any path keeps that), and env (variable names a command may set in front of an allowed command, as in AFFECTED_BASE=... bash .claude/scripts/affected-check.sh; a `$(cat <file>)` of a file in the run's artifacts folder is read as text there). Nothing here removes a rule. A node not in this map (pr-text is in it), or a node path the guard cannot read, gets the strictest common set: the commands every node below may run and only the paths every one of them may write, computed by the guard from this file, never written out. A file the guard cannot read, or one that breaks these rules, denies every call inside a node. No fenced agent may write this file. The per-node denied_tools of the workflow are enforced by .archon/copilot/hooks/run-guard.sh, read from the workflow itself.",
+  "nodes": {
+    "explore": { "agent": "analyst", "allowedFilePaths": ["$RUN_ARTIFACTS/"] },
+    "plan": {
+      "agent": "analyst",
+      "allowedFilePaths": ["$RUN_ARTIFACTS/"],
+      "commandAllowlist": ["bash .archon/scripts/plan-spike.sh"]
+    },
+    "write-tests": {
+      "agent": "test-writer",
+      "allowedFilePaths": ["$RUN_ARTIFACTS/"],
+      "commandAllowlist": ["mkdir -p", "./gradlew :"]
+    },
+    "build-step": {
+      "agent": "developer",
+      "commandAllowlist": ["mkdir -p"],
+      "env": ["AFFECTED_NO_SYNC", "AFFECTED_BASE"]
+    },
+    "review": {
+      "agent": "reviewer",
+      "allowedFilePaths": ["$RUN_ARTIFACTS/", "src/", "*/src/*", "docs/"],
+      "commandAllowlist": ["git add", "git commit", "git log", "git checkout --", "git restore", "./gradlew :",
+        "bash .claude/scripts/affected-check.sh", "mkdir -p"],
+      "env": ["AFFECTED_NO_SYNC", "AFFECTED_BASE"]
+    },
+    "pr-text": { "agent": "reviewer", "allowedFilePaths": ["$RUN_ARTIFACTS/"], "commandAllowlist": ["git log"] },
+    "diagnose": { "agent": "debugger", "allowedFilePaths": ["$RUN_ARTIFACTS/"] },
+    "fix": { "agent": "developer", "commandAllowlist": ["mkdir -p"] }
+  }
+}

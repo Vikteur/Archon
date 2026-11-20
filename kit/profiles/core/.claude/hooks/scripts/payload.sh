@@ -9,6 +9,8 @@
 #   toolArgs (a JSON string or an object) -> tool_input (a path under another key is copied to the Claude key, view's
 #   `path` -> `file_path`), agentType (a subagent's tool hook) or agentName (subagentStart/Stop) -> agent_type,
 #   agentId -> agent_id, sessionId -> session_id, workingDirectory -> cwd. A Claude field already present always wins.
+#   One tool call per payload: Copilot's batched preToolUse ({cwd, sessionId, toolCalls: [...]}) is split into single
+#   calls by .github/hooks/dispatch.sh before it gets here.
 #   $KIT_AGENT names the agent when the payload names none: a root session (`copilot --agent <name>`) carries no agent
 #   field, so a converted agent's own frontmatter hook sets it (kit/SPEC.md). A subagent's agentType wins over it; a
 #   subagent call that names no type is fenced as the root agent (kit_root). A tool name is mapped wherever it sits

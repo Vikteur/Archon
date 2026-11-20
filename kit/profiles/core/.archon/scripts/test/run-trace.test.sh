@@ -8,7 +8,7 @@ script="$here/run-trace.js"
 pass=0; fail=0
 root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT
-export ARCHON_HOME="$root/archon"   # the real ~/.archon is never read
+export ARCHON_HOME="$root/archon" COPILOT_HOME="$root/copilot"   # the real ~/.archon and ~/.copilot are never read
 run=0123456789abcdef0123456789abcdef
 logs="$ARCHON_HOME/workspaces/owner/repo/logs"
 mkdir -p "$logs"
@@ -51,6 +51,45 @@ has "wrote                src/A.java"; check "written file, worktree prefix drop
 has "wrote                plan.md  ×2"; check "written file with backslashes, run prefix dropped" $?
 ! has "contract-pin.sh" && ! has ":app:build" && ! has "code-map             java" && ! has "codegen.test.sh"
 check "a write's content counts as no script, task or code-map" $?
+
+has "## Warnings" && grep -A2 '^## Warnings' "$art/trace.md" | grep -qF '_None._'; check "a run without warnings says so" $?
+! has "Copilot usage per node"; check "no Copilot node, no usage table" $?
+
+# A Copilot run: its tool names count as the Claude tools; a fallback's stderr line, a non-zero exit and the provider's
+# warning codes are named warnings, home paths, URLs and e-mail addresses cut; the usage and trail tables are appended.
+crun=fedcba9876543210fedcba9876543210
+clog="$logs/$crun.jsonl"; cart="$root/copilot-art"; tree="$root/tree"
+sid=abcdef12-1111-4111-8111-111111111111
+mkdir -p "$COPILOT_HOME/session-state/$sid" "$tree/.apm-audit/sessions"
+printf '{"type":"user.message","data":{"content":"PROMPT TEXT"}}\n{"type":"session.usage_record","data":{"usage":{"model":"claude-haiku-5.5","inputTokens":1000,"cacheReadTokens":600,"cacheWriteTokens":300,"outputTokens":50,"cost":1,"duration":900,"accounting":{"sourceSessionId":"%s"}}}}\n' "$sid" \
+  > "$COPILOT_HOME/session-state/$sid/events.jsonl"
+printf '{"type":"TOOL","session":"%s","agent":"main","tool":"Skill"}\n' "$sid" > "$tree/.apm-audit/sessions/$sid.jsonl"
+cat > "$clog" <<LOG
+{"type":"workflow_start","workflow_name":"build-feature-copilot","ts":"2026-11-20T10:00:00Z"}
+{"type":"node_start","step":"ticket","ts":"2026-11-20T10:00:00Z","execution":{"node":{"kind":"exec"}}}
+{"type":"exec_output","step":"ticket","exit_code":0,"stderr_tail":"codegraph: index built\nmcp: contract-api down, codegraph up\nplan-context.sh failed; the plan reads the files itself\nerror: cannot open $HOME/x and /home/alice/y, see https://github.com/someone/repo/pull/1 or ask a@b.example"}
+{"type":"node_start","step":"explore","ts":"2026-11-20T10:01:00Z"}
+{"type":"provider_event","step":"explore","event":{"type":"warning","code":"copilot.skills_missing","message":"skills x and y are missing"}}
+{"type":"provider_event","step":"explore","event":{"type":"warning","code":"copilot.skills_missing","message":"again"}}
+{"type":"provider_event","step":"explore","event":{"type":"tool_call","name":"skill","rawInput":{"skill":"jvm-testing"}}}
+{"type":"provider_event","step":"explore","event":{"type":"tool_call","name":"bash","rawInput":{"command":"bash .archon/scripts/step-gate.sh 1"}}}
+{"type":"provider_event","step":"explore","event":{"type":"tool_call","name":"create","rawInput":{"path":"/x/worktrees/run1/src/B.java","file_text":"run scripts/x.sh"}}}
+{"type":"node_complete","step":"explore","duration_ms":60000,"execution":{"node":{"kind":"agent"},"binding":{"provider":"copilot","sessionPreview":"abcdef12","sessionOrigin":"fresh"}}}
+{"type":"exec_output","step":"fix-made","exit_code":1,"stderr_tail":"CI_FIX_NO_COMMIT: the fix agent made no commit"}
+LOG
+node "$script" "$crun" "$cart" "$tree"; check "Copilot run exits 0" $?
+ctrace() { grep -qF -- "$1" "$cart/trace.md"; }
+ctrace "skill                jvm-testing" && ctrace "archon script        step-gate.sh" && ctrace "wrote                src/B.java" \
+  && ! ctrace "x.sh"; check "Copilot tool names count as the Claude tools" $?
+ctrace "- ticket: plan-context.sh failed; the plan reads the files itself"; check "a fallback's stderr line is a named warning" $?
+ctrace "- ticket: error: cannot open ~/x and ~/y, see <url> or ask <email>"; check "a copied line has home paths, URLs and e-mail cut" $?
+! ctrace "codegraph: index built" && ! ctrace "mcp: contract-api down"; check "stderr lines that are no failure are left out" $?
+ctrace "- fix-made: exit 1"; check "a non-zero exit is a warning" $?
+ctrace "- explore: provider warning copilot.skills_missing ×2" && ! ctrace "are missing"; check "provider warning codes, not their message" $?
+ctrace "| explore | abcdef12 | claude-haiku-5.5 | 1 | 100 | 600 | 300 | 50 | 1 | 60 s |"; check "the Copilot usage row" $?
+ctrace "| explore | 1 | 1 | 1 |"; check "the hook trail joined by session id" $?
+! ctrace "PROMPT TEXT" && ! ctrace "alice" && ! ctrace "$HOME" && ! ctrace "someone"; check "no prompt, home path or account name in the trace" $?
+node "$script" "$crun" "$cart"; ! ctrace "Hook audit trail"; check "no checkout, no trail section" $?
 
 # An unknown run is an error, not an empty trace.
 node "$script" ffffffffffffffffffffffffffffffff "$root/none" 2>/dev/null; [ $? -eq 1 ] && [ ! -e "$root/none/trace.md" ]; check "unknown run fails" $?

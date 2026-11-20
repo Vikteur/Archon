@@ -26,6 +26,7 @@ import {
   kitCommand,
   kitToolsCommand,
   applySetOverrides,
+  checkFileHooks,
   checkMcpServers,
   checkTrust,
   coerceScalar,
@@ -973,6 +974,30 @@ describe('kit', () => {
   });
 
   describe('doctor pieces', () => {
+    it('reports the Copilot fileHooks switch in .archon/config.yaml', () => {
+      expect(checkFileHooks(project)).toMatchObject({ status: 'warn', name: 'fileHooks' });
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(
+        join(project, '.archon/config.yaml'),
+        'assistants:\n  copilot:\n    model: x\n'
+      );
+      const unset = checkFileHooks(project);
+      expect(unset.status).toBe('warn');
+      expect(unset.detail).toContain('is not set');
+      writeFileSync(
+        join(project, '.archon/config.yaml'),
+        'assistants:\n  copilot:\n    fileHooks: false\n'
+      );
+      expect(checkFileHooks(project)).toMatchObject({ status: 'warn' });
+      expect(checkFileHooks(project).detail).toContain('is false');
+      writeFileSync(
+        join(project, '.archon/config.yaml'),
+        'assistants:\n  copilot:\n    fileHooks: true\n'
+      );
+      expect(checkFileHooks(project)).toMatchObject({ status: 'ok', name: 'fileHooks' });
+      writeFileSync(join(project, '.archon/config.yaml'), 'assistants: [\n');
+      expect(checkFileHooks(project).detail).toContain('does not parse');
+    });
     it('checks backlog unless kit.yaml (or the kit defaults) switches it off', () => {
       const backlog = (): DoctorCheck | undefined =>
         checkTools(project, { PATH: '' }).find(c => c.name === 'backlog');
