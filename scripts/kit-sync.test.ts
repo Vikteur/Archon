@@ -252,8 +252,8 @@ describe('scaffold scripts (the kit only)', () => {
       analyst: ['scripts/scaffold.sh --for', 'scripts/scaffold/smoke.sh --render-only', ...wiring],
       reviewer: ['scripts/scaffold.sh --for', 'scripts/scaffold/smoke.sh --render-only', ...wiring],
     });
-    expect(scaffoldCommands('developer', tools)).toEqual(SCAFFOLD_COMMANDS.developer);
-    expect(scaffoldCommands('reviewer', 'Read, Bash')).toEqual(SCAFFOLD_COMMANDS.reviewer);
+    expect(scaffoldCommands('developer', tools)).toEqual([...SCAFFOLD_COMMANDS.developer]);
+    expect(scaffoldCommands('reviewer', 'Read, Bash')).toEqual([...SCAFFOLD_COMMANDS.reviewer]);
     expect(scaffoldCommands('developer', ['Read', 'Edit'])).toEqual([]);
     expect(scaffoldCommands('retro', tools)).toEqual([]);
   });
