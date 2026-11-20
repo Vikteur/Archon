@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Tests for .archon/githooks/commit-msg (owner decision D12, 2026-10-20) and .archon/githooks/pre-push (D14: the guard
 # in the clone's own hooks folder still runs under Archon's core.hooksPath): a throwaway repo with a linked worktree, the
-# hook switched on the way .archon/config.yaml does it (GIT_CONFIG_COUNT), never through the repo's own config.
+# hook switched on the way .archon/config.yaml does it (GIT_CONFIG_COUNT), never through the repo's own config. And
+# .githooks/pre-push (D14 for a person's push once scripts/install-hooks.sh set core.hooksPath=.githooks).
 # Usage: bash .archon/scripts/test/commit-msg.test.sh   (exit 0 = all pass)
 set -uo pipefail
 
@@ -25,15 +26,16 @@ check "config: env switches the hook on through core.hooksPath=.archon/githooks"
 check "config: background tasks are off for Archon processes" $([ "$(yq '.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS' "$cfg")" = 1 ]; echo $?)
 out=$(grep -n 'CLAUDE_CODE_DISABLE_BACKGROUND_TASKS' "$repo_root/.claude/settings.json" 2>/dev/null)
 check "config: background tasks are not switched off in .claude/settings.json (a background waiter)" $([ -z "$out" ]; echo $?)
-out=$(grep -n 'hooksPath' "$repo_root/.git/config" 2>/dev/null)
-check "config: the clone has no clone-wide core.hooksPath" $([ -z "$out" ]; echo $?)
+out=$(git -C "$repo_root" config --local --get-all core.hooksPath 2>/dev/null)
+check "config: a clone-wide core.hooksPath, when set, is .githooks (scripts/install-hooks.sh) and nothing else" \
+  $([ -z "$out" ] || [ "$out" = .githooks ]; echo $?)
 
 # A main checkout with the hook, the subject check and tdd-check committed, and a run worktree on a run branch.
 main="$root/main"; wt="$root/wt"
 git init -q -b main "$main"; git -C "$main" config user.name t; git -C "$main" config user.email t@t
 mkdir -p "$main/.archon/githooks" "$main/.archon/scripts" "$main/.githooks"
 cp "$repo_root/.archon/githooks/commit-msg" "$repo_root/.archon/githooks/pre-push" "$main/.archon/githooks/"
-cp "$repo_root/.githooks/commit-msg" "$main/.githooks/"
+cp "$repo_root/.githooks/commit-msg" "$repo_root/.githooks/pre-push" "$main/.githooks/"
 cp "$here/tdd-check.sh" "$main/.archon/scripts/"
 echo base > "$main/README.md"; git -C "$main" add -A; git -C "$main" commit -qm "chore: base"
 git -C "$main" worktree add -q -b build-feature-1 "$wt"
@@ -108,6 +110,31 @@ check "6 an allowing clone hook lets it through" $([ "$rc" -eq 0 ]; echo $?)
 chmod -x "$main/.git/hooks/pre-push"
 push on
 check "6 a clone hook that is not executable: refused (fails closed)" $([ "$rc" -ne 0 ]; echo $?)
+
+# 7. A person's push with core.hooksPath=.githooks (scripts/install-hooks.sh): git skips the clone's hooks folder, so
+# .githooks/pre-push runs push-guard.sh check from the main checkout itself, and fails closed without it.
+git -C "$main" config core.hooksPath .githooks
+guard="$main/.archon/scripts/push-guard.sh"
+person() { # person <dir>: a push without Archon's env from that checkout; sets rc and out
+  out=$(cd "$1" && git push -q origin HEAD:refs/heads/p$RANDOM 2>&1); rc=$?
+}
+printf '#!/usr/bin/env bash\ncat > "%s/gstdin"; echo "$@" > "%s/gargs"; exit 1\n' "$root" "$root" > "$guard"
+chmod +x "$guard"
+person "$main"
+check "7 a refusing guard stops a person's push with core.hooksPath=.githooks" $([ "$rc" -ne 0 ]; echo $?)
+check "7 the guard gets check, git's arguments and the ref lines" \
+  $(grep -qx "check origin $remote" "$root/gargs" && grep -qE '^HEAD [0-9a-f]{40} refs/heads/p[0-9]+ ' "$root/gstdin"; echo $?)
+person "$wt"
+check "7 from a linked worktree it runs the main checkout's guard too" $([ "$rc" -ne 0 ]; echo $?)
+printf '#!/usr/bin/env bash\ncat > /dev/null; exit 0\n' > "$guard"
+person "$main"
+check "7 an allowing guard lets the push through" $([ "$rc" -eq 0 ]; echo $?)
+chmod -x "$guard"
+person "$main"
+check "7 a guard that is not executable: refused (fails closed)" $([ "$rc" -ne 0 ] && grep -q 'not executable' <<< "$out"; echo $?)
+mv "$guard" "$root/guard.away"
+person "$main"
+check "7 a missing guard: refused (fails closed)" $([ "$rc" -ne 0 ] && grep -q 'missing' <<< "$out"; echo $?)
 
 # The hook copies a clone switches on itself (git config core.hooksPath .githooks) are executable too: git skips a hook
 # that is not, with no more than a hint, so a kit install that drops the bit loses the commit check silently.

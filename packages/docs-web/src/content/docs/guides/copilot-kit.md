@@ -334,7 +334,10 @@ this order:
    finds the contract. A contract in your own tree at `contract.spec_path` is used as it
    is. Otherwise the contract is cloned from `contract.repo`. The readiness map
    `docs/code-maps/contract-agent-readiness.map.json` is optional.
-4. **Hooks.** `scripts/install-hooks.sh` wires the hooks into the project.
+4. **Hooks.** `scripts/install-hooks.sh` sets `core.hooksPath` to `.githooks` for the clone.
+   Git then runs `.githooks/commit-msg`, which checks the message, and `.githooks/pre-push`,
+   which runs the push guard (`push-guard.sh check`). A push without the guard script is
+   refused. Archon processes use `.archon/githooks` instead.
 5. **MCP setup.** `.archon/scripts/mcp-setup.sh` sets up the MCP servers of the project.
 
 The `npm ci` step of the contract server is required. If it fails, `kit add` fails. All
