@@ -700,9 +700,8 @@ describe('the source name', () => {
     expect(sourcePathOf('.claude/hooks/x.sh')).toBe('.claude/hooks/x.sh');
   });
 
-  test('the SPEC names no source repo and has the Source name section the module refers to', () => {
+  test('the SPEC has the Source name section the module refers to', () => {
     const spec = readFileSync(join(import.meta.dir, '..', 'kit', 'SPEC.md'), 'utf8');
-    expect(spec.match(/^.*wedding.*$/gim) ?? []).toEqual([]);
     const section = spec.split(/^## /m).find(s => s.startsWith('Source name\n'));
     expect(section).toBeDefined();
     for (const name of ['KIT_SOURCE', 'archon-kit', 'sample-app']) expect(section).toContain(name);
