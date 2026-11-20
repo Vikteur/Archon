@@ -17,6 +17,8 @@ stop="$here/stop-run.sh"
 pass=0; fail=0
 root="$(mktemp -d)"
 export ARCHON_HOME="$root/no-archon-home"   # the real ~/.archon is never read
+# The build workflow is the kit's default unless a case configures one: no BUILD_WORKFLOW or KIT_CONFIG from the caller.
+unset BUILD_WORKFLOW KIT_CONFIG
 trap 'rm -rf "$root"' EXIT
 
 check() { # check <name> <condition exit code>
@@ -69,7 +71,7 @@ get() {
 nodes_gate='[{"node_id":"ticket","state":"completed"},{"node_id":"plan","state":"completed"},{"node_id":"approve","state":"running"},{"node_id":"implement","state":"pending"}]'
 nodes_plan='[{"node_id":"ticket","state":"completed"},{"node_id":"plan","state":"running"},{"node_id":"approve","state":"pending"}]'
 transcript() { # transcript <id> <request> [through approve]
-  printf '{"type":"workflow_start","workflow_name":"build-feature","content":"%s","workflow_id":"%s"}\n' "$2" "$1"
+  printf '{"type":"workflow_start","workflow_name":"build-feature-copilot","content":"%s","workflow_id":"%s"}\n' "$2" "$1"
   echo '{"type":"node_start","step":"ticket","execution":{"node":{"id":"ticket","kind":"exec"}}}'
   echo '{"type":"node_complete","step":"ticket","duration_ms":2000}'
   echo '{"type":"node_start","step":"plan","execution":{"node":{"id":"plan","kind":"agent"}}}'
@@ -84,25 +86,25 @@ transcript() { # transcript <id> <request> [through approve]
 fixtures() {
   local d="$root/$1"; mkdir -p "$d/stub" "$d/ws/artifacts/runs"
   STUB="$d/stub"; ws=$(native "$d/ws")
-  get "$R1" cancelled "Build TASK-7.1" build-feature "$nodes_gate" approve > "$STUB/$R1.get.json"
+  get "$R1" cancelled "Build TASK-7.1" build-feature-copilot "$nodes_gate" approve > "$STUB/$R1.get.json"
   transcript "$R1" "Build TASK-7.1" through > "$STUB/$R1.jsonl"
   echo '{"type":"gate_decision","step":"approve","decision":"rejected","content":"the plan skips the migration test"}' >> "$STUB/$R1.jsonl"
-  get "$R2" cancelled "Build TASK-7.1" build-feature "$nodes_plan" > "$STUB/$R2.get.json"
+  get "$R2" cancelled "Build TASK-7.1" build-feature-copilot "$nodes_plan" > "$STUB/$R2.get.json"
   transcript "$R2" "Build TASK-7.1" > "$STUB/$R2.jsonl"
   mkdir -p "$d/ws/artifacts/runs/$R2"
   printf '{"reason":"wrong base branch","action":"cancel","status":"running","at":"2026-10-01T09:20:30.000Z"}\n' \
     > "$d/ws/artifacts/runs/$R2/stop-reason.json"
-  get "$R3" cancelled "fix the typo" build-feature "$nodes_plan" > "$STUB/$R3.get.json"
+  get "$R3" cancelled "fix the typo" build-feature-copilot "$nodes_plan" > "$STUB/$R3.get.json"
   transcript "$R3" "fix the typo" > "$STUB/$R3.jsonl"
-  get "$R4" cancelled "Build TASK-7.1" build-feature "$nodes_plan" > "$STUB/$R4.get.json"
+  get "$R4" cancelled "Build TASK-7.1" build-feature-copilot "$nodes_plan" > "$STUB/$R4.get.json"
   get "$R5" cancelled "Build TASK-7.1" probe "$nodes_plan" > "$STUB/$R5.get.json"
-  get "$R6" completed "Build TASK-7.1" build-feature "$nodes_plan" > "$STUB/$R6.get.json"
-  get "$R7" completed "Build TASK-7.1" build-feature "$nodes_plan" > "$STUB/$R7.get.json"
+  get "$R6" completed "Build TASK-7.1" build-feature-copilot "$nodes_plan" > "$STUB/$R6.get.json"
+  get "$R7" completed "Build TASK-7.1" build-feature-copilot "$nodes_plan" > "$STUB/$R7.get.json"
   { printf '{"runs":['
     # Newest first, as archon lists them; the last field is the day of September the run started.
-    for r in "$R7:completed:build-feature:\"$R1\":11" "$R1:cancelled:build-feature:null:10" \
-             "$R3:cancelled:build-feature:null:07" "$R6:completed:build-feature:null:06" \
-             "$R2:cancelled:build-feature:null:05" "$R5:cancelled:probe:null:02" "$R4:cancelled:build-feature:null:01"; do
+    for r in "$R7:completed:build-feature-copilot:\"$R1\":11" "$R1:cancelled:build-feature-copilot:null:10" \
+             "$R3:cancelled:build-feature-copilot:null:07" "$R6:completed:build-feature-copilot:null:06" \
+             "$R2:cancelled:build-feature-copilot:null:05" "$R5:cancelled:probe:null:02" "$R4:cancelled:build-feature-copilot:null:01"; do
       IFS=: read -r id st wf from day <<< "$r"
       printf '{"id":"%s","status":"%s","workflow_name":"%s","adopted_from_run_id":%s,"started_at":"2026-09-%sT09:00:00.000Z"},' \
         "$id" "$st" "$wf" "$from" "$day"
@@ -173,7 +175,7 @@ check "S3b nothing pushed" $([ "$(origin_log s3b | head -1)" = "full retro" ]; e
 check "S3b full section kept" $(has 'written by the retro agent' "$f/lessons-learned.md" && git -C "$u" diff --quiet; echo $?)
 
 # ---------- retro-stopped.sh --sweep ----------
-# S4. Every stopped build-feature run without a section gets one; other workflows and finished runs are left out.
+# S4. Every stopped run of the build workflow (the kit's default, build-feature-copilot) without a section gets one; other workflows and finished runs are left out.
 fixtures s4; sh_ "$stopped" --sweep
 check "S4 exit 0" $([ "$rc" -eq 0 ]; echo $?)
 pushed s4 docs/retro/TASK-7.1/lessons-learned.md > "$root/s4.md" 2>/dev/null
@@ -205,9 +207,18 @@ check "S6 off main: nothing written" $(git -C "$u" diff --quiet && [ ! -e "$u/do
 fixtures s6b; touch "$STUB/runs.fail"; sh_ "$stopped" --sweep
 check "S6 archon unavailable: exit 0" $([ "$rc" -eq 0 ]; echo $?)
 
+# S7. The sweep follows the configured build_workflow: with it set to probe, the cancelled probe run is documented and
+# the build-feature-copilot runs are not.
+fixtures s7; printf 'build_workflow: probe\n' > "$root/s7/kit.yaml"
+KIT_CONFIG="$root/s7/kit.yaml" sh_ "$stopped" --sweep
+check "S7 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+pushed s7 docs/retro/TASK-7.1/lessons-learned.md > "$root/s7.md" 2>/dev/null
+check "S7 run of the configured workflow documented" $(has '## Run ffffffff — 2026-10-01 — cancelled' "$root/s7.md"; echo $?)
+check "S7 runs of another workflow left out" $(! grep -rqE 'Run (aaaaaaaa|bbbbbbbb)' "$u/docs/retro" && [ ! -e "$u/docs/retro/run-cccccccc" ]; echo $?)
+
 # ---------- stop-run.sh <run id> <reason> ----------
 running() { # running <id> <status> [approval node]: replaces the fixture with a live run of that status
-  get "$1" "$2" "Build TASK-7.1" build-feature "$nodes_plan" ${3:-} > "$STUB/$1.get.json"
+  get "$1" "$2" "Build TASK-7.1" build-feature-copilot "$nodes_plan" ${3:-} > "$STUB/$1.get.json"
   transcript "$1" "Build TASK-7.1" ${3:+through} > "$STUB/$1.jsonl"
 }
 L1=12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa
