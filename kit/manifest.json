@@ -15,17 +15,11 @@
       ],
       "description": "Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents."
     },
-    "java-quarkus": {
-      "requires": [
-        "java"
-      ],
-      "description": "The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus scaffold templates, the CI workflow and run-app."
-    },
     "java-spring": {
       "requires": [
         "java"
       ],
-      "description": "The java-quarkus paths rewritten for Spring Boot, from the hand-written kit/overlays/java-spring."
+      "description": "The Spring Boot framework skills (bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, run-app), their code-map leaves, the Spring scaffold templates and the CI workflow, from the hand-written kit/overlays/java-spring."
     },
     "openapi-contract": {
       "requires": [
@@ -42,12 +36,7 @@
       "description": "The mijn-gezondheid portal's own scaffold templates and its scaffold.json (docs/scaffold-templates/project/), from the hand-written kit/overlays/mijn-gezondheid: java's new-context.sh, smoke.sh and the wiring check run on them as installed."
     }
   },
-  "exclusive": [
-    [
-      "java-quarkus",
-      "java-spring"
-    ]
-  ],
+  "exclusive": [],
   "files": [
     {
       "path": ".agents/skills/archon-cli/SKILL.md",
@@ -155,7 +144,7 @@
       "template": false,
       "origin": ".archon/copilot/README.md",
       "kind": "doc",
-      "sha256": "837a8afdedb4ff0f94828100e10c6385eb4e2ec4b36f002a046b41157907d153"
+      "sha256": "1c119eff743ab9c1337b4bb0776beb4aa78c1159068d473c0433c3baf1ffa68e"
     },
     {
       "path": ".archon/copilot/baseline.md",
@@ -182,7 +171,7 @@
       "template": false,
       "origin": ".archon/copilot/hooks/run-guard.sh",
       "kind": "hook",
-      "sha256": "32bba953f8483829581ad3408f2e1bad5892eb13c2377f842c678ba8e152f197"
+      "sha256": "fe293219a37a607b16895d38600f36f98ee0851949baf34e51e7e2eeece17b19"
     },
     {
       "path": ".archon/copilot/node-fences.json",
@@ -302,7 +291,7 @@
       "template": false,
       "origin": ".archon/scripts/copilot-audit.js",
       "kind": "script",
-      "sha256": "8cc97cba7fe4f9c546d78a92708f7bfc1b43b588209b9ee953374f977f99bafd"
+      "sha256": "6324dfced01863ac5584047c9d31d07284926d661c6c5b5c14af566eeff239ef"
     },
     {
       "path": ".archon/scripts/copilot-usage.js",
@@ -383,7 +372,7 @@
       "template": true,
       "origin": ".archon/scripts/mcp-use-check.js",
       "kind": "script",
-      "sha256": "d4a837b64324cd213cd6cb64422927f72f56d662b7147a7bfd3f99d1d5f05b98"
+      "sha256": "91be1ed6c7914415c90055eb0531c83f5810a659437e77a494966e16baa91f1a"
     },
     {
       "path": ".archon/scripts/open-pr.sh",
@@ -410,7 +399,7 @@
       "template": false,
       "origin": ".archon/scripts/plan-order.js",
       "kind": "script",
-      "sha256": "4da97eb3abfa950b5cdcbb230d370b86b074dcd2b7d64ec6eb26711f551666a5"
+      "sha256": "8f8baa77ece2aeab57887e6a09c4205147e9daf0328036d7103c84d11049ae64"
     },
     {
       "path": ".archon/scripts/plan-spike.sh",
@@ -428,7 +417,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "78657add2493590f9189a25329e08b9cb2dd85147cb81ac43bbff57f62fbd460"
+      "sha256": "93c059c0f56e529a0d88b9991da21ec92be1fa5b8126ad5d13f18a53ddeb971e"
     },
     {
       "path": ".archon/scripts/pr-refresh.sh",
@@ -437,7 +426,7 @@
       "template": false,
       "origin": ".archon/scripts/pr-refresh.sh",
       "kind": "script",
-      "sha256": "960ec111d3e21cc05bf40b918530b4a8944de55118099ff1dc79f859958c9ff4"
+      "sha256": "75d9287b2e96a429aa81c664bf02eab3fe46a7620659fea36e49bed33a5bda49"
     },
     {
       "path": ".archon/scripts/push-guard.sh",
@@ -626,7 +615,7 @@
       "template": false,
       "origin": ".archon/scripts/test-task.sh",
       "kind": "script",
-      "sha256": "03d981f4e61cf0ac130131945e4658e678e3c4d6938fc8e182da33c511ad105b"
+      "sha256": "f9b2ec8e47e0c6cb17f1f8232ebae86cce4b904be4fb9fa7a3671064dc34051c"
     },
     {
       "path": ".archon/scripts/test/answer-blocked.test.sh",
@@ -717,7 +706,7 @@
       "template": false,
       "origin": ".archon/scripts/test/copilot-guard.test.sh",
       "kind": "script",
-      "sha256": "1be4df140cd231ff4d43af134f3ebcb1a7edc160364a4e2185818ee8d5a47b41"
+      "sha256": "007b3542a740f75d654b108987d22bf8c4d8b0dcbc648fae8fe39652617970b3"
     },
     {
       "path": ".archon/scripts/test/copilot-usage.test.sh",
@@ -735,7 +724,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "63478e8da072b7e3de35a6603f02e1ddd9091b74a2bb95d0fa0b62a4e59eaa92"
+      "sha256": "89b1898f3e9283a157aac43a130a8849bd7517d5d053f5e661f6cdfb14a26db8"
     },
     {
       "path": ".archon/scripts/test/fixtures/copilot-audit/empty.jsonl",
@@ -827,7 +816,7 @@
       "template": true,
       "origin": ".archon/scripts/test/mcp-use-check.test.sh",
       "kind": "script",
-      "sha256": "a8d833a0ca5d65c4bb34358010f8baf2d4d09bcefa19364413be61b257eb6a29"
+      "sha256": "20f730f5a5c29b64d42c2c5e90558eb5b6e2f8f6142c10cc367bb78326347320"
     },
     {
       "path": ".archon/scripts/test/node-fence.test.sh",
@@ -836,7 +825,7 @@
       "template": false,
       "origin": ".archon/scripts/test/node-fence.test.sh",
       "kind": "script",
-      "sha256": "3e8b699a5b9da8ae7e2cb0a84ea9e1b959ef83845fb8e0750ab2ff689a0a7e0b"
+      "sha256": "089986b42a2cb470b477a12e605f62bda9fc607cf9c3575ca5456590a0ecb988"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -872,7 +861,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-order.test.sh",
       "kind": "script",
-      "sha256": "2783c8132f95678ce1220dad7641b894f3a643895c527c6e9822705852e983c7"
+      "sha256": "b8d7bcae93f6cc950aaf65bc66f2ff26e99e575e6d9af5f1074be4cb36538283"
     },
     {
       "path": ".archon/scripts/test/plan-spike.test.sh",
@@ -890,7 +879,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "207d55b81720bf4ba3498dfa94f556c3b19d75cfed5dc69af83ad5daa167e937"
+      "sha256": "866ca47bd4b2b3921155a5171219bdceeff2f102c549eb5777ebda97d6b556c5"
     },
     {
       "path": ".archon/scripts/test/pr-refresh.test.sh",
@@ -899,7 +888,7 @@
       "template": true,
       "origin": ".archon/scripts/test/pr-refresh.test.sh",
       "kind": "script",
-      "sha256": "bae1697ae2b0fc7f2d884b2c800ad416bdc8c9e15b236de8a11038c3579f1654"
+      "sha256": "3410ec6c9ef861103d58cda14175b2cf5cc193949a6b03d21fdb818115310ff2"
     },
     {
       "path": ".archon/scripts/test/push-guard.test.sh",
@@ -1062,7 +1051,7 @@
       "template": false,
       "origin": ".archon/scripts/test/ticket.test.sh",
       "kind": "script",
-      "sha256": "d6a579fba8a391d1b2345060bb1cfae6085d8fd71158e57d00c44d10e5bf3bdb"
+      "sha256": "da2e43b8ec238dbdd9072b9764a4b88ac5044f9d378668fc62235a2f50ae9485"
     },
     {
       "path": ".archon/scripts/test/tool-advice.test.sh",
@@ -1080,7 +1069,7 @@
       "template": false,
       "origin": ".archon/scripts/test/workflow-contracts.test.sh",
       "kind": "script",
-      "sha256": "a59b60abb1d081ef910bf7b141e7efb57a08cb32b0e02b67f140637d0814d43d"
+      "sha256": "09cdf2f95290d5269172c58e1dc143e324162062c3b0793987dae100f2373dea"
     },
     {
       "path": ".archon/scripts/ticket.sh",
@@ -1089,7 +1078,7 @@
       "template": false,
       "origin": ".archon/scripts/ticket.sh",
       "kind": "script",
-      "sha256": "6ec82d9a5d25a1f9225613561dc29d44f685bcb2024ab59be77b1798f994defd"
+      "sha256": "73e2c20949bc4e7a79f6130cc62995a75cdd80b0d1f391f10d55fabb11c8ddbf"
     },
     {
       "path": ".archon/workflows/build-feature-copilot.yaml",
@@ -1098,7 +1087,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "bbf8d8266e68c97ff8acd1e8102859a91eda6199b09dae83f0ca113bc04ddb11"
+      "sha256": "7727c1ce2b8e901e5afdeb342cded16767d985669c34c29b1eadd4a21013ab6a"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1188,7 +1177,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/audit-log.sh",
       "kind": "hook",
-      "sha256": "3d7c3ce33aa3df725c541881f026a66772ad61d198f67fc11b2bdc3adc795eb5"
+      "sha256": "128e18f7077dc87030fed1085bb65bbfa892e704077036debc4f983da482a90f"
     },
     {
       "path": ".claude/hooks/scripts/gate-common.sh",
@@ -1233,7 +1222,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "35a329c023088ec29b167d204265aedfcff5f3ce4f283da47fe1f4f24d83d808"
+      "sha256": "78b7606f4730bf916fd686816b6b246c126475a7b02c1849593e92ccdced8f8b"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
@@ -1299,7 +1288,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-local.sh",
       "kind": "script",
-      "sha256": "d2da33d3952a2f06da08da955405c5ae8fd86bd5d3fc26e6e2fc3c2a28d9c679",
+      "sha256": "1c1c2de117846369613d6ca55f68c9c22a635c937e1c23bf164bef17f56fee9c",
       "when": "local_ci"
     },
     {
@@ -1329,7 +1318,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-status-grammar.sh",
       "kind": "script",
-      "sha256": "b080a7cbeb860f56336d5b53d2ba33de82853dad1c33a1e990b885727d603b7c",
+      "sha256": "512540b3dc9a906e2c5d4d2a696c07b6a88fd1f129603ea6c1996c894d93d028",
       "when": "local_ci"
     },
     {
@@ -1430,7 +1419,7 @@
       "template": false,
       "origin": null,
       "kind": "hook",
-      "sha256": "2168d603f9d977d6cc6141f58b9483d6e491a5220ba995dd439cce9b91bf8da2"
+      "sha256": "32f0c8135092ccc42d91d6b97d9e7947ed9e0ef4e82358974491e7f1afdab975"
     },
     {
       "path": ".github/hooks/kit.json",
@@ -1768,7 +1757,7 @@
       "template": false,
       "origin": "scripts/install-tools.sh",
       "kind": "script",
-      "sha256": "4228e78c8b608dc97ee683e4b45083f32aa9c5e772acc562747dd6a99b3b978a"
+      "sha256": "ecba45ac6dbfbf2f0d3d1fa15766fad356be7037cea2db5d2b6ff677e8f0c01f"
     },
     {
       "path": "scripts/test/archon-suites.test.sh",
@@ -1786,7 +1775,7 @@
       "template": false,
       "origin": "scripts/test/audit-log-args.test.sh",
       "kind": "script",
-      "sha256": "2e262a111f2c8ca0b82d14f380eff234af8c635c1e8db0128fd07c9afb1afae5"
+      "sha256": "3503c05ccbc2a5dde75182859da3ed0a272497d8242ff3d3484421cb67d8579a"
     },
     {
       "path": "scripts/test/ci-audit.test.sh",
@@ -1819,13 +1808,53 @@
       "when": "local_ci"
     },
     {
+      "path": "scripts/test/ci-local-lib.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/test/ci-local-lib.sh",
+      "kind": "script",
+      "sha256": "12c4dbeddbe9268e49c0e90fb6226aca07d3edb16efeb9a00801416e66407ad3",
+      "when": "local_ci"
+    },
+    {
+      "path": "scripts/test/ci-local-queue.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/test/ci-local-queue.test.sh",
+      "kind": "script",
+      "sha256": "597ab1c523e1df7c1b9d51e9327e7a1c933c6c9b1e237ce25a235eedcea169e0",
+      "when": "local_ci"
+    },
+    {
+      "path": "scripts/test/ci-local-status.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "5f5fb2b1696cabf31e4dabb81a30648c02ca1006bb4eabb40c504aac92573005",
+      "when": "local_ci"
+    },
+    {
+      "path": "scripts/test/ci-local-watch.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": "scripts/test/ci-local-watch.test.sh",
+      "kind": "script",
+      "sha256": "dc15f2037b45afc19cf494e8d486b0b14d29b5da2770880f4b0c322ce71f9e74",
+      "when": "local_ci"
+    },
+    {
       "path": "scripts/test/ci-local.test.sh",
       "profile": "core",
       "mode": "0644",
       "template": false,
       "origin": "scripts/test/ci-local.test.sh",
       "kind": "script",
-      "sha256": "9512a2b79d5f23b78d42a6cac7342eeaaaf78823537804cf0340d1116b5968d6",
+      "sha256": "3bedf4eff3e9eedabc8c4b3529b8549053aef5dbcc10e12bfaca28ee801c7f65",
       "when": "local_ci"
     },
     {
@@ -1855,7 +1884,7 @@
       "template": false,
       "origin": "scripts/test/ci-status-grammar.test.sh",
       "kind": "script",
-      "sha256": "a0dd38fd1cbb644c6dc5f7dd65c50a9525811b26f4043fe63aebbe41e4fae33a",
+      "sha256": "50705925b36279a76c57164bbab5cf75d6167d143fe1e915a071fac8fc596020",
       "when": "local_ci"
     },
     {
@@ -1865,7 +1894,7 @@
       "template": false,
       "origin": "scripts/test/gate-change-check.test.sh",
       "kind": "script",
-      "sha256": "d192c8444b079f1594aa7b0deea0fe988dcece653c75c56fa066aa0eb31c14fb",
+      "sha256": "e5d08de643af4efff18b5acf40350f1ec2ce7cee41c8adbcb1fbcf944ae6ba03",
       "when": "local_ci"
     },
     {
@@ -1875,7 +1904,7 @@
       "template": false,
       "origin": "scripts/test/install-tools.test.sh",
       "kind": "script",
-      "sha256": "007e6a1d6896ad090231ca315db4b7c144afa76463adcb725bd5547fc8f85d1d"
+      "sha256": "21cc839fc506fa135004a1ef7645952159338df349b479a3f4997e3a248d1624"
     },
     {
       "path": "scripts/test/run-suites.test.sh",
@@ -1893,7 +1922,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "24944f894033e1c761c7da9906095fb3c7dc8509bacdd54f22bd784c6ef195d6"
+      "sha256": "f0152709c6cc06862083324b3ce7f4b3fe0869a4c78b212af91788fe5c0e35f3"
     },
     {
       "path": "scripts/test/web-uis.test.sh",
@@ -1920,7 +1949,7 @@
       "template": true,
       "origin": "scripts/tokenomics/tokenomics.js",
       "kind": "script",
-      "sha256": "9aa0f05fbd4fdf52271fb3632fc10ddf1c563f6430f88227773822a00577e77f"
+      "sha256": "8b8d2d19aea37173723d38ef510dfd903ebe275ab290bab5b0a12eec1b3b1e0b"
     },
     {
       "path": "scripts/tools.conf",
@@ -1929,7 +1958,7 @@
       "template": false,
       "origin": "scripts/tools.conf",
       "kind": "config",
-      "sha256": "c1d0058f036d748800c94677b832483dd179127d7fa1412ddf3168fe462c63ff"
+      "sha256": "4d2199aaf38ce8936e57d6c9ca38d0d629a6d74ff17ca4397b78cababf9999ca"
     },
     {
       "path": "scripts/web-uis.sh",
@@ -1947,7 +1976,7 @@
       "template": false,
       "origin": ".claude/scripts/affected-check.sh",
       "kind": "script",
-      "sha256": "0c8c3741e4ac8998e54de4b39a3c9ad2ee0dcce7f956db8f886e9cf096ec745c"
+      "sha256": "2184a6bfd00672a31e224c495d0013a5f198b5ecc93ca344cd99c8a7256fbd1f"
     },
     {
       "path": ".claude/scripts/build-shape-check.sh",
@@ -1956,7 +1985,7 @@
       "template": false,
       "origin": ".claude/scripts/build-shape-check.sh",
       "kind": "script",
-      "sha256": "359b23980e1507ae5b06a758dd5ba1e6e4596b4bf25bbaca9f36036ed08a94ec"
+      "sha256": "4e48eecb68acf562ef498da383f9b302ed442dc8adb43b93d5a01a57ea1303de"
     },
     {
       "path": ".claude/scripts/ci-gate.sh",
@@ -1975,7 +2004,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-workflow-check.sh",
       "kind": "script",
-      "sha256": "dbc38002c94bd32f31b1e1317b93e4f2e18830965b6b78cb1bc9bfb11f393ef8",
+      "sha256": "e448295fbb9f07bbbf5856fc9082fab3b4880801a69eeb4551319735e39d693c",
       "when": "local_ci"
     },
     {
@@ -1985,7 +2014,7 @@
       "template": false,
       "origin": ".claude/scripts/class-version-check.sh",
       "kind": "script",
-      "sha256": "c34c80147b38a6572020c577d41d2d7837af5f4e26ccabc6cc2ba8940c1c4d6d"
+      "sha256": "5376aab74ddb696aa946c87e26e3cc2dc69d60155da9f24a62ef73af4bd99837"
     },
     {
       "path": ".claude/scripts/pin-proof-check.sh",
@@ -1994,7 +2023,7 @@
       "template": false,
       "origin": ".claude/scripts/pin-proof-check.sh",
       "kind": "script",
-      "sha256": "e8a00b4e136d66f7ece1acadf6cba8a8bab286036741c47e4b2eb45d627df8e3"
+      "sha256": "f59340f506c425de88d9b4a73821356edf08e3616c0522ee85d85ccf5682e36e"
     },
     {
       "path": ".claude/scripts/test-set-coverage.java",
@@ -2003,7 +2032,7 @@
       "template": false,
       "origin": ".claude/scripts/test-set-coverage.java",
       "kind": "script",
-      "sha256": "120c4af0b411319378e2273dc4ddb61c4ed14d1c9e148d092904821dbb3fe4d3"
+      "sha256": "ae396bbd9d30d363f3232dec1a1a9e54fe706559255ac258467fdfa395718241"
     },
     {
       "path": ".claude/scripts/test-set-coverage.sh",
@@ -2843,7 +2872,7 @@
       "template": false,
       "origin": "scripts/test/affected-check.test.sh",
       "kind": "script",
-      "sha256": "8a98f96963579b3ada535d450872fbe26dd623ca6626e7fa1db61dfeddedb3dd"
+      "sha256": "1b3023fb2152f28f75a367dba440db37ca1a9833b5cf565ac9ee9b87523330c6"
     },
     {
       "path": "scripts/test/build-shape-check.test.sh",
@@ -2852,7 +2881,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "dcc8bf0faf62d10ebb453a1ead7d07566d3c5b951653c123f82381b60090954d"
+      "sha256": "4cc468241bfd6494ac96623db4fc05c79a9732904263cf353a8277a4a8f52fde"
     },
     {
       "path": "scripts/test/ci-gate.test.sh",
@@ -2891,7 +2920,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "8dd7e454cfe0aff8f9858c06827dad96de24a8d20a2191cb9a75dc72ae733df8"
+      "sha256": "936f926c6e86b4c2989ea1a35d6f19a109b31986f30a6519150e9c886bab111d"
     },
     {
       "path": "scripts/test/pin-proof-check.test.sh",
@@ -2900,7 +2929,7 @@
       "template": false,
       "origin": "scripts/test/pin-proof-check.test.sh",
       "kind": "script",
-      "sha256": "6c8d8635f1af35c88c718165c124f13782cf75ab7fd5303dfb61171f80866327"
+      "sha256": "cdd0676b3f75bf6717fb3bd6f87d2c5c44fb907e2fd1ba6ec89b30138f8fc8ee"
     },
     {
       "path": "scripts/test/scaffold-project.test.sh",
@@ -2931,322 +2960,12 @@
     },
     {
       "path": ".github/ci-inputs.yml",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".github/ci-inputs.yml",
-      "kind": "config",
-      "sha256": "71d4591e0535f81b96785303bba25c8303b6c20fe1db85ab35a42159f2ba6a9c",
-      "when": "local_ci"
-    },
-    {
-      "path": ".github/skills/api-first-controller/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/skills/api-first-controller/SKILL.md",
-      "kind": "skill",
-      "sha256": "4fcdd8ff1830ca82138c3899cbc9eea260aa74d3b8c54e1995328b3e989163ca"
-    },
-    {
-      "path": ".github/skills/bean-config-di/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/skills/bean-config-di/SKILL.md",
-      "kind": "skill",
-      "sha256": "0e8b8804cc157f409f20b6281a8253d254eace2a22697cc8924beb880e51551e"
-    },
-    {
-      "path": ".github/skills/exception-to-http/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/skills/exception-to-http/SKILL.md",
-      "kind": "skill",
-      "sha256": "b720eb5f6e5237431bcdbcbaf8c76cd0155ac4d8f0ec8edfd5bfd23e51546a31"
-    },
-    {
-      "path": ".github/skills/persistence-repository/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/skills/persistence-repository/SKILL.md",
-      "kind": "skill",
-      "sha256": "14cf65a54fd4e6e851b5e62d38bf29f6e6598ddca97e39a87635295ed5518cb8"
-    },
-    {
-      "path": ".github/skills/resilience4j/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/skills/resilience4j/SKILL.md",
-      "kind": "skill",
-      "sha256": "0bdaa5361dba4d297ca2abbe6e8b70f91785e610b21cddfd25546ba8991d8d9c"
-    },
-    {
-      "path": ".github/skills/run-app/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": true,
-      "origin": ".claude/skills/run-app/SKILL.md",
-      "kind": "skill",
-      "sha256": "ba8563a9e620b75177f83665c2bf526bd3bce6cd83ca245b6f49900fddcb24a0"
-    },
-    {
-      "path": ".github/skills/run-app/smoke.sh",
-      "profile": "java-quarkus",
-      "mode": "0755",
-      "template": true,
-      "origin": ".claude/skills/run-app/smoke.sh",
-      "kind": "skill",
-      "sha256": "1f2a4af18161f792e82489e6f25068ad825dd7c5409dcfa35f793708168b09cf"
-    },
-    {
-      "path": ".github/skills/testcontainers/SKILL.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/skills/testcontainers/SKILL.md",
-      "kind": "skill",
-      "sha256": "0f734e4f04e795569f79bc25ca8d9ffd5c526b5d686aeaa658e368cf862d144d"
-    },
-    {
-      "path": ".github/workflows/ci.yml",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": true,
-      "origin": ".github/workflows/ci.yml",
-      "kind": "config",
-      "sha256": "ce456ea884f72e65dfbe7a1357c732462183cd3af2d3f678503edf2d241e0165",
-      "when": "local_ci"
-    },
-    {
-      "path": "docs/code-maps/api-first-controller.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/api-first-controller.md",
-      "kind": "doc",
-      "sha256": "76a3d91d7357e476adeeb15f0584a7b77686d630bea03327e7795a8159a41f46",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/bean-config-di.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/bean-config-di.md",
-      "kind": "doc",
-      "sha256": "8c9932b158fb8462bcf69b3f0be80df530d741a05afdc874316b21705ecd8c7d",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/exception-to-http.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/exception-to-http.md",
-      "kind": "doc",
-      "sha256": "192edf4b737d495aa7eeea4af2743eeeddd705ada68758d39b004ef14fd08fa1",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/exemplars/customer-controller.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/exemplars/customer-controller.md",
-      "kind": "doc",
-      "sha256": "da39324580562a3c259c6483ced2b411253ce8482b4cfdad07b0048bec337c03",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/exemplars/default-registry-gateway.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/exemplars/default-registry-gateway.md",
-      "kind": "doc",
-      "sha256": "a9d792ffe26bd1c630ea3f1ae45b7c9ac46f2323ec60e532f829ef778023150b",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/exemplars/rest-exception-handler.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/exemplars/rest-exception-handler.md",
-      "kind": "doc",
-      "sha256": "50c55eb6f06dd6433f400d68941b578534c6c48bca9ce91071c8251df324c95c",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
-      "kind": "doc",
-      "sha256": "c90833311910df432d1b793b7d6a3b9680e4fef7bec33f7a778da729ccd1343a",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/exemplars/web-service-config.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/exemplars/web-service-config.md",
-      "kind": "doc",
-      "sha256": "95f4360dad935558a6bcb7cf37d6bc7707322a6fb9ef8871fef7b03f554bd868",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/persistence-repository.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/persistence-repository.md",
-      "kind": "doc",
-      "sha256": "12e8c8dcb7adea2eb5b54760c3c9394b64d9eb6bc45f73b556ffaba689eebc70",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/resilience4j.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/resilience4j.md",
-      "kind": "doc",
-      "sha256": "599521e5ae3b16f2e98242f475e7055a9a6bc7a46d7c9a110f94cf5885fe9a79",
-      "createOnly": true
-    },
-    {
-      "path": "docs/code-maps/testcontainers.md",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/code-maps/testcontainers.md",
-      "kind": "doc",
-      "sha256": "d77aa6f7a2ad009ede6d20f8ec3400e4900158f0a42dd539a7d9b1217269c586",
-      "createOnly": true
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/controller-command-test.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/controller-command-test.mustache",
-      "kind": "template",
-      "sha256": "22cf2e07affa468613165604ea976220bf558867ead1273a1b1a1ec6ed206615"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/controller-test.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/controller-test.mustache",
-      "kind": "template",
-      "sha256": "41b8e60f29b0e021aaa8db999c00af362d3e11e28995e2a59f7409c0b292e5b0"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/default-repository-crud-test.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/default-repository-crud-test.mustache",
-      "kind": "template",
-      "sha256": "0738df2fcbf1d3913b6c9a7d044551cbd6a557c142d30b8f587ee9a1b66a9110"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/default-repository-crud.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/default-repository-crud.mustache",
-      "kind": "template",
-      "sha256": "bc5f9c67346fdbb7839982854817012f0f5c3b953b2a297c37b358cc1a13b7a7"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/default-repository-test.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/default-repository-test.mustache",
-      "kind": "template",
-      "sha256": "f6b7f6ac199369917bfaba8e65718674ef72a1922fe25cbea80b7c70efdc91d8"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/default-repository.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/default-repository.mustache",
-      "kind": "template",
-      "sha256": "b04748472a872a72cfbae2815dd7f28b8d8ef300b4e7e2b7e0ad48e19719bc70"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/panache-repository.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/panache-repository.mustache",
-      "kind": "template",
-      "sha256": "20f3905f3cdf29a6c669cf2e637cba3e014a448a0745476fe5181249bee63d9b"
-    },
-    {
-      "path": "docs/scaffold-templates/adapter/table-test.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/adapter/table-test.mustache",
-      "kind": "template",
-      "sha256": "e4e1c84683e418ccb1b962c2a9eb8ac105f7ef87aa557b9a1b27ee1c9aa490e2"
-    },
-    {
-      "path": "docs/scaffold-templates/usecase/domain-config.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/usecase/domain-config.mustache",
-      "kind": "template",
-      "sha256": "aec17e8bcfa6df6ddd6eec1905cdd64c9424a929ceec3684d8c566f696b53fe2"
-    },
-    {
-      "path": "docs/scaffold-templates/usecase/usecase-create-or-update.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/usecase/usecase-create-or-update.mustache",
-      "kind": "template",
-      "sha256": "9697e67899e6e9b569d58b9f4a7eb3b674230f65d2dc01831907cc2e914f1c60"
-    },
-    {
-      "path": "docs/scaffold-templates/usecase/usecase-delete.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/usecase/usecase-delete.mustache",
-      "kind": "template",
-      "sha256": "c167f767511b97879bdfa3bcde7c53f41f631f6f8100130e61ee20cfe029f53a"
-    },
-    {
-      "path": "docs/scaffold-templates/usecase/usecase.mustache",
-      "profile": "java-quarkus",
-      "mode": "0644",
-      "template": false,
-      "origin": "docs/scaffold-templates/usecase/usecase.mustache",
-      "kind": "template",
-      "sha256": "38af8237d2f9ac885be7fa7af0517a35c3783a1650bf0a467e0cfe9b33dbcb91"
-    },
-    {
-      "path": ".github/ci-inputs.yml",
       "profile": "java-spring",
       "mode": "0644",
-      "template": false,
+      "template": true,
       "origin": ".github/ci-inputs.yml",
       "kind": "config",
-      "sha256": "4ac0ccab10534e4f4a7091e27d92f30771346f2680b875e714f2eeb170828083",
+      "sha256": "71eeda453716633521cf572293aedad27a921b8a173e1ef4b23c6436f2627d00",
       "when": "local_ci"
     },
     {
@@ -3355,7 +3074,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "5be09d98923a7bcfa94613ac74d0529fba4265210982d7ddf5729abc7437056d",
+      "sha256": "0e1f30b149712c938b92dff5ca63e8144447cfb6af0fdd0779a36577123f9c86",
       "when": "local_ci"
     },
     {
@@ -3646,7 +3365,7 @@
       "template": false,
       "origin": ".claude/scripts/generated-untracked-check.sh",
       "kind": "script",
-      "sha256": "ed8a2fe7ed2084692392c98b2c9572846ccd0474ea4c062aa4064c6740bab31c"
+      "sha256": "a98ce74fbbed8cfd051e5fe4d188de77cca9cc4dd6c8a97dac4a3762eeb82059"
     },
     {
       "path": ".github/agents/contract-agent.agent.md",
@@ -3656,16 +3375,6 @@
       "origin": ".claude/agents/contract-agent.md",
       "kind": "agent",
       "sha256": "230ba0f478e8286daa412a9b37976fe7f68765fca24422ca853c2527fa9bec6c"
-    },
-    {
-      "path": ".github/ci-inputs.yml",
-      "profile": "openapi-contract",
-      "mode": "0644",
-      "template": false,
-      "origin": ".github/ci-inputs.yml",
-      "kind": "config",
-      "sha256": "b11c65f5aa6f339785c880f3d8db948707c5041b5e83b8bd2d9f63252c7cdf82",
-      "when": "local_ci"
     },
     {
       "path": ".github/mcp.json",
@@ -3702,16 +3411,6 @@
       "origin": ".claude/skills/contract-slice/SKILL.md",
       "kind": "skill",
       "sha256": "70fc21113759aa9940e46ac4d689155b01673c594ace469455064987685988a5"
-    },
-    {
-      "path": ".github/workflows/ci.yml",
-      "profile": "openapi-contract",
-      "mode": "0644",
-      "template": true,
-      "origin": ".github/workflows/ci.yml",
-      "kind": "config",
-      "sha256": "9d01ea1e49288d5d3ed12a07ba869f9656dc3cee07486af9ae05828346edc551",
-      "when": "local_ci"
     },
     {
       "path": "scripts/contract-agent-readiness.sh",
