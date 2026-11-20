@@ -67,6 +67,10 @@ check "2 the empty pr-refresh block before Merge" \
     m=$(grep -nx '## Merge' "$body" | cut -d: -f1); [ -n "$s" ] && [ "$e" -eq $((s+1)) ] && [ "$m" -gt "$e" ]; echo $?)
 check "2 Merge: a team member merges, never the workflow" $(grep -A3 '^## Merge' "$body" | tr '\n' ' ' | grep -q 'A team member reviews and merges.*never merges it itself.*requesting changes'; echo $?)
 check "2 ends with the footer" $(tail -1 "$body" | grep -qx '🤖 Generated with GitHub Copilot through Archon (build-feature-copilot)'; echo $?)
+# 2b. Stdout stays empty: the open-pr node runs `pr-body.sh … && open-pr.sh …` and parses its stdout as one JSON
+# document, so a line from pr-body.sh failed the node after the push (seen in a measured run).
+so=$(ARTIFACTS_DIR="$art" bash "$script" main TASK-7 "$root/summary.md" "$body" 2>/dev/null)
+check "2b nothing on stdout" $([ -z "$so" ]; echo $?)
 
 # 2b. That body refreshed by pr-refresh.sh (gh stubbed): exactly one `## Decisions`, inside the block, holding the
 # decisions word for word, and still one after a second refresh.

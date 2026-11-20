@@ -7,7 +7,7 @@
 # block that pr-refresh.sh fills after every CI round, the `## Merge` section and the footer. It writes no `## Decisions`
 # section: pr-refresh.sh alone writes it, inside its block (owner decision 2026-11-20), so a body has one.
 # A missing or empty summary file is no error: the body then says so, and the commits in the block say what changed.
-# Exit 0, 2 on a usage error.
+# Prints nothing on stdout. Exit 0, 2 on a usage error.
 set -uo pipefail
 [ "$#" -eq 4 ] || { echo "usage: pr-body.sh <base branch> <ticket id or \"\"> <summary file> <body file>" >&2; exit 2; }
 base=$1 ticket=$2 summary=$3 body=$4
@@ -47,4 +47,5 @@ tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
   echo "🤖 Generated with GitHub Copilot through Archon (build-feature-copilot)"
 } > "$tmp"
 mv "$tmp" "$body"
-echo "pr-body: wrote $body"
+# stderr: the open-pr node chains this script before open-pr.sh, and its stdout must be that one JSON document.
+echo "pr-body: wrote $body" >&2
