@@ -61,9 +61,9 @@ jobs:
           path: '*/build/reports/tests/'
 
   archon-scripts:
-    # The shell test suites of the build-feature scripts (.archon/scripts/test/*.test.sh), moved here from the
-    # weddingapp umbrella, now an archive. ubuntu-latest ships the bash, git, node, jq and yq
-    # they need; archon and backlog are stubbed by the suites themselves.
+    # The shell test suites of the build-feature scripts (.archon/scripts/test/*.test.sh), moved here from a separate
+    # umbrella repo, now an archive. ubuntu-latest ships the bash, git, node, jq and yq they need; archon and backlog
+    # are stubbed by the suites themselves.
     # 30 minutes: alone it takes ~3.5 min, but beside a build-feature run it took 13.8 (2d1461f) of the 15 it had.
     runs-on: ubuntu-latest
     timeout-minutes: 30

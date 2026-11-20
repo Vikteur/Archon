@@ -1,7 +1,7 @@
 {
   "version": 1,
   "source": {
-    "name": "wedding-portal",
+    "name": "archon-kit",
     "commit": "c84f413583bf9db3d5dc096ac925d4a534c9a565"
   },
   "profiles": {
@@ -299,7 +299,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.sh",
       "kind": "script",
-      "sha256": "3985de315fcd800d9af8f999128edd1c01222fd334b9edd3153d645b9d7dacd2"
+      "sha256": "2ccbd337cd13afdb5260422549858bb762dea8d1fb213e33bb105de5520a98e1"
     },
     {
       "path": ".archon/scripts/local-ci-run.sh",
@@ -2753,18 +2753,18 @@
       "profile": "java-quarkus",
       "mode": "0644",
       "template": true,
-      "origin": ".claude/skills/run-wedding-portal/SKILL.md",
+      "origin": ".claude/skills/run-app/SKILL.md",
       "kind": "skill",
-      "sha256": "f46d1ece10454949efa4fd3c9bed118b88e4f327f49b2c43c8e0fa02a0332bfc"
+      "sha256": "ba8563a9e620b75177f83665c2bf526bd3bce6cd83ca245b6f49900fddcb24a0"
     },
     {
       "path": ".github/skills/run-app/smoke.sh",
       "profile": "java-quarkus",
       "mode": "0755",
       "template": true,
-      "origin": ".claude/skills/run-wedding-portal/smoke.sh",
+      "origin": ".claude/skills/run-app/smoke.sh",
       "kind": "skill",
-      "sha256": "213c03e612bc17c56c0bab8f4c5b00c8c5273df8f61619cf8f19fa86c66a0caa"
+      "sha256": "1f2a4af18161f792e82489e6f25068ad825dd7c5409dcfa35f793708168b09cf"
     },
     {
       "path": ".github/skills/testcontainers/SKILL.md",
@@ -2782,7 +2782,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "487323b1092ddc11f9a5232a06f5d0c98f17083f24d2da47efdd4434f5d19a3b"
+      "sha256": "ce456ea884f72e65dfbe7a1357c732462183cd3af2d3f678503edf2d241e0165"
     },
     {
       "path": "docs/code-maps/api-first-controller.md",
@@ -2791,7 +2791,7 @@
       "template": false,
       "origin": "docs/code-maps/api-first-controller.md",
       "kind": "doc",
-      "sha256": "5284802412769246ec6e3e27c10c1a7d60510dda3ffcc9d33008cd270a6c0a9a",
+      "sha256": "76a3d91d7357e476adeeb15f0584a7b77686d630bea03327e7795a8159a41f46",
       "createOnly": true
     },
     {
@@ -2801,7 +2801,7 @@
       "template": false,
       "origin": "docs/code-maps/bean-config-di.md",
       "kind": "doc",
-      "sha256": "7a4c01c74eee595f486f293be47189c3a9c45e114873544ffa838da94b9bfe9c",
+      "sha256": "8c9932b158fb8462bcf69b3f0be80df530d741a05afdc874316b21705ecd8c7d",
       "createOnly": true
     },
     {
@@ -2811,7 +2811,7 @@
       "template": false,
       "origin": "docs/code-maps/exception-to-http.md",
       "kind": "doc",
-      "sha256": "dda19ab873f6cff29342d7e81f4b837889fa80b84498a3456222e2d6dd33a9dd",
+      "sha256": "192edf4b737d495aa7eeea4af2743eeeddd705ada68758d39b004ef14fd08fa1",
       "createOnly": true
     },
     {
@@ -2871,7 +2871,7 @@
       "template": false,
       "origin": "docs/code-maps/persistence-repository.md",
       "kind": "doc",
-      "sha256": "62efa1f19ea13ed6f11789b76a305ef62b65683ac1bcb228750d150479b104ef",
+      "sha256": "12e8c8dcb7adea2eb5b54760c3c9394b64d9eb6bc45f73b556ffaba689eebc70",
       "createOnly": true
     },
     {
@@ -2881,7 +2881,7 @@
       "template": false,
       "origin": "docs/code-maps/resilience4j.md",
       "kind": "doc",
-      "sha256": "c57ecdaad002e02b3cf18733335e5b04412b318317ffa7e366df03c4ba2171a8",
+      "sha256": "599521e5ae3b16f2e98242f475e7055a9a6bc7a46d7c9a110f94cf5885fe9a79",
       "createOnly": true
     },
     {
@@ -3088,7 +3088,7 @@
       "profile": "java-spring",
       "mode": "0644",
       "template": false,
-      "origin": ".claude/skills/run-wedding-portal/SKILL.md",
+      "origin": ".claude/skills/run-app/SKILL.md",
       "kind": "skill",
       "sha256": "49b58ff7e229c18b2d74ca87eb50ff02b71628667f9e9791b3ccc47169ec094e"
     },
@@ -3097,7 +3097,7 @@
       "profile": "java-spring",
       "mode": "0755",
       "template": false,
-      "origin": ".claude/skills/run-wedding-portal/smoke.sh",
+      "origin": ".claude/skills/run-app/smoke.sh",
       "kind": "skill",
       "sha256": "77f1d85ab8978b7994b2cb2f57d3779f60e4e7faaef1ffe07c3a58b04ea81f93"
     },
@@ -3551,7 +3551,7 @@
       "template": false,
       "origin": "scripts/contract-db-parity/compare.mjs",
       "kind": "script",
-      "sha256": "a1310067e80069b871d51e6da2e66d518ad3ed3c80f86225b4c2a5cb6b9aa3ba"
+      "sha256": "65159c2317132297aef26c68da9b00e4f55346cf9b1e7958e35220f3b18a9243"
     },
     {
       "path": "scripts/contract-db-parity/db-schema.sql",
@@ -3605,7 +3605,7 @@
       "template": false,
       "origin": "scripts/portal-mcp/code-index.mjs",
       "kind": "script",
-      "sha256": "28c6a7bf2e0dc9ee098eb08e5feefd2bf806eeff7364cd08d5236b842c269d3a"
+      "sha256": "54f50089438b1ab522013c9b8bdfce9bff459b28ecc4b0c2e78c6f3197951344"
     },
     {
       "path": "scripts/contract-mcp/kit-config.mjs",
@@ -3650,7 +3650,7 @@
       "template": false,
       "origin": "scripts/portal-mcp/schema-graph.mjs",
       "kind": "script",
-      "sha256": "e59ac232ab877243d3643c84ee82aed2cdbcc0804a66e7c1e711bab9f00d965e"
+      "sha256": "7f0051636975bd14819bdc14ff0bffce842bf25217559fd0908342e3620e177e"
     },
     {
       "path": "scripts/contract-mcp/server.mjs",
@@ -3668,7 +3668,7 @@
       "template": true,
       "origin": "scripts/portal-mcp/tools.mjs",
       "kind": "script",
-      "sha256": "54ca34f2f6fba6c55ef04956e17473ee4650f4e5fad96b0b337b7ee0919892c5"
+      "sha256": "8385e343ea8c594df9d63f8b4f3fe65b11fa9fafa0aa1d0c599bf381de09e551"
     },
     {
       "path": "scripts/test/contract-mcp.test.sh",
@@ -3713,7 +3713,7 @@
       "template": false,
       "origin": "scripts/test/fixtures/contract-agent-readiness/findability-known.json",
       "kind": "config",
-      "sha256": "409184602292eb4721bb354c0575d0fa76a06c53502113a5b061ec66e7196867"
+      "sha256": "b09f093efc0d2aebf9accd5e85b4ca1e71169c871a189457e570b8c9ea3a6e53"
     },
     {
       "path": "scripts/test/fixtures/contract-agent-readiness/intents.json",
@@ -3722,7 +3722,7 @@
       "template": false,
       "origin": "scripts/test/fixtures/contract-agent-readiness/intents.json",
       "kind": "config",
-      "sha256": "17040e78dd8da2df8fcdd47eded6e6025dd4b9463c57faaa302b1f25c184f0ef"
+      "sha256": "ff047a8052dfb2a4c6ef39f22b9dfbc9be1c4681a79463a1a73e47ae846c9812"
     },
     {
       "path": "scripts/test/fixtures/contract-agent-readiness/map-stale.json",

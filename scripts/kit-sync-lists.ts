@@ -5,6 +5,7 @@
 import { mergeRewrites, NOUN_REWRITES, NOUN_TARGETED } from './kit-sync-generic';
 import { STANDALONE_TARGETED } from './kit-sync-standalone-text';
 import { CONSUMER_TARGETED } from './kit-sync-consumer';
+import { reEsc, SRC } from './kit-sync-source-name';
 
 export const PROFILES = [
   'core',
@@ -275,14 +276,33 @@ export const SKILL_PROFILES: Record<string, Profile> = {
   'persistence-repository': 'java-quarkus',
   resilience4j: 'java-quarkus',
   testcontainers: 'java-quarkus',
-  'run-wedding-portal': 'java-quarkus',
+  [SRC.runSkill]: 'java-quarkus',
   'contract-agent-readiness': 'openapi-contract',
   'contract-db-parity': 'openapi-contract',
   'contract-slice': 'openapi-contract',
 };
 
 /** Source skill folders that ship under another name. */
-export const SKILL_RENAMES: Record<string, string> = { 'run-wedding-portal': 'run-app' };
+export const SKILL_RENAMES: Record<string, string> = { [SRC.runSkill]: 'run-app' };
+
+const RENAMED_SKILL = /^\.claude\/skills\/([^/]+)\//;
+
+/**
+ * A source path as the kit records it (a manifest origin, an overlay's derivedFrom): a renamed skill's files under the
+ * name they ship as, so the kit names no source skill. sourcePathOf maps it back for the staleness check.
+ */
+export function kitOrigin(path: string): string {
+  const from = RENAMED_SKILL.exec(path)?.[1];
+  const to = from === undefined ? undefined : SKILL_RENAMES[from];
+  return to === undefined ? path : path.replace(RENAMED_SKILL, `.claude/skills/${to}/`);
+}
+
+/** The source path a recorded origin stands for: kitOrigin reversed. */
+export function sourcePathOf(origin: string): string {
+  const to = RENAMED_SKILL.exec(origin)?.[1];
+  const from = Object.keys(SKILL_RENAMES).find(k => SKILL_RENAMES[k] === to);
+  return from === undefined ? origin : origin.replace(RENAMED_SKILL, `.claude/skills/${from}/`);
+}
 
 export const RULE_PROFILES: Record<string, Profile> = {
   general: 'core',
@@ -472,15 +492,18 @@ export const TARGETED: Record<string, Rewrite[]> = mergeRewrites(
  * kit-sync-generic.ts's PATH_REWRITES, except in its PATH_SKIP files.
  */
 export const GLOBAL_REWRITES: [RegExp, string][] = [
-  [/\/home\/viktor\/wedding-portal(?![\w-])/g, '@@KIT_PROJECT_DIR@@'],
-  [/\.claude([/\\])skills\1run-wedding-portal/g, '.github$1skills$1run-app'],
-  [/(?<![\w-])run-wedding-portal(?![\w-])/g, 'run-app'],
+  [new RegExp(`/home/viktor/${reEsc(SRC.repo)}(?![\\w-])`, 'g'), '@@KIT_PROJECT_DIR@@'],
+  [
+    new RegExp(`\\.claude([/\\\\])skills\\1${reEsc(SRC.runSkill)}`, 'g'),
+    '.github$1skills$1run-app',
+  ],
+  [new RegExp(`(?<![\\w-])${reEsc(SRC.runSkill)}(?![\\w-])`, 'g'), 'run-app'],
   [/Vikteur\/rekord-contract/g, '@@KIT_CONTRACT_REPO@@'],
   ...NOUN_REWRITES,
 ];
 
 /** The source's main checkout: `archon kit add` renders @@KIT_PROJECT_DIR@@ as the project's absolute path. */
-export const PROJECT_DIR = /\/home\/viktor\/wedding-portal(?![\w-])/g;
+export const PROJECT_DIR = new RegExp(`/home/viktor/${reEsc(SRC.repo)}(?![\\w-])`, 'g');
 export const CONTRACT_SERVER = '@@KIT_CONTRACT_SERVER_NAME@@';
 export const SOURCE_CONTRACT_SERVER = /(?<![\w-])portal-api(?![\w-])/g;
 
@@ -498,7 +521,7 @@ const LEAK_FAIL: [string, RegExp][] = [
   ['Slack token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
   ['API key', /\bsk-(ant-)?[A-Za-z0-9_-]{32,}/],
 ];
-const LEAK_WARN = /wedding|rekord|portal/gi;
+const LEAK_WARN = new RegExp(`${reEsc(SRC.word)}|rekord|portal`, 'gi');
 const LEAK_WARN_FREE: Profile[] = ['java-quarkus', 'openapi-contract'];
 
 export interface LeakReport {

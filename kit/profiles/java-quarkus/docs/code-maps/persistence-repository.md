@@ -10,7 +10,7 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
+## This repo (the Quarkus original)
 These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
 (`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
 

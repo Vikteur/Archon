@@ -99,7 +99,7 @@ return { serverName, projectName, spec, ops, tools: [
   description: 'Answers one contract schema ready to implement: every field with type, format, enum, nullable, '
     + 'required and constraints, allOf flattened with each inherited field\'s source, nested schemas as names, and '
     + 'the generated Java model with the classes that import it. Next: usedBy for what carries it.',
-  inputSchema: { name: z.string().describe('The schema name, e.g. wedding or Wedding') },
+  inputSchema: { name: z.string().describe('The schema name, e.g. folder or Folder') },
   annotations: { readOnlyHint: true, openWorldHint: false },
 }, handler: async ({ name }) => {
   const a = graph.schema(name);
@@ -111,13 +111,13 @@ return { serverName, projectName, spec, ops, tools: [
   description: 'Answers what a change to a schema or one field reaches: every operation that carries it, request or '
     + 'response, with the shortest route and whether the field is required, and the hand-written Java lines that '
     + 'read it from the generated model. Lists uses; it does not judge a change. Next: codegraph_impact.',
-  inputSchema: { target: z.string().describe('A schema (wedding) or a field (wedding.weddingDate)') },
+  inputSchema: { target: z.string().describe('A schema (folder) or a field (folder.name)') },
   annotations: { readOnlyHint: true, openWorldHint: false },
 }, handler: async ({ target }) => {
   const a = graph.usedBy(target);
   if (!a) {
     const head = String(target).split('.')[0];
-    return { isError: true, ...answer(`No schema ${head}. Nearest: ${graph.nearest(head).join(', ')}. Use schema or field, e.g. wedding.weddingDate.`) };
+    return { isError: true, ...answer(`No schema ${head}. Nearest: ${graph.nearest(head).join(', ')}. Use schema or field, e.g. folder.name.`) };
   }
   return a.error ? { isError: true, ...answer(a) } : answer(a);
 } },

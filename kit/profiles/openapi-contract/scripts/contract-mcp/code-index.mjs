@@ -16,7 +16,7 @@ const MAX_CHARS = 4000;
 const SKIP_DIRS = new Set(['build', 'node_modules', '.git', '.gradle', '.codegraph', 'contract', 'out']);
 
 // The generator's name for a tag's interface: each word capitalised, an all-caps word lowered after its first letter
-// (`DJ` → `DjApi`).
+// (`HR` → `HrApi`).
 export const apiName = (tag) => `${String(tag).split(/[^A-Za-z0-9]+/).filter(Boolean)
   .map((w) => w[0].toUpperCase() + (w === w.toUpperCase() ? w.slice(1).toLowerCase() : w.slice(1))).join('')}Api`;
 
@@ -139,7 +139,7 @@ function codegraphCallees(root, controller, method) {
 }
 
 // A regex for a string literal in a test that names this path: the literal text between the parameters must match,
-// and a parameter may be written out, left as `{name}`, or concatenated (`"/api/weddings/" + id + "/people"`).
+// and a parameter may be written out, left as `{name}`, or concatenated (`"/api/folders/" + id + "/notes"`).
 export function pathPattern(path) {
   const esc = (s) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
   const param = String.raw`(?:[^"/\s]+|"\s*\+\s*[^+;\n]+?(?:\+\s*"|(?=\s*[),;])))`;

@@ -4,6 +4,7 @@
  * against the source project stays out, with its reason. scripts/kit-sync.ts calls classifySuite from classify.
  */
 import type { Profile } from './kit-sync-lists';
+import { reEsc, SRC } from './kit-sync-source-name';
 
 /** The suite folders; a suite is `<folder>/<name>.test.sh`, its fixtures `<folder>/fixtures/<name>/**`. */
 export const SUITE_DIRS = ['.archon/scripts/test/', 'scripts/test/'];
@@ -163,17 +164,17 @@ export const SUITE_NOUNS: [RegExp, string][] = [
   [/\bViktorVS1\b/g, 'example-bot'],
   [/\bviktor-vansteenweghen_ssgia\b/g, 'example-work'],
   [/\bVikteur\b/g, 'example-org'],
-  [/wedding-image-check/g, 'app-image-check'],
-  [/wedding-portal:/g, 'app:'],
-  [/wedding-portal-hooks/g, 'project-hooks'],
+  [new RegExp(`${reEsc(SRC.word)}-image-check`, 'g'), 'app-image-check'],
+  [new RegExp(`${reEsc(SRC.repo)}:`, 'g'), 'app:'],
+  [new RegExp(`${reEsc(SRC.repo)}-hooks`, 'g'), 'project-hooks'],
   [/\bPORTAL_DIR\b/g, 'PROJECT_DIR'],
-  [/\bweddingapp\b/g, 'example-umbrella'],
-  [/wedding-portal/g, 'example-app'],
-  [/wedding_portal/g, 'example_app'],
-  [/\bWEDDING_/g, 'APP_'],
-  [/WeddingId/g, 'OrderId'],
-  [/\bWedding/g, 'Order'],
-  [/\bwedding/g, 'order'],
+  [new RegExp(`\\b${reEsc(SRC.umbrella)}\\b`, 'g'), 'example-umbrella'],
+  [new RegExp(reEsc(SRC.repo), 'g'), 'example-app'],
+  [new RegExp(reEsc(SRC.snake), 'g'), 'example_app'],
+  [new RegExp(`\\b${SRC.WORD}_`, 'g'), 'APP_'],
+  [new RegExp(`${SRC.Word}Id`, 'g'), 'OrderId'],
+  [new RegExp(`\\b${SRC.Word}`, 'g'), 'Order'],
+  [new RegExp(`\\b${SRC.word}`, 'g'), 'order'],
   [/\bapp\.rekord\b/g, 'com.example'],
   [/\bapp\/rekord\b/g, 'com/example'],
   [/rekord-contract/g, 'example-contract'],
