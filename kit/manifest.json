@@ -570,7 +570,7 @@
       "template": false,
       "origin": ".archon/scripts/skill-check.js",
       "kind": "script",
-      "sha256": "5cc2295384b2858f5740383de55aeca356ab1b815c59e7b76595e061eb35e534"
+      "sha256": "93106500f3eedba661f10f360b82aab0814cdbcae5db54b9cb11c7a4f90ef95e"
     },
     {
       "path": ".archon/scripts/step-check.js",
@@ -579,7 +579,7 @@
       "template": false,
       "origin": ".archon/scripts/step-check.js",
       "kind": "script",
-      "sha256": "179d8e10c86a157d3094dc52e6f276c8d144050ca69298755829ccebc2b17bcb"
+      "sha256": "44dde1b55cea40a50e47a21057a9e62b701be92e9fdc34a11376868ec6c353d3"
     },
     {
       "path": ".archon/scripts/step-cut.js",
@@ -588,7 +588,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "28b9156e99fd733394a12278cbc9fcdcea8450692aca91503346c9bd43a72363"
+      "sha256": "7bccfd033754699dc3fb1b9b138ef2b398fb6285206b384e3751ca3d1251e6bb"
     },
     {
       "path": ".archon/scripts/stop-run.sh",
@@ -1015,7 +1015,7 @@
       "template": false,
       "origin": ".archon/scripts/test/skill-check.test.sh",
       "kind": "script",
-      "sha256": "0291566fa70b20fb58d8608c71bf2ee48b82a8bf2c8b9c2c2508bc4547bca7d3"
+      "sha256": "d30575f6c8cb4dd19ce0a9136a7ad0238a2338f071bcd25a08d21580200a68b9"
     },
     {
       "path": ".archon/scripts/test/step-check.test.sh",
@@ -1024,7 +1024,7 @@
       "template": false,
       "origin": ".archon/scripts/test/step-check.test.sh",
       "kind": "script",
-      "sha256": "ffa9541c94463ba0761cd7756f7da3c117ae82b94c0b0fe4d7041fe201e84235"
+      "sha256": "4a37f3ce153c4a4930a69122c886ef889012d18d2527b96282f8bb65a4514d18"
     },
     {
       "path": ".archon/scripts/test/step-cut.test.sh",
@@ -1033,7 +1033,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "ed9f14a32c21570bb9f9dbd819fa97b428f88e038dfd97abace2d93cc06cc183"
+      "sha256": "95fca99cb7c50d8d075b205068b150bd000cd0a19d56f4650a738e04e4abac50"
     },
     {
       "path": ".archon/scripts/test/tdd-check.test.sh",
@@ -1087,7 +1087,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "88e883c3fddcb9cd5b6997804a17d4361b9bc58cd13c85853e6b3c8d544ec79c"
+      "sha256": "bfe5b0724f52f4079810536dde971f9133b0435fb5cbbde3d73d2d82e689102e"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
