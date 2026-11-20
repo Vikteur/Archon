@@ -32,6 +32,7 @@ passed=0; failed=0; pending=0; holds=0
 
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 unset CLAUDE_AUDIT_ROLE CLAUDE_AUDIT_TICKET CLAUDE_AUDIT_PROMPTS COPILOT_AUDIT_ROLE COPILOT_AUDIT_TICKET 2>/dev/null
+unset KIT_NODE ARCHON_NODE_EXECUTION 2>/dev/null  # section 8 sets them per call
 
 check() { # check <name> <command...>
   local name="$1"; shift
@@ -116,6 +117,27 @@ check "6 the edit strings are not stored" bash -c '! grep -q "old_string" "$1"' 
 # 7. No call is dropped: one TOOL record per call, every line valid JSON.
 check "7 one TOOL record per call" test "$(jq -r 'select(.type == "TOOL") | .type' "$log" | wc -l | tr -d ' ')" -eq "$calls"
 check "7 every line is JSON" test "$(jq -c . "$log" | wc -l | tr -d ' ')" -eq "$(wc -l < "$log" | tr -d ' ')"
+
+# 8. Inside an Archon workflow node the record names the node: KIT_NODE, else the last segment of the path in
+# ARCHON_NODE_EXECUTION; outside a node the record is as before ("main", no node key).
+nx='{"runId":"r1","path":"implement.build-step","invocation":1,"attempt":1}'
+ARCHON_NODE_EXECUTION="$nx" fire postToolUse Bash '{"command":"git status"}'
+check "8 ARCHON_NODE_EXECUTION alone: agent is the node" test "$(field agent)" = build-step
+check "8 ARCHON_NODE_EXECUTION alone: node field" test "$(field node)" = build-step
+KIT_NODE=review ARCHON_NODE_EXECUTION="$nx" fire postToolUse Bash '{"command":"git status"}'
+check "8 KIT_NODE wins over ARCHON_NODE_EXECUTION" test "$(field agent) $(field node)" = "review review"
+KIT_NODE='?' ARCHON_NODE_EXECUTION='{"path":"plan"}' fire postToolUse Read '{"file_path":"a"}'
+check "8 KIT_NODE ? falls back to the node path" test "$(field node)" = plan
+CLAUDE_AUDIT_ROLE=developer ARCHON_NODE_EXECUTION="$nx" fire postToolUse Bash '{"command":"ls"}'
+check "8 a launcher role keeps the agent, the node is its own field" test "$(field agent) $(field node)" = "developer build-step"
+ARCHON_NODE_EXECUTION='{"path":"implement.bad node"}' fire postToolUse Bash '{"command":"ls"}'
+check "8 a node name that is not a plain word is no node" test "$(field agent) $(field node)" = "main null"
+KIT_NODE='a"b' fire postToolUse Bash '{"command":"ls"}'
+check "8 a KIT_NODE that is not a plain word is no node" test "$(field agent) $(field node)" = "main null"
+fire postToolUse Bash '{"command":"ls"}'
+check "8 outside a node: agent main" test "$(field agent)" = main
+check "8 outside a node: no node key" bash -c 'printf "%s" "$1" | jq -e "select(.type == \"TOOL\") | has(\"node\") | not"' _ "$rec"
+check "8 every line is still JSON" test "$(jq -c . "$log" | wc -l | tr -d ' ')" -eq "$(wc -l < "$log" | tr -d ' ')"
 
 echo "audit-log: $passed passed, $failed failed, $pending pending the hook fix, $holds expect(s) already holding"
 [ "$failed" -eq 0 ]

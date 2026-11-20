@@ -29,12 +29,14 @@
 // only its side (test: the first open step; build: the step of the newest red/step-<n>.log), with the skills of the
 // steps folded into it. It never fails the node:
 // it prints {"ok", "n", "side", "missing"} for the loop's `when:` and, on a miss, writes
-// <artifacts-dir>/skills-missing.md for the next agent and, for the build side, opens the step again in the plan, so
+// <artifacts-dir>/skills-missing.md for the next agent (an ok check removes it only when it is of its own side) and,
+// for the build side, opens the step again in the plan, so
 // the loop builds it again with the skill loaded. A blocked plan, or a step with no window yet, is left to the gates
 // after the loop.
 const fs = require('fs');
 const path = require('path');
 const { findLog } = require('./run-trace.js');
+const { missSide } = require('./step-cut.js');
 
 const SLACK_MS = 1000; // the audit stamp has whole seconds
 // red/step-<n>.log, or a suffixed red/step-<n>-<part>.log a resumed write-tests may write: group 1 is n
@@ -300,7 +302,8 @@ function live(art, runId, root, side) {
 // A miss: tell the next agent which skills to load, and open a built step again so the loop builds it once more
 function remedy(art, r) {
   const file = path.join(art, 'skills-missing.md');
-  if (r.ok) { fs.rmSync(file, { force: true }); return; }
+  // a pass removes a note of its own side only: a build-side miss outlives the test-side check before the build agent
+  if (r.ok) { if (['', r.side].includes(missSide(file))) fs.rmSync(file, { force: true }); return; }
   fs.writeFileSync(file, [`# Skills missing — step ${r.n}`, '',
     `${r.side === 'test' ? 'Test' : 'Build'} skills: ${r.missing.join(', ')}`, '',
     `The ${r.side} agent of step ${r.n} never loaded these. Load each with the Skill tool, check the step's ` +

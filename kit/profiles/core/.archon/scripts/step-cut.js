@@ -6,7 +6,10 @@
 // runs from that line to the line before the next checkbox line or the next Markdown heading outside a code fence.
 // step.md holds, in this order: a title with n and the step count, the step's block, the block of every open step
 // marked `(folded into step <n>)` (built with this one), the plan's `## Owner decisions` section, and every `ANSWER:`
-// line of the plan. plan.md stays the file the agents mark, and add `Hand-written:` and `BLOCKED:` lines to.
+// line of the plan, and last the notes step-check.js left for the next agent (skills-missing.md, scaffold-missing.md),
+// under `## Misses of the last round`: step.md is the file every agent of the loop reads, so a retry sees the miss
+// without having to look for those files (run bdccdb95: nine build retries never did, and the step went round ten
+// times). plan.md stays the file the agents mark, and add `Hand-written:` and `BLOCKED:` lines to.
 // No open step removes a step.md left from an earlier step. Prints one line; exits 0, 1 without plan.md, 2 on usage.
 const fs = require('fs');
 const path = require('path');
@@ -14,6 +17,18 @@ const path = require('path');
 const CHECKBOX = /^\s*- \[[ xX]\]/;
 const OPEN = /^\s*- \[ \]/;
 const HEADING = /^#{1,6}\s/;
+// step-check.js's notes for the next agent, in the order step.md shows them
+const MISSES = ['skills-missing.md', 'scaffold-missing.md'];
+
+// The side (test or build) a miss note is for, read from the lines skill-check.js and step-check.js write; '' when the
+// file is absent or names no side. A passing check removes only a note of its own side (or of none): the test-side
+// check runs between a build-side miss and the build agent that has to fix it.
+function missSide(file) {
+  let text;
+  try { text = fs.readFileSync(file, 'utf8'); } catch { return ''; }
+  const m = /^(Test|Build) skills:/m.exec(text) || /^# Scaffold missing — step \d+, (test|build) side\s*$/m.exec(text);
+  return m ? m[1].toLowerCase() : '';
+}
 
 // [{ n, open, start, end }] over the checkbox lines; end is the index after the block's last line
 function steps(lines) {
@@ -71,6 +86,12 @@ function cut(art) {
   if (decisions) parts.push(decisions);
   const answers = lines.filter(l => /^\s*ANSWER:/.test(l));
   if (answers.length) parts.push('## Answers in the plan', answers.join('\n'));
+  const notes = MISSES.map(f => path.join(art, f)).filter(f => fs.existsSync(f));
+  if (notes.length) {
+    parts.push('## Misses of the last round: read these first');
+    // a note's own headings go one level under this section's
+    for (const f of notes) parts.push(trimBlock(fs.readFileSync(f, 'utf8').split(/\r?\n/)).replace(/^(#{1,4}) /gm, '$1## '));
+  }
   fs.writeFileSync(stepFile, `${parts.join('\n\n')}\n`);
   return { code: 0, msg: `step-cut: step ${step.n} of ${all.length} in step.md` };
 }
@@ -86,4 +107,4 @@ if (require.main === module) {
   process.exit(r.code);
 }
 
-module.exports = { cut, steps };
+module.exports = { cut, steps, missSide };

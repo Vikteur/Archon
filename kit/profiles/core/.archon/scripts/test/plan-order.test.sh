@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for .archon/scripts/plan-order.js: a plan step that adds a port must deliver its adapter in the same step
 # (TASK-7.4, TASK-48.8: the port's use case was a bean, so every test that booted the DI container failed until a later
-# step's adapter; Quarkus and Spring alike, so the rule does not read the kit's stack), and
+# step's adapter; no kit key changes the rule), and
 # a plan has at most one (pin only) step, with a `Pin:` line per pinned behaviour.
 # Usage: bash .archon/scripts/test/plan-order.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -139,13 +139,13 @@ yq '.nodes[] | select(.id == "implement") | .loop_group.nodes[] | select(.id == 
   | tr '\n' ' ' | grep -q 'for each `Pin:` line'
 r=$?; if [ "$r" -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: write-tests mutates once for each Pin: line"; fi
 
-# The rule is the same on the spring stack (a missing bean fails the Spring context too): KIT_STACK changes nothing.
+# An env an old install still sets (KIT_STACK) changes nothing: a port whose adapter comes later still fails.
 write '## Steps' \
   '- [ ] **1. Use case and port: `SignInUseCase`, `SignInAccountRepository`**' \
   '- [ ] **2. Adapter: `DefaultSignInAccountRepository`**'
 out=$(cd "$root" && KIT_STACK=spring node "$script" "$plan" 2>&1); r=$?
 if [ "$r" -ne 0 ] && grep -qF 'but its adapter DefaultSignInAccountRepository comes only in step 2' <<< "$out"; then pass=$((pass+1))
-else fail=$((fail+1)); echo "FAIL: spring stack: a port whose adapter comes later still fails"; echo "$out" | sed 's/^/    /'; fi
+else fail=$((fail+1)); echo "FAIL: with KIT_STACK set: a port whose adapter comes later still fails"; echo "$out" | sed 's/^/    /'; fi
 
 echo "plan-order: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

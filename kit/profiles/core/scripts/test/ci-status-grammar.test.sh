@@ -42,6 +42,25 @@ check "1b a ; in the sig cannot add a token" $([ "$(ci_status_ran success 9 box 
 check "1b a token after the rerun is unknown" $(is success "success in 9s on box; green on rerun after x; fp=0123456789" kind=unknown; echo $?)
 check "1b the CLI formats it" $([ "$(bash "$script" format ran success 9 box "" 0 0 sig)" = "success in 9s on box; green on rerun after sig" ]; echo $?)
 
+# 1c. The test count of the JUnit XML the job left comes right after the host; no count, no token.
+d=$(ci_status_ran success 245 box "$fp" 1 2 "" 412)
+check "1c the count comes before fp, narrowed and skipped-locally" $([ "$d" = "success in 245s on box; 412 tests; fp=0123456789; narrowed: archon-suites; skipped-locally 2" ] \
+  && is success "$d" kind=ran tests=412 fp=0123456789 narrowed=1 skipped=2 legacy=0; echo $?)
+check "1c one test is singular" $([ "$(ci_status_ran success 9 box "" 0 0 "" 1)" = "success in 9s on box; 1 test" ] \
+  && is success "success in 9s on box; 1 test" kind=ran tests=1; echo $?)
+check "1c a red run carries its count" $([ "$(ci_status_ran failure 9 box "" 0 0 "" 30)" = "failure in 9s on box; 30 tests" ] \
+  && is failure "failure in 9s on box; 30 tests" kind=ran state=failure tests=30; echo $?)
+check "1c no count, 0 or not a number: no token" $([ "$(ci_status_ran success 9 box "" 0 0 "" "")" = "success in 9s on box" ] \
+  && [ "$(ci_status_ran success 9 box "" 0 0 "" 0)" = "success in 9s on box" ] \
+  && [ "$(ci_status_ran success 9 box "" 0 0 "" "12; narrowed: archon-suites")" = "success in 9s on box" ] \
+  && is success "success in 9s on box" kind=ran tests=; echo $?)
+check "1c the count and the rerun sig together" $([ "$(ci_status_ran success 30 box "" 0 0 sig 7)" = "success in 30s on box; 7 tests; green on rerun after sig" ] \
+  && is success "success in 30s on box; 7 tests; green on rerun after sig" kind=ran tests=7 rerun=sig; echo $?)
+check "1c 0 tests, a second count or a count on the legacy form is unknown" $(is success "success in 9s on box; 0 tests" kind=unknown \
+  && is success "success in 9s on box; 4 tests; 5 tests" kind=unknown \
+  && is success "success in 9s on box, 2 step(s) skipped locally; 4 tests" kind=unknown; echo $?)
+check "1c the CLI formats it" $([ "$(bash "$script" format ran success 9 box "" 0 0 "" 12)" = "success in 9s on box; 12 tests" ]; echo $?)
+
 # 2. Reuse, infrastructure, not run, timed out.
 d=$(ci_status_reused "$sha" "$fp" abcdef0123)
 check "2 reused" $([ "$d" = "reused from 89abcdef0123; fp=0123456789; scope=abcdef0" ] \
@@ -80,6 +99,8 @@ check "5 anything else is unknown" $(is success "passed" kind=unknown && is succ
 # 6. The longest realistic forms fit GitHub's 140 characters; the command line formats and parses too.
 d=$(ci_status_ran success 99999 a-rather-long-host-name.example "$fp" 1 99)
 check "6 the longest ran form fits 140 characters" $([ ${#d} -le 140 ]; echo $?)
+d=$(ci_status_ran success 99999 a-rather-long-host-name.example "$fp" 1 99 "" 999999)
+check "6 the longest ran form with a test count fits 140 characters" $([ ${#d} -le 140 ] && is success "$d" kind=ran tests=999999; echo $?)
 check "6 the command line formats" $([ "$(bash "$script" format infra worktree box)" = "failure (infra: worktree) on box" ]; echo $?)
 # A here-string, not | grep -q: under pipefail grep -q quitting at the first match can SIGPIPE the parser.
 check "6 the command line parses" $(grep -qx kind=ran <<<"$(bash "$script" parse success "success in 3s on box")"; echo $?)

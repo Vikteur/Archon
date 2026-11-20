@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests .claude/scripts/class-version-check.sh on the spring stack: every compiled main and test class is the
+# Tests .claude/scripts/class-version-check.sh: every compiled main and test class is the
 # bytecode of the build's toolchain (JavaLanguageVersion.of(N) in build.gradle.kts, buildSrc/ or build-logic/, else kit
 # key java_version), class-file major N + 44. Each case writes class files of a chosen major into a throwaway root.
 # Usage: bash scripts/test/class-version-check.test.sh   (exit 0 = all pass)
@@ -14,8 +14,8 @@ check() { # check <name> <condition exit code>
   else fail=$((fail+1)); echo "FAIL - $1"; printf '%s\n' "$out" | sed 's/^/       | /'; fi
 }
 said() { grep -qF -- "$1" <<< "$out"; }
-# The stack is set, not the script's default; no project or machine kit.yaml is read.
-export KIT_STACK=spring KIT_CONFIG="$tmp/none/kit.yaml"
+# No project or machine kit.yaml is read.
+export KIT_CONFIG="$tmp/none/kit.yaml"
 unset KIT_JAVA_VERSION
 
 n=0

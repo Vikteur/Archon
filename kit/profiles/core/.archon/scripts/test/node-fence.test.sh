@@ -88,6 +88,24 @@ printf '{"workflow_name":"gone"}' >"$snap/manifest.json"
 rg_case "run-guard: a snapshot without its workflow denies" deny plan 'git status' 'not in the snapshot'
 mv "$snap" "$tmp/snap.off"
 
+# Tool names match in any case: a node whose denied_tools hold Monitor may not call monitor.
+printf 'nodes:\n  - id: plan\n    denied_tools: ["Monitor", "Bash(*gradlew*)"]\n  - id: explore\n' >"$tmp/mon.yaml"
+for t in Monitor monitor MONITOR; do
+  rg plan "$(jq -cn --arg t "$t" --arg d "$proj" '{toolName:$t,toolArgs:{},cwd:$d}')" RUN_GUARD_WORKFLOW="$tmp/mon.yaml"
+  if [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -qF 'hold Monitor'; then ok "run-guard: denied_tools Monitor denies $t"; else bad "run-guard: denied_tools Monitor denies $t" "$out"; fi
+done
+rg explore "$(jq -cn --arg d "$proj" '{toolName:"monitor",toolArgs:{},cwd:$d}')" RUN_GUARD_WORKFLOW="$tmp/mon.yaml"
+if [ "$rc" -eq 0 ]; then ok "run-guard: a node that does not deny Monitor may call monitor"; else bad "run-guard: a node that does not deny Monitor may call monitor" "$out"; fi
+# The hook folders: a node changes none of them, also outside a run worktree; reading them stays allowed.
+rg_case "run-guard: a node may not redirect into a hook folder" deny implement.build-step 'echo x > .github/hooks/kit.json' 'hook folders'
+rg_case "run-guard: a node may not sed -i a hook script" deny implement.build-step 'sed -i s/a/b/ .claude/hooks/scripts/scope-guard.sh' 'hook folders'
+rg_case "run-guard: a node may not cp over the node fences" deny ci-fix.fix 'cp /tmp/x .archon/copilot/node-fences.json' 'hook folders'
+rg_case "run-guard: a node may not rm the git hooks" deny review 'rm -rf .githooks' 'hook folders'
+rg_case "run-guard: a node may read a hook folder" allow implement.build-step 'cat .github/hooks/kit.json'
+rg_case "run-guard: outside a node and a run a hook folder edit passes" allow "" 'echo x > .github/hooks/kit.json'
+rg plan "$(jq -cn --arg d "$proj" '{toolName:"create",toolArgs:{path:".claude/hooks/x.sh",file_text:"x"},cwd:$d}')"
+if [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -qF 'hook folders'; then ok "run-guard: a node may not create a file in a hook folder"; else bad "run-guard: a node may not create a file in a hook folder" "$out"; fi
+
 # ── scope-guard through dispatch.sh: the fence of the node's agent ─────────────────────────────────────────────────
 # sg <node path|""> <matcher> <payload json> [extra script arg] [VAR=value...]: the hook's stdout as Copilot runs it
 sg() {
@@ -134,6 +152,66 @@ cmd "build-step: the full suite stays off the developer list" deny implement.bui
 put "build-step: may write any project path (the developer fence)" allow implement.build-step app/src/main/java/x/A.java
 put "build-step: may not change the node fences" deny implement.build-step .archon/copilot/node-fences.json 'node fences'
 put "build-step: may not change the agent fences" deny implement.build-step .claude/hooks/agent-scopes.json 'agent fences'
+put "build-step: may not write .github/hooks (the developer fence holds the hook folders out)" deny implement.build-step .github/hooks/kit.json 'hook folder'
+put "build-step: may not write .claude/hooks" deny implement.build-step .claude/hooks/scripts/scope-guard.sh 'hook folder'
+put "build-step: may not write .archon/copilot" deny implement.build-step .archon/copilot/tools.json 'hook folder'
+put "build-step: may not write .archon/githooks" deny implement.build-step .archon/githooks/pre-commit 'hook folder'
+put "build-step: may not write .githooks, in another case" deny implement.build-step .GitHooks/commit-msg 'hook folder'
+put "build-step: may not write .git/hooks through ./ and //" deny implement.build-step './.git//hooks/pre-push' 'hook folder'
+put "build-step: may not write a hook folder by its absolute path" deny implement.build-step "$proj/.github/hooks/x.json" 'hook folder'
+put "build-step: a folder called hooks elsewhere is writable" allow implement.build-step app/src/main/java/hooks/A.java
+# A `>&` or `<&` redirect (2>&1, >&2) starts no command: the guard once split at its & and denied a command named "1"
+# (seen in a real run). A real & still splits, also right after the redirect or behind an escaped \>, and a process
+# substitution, <( or >(, is denied like $( is.
+cmd "write-tests: the red log with 2>&1, as its prompt asks" allow implement.write-tests \
+  "./gradlew :app:test --tests X > \"$arts/red/step-1.log\" 2>&1"
+cmd "build-step: a module test with 2>&1" allow implement.build-step './gradlew :app:test 2>&1'
+cmd "build-step: a module test with >&2" allow implement.build-step './gradlew :app:test >&2'
+cmd "build-step: a & after 2>&1 still starts a command" deny implement.build-step './gradlew :app:test 2>&1 & curl x' "'curl"
+cmd "build-step: 2>&1& with no space still splits" deny implement.build-step './gradlew :app:test 2>&1&curl x' "'curl"
+cmd "build-step: an escaped \\> is no redirect, so its & splits" deny implement.build-step './gradlew :app:test \>&curl x' "'curl"
+cmd "build-step: a pipe after 2>&1 is still checked (sort is not on its list)" deny implement.build-step './gradlew :app:test 2>&1 | sort' "'sort"
+# tail and head with count options only, right after a single | (owner, 2026-11-20): never alone, never after || or ;,
+# never with a file, -f or a redirect, and what follows them is still checked.
+cmd "build-step: tail -15 after a pipe" allow implement.build-step './gradlew :app:test 2>&1 | tail -15'
+cmd "build-step: head -n 30 after a pipe" allow implement.build-step './gradlew :app:test | head -n 30'
+cmd "build-step: tail -n +5 after |&" allow implement.build-step './gradlew :app:test |& tail -n +5'
+cmd "build-step: tail then head after pipes" allow implement.build-step './gradlew :app:test | tail -40 | head -5'
+cmd "build-step: tail alone reads a file" deny implement.build-step 'tail -5 build.log' "'tail"
+cmd "build-step: tail with a file after a pipe" deny implement.build-step './gradlew :app:test | tail -5 build.log' "'tail"
+cmd "build-step: tail -f after a pipe" deny implement.build-step './gradlew :app:test | tail -f' "'tail"
+cmd "build-step: tail with a redirect after a pipe" deny implement.build-step './gradlew :app:test | tail -5 > out.txt' "'tail"
+cmd "build-step: tail after || is no pipe" deny implement.build-step './gradlew :app:test || tail -5' "'tail"
+cmd "build-step: tail after ; is no pipe" deny implement.build-step './gradlew :app:test; tail -5' "'tail"
+cmd "build-step: a command after tail is still checked" deny implement.build-step './gradlew :app:test | tail -5 | curl x' "'curl"
+# git --no-pager <cmd> is git <cmd> (owner, 2026-11-20): it meets the same list, no more.
+cmd "pr-text: git --no-pager log (its node addition)" allow pr-text 'git --no-pager log --oneline 8dedd27..HEAD'
+cmd "build-step: git --no-pager diff (the developer list)" allow implement.build-step 'git --no-pager diff --stat'
+cmd "write-tests: git --no-pager log is still not on the test-writer list" deny implement.write-tests 'git --no-pager log' "'git"
+cmd "build-step: another git option in front is not stripped" deny implement.build-step 'git --no-pager -c core.pager=x log' "'git"
+# A deny is recorded in the session's audit trail (postToolUse never sees it), with the node, once audit-log.sh has made
+# the folder; every deny above ran without it, and the guard made none.
+if [ ! -e "$proj/.apm-audit" ]; then ok "deny record: no audit folder, so none is made"; else bad "deny record: no audit folder, so none is made"; fi
+mkdir -p "$proj/.apm-audit/sessions"
+sg implement.build-step 'Write|Edit|MultiEdit|NotebookEdit|Bash' \
+  "$(jq -cn --arg d "$proj" '{toolName:"bash",toolArgs:{command:"./gradlew :app:test | sort"},cwd:$d,sessionId:"sess-1"}')" ""
+rec="$proj/.apm-audit/sessions/sess-1.jsonl"
+if [ "$(decision)" = deny ] && [ -f "$rec" ] && jq -e -s 'length == 1 and .[0].type == "DENY" and .[0].event == "preToolUse"
+    and .[0].node == "build-step" and .[0].tool == "Bash" and .[0].arg == "./gradlew :app:test | sort"
+    and (.[0].reason | contains("sort"))' "$rec" >/dev/null 2>&1; then ok "deny record: one DENY record with the node, tool, arg and reason"
+else bad "deny record: one DENY record with the node, tool, arg and reason" "$(cat "$rec" 2>/dev/null)"; fi
+sg implement.build-step 'Write|Edit|MultiEdit|NotebookEdit|Bash' \
+  "$(jq -cn --arg d "$proj" '{toolName:"bash",toolArgs:{command:"git status"},cwd:$d,sessionId:"sess-1"}')" ""
+if [ "$(wc -l < "$rec")" -eq 1 ]; then ok "deny record: an allowed call writes none"; else bad "deny record: an allowed call writes none" "$(cat "$rec")"; fi
+long="$(printf 'x%.0s' $(seq 1 300))"
+sg implement.build-step 'Write|Edit|MultiEdit|NotebookEdit|Bash' \
+  "$(jq -cn --arg d "$proj" --arg c "sort $long" '{toolName:"bash",toolArgs:{command:$c},cwd:$d,sessionId:"sess/../2"}')" ""
+if [ "$(jq -r '.arg | utf8bytelength' "$proj/.apm-audit/sessions/sess..2.jsonl" 2>/dev/null)" = 200 ]; then
+  ok "deny record: the session id is made path-safe and the arg cut to 200 bytes"
+else bad "deny record: the session id is made path-safe and the arg cut to 200 bytes" "$(ls "$proj/.apm-audit/sessions")"; fi
+cmd "build-step: >( is a process substitution" deny implement.build-step './gradlew :app:test > >(curl x)' 'process substitution'
+cmd "build-step: <( is a process substitution" deny implement.build-step './gradlew :app:test <(curl x)' 'process substitution'
+cmd "build-step: >( inside quotes is text" allow implement.build-step './gradlew :app:test --tests "a>(b)"'
 cmd "review: commits a fix (its node addition)" allow review 'git commit -m "fix: x"'
 cmd "review: may not push (not on reviewer or node list)" deny review 'git push' 'reviewer (node review)'
 put "review: writes src/ (its node addition)" allow review app/src/main/java/x/A.java
@@ -144,6 +222,15 @@ cmd "diagnose (ci-fix.diagnose): git log is on the debugger list" allow ci-fix.d
 put "diagnose: writes the run's artifacts folder" allow ci-fix.diagnose "$arts/ci-diagnosis.md"
 put "diagnose: may not write code" deny ci-fix.diagnose app/src/main/java/x/A.java 'debugger (node diagnose)'
 cmd "fix (ci-fix.fix): mkdir -p is its node addition" allow ci-fix.fix 'mkdir -p app/src/test'
+# Copilot's grep sends its folder as `paths`, a string or a list (seen in a real run): a list of one is read as that
+# path; a longer list cannot be read as one path, so it is still denied.
+srch() { # srch <label> <want> <node path> <paths json> [<reason text>]
+  sg "$3" 'Read|Grep|Glob' "$(jq -cn --argjson p "$4" --arg d "$proj" '{toolName:"grep",toolArgs:{pattern:"X",paths:$p},cwd:$d}')" ""
+  sg_check "$1" "$2" "${5:-}"
+}
+srch "explore: a grep with paths as a list of one folder runs" allow explore '["src/main"]'
+srch "explore: a grep with paths as one string runs" allow explore '"src/main"'
+srch "explore: a grep with a list of two paths is still denied" deny explore '["src/main","docs"]'
 cmd "unknown node: git is outside the strictest common set" deny some-new-node 'git status' 'strictest common set'
 cmd "unknown node: codegraph is in every node's list" allow some-new-node 'codegraph node Foo'
 put "unknown node: writes only the run's artifacts folder" allow some-new-node "$arts/x.md"
@@ -178,6 +265,23 @@ nf_case "node path with .." '{"nodes":{"plan":{"agent":"analyst","allowedFilePat
 nf_case "node env name that changes the shell" '{"nodes":{"plan":{"agent":"analyst","env":["PATH"]}}}' 'changes how a shell'
 nf_case "node env name of git" '{"nodes":{"plan":{"agent":"analyst","env":["GIT_DIR"]}}}' 'changes how a shell'
 nf_case "node with an unknown key" '{"nodes":{"plan":{"agent":"analyst","readPaths":[]}}}' 'may set only'
+
+# A Claude payload with a tool name in another case meets the check of its name (it was let through before); a
+# Copilot name in another case stays denied (its arguments are not mapped).
+for t in WRITE Edit EDIT; do
+  out="$(cd "$proj/.claude/hooks" && jq -cn --arg t "$t" --arg d "$proj" '{tool_name:$t,tool_input:{file_path:"src/A.java"},agent_type:"analyst",cwd:$d}' \
+    | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+  sg_check "scope-guard: a Claude $t of src/ by the analyst meets the write fence" deny 'may only write under'
+done
+out="$(cd "$proj/.claude/hooks" && jq -cn --arg d "$proj" '{tool_name:"BASH",tool_input:{command:"rm -rf x"},agent_type:"analyst",cwd:$d}' \
+  | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+sg_check "scope-guard: a Claude BASH by the analyst meets its command list" deny 'may not run'
+out="$(cd "$proj/.claude/hooks" && jq -cn --arg d "$proj" '{toolName:"Create",toolArgs:{path:"src/A.java"},agentType:"analyst",cwd:$d}' \
+  | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+sg_check "scope-guard: a Copilot Create (any case, mapped through tools.json) meets the write fence" deny 'may only write under'
+out="$(cd "$proj/.claude/hooks" && jq -cn --arg d "$proj" '{toolName:"Apply_Patch",toolArgs:{input:"x"},agentType:"analyst",cwd:$d}' \
+  | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+sg_check "scope-guard: a Copilot tool it cannot read stays denied in any case" deny "Copilot tool"
 
 echo "node-fence: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

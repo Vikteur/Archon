@@ -87,7 +87,7 @@ export const THIS_REPO_LEAVES: string[] = [
   'validation-notification-result',
 ].map(n => `docs/code-maps/${n}.md`);
 
-/** Profiles whose leaves must be generic; the java-quarkus originals keep their facts (kit/SPEC.md, Leak check). */
+/** Profiles whose leaves must be generic; java-spring's hand-written leaves are its own (kit/SPEC.md, Leak check). */
 const GENERIC_PROFILES = ['core', 'java'];
 
 /**

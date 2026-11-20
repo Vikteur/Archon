@@ -19,6 +19,12 @@
 #  - build-feature-copilot's ci-fix loop starts with red-head (a head red on the same job as main stops as RED_FROM_MAIN), a fix
 #    without a commit fails as CI_FIX_NO_COMMIT, one without a commit after a `CAUSE: main` diagnosis ends at a cancel
 #    node as BLOCKED_NEEDS_PERSON, and diagnose and fix may not push to main or commit tickets (D13, D14).
+#  - every skill a node names (its `skills:` allow-list, loop nodes too) is shipped under .github/skills/<skill>/SKILL.md,
+#    and build-feature-copilot's write-tests and build-step name exactly their full lists cut to the installed profiles'
+#    skills (`kit add` drops a line marked for a profile not installed; Copilot warns copilot.skills_missing otherwise);
+#  - build-feature-copilot's committing agent nodes (write-tests, build-step, review, fix) are retry-safe: each prompt says
+#    the node may run again, and has it read `git status` and its own commits since its base sha first (step-base.sha,
+#    review-base.sha, ci-fix-before.sha), so a transient retry never commits the same work twice;
 #  W1, W4 and W5 are ROADMAP R17 (T12); each check also runs on a fixture of the old code, where it must fail.
 #  - a dry run with default stubs of each workflow ends `Simulation outcome: completed`; a build workflow's plan
 #    approval is answered by a stub, and a rejected plan ends `Simulation outcome: cancelled`. It needs the archon CLI;
@@ -123,6 +129,63 @@ unguarded_commits() { # unguarded_commits <workflow yaml>
     walk(wf.nodes);'
 }
 
+# The skills a node names that <root> does not ship, one `<node>: <skill>` per line
+unshipped_skills() { # unshipped_skills <workflow yaml> <root>
+  yq -o=json '.' "$1" | ROOT="$2" node -e '
+    const fs = require("fs"), path = require("path");
+    const wf = JSON.parse(fs.readFileSync(0, "utf8"));
+    const walk = ns => { for (const n of ns || []) {
+      for (const s of n.skills || []) if (!fs.existsSync(path.join(process.env.ROOT, ".github/skills", s, "SKILL.md")))
+        console.log(`${n.id}: ${s}`);
+      walk(n.loop_group && n.loop_group.nodes); walk(n.loop && n.loop.nodes); walk(n.nodes);
+    } };
+    walk(wf.nodes);'
+}
+
+# A node's skills, comma-joined, found anywhere in the workflow (loop nodes too)
+node_skills() { # node_skills <workflow yaml> <node id>
+  yq -o=json '.' "$1" | ID="$2" node -e '
+    const wf = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const find = ns => { for (const n of ns || []) {
+      if (n.id === process.env.ID) return n;
+      const f = find(n.loop_group && n.loop_group.nodes) || find(n.loop && n.loop.nodes) || find(n.nodes);
+      if (f) return f;
+    } };
+    const n = find(wf.nodes);
+    console.log(n ? (n.skills || []).join(",") : "");'
+}
+
+# Each <node>:<base file> whose prompt does not say it may run again, read `git status` and git log from that base sha
+retry_unsafe() { # retry_unsafe <workflow yaml> <node>:<base file>...
+  local wf=$1; shift
+  yq -o=json '.' "$wf" | node -e '
+    const wf = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const find = (ns, id) => { for (const n of ns || []) {
+      if (n.id === id) return n;
+      const f = find(n.loop_group && n.loop_group.nodes, id) || find(n.loop && n.loop.nodes, id) || find(n.nodes, id);
+      if (f) return f;
+    } };
+    for (const pair of process.argv.slice(1)) {
+      const [id, base] = pair.split(":");
+      const n = find(wf.nodes, id), p = (n && n.prompt) || "";
+      const miss = [];
+      if (!n) miss.push("no such node");
+      else {
+        if (!/may run again/.test(p)) miss.push("does not say it may run again");
+        if (!/`git status`/.test(p)) miss.push("reads no `git status`");
+        if (!new RegExp("git log [^`]*" + base.replace(/[.]/g, "[.]") + "[^`]*[.][.]HEAD").test(p)) miss.push("reads no git log since " + base);
+      }
+      if (miss.length) console.log(id + ": " + miss.join(", "));
+    }' "$@"
+}
+
+# <list> cut to the skills <root> ships, order kept, comma-joined
+shipped_of() { # shipped_of <root> <skill>...
+  local root=$1 s out=(); shift
+  for s in "$@"; do [ -f "$root/.github/skills/$s/SKILL.md" ] && out+=("$s"); done
+  local IFS=,; echo "${out[*]}"
+}
+
 # What the run-worktree hook setup lacks under <root>, one line each (D12)
 hook_gaps() { # hook_gaps <root>
   local cfg="$1/.archon/config.yaml" h
@@ -162,6 +225,8 @@ for wf in "$workflows"/*.yaml; do
   check "$name: never merges (no gh pr merge, no merge API call)" $([ -z "$out" ]; echo $?) "$out"
   out=$(missing_scripts "$wf" "$repo")
   check "$name: W1 every repo script it names exists" $([ -z "$out" ]; echo $?) "$out"
+  out=$(unshipped_skills "$wf" "$repo")
+  check "$name: every skill a node names is shipped (.github/skills/<skill>/SKILL.md)" $([ -z "$out" ]; echo $?) "$out"
   # Seconds after a push GitHub still reports the old head, so local CI on a pull request names the commit it expects
   # (TASK-59). --logs only reads a folder, and a merge commit is a sha, not a pull request.
   out=$(grep -nE 'local-ci-run\.sh' "$wf" | grep -vE '^[0-9]+:\s*#' | grep -vE -- '--logs|--head|local-ci-run\.sh "\$merge"')
@@ -173,6 +238,21 @@ check "run worktrees: core.hooksPath points at .archon/githooks, every hook exec
 if [ -f "$workflows/build-feature-copilot.yaml" ]; then
   out=$(ci_fix_gaps "$workflows/build-feature-copilot.yaml")
   check "build-feature-copilot: ci-fix starts with red-head, names its three outcome tokens, ends blocked at a cancel node, may not push main or commit tickets" \
+    $([ -z "$out" ]; echo $?) "$out"
+  # The test and build agents' skills follow the installed profiles: the full lists (core, java, java-spring) cut to
+  # what this install ships, in order; a profile's skill is never dropped while that profile ships it.
+  got=$(node_skills "$workflows/build-feature-copilot.yaml" write-tests)
+  want=$(shipped_of "$repo" tdd-loop jvm-testing object-mother-builders usecase-bdd-spec testcontainers archunit-fitness \
+    domain-to-dto-mapper-tests code-generation)
+  check "build-feature-copilot: write-tests names its skills of the installed profiles ($got)" $([ -n "$got" ] && [ "$got" = "$want" ]; echo $?) "want $want"
+  got=$(node_skills "$workflows/build-feature-copilot.yaml" build-step)
+  want=$(shipped_of "$repo" clean-code java domain-modeling validation-notification-result domain-events \
+    usecase-orchestration api-first-controller domain-dto-mapper persistence-repository jpa-entity-mapping \
+    flyway-migrations resilience4j bean-config-di exception-to-http conventional-commits code-generation)
+  check "build-feature-copilot: build-step names its skills of the installed profiles ($got)" $([ -n "$got" ] && [ "$got" = "$want" ]; echo $?) "want $want"
+  out=$(retry_unsafe "$workflows/build-feature-copilot.yaml" write-tests:step-base.sha build-step:step-base.sha \
+    review:review-base.sha fix:ci-fix-before.sha)
+  check "build-feature-copilot: write-tests, build-step, review and fix check their own earlier commits before a retry" \
     $([ -z "$out" ]; echo $?) "$out"
   out=$(open_pr_unleased "$workflows/build-feature-copilot.yaml" "$here/open-pr.sh")
   check "build-feature-copilot: W4 open-pr pushes only with a lease against the head last seen" $([ -z "$out" ]; echo $?) "$out"
@@ -349,6 +429,53 @@ nodes:
 EOF
 out=$(ci_fix_gaps "$tmp/f.yaml")
 check "contracts: the failure-recovery ci-fix loop is not reported" $([ -z "$out" ]; echo $?) "$out"
+
+# Skills: a node that names a skill the root does not ship is found, in or out of a loop (the lists before the profile
+# markers named the java skills on a core-only install); shipped ones are not
+mkdir -p "$tmp/sk/.github/skills/tdd-loop" "$tmp/sk/.github/skills/clean-code"
+: > "$tmp/sk/.github/skills/tdd-loop/SKILL.md"; : > "$tmp/sk/.github/skills/clean-code/SKILL.md"
+mkdir -p "$tmp/sk/.github/skills/java"   # a folder without SKILL.md is not a shipped skill
+cat > "$tmp/f.yaml" <<'EOF'
+nodes:
+  - id: plan
+    skills: [clean-code]
+  - id: implement
+    loop_group:
+      nodes:
+        - id: write-tests
+          skills: [tdd-loop, jvm-testing]
+        - id: build-step
+          skills: [clean-code, java]
+EOF
+out=$(unshipped_skills "$tmp/f.yaml" "$tmp/sk")
+check "contracts: a skill a node names but the install lacks is found, loop nodes too" \
+  $([ "$out" = "$(printf 'write-tests: jvm-testing\nbuild-step: java')" ]; echo $?) "$out"
+check "contracts: a loop node's skills are read" $([ "$(node_skills "$tmp/f.yaml" build-step)" = clean-code,java ]; echo $?)
+check "contracts: a full list is cut to the shipped skills, order kept" \
+  $([ "$(shipped_of "$tmp/sk" java tdd-loop jvm-testing clean-code)" = tdd-loop,clean-code ]; echo $?)
+sed -i 's/, jvm-testing//; s/clean-code, java/clean-code/' "$tmp/f.yaml"
+out=$(unshipped_skills "$tmp/f.yaml" "$tmp/sk")
+check "contracts: only shipped skills: nothing reported" $([ -z "$out" ]; echo $?) "$out"
+
+cat > "$tmp/r.yaml" <<'EOF'
+nodes:
+  - id: review
+    prompt: |
+      This node may run again. First run `git status` and `git log --oneline "$(cat "$ARTIFACTS_DIR/review-base.sha")"..HEAD`.
+  - id: implement
+    loop_group:
+      nodes:
+        - id: build-step
+          prompt: |
+            Build the step and commit.
+EOF
+out=$(retry_unsafe "$tmp/r.yaml" review:review-base.sha build-step:step-base.sha fix:ci-fix-before.sha)
+check "contracts: a committing node without the retry check is found, loop nodes too, and a missing node is named" \
+  $([ "$out" = "$(printf 'build-step: does not say it may run again, reads no `git status`, reads no git log since step-base.sha\nfix: no such node')" ]; echo $?) "$out"
+out=$(retry_unsafe "$tmp/r.yaml" review:step-base.sha)
+check "contracts: a retry check against another base sha is found" $([ "$out" = "review: reads no git log since step-base.sha" ]; echo $?) "$out"
+out=$(retry_unsafe "$tmp/r.yaml" review:review-base.sha)
+check "contracts: a retry-safe node: nothing reported" $([ -z "$out" ]; echo $?) "$out"
 
 # A dry run with default stubs walks each workflow's control flow without a provider
 if command -v archon >/dev/null 2>&1; then

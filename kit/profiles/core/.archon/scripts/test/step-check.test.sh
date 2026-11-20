@@ -100,6 +100,10 @@ echo old > "$art/scaffold-missing.md"
 live test
 ok "named: a file the plan names says ok" $(grep -q '"ok":true' <<< "$out"; echo $?)
 ok "named: an ok check removes scaffold-missing.md" $([ ! -e "$art/scaffold-missing.md" ]; echo $?)
+reset; plan ' ' "Hand-written: $F/GuestMother.java — template-misfit: domain/mother — the Mother builds a graph"; add "$F/GuestMother.java"
+printf '# Scaffold missing — step 2, build side\n\n- `x`: why\n' > "$art/scaffold-missing.md"
+live test
+ok "named: a test-side pass keeps a build-side scaffold-missing.md" $(grep -q '"ok":true' <<< "$out" && grep -qx '# Scaffold missing — step 2, build side' "$art/scaffold-missing.md"; echo $?)
 
 # 3. Only files since step-base count: one added before the step began is the gate's after the loop.
 reset; add "$F/GuestMother.java"; plan ' '

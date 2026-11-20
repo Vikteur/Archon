@@ -146,6 +146,132 @@ printf '%s' '["Bash(*--no-verify*)"]' > "$main/.archon/copilot/deny.json"
 feed "$run" "$(claude 'git push origin main' "$run")"; check "deny.json present: the run rules still apply" "$([ "$rc" -eq 2 ]; echo $?)"
 rm -f "$main/.archon/copilot/deny.json"
 
+# tool names match in any case: deny.json's Monitor and WebFetch deny monitor and webfetch
+printf '%s' '["Monitor","WebFetch","Bash(*--no-verify*)"]' > "$main/.archon/copilot/deny.json"
+dfeed "$(node -e 'console.log(JSON.stringify({toolName:"monitor",toolArgs:"{}",cwd:process.argv[1]}))' "$main")"
+check "deny.json: Monitor denies a tool called monitor" "$([ "$rc" -eq 2 ] && grep -q 'holds Monitor' <<< "$out"; echo $?)"
+dfeed "$(node -e 'console.log(JSON.stringify({tool_name:"WEBFETCH",tool_input:{url:"x"},cwd:process.argv[1]}))' "$main")"
+check "deny.json: WebFetch denies WEBFETCH" "$([ "$rc" -eq 2 ]; echo $?)"
+dfeed "$(node -e 'console.log(JSON.stringify({toolName:"view",toolArgs:"{\"path\":\"a\"}",cwd:process.argv[1]}))' "$main")"
+check "deny.json: another tool still passes" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+rm -f "$main/.archon/copilot/deny.json"
+
+# the backlog rule follows the main checkout's kit config (kit_get backlog true): only backlog: false lifts it
+mkdir -p "$main/.archon/scripts" && cp "$repo/.archon/scripts/kit-config.sh" "$main/.archon/scripts/kit-config.sh"
+bl() { feed "$run" "$(claude "$1" "$run")"; }
+printf 'agent_cli: copilot\n' > "$main/.archon/kit.yaml"
+bl 'backlog task edit 12 -s Done'; check "backlog: no backlog key in kit.yaml denies backlog task" "$([ "$rc" -eq 2 ] && grep -q 'backlog task without BACKLOG_CWD' <<< "$out"; echo $?)"
+printf 'backlog: true\n' > "$main/.archon/kit.yaml"
+bl 'backlog task edit 12 -s Done'; check "backlog: true denies backlog task" "$([ "$rc" -eq 2 ]; echo $?)"
+mkdir -p "$run/.archon" && printf 'backlog: false\n' > "$run/.archon/kit.yaml"
+bl 'backlog task edit 12 -s Done'; check "backlog: the run's own kit.yaml cannot lift the rule" "$([ "$rc" -eq 2 ]; echo $?)"
+rm -f "$run/.archon/kit.yaml"
+if command -v yq >/dev/null 2>&1; then
+  printf 'backlog: false\n' > "$main/.archon/kit.yaml"
+  bl 'backlog task edit 12 -s Done'; check "backlog: false allows backlog task" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+  printf 'backlog: False\n' > "$main/.archon/kit.yaml"
+  bl 'backlog task list --plain'; check "backlog: False (any case) allows backlog task" "$([ "$rc" -eq 0 ]; echo $?)"
+  for c in 'git push origin main' 'git commit --no-verify -m x' "git -C $main status" "cd $main && ls"; do
+    bl "$c"; check "backlog: false keeps the other run rules: $c" "$([ "$rc" -eq 2 ]; echo $?)"
+  done
+else
+  echo "SKIP: no yq, so kit_get prints the default and backlog: false cannot be read"
+fi
+rm -rf "$main/.archon/scripts" "$main/.archon/kit.yaml"
+bl 'backlog task edit 12 -s Done'; check "backlog: no kit-config.sh in the main checkout denies backlog task" "$([ "$rc" -eq 2 ]; echo $?)"
+
+# the hook folders: inside a run no edit tool and no shell write changes them; reading them stays allowed
+mkdir -p "$run/.github/hooks" "$run/.archon/copilot" "$run/.claude/hooks/scripts" "$run/.archon/githooks" "$run/.githooks" "$run/src"
+echo '{}' > "$run/.github/hooks/a.json"; echo x > "$run/.archon/copilot/node-fences.json"; echo x > "$run/.claude/hooks/scripts/a.sh"
+echo x > "$run/.archon/githooks/pre-commit"; echo x > "$run/.githooks/commit-msg"; ln -s .github/hooks "$run/lnk"
+hook_deny=(
+  'echo x > .github/hooks/a.json'
+  'echo x >> .claude/hooks/scripts/a.sh'
+  'echo x 2>/dev/null >.archon/copilot/node-fences.json'
+  'printf x | tee -a .githooks/commit-msg'
+  'sed -i s/x/y/ .archon/githooks/pre-commit'
+  "sed -i.bak -e 's/x/y/' .githooks/commit-msg"
+  'perl -pi -e s/x/y/ .githooks/commit-msg'
+  'cp /etc/hostname .github/hooks/'
+  'cp /etc/hostname .github/hooks/new.json'
+  'cp -r src/ .claude/hooks'
+  'mv .claude/hooks/scripts/a.sh /tmp/'
+  'mv src .github/hooks'
+  'rm .archon/copilot/node-fences.json'
+  'rm -rf .github'
+  'rm -rf .'
+  'rmdir .githooks'
+  'touch .github/hooks/b.json'
+  'chmod -x .githooks/commit-msg'
+  'ln -sf /tmp/x .githooks/commit-msg'
+  'dd if=/dev/zero of=.archon/copilot/x count=1'
+  'truncate -s 0 .archon/githooks/pre-commit'
+  'find . -name a.sh -delete'
+  'find .claude -type f -exec rm {} +'
+  'git checkout -- .githooks/commit-msg'
+  'git restore .claude/hooks/scripts/a.sh'
+  'git rm -r .github/hooks'
+  'cd .github && echo x > hooks/a.json'
+  'cd .github/hooks; touch b'
+  'echo x > hooks/a.json'
+  'bash -c "echo x > .github/hooks/a.json"'
+  'D=.claude/hooks; echo x > $D/scripts/a.sh'
+  'echo x > .GitHub/Hooks/a.json'
+  'echo x > .github/hooks/*.json'
+  'cp /etc/hostname .{github,claude}/hooks/'
+  'echo x > "$(echo .github/hooks/a.json)"'
+  'ls .github/hooks | xargs rm'
+  'echo x > lnk/a.json'
+  "python3 -c 'open(\".github/hooks/a.json\",\"w\").write(\"x\")'"
+  "node -e 'require(\"fs\").writeFileSync(\".claude/hooks/x\",\"\")'"
+  'echo x > .git/hooks/pre-push'
+  'tar -xf /tmp/x.tar -C .github/hooks'
+  $'cat > .github/hooks/a.json <<EOF\n{}\nEOF'
+  $'git apply <<EOF\ndiff --git a/.githooks/commit-msg b/.githooks/commit-msg\n--- a/.githooks/commit-msg\n+++ b/.githooks/commit-msg\n@@ -1 +1 @@\n-x\n+y\nEOF'
+)
+for c in "${hook_deny[@]}"; do
+  for who in claude copilot; do
+    denied "$who" "$c"; check "hook folder deny ($who): $c" "$( [ $? -eq 0 ] && grep -q 'hook folders' <<< "$out"; echo $?)"
+  done
+done
+hook_allow=(
+  'cat .github/hooks/a.json'
+  'ls -la .claude/hooks lnk'
+  'grep -r x .githooks .archon/copilot'
+  'git diff -- .github/hooks'
+  'git log --oneline -- .claude/hooks'
+  'sed -n 1p .githooks/commit-msg'
+  'cp .github/hooks/a.json ../copy.json'
+  'echo x > src/notes.txt'
+  'rm -rf src/build'
+  "find . -name '*.java' -delete"
+  'echo hooks copilot'
+  'cd .github && ls hooks'
+)
+for c in "${hook_allow[@]}"; do
+  for who in claude copilot; do
+    allowed "$who" "$c"; check "hook folder read allowed ($who): $c" $?
+  done
+done
+tool() { node -e 'const [n,a,cwd]=process.argv.slice(1);console.log(JSON.stringify({sessionId:"s",cwd,toolCalls:[{id:"a",name:n,args:a.startsWith("{")?JSON.parse(a):a}]}))' "$1" "$2" "$run"; }
+feed "$run" "$(node -e 'console.log(JSON.stringify({tool_name:"Write",tool_input:{file_path:".github/hooks/a.json",content:"x"},cwd:process.argv[1]}))' "$run")"
+check "hook folder: Claude Write is refused" "$([ "$rc" -eq 2 ] && grep -q 'hook folders' <<< "$out"; echo $?)"
+feed "$run" "$(tool create '{"path":".claude/hooks/x.sh","file_text":"x"}')"; check "hook folder: Copilot create is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(tool edit "{\"path\":\"$run/.archon/githooks/pre-commit\"}")"; check "hook folder: Copilot edit of an absolute path is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(tool str_replace_editor '{"command":"str_replace","path":".archon/copilot/node-fences.json"}')"; check "hook folder: str_replace_editor is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(tool Edit '{"file_path":".GITHOOKS/commit-msg"}')"; check "hook folder: an edit in another case is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(tool apply_patch $'*** Begin Patch\n*** Update File: .githooks/commit-msg\n@@\n-x\n+y\n*** End Patch')"; check "hook folder: apply_patch naming one is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(tool write_bash '{"input":"echo x > .github/hooks/a.json\n"}')"; check "hook folder: write_bash input is refused" "$([ "$rc" -eq 2 ]; echo $?)"
+feed "$run" "$(tool view '{"path":".github/hooks/a.json"}')"; check "hook folder: a Copilot view passes" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+feed "$run" "$(tool str_replace_editor '{"command":"view","path":".claude/hooks/scripts/a.sh"}')"; check "hook folder: str_replace_editor view passes" "$([ "$rc" -eq 0 ]; echo $?)"
+feed "$run" "$(tool create '{"path":"src/A.java","file_text":"x"}')"; check "hook folder: a create elsewhere passes" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+feed "$run" "$(tool apply_patch $'*** Begin Patch\n*** Update File: src/A.java\n@@\n-x\n+y\n*** End Patch')"; check "hook folder: apply_patch elsewhere passes" "$([ "$rc" -eq 0 ]; echo $?)"
+mkdir -p "$main/.github/hooks"
+feed "$main" "$(node -e 'console.log(JSON.stringify({tool_name:"Write",tool_input:{file_path:".github/hooks/a.json"},cwd:process.argv[1]}))' "$main")"
+check "hook folder: outside a run (the owner's chat) an edit passes" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
+feed "$main" "$(claude 'echo x > .github/hooks/a.json' "$main")"; check "hook folder: outside a run a shell write passes" "$([ "$rc" -eq 0 ]; echo $?)"
+rm -rf "$main/.github" "$run/lnk"
+
 # the registration file: Copilot-native shape (version 1, preToolUse, bash command, timeoutSec), runs the guard
 reg="$repo/.github/hooks/archon-run-guard.json"
 check "registration is native Copilot JSON: version 1, one preToolUse command hook for run-guard.sh, timeoutSec, no matcher" "$(node -e 'const h=JSON.parse(require("fs").readFileSync(process.argv[1]));const a=h.hooks.preToolUse;const c=a&&a[0];process.exit(h.version===1&&Object.keys(h.hooks).join()==="preToolUse"&&a.length===1&&c.type==="command"&&c.bash.includes(".archon/copilot/hooks/run-guard.sh")&&typeof c.timeoutSec==="number"&&!("matcher"in c)?0:1)' "$reg"; echo $?)"

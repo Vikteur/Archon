@@ -8,6 +8,7 @@ script="$root/.archon/scripts/ticket.sh"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 pass=0; fail=0
 check() { if [ "$2" -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1"; fi; }
+keys() { node -e 'try { console.log(Object.keys(JSON.parse(process.argv[1])).sort().join(",")); } catch { console.log("<not json>"); }' "$1"; }
 field() { node -e 'try { const v = JSON.parse(process.argv[1])[process.argv[2]]; console.log(v === undefined ? "<none>" : v); } catch { console.log("<not json>"); }' "$1" "$2"; }
 
 mkdir -p "$tmp/bin" "$tmp/board/backlog"
@@ -39,7 +40,8 @@ check "off: exits 0 (rc=$rc: $(cat "$tmp/a1/err"))" "$rc"
 [ "$(field "$out" task)" = "" ]; check "off: no task id although the text names TASK-4 ($out)" $?
 [ "$(field "$out" stop)" = "stop-db-migration,stop-auth" ]; check "off: STOP labels from the Labels: line ($out)" $?
 [ "$(field "$out" title)" = "PROJ-12 Add a greeting endpoint" ]; check "off: title is the first line ($out)" $?
-[ "$(field "$out" pr_note)" = "" ]; check "off: no pr_note, so no Backlog ticket line in the pull request" $?
+[ "$(field "$out" task)" = "" ] && [ "$(keys "$out")" = "stop,task,title" ]
+check "off: only task, stop and title, the task empty, so no Backlog ticket line in the pull request (pr-body.sh) ($out)" $?
 [ ! -s "$BACKLOG_LOG" ]; check "off: backlog is never called ($(cat "$BACKLOG_LOG"))" $?
 grep -qx 'Ticket - PROJ-12 Add a greeting endpoint' "$tmp/a1/ticket.md"; check "off: ticket.md has the title line" $?
 grep -qx 'Labels: stop-db-migration, api, stop-auth' "$tmp/a1/ticket.md"; check "off: ticket.md has the labels" $?
@@ -69,12 +71,13 @@ check "empty: exits 0 (rc=$rc)" "$rc"
 [ "$(field "$out" title)" = "" ]; check "empty: empty title ($out)" $?
 grep -qx 'Ticket - (no title)' "$tmp/a4/ticket.md"; check "empty: ticket.md says so" $?
 
-# 5. backlog on and a TASK id: the Backlog ticket, as before, with its title and a pr_note naming it.
+# 5. backlog on and a TASK id: the Backlog ticket, as before, with its title (pr-body.sh names it in the pull request).
 BACKLOG_CWD="$tmp/board" run "$tmp/a5" "build task-4 please"
 check "on, TASK: exits 0 (rc=$rc: $(cat "$tmp/a5/err"))" "$rc"
 [ "$(field "$out" task)" = "TASK-4" ] && [ "$(field "$out" stop)" = "stop-db-migration" ]; check "on, TASK: id and STOP labels ($out)" $?
 [ "$(field "$out" title)" = "Add a greeting" ]; check "on, TASK: title from the Backlog ($out)" $?
-[ "$(field "$out" pr_note)" = "Name its Backlog ticket, TASK-4 (Add a greeting)." ]; check "on, TASK: pr_note names the ticket ($out)" $?
+[ "$(keys "$out")" = "stop,task,title" ] && [ "$(field "$out" task)" = "TASK-4" ]
+check "on, TASK: only task, stop and title, the task naming the ticket (no unread pr_note) ($out)" $?
 grep -qx 'Task TASK-4 - Add a greeting' "$tmp/a5/ticket.md" && grep -qx 'Depends on: TASK-1' "$tmp/a5/ticket.md" \
   && ! grep -q huge "$tmp/a5/ticket.md"; check "on, TASK: ticket.md from the plain view, the graph dropped" $?
 grep -qx 'task edit TASK-4 --status In Progress' "$BACKLOG_LOG"; check "on, TASK: a To Do ticket is set In Progress" $?
@@ -89,6 +92,11 @@ mkdir -p "$tmp/lone/repo"; git -C "$tmp/lone/repo" init -q
 out=$(cd "$tmp/lone/repo" && ARTIFACTS_DIR="$tmp/lone" bash "$script" "TASK-4" 2> "$tmp/lone/err"); rc=$?
 [ "$rc" -ne 0 ]; check "on, TASK, no board: fails (rc=$rc)" $?
 grep -q 'backlog: false' "$tmp/lone/err"; check "on, TASK, no board: names backlog: false ($(cat "$tmp/lone/err"))" $?
+
+# 8. The ticket node declares exactly the fields ticket.sh prints: a field no node reads (pr_note) is not kept.
+wf="$root/.archon/workflows/build-feature-copilot.yaml"
+declared=$(yq -r '.nodes[] | select(.id == "ticket") | .output_format.required | sort | join(",")' "$wf")
+[ "$declared" = "stop,task,title" ]; check "the ticket node requires task, stop and title only ($declared)" $?
 
 echo "ticket: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

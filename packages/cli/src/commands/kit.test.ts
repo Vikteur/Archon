@@ -60,7 +60,7 @@ function makeKit(): Kit {
     'java/README.md': '# java wins\n',
     'java/src.txt': 'java file\n',
     'spring/s.txt': 'spring\n',
-    'quarkus/q.txt': 'quarkus\n',
+    'micronaut/q.txt': 'micronaut\n',
   };
   const meta: Record<string, { mode?: string; template?: boolean }> = {
     'core/scripts/run.sh': { mode: '0755' },
@@ -74,9 +74,9 @@ function makeKit(): Kit {
         core: { requires: [], description: 'core profile' },
         java: { requires: ['core'], description: 'java profile' },
         spring: { requires: ['java'], description: 'spring' },
-        quarkus: { requires: ['java'], description: 'quarkus' },
+        micronaut: { requires: ['java'], description: 'micronaut' },
       },
-      exclusive: [['spring', 'quarkus']],
+      exclusive: [['spring', 'micronaut']],
       files: Object.entries(files).map(([key, content]) => {
         const [profile, ...rest] = key.split('/');
         return {
@@ -92,7 +92,7 @@ function makeKit(): Kit {
       aliases: { '@scout': { provider: 'copilot', model: 'claude-haiku-5.5' } },
       postInstall: [
         { profile: 'core', run: 'echo post-core > post.txt', optional: false },
-        { profile: 'quarkus', run: 'echo never > never.txt', optional: false },
+        { profile: 'micronaut', run: 'echo never > never.txt', optional: false },
         { profile: 'core', run: 'exit 3', optional: true },
       ],
     },
@@ -161,10 +161,12 @@ describe('kit', () => {
       expect(resolveProfiles(makeKit(), ['spring'])).toEqual(['core', 'java', 'spring']);
     });
     it('rejects exclusive combos', () => {
-      expect(() => resolveProfiles(makeKit(), ['spring', 'quarkus'])).toThrow(/mutually exclusive/);
+      expect(() => resolveProfiles(makeKit(), ['spring', 'micronaut'])).toThrow(
+        /mutually exclusive/
+      );
     });
     it('lists valid profiles for an unknown one', () => {
-      expect(() => resolveProfiles(makeKit(), ['nope'])).toThrow(/core, java, spring, quarkus/);
+      expect(() => resolveProfiles(makeKit(), ['nope'])).toThrow(/core, java, spring, micronaut/);
     });
     it('add fails on unknown profile and non-git dirs', async () => {
       expect(await add({ profiles: ['nope'] })).toBe(1);
@@ -209,7 +211,7 @@ describe('kit', () => {
       ).toEqual(['IF_PROFILE_CORE', 'IF_PROFILE_JAVA', 'IF_PROFILE_SPRING']);
       expect(
         renderTemplate(
-          'q @@KIT_IF_PROFILE_QUARKUS@@\ns @@KIT_IF_PROFILE_SPRING@@\n',
+          'q @@KIT_IF_PROFILE_MICRONAUT@@\ns @@KIT_IF_PROFILE_SPRING@@\n',
           vars,
           new Set()
         )
@@ -260,6 +262,22 @@ describe('kit', () => {
       expect(await add({ profiles: ['java'] })).toBe(0);
       expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# java wins\n');
       expect(statSync(join(project, 'scripts/run.sh')).mode & 0o111).not.toBe(0);
+      logs.length = 0;
+      expect(await add()).toBe(0);
+      expect(logs.join('\n')).toContain('0 written');
+    });
+    it('gives an unchanged executable its mode back, and leaves an unchanged plain file alone', async () => {
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      chmodSync(join(project, 'scripts/run.sh'), 0o644);
+      logs.length = 0;
+      expect(await add({ dryRun: true })).toBe(0);
+      expect(statSync(join(project, 'scripts/run.sh')).mode & 0o111).toBe(0);
+      expect(logs.join('\n')).toContain('1 would be written');
+      logs.length = 0;
+      expect(await add()).toBe(0);
+      expect(statSync(join(project, 'scripts/run.sh')).mode & 0o111).not.toBe(0);
+      expect(statSync(join(project, 'README.md')).mode & 0o111).toBe(0);
+      expect(logs.join('\n')).toContain('1 written');
       logs.length = 0;
       expect(await add()).toBe(0);
       expect(logs.join('\n')).toContain('0 written');

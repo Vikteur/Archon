@@ -255,6 +255,13 @@ live test
 lcheck "live: every test skill loaded says ok" $(grep -q '"ok":true' <<< "$out"; echo $?)
 lcheck "live: an ok check removes skills-missing.md" $([ ! -e "$art/skills-missing.md" ]; echo $?)
 
+# A pass removes a note of its own side only: the test-side check runs between a build-side miss and the build agent
+# that has to fix it (run bdccdb95: it removed the note, and nine build retries never saw it).
+printf '# Skills missing — step 2\n\nBuild skills: hexagonal-usecase\n' > "$art/skills-missing.md"
+live test
+lcheck "live: a test-side pass keeps a build-side note" $(grep -q '"ok":true' <<< "$out" && grep -qx 'Build skills: hexagonal-usecase' "$art/skills-missing.md"; echo $?)
+rm -f "$art/skills-missing.md"
+
 fresh; plan; fixture; rm "$art/red/step-3.log"
 load 2026-10-18T10:03:00Z jvm-testing; load 2026-10-18T10:03:01Z tdd-loop
 live build
@@ -266,6 +273,12 @@ fresh; plan; fixture; rm "$art/red/step-3.log"
 load 2026-10-18T10:03:00Z jvm-testing; load 2026-10-18T10:06:00Z hexagonal-usecase
 live build
 lcheck "live: every build skill loaded says ok and keeps the step" $(grep -q '"ok":true' <<< "$out" && grep -q '^- \[x\] \*\*Step 1' "$art/plan.md"; echo $?)
+printf 'Test skills: tdd-loop\n' > "$art/skills-missing.md"
+live build
+lcheck "live: a build-side pass keeps a test-side note" $(grep -q '"ok":true' <<< "$out" && grep -qx 'Test skills: tdd-loop' "$art/skills-missing.md"; echo $?)
+printf 'Build skills: hexagonal-usecase\n' > "$art/skills-missing.md"
+live build
+lcheck "live: a build-side pass removes its own note" $(grep -q '"ok":true' <<< "$out" && [ ! -e "$art/skills-missing.md" ]; echo $?)
 
 fresh; plan; fixture
 live build

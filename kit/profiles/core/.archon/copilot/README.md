@@ -11,11 +11,15 @@ The workflow ships with the kit, and a kit update replaces it only while it is u
   `.github/copilot-instructions.md` is the short Copilot-side note (Claude-only mechanics do not apply; how to drive a run).
 - Agents: `.github/agents` and `.claude/agents/`. Hooks: Claude Code event names in `.claude/settings.json` run on matching Copilot events;
   repo hooks in `.github/hooks/*.json` too. `.github/hooks/archon-run-guard.json` registers `hooks/run-guard.sh`, which
-  refuses unsafe shell commands (no-verify, push to main, the main checkout) inside an Archon run worktree only. The file is in
+  refuses unsafe shell commands (no-verify, push to main, the main checkout, `backlog task` unless the kit config says
+  `backlog: false`) inside an Archon run worktree only, and inside a run or a node any write to a hook folder
+  (`.github/hooks`, `.archon/copilot`, `.claude/hooks`, `.archon/githooks`, `.githooks`, `.git/hooks`; reading stays
+  allowed). The file is in
   Copilot's native `preToolUse` format. `-p` runs skip repo hooks in an untrusted folder: trust `~/.archon/workspaces` once
   ("Yes, and remember this folder") or copy `.github/hooks/archon-run-guard.json` into `${COPILOT_HOME:-~/.copilot}/hooks/`.
 - Hook input: preToolUse comes batched, `{cwd, sessionId, toolCalls: [{id, name, args}]}`; `.github/hooks/dispatch.sh`
-  runs each hook once per call and `hooks/run-guard.sh` checks every call. Tool names map through `tools.json`.
+  runs each hook once per call and `hooks/run-guard.sh` checks every call. Tool names map through `tools.json`, and
+  every guard and matcher reads them in any case (`monitor` is `Monitor`).
   [baseline.md](baseline.md) has the payload shapes and the per-node time and tokens of two real runs.
 - Fences per node (owner decision 2026-11-20): Archon sets `ARCHON_NODE_EXECUTION` (its `path` names the node) and
   `WORKFLOW_ID` for a node's whole Copilot session, and both reach the hooks. `hooks/run-guard.sh` then enforces the node's
@@ -25,7 +29,8 @@ The workflow ships with the kit, and a kit update replaces it only while it is u
   `.claude/hooks/scripts/scope-guard.sh` fences each call as the agent [node-fences.json](node-fences.json) maps the node
   to (explore and plan analyst, write-tests test-writer, build-step and fix developer, review and pr-text reviewer,
   diagnose debugger), with only the additions that node's prompt needs. A node not in that file gets the strictest
-  common set, and a node path, workflow, list or file a guard cannot read denies the call. The
+  common set, and a node path, workflow, list or file a guard cannot read denies the call. No node fence lets a node
+  write a hook folder, and the audit records of a node name it (`agent` and `node`, where they said `main`). The
   `.archon/scripts/test/node-fence.test.sh` suite covers both guards.
 - Known limit, not fixed: a `preToolUse` hook that outruns its `timeoutSec` fails open on Copilot CLI (measured on
   1.0.78), and a non-zero exit denies. The guards are kept fast for that reason (scope-guard denies a command longer

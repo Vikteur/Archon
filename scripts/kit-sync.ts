@@ -73,7 +73,7 @@ import {
   PROFILES,
   PROJECT_DIR,
   type Profile,
-  QUARKUS_TEMPLATE,
+  FRAMEWORK_TEMPLATE,
   RULE_PROFILES,
   type Rewrite,
   SKILL_PROFILES,
@@ -175,7 +175,7 @@ function frontmatterOf(text: string): Record<string, unknown> {
 
 function mostSpecific(profiles: Profile[], where: string): Profile {
   if (!profiles.length) throw new Error(`${where}: names no known skill`);
-  for (const p of ['java-quarkus', 'java', 'openapi-contract', 'core'] as Profile[])
+  for (const p of ['java-spring', 'java', 'openapi-contract', 'core'] as Profile[])
     if (profiles.includes(p)) return p;
   throw new Error(`${where}: no profile`);
 }
@@ -275,7 +275,7 @@ export function classify(
   if (path.startsWith(PROJECT_TEMPLATES))
     return { exclude: true, why: "the repo's own scaffold templates" };
   if (path.startsWith('docs/scaffold-templates/'))
-    return { profile: QUARKUS_TEMPLATE.test(text) ? 'java-quarkus' : 'java', convert: 'copy' };
+    return { profile: FRAMEWORK_TEMPLATE.test(text) ? 'java-spring' : 'java', convert: 'copy' };
   if (path.startsWith('docs/code-maps/') && path !== 'docs/code-maps/README.md')
     return classifyCodeMap(path, text);
   return classifyByList(path);

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-step tool install (TASK-37): installs every tool listed in scripts/tools.conf on Windows (winget, from Git Bash),
-# on macOS (Homebrew) and on Linux (no sudo: jq, yq and gh as release downloads into ~/.local, npm -g for the npm tools,
+# on macOS (Homebrew) and on Linux (no sudo: jq, yq, gh and gitleaks as release downloads into ~/.local, npm -g for the npm tools,
 # the installer scripts; git, node, java and docker need sudo there, so they are only checked: a missing one is warned
 # about and counts as failed, exit 1). The npm tools are installed at their pinned version; the others come through winget,
 # Homebrew or their own installer, and are only checked against the version in tools.conf. A tool that is already
@@ -14,7 +14,7 @@
 #   TOOLS_CONF                tool list (default: tools.conf beside this script)
 #   INSTALL_TOOLS_OS          windows | macos | linux (default: from uname)
 #   LOCAL_PREFIX              Linux install prefix (default: ~/.local; binaries go to its bin/)
-#   JQ_VERSION, YQ_VERSION, GH_VERSION   Linux download versions (1.7.1, v4.54.1, 2.63.2)
+#   JQ_VERSION, YQ_VERSION, GH_VERSION, GITLEAKS_VERSION   Linux download versions (1.7.1, v4.54.1, 2.63.2, 8.30.1)
 #   PROJECT_DIR               the checkout whose scripts/install-hooks.sh switches the git hooks on (default: this repo)
 #   INSTALL_TOOLS_PATH_DIRS   directories put on PATH after a Windows install, colon-separated (default: the usual ones)
 #   AGENT_CLI                 claude | copilot: the agent CLI this project runs (default: agent_cli in .archon/kit.yaml,
@@ -22,6 +22,10 @@
 #                             that one is installed or checked; INSTALL_TOOLS_ALL=1 takes both.
 #   INSTALL_TOOLS_BACKLOG     0 | 1: Backlog.md (the backlog tool) off or on (default: backlog: false|true in
 #                             .archon/kit.yaml, else in .archon/kit.defaults.yaml, else on)
+#   INSTALL_TOOLS_PROFILES    the installed kit profiles, comma- or space-separated (default: profiles in .archon/kit.yaml,
+#                             else in .archon/kit.defaults.yaml, else none known): a tools.conf row with a profile column
+#                             (spectral: openapi-contract) is kept only when that profile is one of them; with no
+#                             profiles known every row is kept
 #   INSTALL_TOOLS_JAVA_VERSION  the JDK major (default: java_version in .archon/kit.yaml, else in
 #                             .archon/kit.defaults.yaml, else tools.conf's): the java row's version, winget id and cask
 # --check also reads whether the tools are ready, not only installed: Docker's daemon answers (Testcontainers and local
@@ -115,13 +119,13 @@ check_tool() {
   version_fits "$spec" "$found_version"
 }
 
-names=(); specs=(); kinds=(); wins=(); macs=(); checks=()
+names=(); specs=(); kinds=(); wins=(); macs=(); checks=(); profs=()
 while IFS= read -r line || [ -n "$line" ]; do
   line=${line%$'\r'}; line=${line%%#*}
   [ -n "$(trim "$line")" ] || continue
-  IFS='|' read -r name spec kind win mac check <<< "$line"
+  IFS='|' read -r name spec kind win mac check prof <<< "$line"
   names+=("$(trim "$name")"); specs+=("$(trim "$spec")"); kinds+=("$(trim "$kind")")
-  wins+=("$(trim "$win")"); macs+=("$(trim "$mac")"); checks+=("$(trim "$check")")
+  wins+=("$(trim "$win")"); macs+=("$(trim "$mac")"); checks+=("$(trim "$check")"); profs+=("$(trim "$prof")")
 done < "$conf"
 
 # The agent CLI (claude or copilot): read with sed, not yq, since yq may be one of the tools still to install.
@@ -139,23 +143,47 @@ for f in "$project/.archon/kit.yaml" "$project/.archon/kit.defaults.yaml"; do
   [ -f "$f" ] && use_backlog=$(sed -n 's/^backlog:[[:space:]]*["'"'"']\{0,1\}\([a-z01]*\).*/\1/p' "$f" | head -n 1)
 done
 case "$use_backlog" in false | 0 | no | off) use_backlog=0 ;; *) use_backlog=1 ;; esac
-keep=(); agent_dropped=0
+# The installed kit profiles: INSTALL_TOOLS_PROFILES, else the profiles list of kit.yaml, then of kit.defaults.yaml, in
+# either YAML form (`profiles: [a, b]` or one `- a` line each). Read with awk, not yq, as agent_cli is with sed.
+kit_profiles() { # kit_profiles <kit.yaml>: the names, space-separated
+  awk '
+    /^profiles:/ { s = $0; sub(/^profiles:[[:space:]]*/, "", s); sub(/#.*/, "", s)
+      if (s ~ /\[/) { gsub(/[]["'"'"',]/, " ", s); print s; exit }
+      inlist = 1; next }
+    inlist && /^[[:space:]]*-/ { s = $0; sub(/#.*/, "", s); sub(/^[[:space:]]*-[[:space:]]*/, "", s); gsub(/["'"'"'[:space:]]/, "", s)
+      printf "%s ", s; next }
+    inlist && /^[[:space:]]*(#.*)?$/ { next }
+    inlist { exit }' "$1"
+}
+profiles=${INSTALL_TOOLS_PROFILES:-}; profiles=${profiles//,/ }
+for f in "$project/.archon/kit.yaml" "$project/.archon/kit.defaults.yaml"; do
+  [ -z "$(trim "$profiles")" ] || break
+  [ -f "$f" ] && profiles=$(kit_profiles "$f")
+done
+profiles=$(trim "$profiles")
+keep=(); agent_dropped=0; for_profile=()
 for i in "${!names[@]}"; do
   case "${names[i]}" in
     claude | copilot)
       if [ "${INSTALL_TOOLS_ALL:-0}" != 1 ] && [ "${names[i]}" != "$agent_cli" ]; then agent_dropped=1; continue; fi ;;
     backlog) [ "$use_backlog" = 1 ] || continue ;;
   esac
+  if [ -n "${profs[i]}" ] && [ "${profs[i]}" != - ] && [ -n "$profiles" ]; then
+    case " $profiles " in *" ${profs[i]} "*) ;; *) for_profile+=("${names[i]} (${profs[i]})"); continue ;; esac
+  fi
   keep+=("$i")
 done
 [ "$agent_dropped" = 0 ] || echo "Agent CLI: $agent_cli (the other one is left out; INSTALL_TOOLS_ALL=1 takes both)"
 [ "$use_backlog" = 1 ] || echo "Backlog.md: off (backlog: false in .archon/kit.yaml, or INSTALL_TOOLS_BACKLOG=0), not installed"
+[ "${#for_profile[@]}" -eq 0 ] || echo "For a kit profile this project does not install, left out: ${for_profile[*]}"
 if [ "${#keep[@]}" -ne "${#names[@]}" ]; then
-  n2=(); s2=(); k2=(); w2=(); m2=(); c2=()
-  for i in "${keep[@]}"; do
+  n2=(); s2=(); k2=(); w2=(); m2=(); c2=(); p2=()
+  for i in ${keep[@]+"${keep[@]}"}; do
     n2+=("${names[i]}"); s2+=("${specs[i]}"); k2+=("${kinds[i]}"); w2+=("${wins[i]}"); m2+=("${macs[i]}"); c2+=("${checks[i]}")
+    p2+=("${profs[i]}")
   done
-  names=("${n2[@]}"); specs=("${s2[@]}"); kinds=("${k2[@]}"); wins=("${w2[@]}"); macs=("${m2[@]}"); checks=("${c2[@]}")
+  names=(${n2[@]+"${n2[@]}"}); specs=(${s2[@]+"${s2[@]}"}); kinds=(${k2[@]+"${k2[@]}"}); wins=(${w2[@]+"${w2[@]}"})
+  macs=(${m2[@]+"${m2[@]}"}); checks=(${c2[@]+"${c2[@]}"}); profs=(${p2[@]+"${p2[@]}"})
 fi
 
 # The JDK is the project's toolchain (kit key java_version), not tools.conf's default: the java row's version, and the
@@ -273,6 +301,15 @@ linux_install() { # linux_install <name>
         fetch "https://github.com/mikefarah/yq/releases/download/$ver/yq_linux_$arch" "$tmp" || return 1
       fi
       install -m 0755 "$tmp" "$prefix/bin/yq"; rm -f "$tmp" ;;
+    gitleaks)
+      # the release's tarball holds the binary at its top (beside LICENSE and README.md); its checksums file lists it
+      local garch=x64; [ "$arch" = arm64 ] && garch=arm64
+      ver=${GITLEAKS_VERSION:-8.30.1}; ver=${ver#v}; tmp=$(mktemp)
+      fetch_checked "https://github.com/gitleaks/gitleaks/releases/download/v$ver/gitleaks_${ver}_linux_$garch.tar.gz" "$tmp" \
+        "https://github.com/gitleaks/gitleaks/releases/download/v$ver/gitleaks_${ver}_checksums.txt" \
+        "gitleaks_${ver}_linux_$garch.tar.gz" 1 || return 1
+      tar -xzf "$tmp" -C "$prefix/bin" gitleaks || { rm -f "$tmp"; return 1; }
+      chmod 0755 "$prefix/bin/gitleaks"; rm -f "$tmp" ;;
     gh)
       ver=${GH_VERSION:-2.63.2}; tmp=$(mktemp)
       fetch_checked "https://github.com/cli/cli/releases/download/v$ver/gh_${ver}_linux_$arch.tar.gz" "$tmp" \

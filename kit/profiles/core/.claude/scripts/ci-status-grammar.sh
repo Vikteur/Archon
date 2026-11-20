@@ -4,9 +4,10 @@
 # Source it (`. ci-status-grammar.sh`) or run it: ci-status-grammar.sh format <form> <args...> | parse <state> <description>
 #
 # State     Description (at most 140 characters; GitHub cuts the rest)                        kind
-# success   success in <s>s on <host>[; fp=<fp10>][; narrowed: archon-suites][; skipped-locally <n>]
+# success   success in <s>s on <host>[; <t> tests][; fp=<fp10>][; narrowed: archon-suites][; skipped-locally <n>]
 #             [; green on rerun after <sig>]   ran (a pass; sig: the infra signature a --rerun-failed reran it after)
-# failure   failure in <s>s on <host>[; fp=<fp10>][; narrowed: archon-suites][; skipped-locally <n>]   ran
+# failure   failure in <s>s on <host>[; <t> tests][; fp=<fp10>][; narrowed: archon-suites][; skipped-locally <n>]  ran
+#           <t>: the tests of the JUnit XML the job left ("1 test", "412 tests"); a job that left none has no token.
 # success   reused from <sha12>; fp=<fp10>; scope=<blob7>                                             reused
 # success   reused from <sha12>; same tree   a merge commit whose tree its PR head's green run tested    same-tree
 # failure   failure (infra: <reason>) on <host>     the runner could not run the job (worktree, wsl-checkout) infra
@@ -22,7 +23,9 @@
 # fp is the planner's input fingerprint (ci-plan.sh); until the planner runs, a ran status carries none.
 
 ci_status_ran() { # ci_status_ran <success|failure> <secs> <host> [fp] [narrowed 0|1] [skipped-locally n] [rerun sig]
+  #                 [tests t]
   local d="$1 in ${2}s on $3"
+  if [[ "${8:-}" =~ ^[1-9][0-9]*$ ]]; then [ "$8" = 1 ] && d+="; 1 test" || d+="; $8 tests"; fi
   [ -n "${4:-}" ] && d+="; fp=${4:0:10}"
   [ "${5:-0}" = 1 ] && d+="; narrowed: archon-suites"
   [ "${6:-0}" -gt 0 ] 2>/dev/null && d+="; skipped-locally $6"
@@ -43,10 +46,10 @@ ci_status_running() { printf 'running since %s, pid %s@%s' "${3:-$(date +%H:%M)}
 
 # ci_status_parse <state> <description>: one key=value per line, kind first; never evaluate the output, a status can be
 # posted by anyone with write access. Keys: kind state secs host fp narrowed skipped from scope reason n pos since pid
-# minutes legacy rerun (the sig of `green on rerun after <sig>`, a pass).
+# minutes legacy rerun (the sig of `green on rerun after <sig>`, a pass) tests (the count of `<t> tests`, empty without).
 ci_status_parse() {
   local state=$1 d=$2 rest tok kind=unknown
-  local secs="" host="" fp="" rerun="" narrowed=0 skipped=0 from="" scope="" reason="" n="" pos="" since="" pid="" minutes="" legacy=0
+  local secs="" host="" fp="" rerun="" tests="" narrowed=0 skipped=0 from="" scope="" reason="" n="" pos="" since="" pid="" minutes="" legacy=0
   if [[ "$d" =~ ^(success|failure)\ in\ ([0-9]+)s\ on\ ([^\;,\ ]+)(,\ ([0-9]+)\ step\(s\)\ skipped\ locally)?(\;\ .*)?$ ]]; then
     kind=ran secs=${BASH_REMATCH[2]} host=${BASH_REMATCH[3]} rest=${BASH_REMATCH[6]#; }
     [ "${BASH_REMATCH[1]}" = "$state" ] || kind=unknown
@@ -54,6 +57,7 @@ ci_status_parse() {
     while [ -n "$rest" ] && [ "$kind" = ran ]; do
       tok=${rest%%; *}; [ "$tok" = "$rest" ] && rest="" || rest=${rest#*; }
       if [[ "$tok" =~ ^fp=([0-9a-f]{1,64})$ ]]; then fp=${BASH_REMATCH[1]}
+      elif [[ "$tok" =~ ^([1-9][0-9]*)\ tests?$ ]] && [ "$legacy" = 0 ] && [ -z "$tests" ]; then tests=${BASH_REMATCH[1]}
       elif [ "$tok" = "narrowed: archon-suites" ]; then narrowed=1
       elif [[ "$tok" =~ ^skipped-locally\ ([0-9]+)$ ]] && [ "$legacy" = 0 ]; then skipped=${BASH_REMATCH[1]}
       elif [[ "$tok" =~ ^green\ on\ rerun\ after\ ([^\;]+)$ ]] && [ "$state" = success ] && [ -z "$rest" ]; then
@@ -86,9 +90,9 @@ ci_status_parse() {
   if [ "$kind" = unknown ]; then
     printf 'kind=unknown\nstate=%s\n' "$state"; return 0
   fi
-  printf 'kind=%s\nstate=%s\nsecs=%s\nhost=%s\nfp=%s\nnarrowed=%s\nskipped=%s\nfrom=%s\nscope=%s\nreason=%s\nn=%s\npos=%s\nsince=%s\npid=%s\nminutes=%s\nlegacy=%s\nrerun=%s\n' \
+  printf 'kind=%s\nstate=%s\nsecs=%s\nhost=%s\nfp=%s\nnarrowed=%s\nskipped=%s\nfrom=%s\nscope=%s\nreason=%s\nn=%s\npos=%s\nsince=%s\npid=%s\nminutes=%s\nlegacy=%s\nrerun=%s\ntests=%s\n' \
     "$kind" "$state" "$secs" "$host" "$fp" "$narrowed" "$skipped" "$from" "$scope" "$reason" "$n" "$pos" "$since" "$pid" \
-    "$minutes" "$legacy" "$rerun"
+    "$minutes" "$legacy" "$rerun" "$tests"
 }
 
 # ci_status_get <key> <state> <description>: one field of the parse.

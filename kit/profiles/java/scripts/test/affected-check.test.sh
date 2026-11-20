@@ -73,7 +73,7 @@ build_template() {
   mkdir -p x-domain/src/test/java && echo 'class DomainIT {}' > x-domain/src/test/java/DomainIT.java
   tagged x-adapter/src/test/java/RepoTest.java integration
   tagged application/src/test/java/BootTest.java integration
-  tagged application/src/test/java/RefusalTest.java quarkus-unit-test
+  tagged application/src/test/java/RefusalTest.java boot-test
   tagged application/src/test/java/WebTest.java resource-test
   tagged y-gateway/src/test/java/StubTest.java integration
   stub gradlew gradlew
@@ -138,9 +138,8 @@ run() {
 }
 
 has() { grep -qxF "$1" "$log"; }
-# The cases below expect the quarkus sets (startupTest); the spring ones set KIT_STACK=spring, and the default
-# (spring, with no env and no kit.yaml) has a case of its own at the end.
-export KIT_STACK=quarkus
+# No env names a stack; the old kit key stack, which nothing reads any more, has cases of its own at the end.
+unset KIT_STACK
 ran_nothing() { [ ! -s "$log" ]; }
 said() { grep -qF "$1" <<< "$out"; }
 same_head() { [ "$(git rev-parse HEAD)" = "$1" ]; }
@@ -204,14 +203,14 @@ new_repo "$r"
 echo b > x-adapter/src/A.java && git commit -qam ad
 run
 check "adapter: unit tests, then the tagged slow sets" \
-  has "gradlew :application:test :x-adapter:test :application:integrationTest :x-adapter:integrationTest :application:startupTest :application:resourceTest"
+  has "gradlew :application:test :x-adapter:test :application:integrationTest :x-adapter:integrationTest :application:resourceTest"
 
 # An uncommitted application change counts.
 new_repo "$r"
 echo b > application/src/A.java
 run
 check "application, uncommitted: its tests and its tagged slow sets" \
-  has "gradlew :application:test :application:integrationTest :application:startupTest :application:resourceTest"
+  has "gradlew :application:test :application:integrationTest :application:resourceTest"
 
 # An untracked file in a gateway's main code counts; that does not run the gateway's slow set.
 new_repo "$r"
@@ -229,7 +228,7 @@ check "tagged test file: its set" has "gradlew :application:test :y-gateway:test
 new_repo "$r"
 echo '// b' >> application/src/test/java/WebTest.java && git commit -qam t
 run
-check "resource-test tagged file: resourceTest" has "gradlew :application:test :application:integrationTest :application:startupTest :application:resourceTest"
+check "resource-test tagged file: resourceTest" has "gradlew :application:test :application:integrationTest :application:resourceTest"
 
 # A class named *IT without a tag is a unit test: the name never picks the set.
 new_repo "$r"
@@ -243,7 +242,7 @@ new_repo "$r"
 echo b > build.gradle.kts && git commit -qam root
 run
 check "root build file: every module, then every tagged slow set" \
-  has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test :y-gateway:test :application:integrationTest :x-adapter:integrationTest :y-gateway:integrationTest :application:startupTest :application:resourceTest"
+  has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test :y-gateway:test :application:integrationTest :x-adapter:integrationTest :y-gateway:integrationTest :application:resourceTest"
 
 # The shared tag rule: this suite (step-gate.sh shared it until agent-feature was removed, D19).
 new_repo "$r"
@@ -304,7 +303,7 @@ check "ci-workflow-check.sh: the check and the suites" has "contract-pin.test.sh
 new_repo "$r"
 echo 'contract.tag=v2' > gradle.properties && git add -A && git commit -qm p
 run
-check "gradle.properties: every module" has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test :y-gateway:test :application:integrationTest :x-adapter:integrationTest :y-gateway:integrationTest :application:startupTest :application:resourceTest"
+check "gradle.properties: every module" has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test :y-gateway:test :application:integrationTest :x-adapter:integrationTest :y-gateway:integrationTest :application:resourceTest"
 check "gradle.properties: the CI workflow tests" has "contract-pin.test.sh "
 
 # The archon suite selection: a hook or .gitignore change runs what the selector picks; a failed selection runs all.
@@ -470,36 +469,27 @@ mkdir -p .github/agents && echo a > .github/agents/dev.agent.md && git add -A &&
 run
 check "agent text: the script-names suite" test "$(cat "$log")" = "agent-script-names.test.sh "
 
-# The spring stack (KIT_STACK=spring) has no startupTest: the quarkus-unit-test tag picks no set there, so a file
-# tagged with it is a unit test; integration and resource-test pick the same sets as on quarkus.
+# Only integration and resource-test pick a slow set: a file with another tag is a unit test, and there is no startupTest.
 new_repo "$r"
 echo b > application/src/A.java
-KIT_STACK=spring run
-check "spring, application: its tagged slow sets, no startupTest" \
+run
+check "application: its tagged slow sets, no startupTest" \
   has "gradlew :application:test :application:integrationTest :application:resourceTest"
 new_repo "$r"
-printf '@Tag("quarkus-unit-test")\nclass BootRefusalTest {}\n' > x-domain/src/test/java/BootRefusalTest.java
-KIT_STACK=spring run
-check "spring, quarkus-unit-test tagged file: unit tests only" \
-  has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test"
+printf '@Tag("boot-test")\nclass BootRefusalTest {}\n' > x-domain/src/test/java/BootRefusalTest.java
 run
-check "quarkus, quarkus-unit-test tagged file: startupTest" \
-  has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test :x-domain:startupTest"
-# The kit file names the stack when no env does.
+check "a tag no set names: unit tests only" \
+  has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test"
+# An old install's kit.yaml names a stack, and an env may still set one: neither changes the sets.
 new_repo "$r"
 printf 'stack: spring\n' > .archon/kit.yaml
 echo b > application/src/A.java
-KIT_STACK= run
+run
 check "kit.yaml stack: spring, application: no startupTest" \
   has "gradlew :application:test :application:integrationTest :application:resourceTest"
 printf 'stack: quarkus\n' > .archon/kit.yaml
-KIT_STACK= run
-check "kit.yaml stack: quarkus, application: startupTest" \
-  has "gradlew :application:test :application:integrationTest :application:startupTest :application:resourceTest"
-# No env and no kit.yaml: the stack is spring.
-rm .archon/kit.yaml
-KIT_STACK= run
-check "no stack named: spring, application: no startupTest" \
+KIT_STACK=quarkus run
+check "kit.yaml stack: quarkus and KIT_STACK=quarkus, application: still no startupTest" \
   has "gradlew :application:test :application:integrationTest :application:resourceTest"
 
 cd "$repo_root" || exit 1

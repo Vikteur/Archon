@@ -6,7 +6,8 @@
 //   node copilot-audit.js <run-id>           write .apm-audit/sessions/copilot-<run-id>.jsonl in the current directory
 //   node copilot-audit.js --names <run-id>   list the tool names the run log holds, with how each one maps
 // The file is rewritten whole on every call (idempotent), with records in the shape audit-log.sh writes; `agent` is the
-// node the call ran in (the hooks write "main": copilot-usage.js joins their trail to a node by its session id). Which Copilot
+// node the call ran in (the hooks write the node too, from KIT_NODE or ARCHON_NODE_EXECUTION, plus a "node" field; records
+// from before that say "main", so copilot-usage.js still joins a trail to a node by its session id). Which Copilot
 // tool is which Claude tool is .archon/copilot/tools.json (COPILOT_TOOLS overrides the path), never code here.
 // Fallback only: audit-log.sh may already have written this run's trail. The hooks cover the run only when a session file
 // other than copilot-*.jsonl holds a Skill record (tool === 'Skill', what skill-check.js needs) stamped at or after the
@@ -30,7 +31,7 @@ function loadMap() {
 }
 
 // The Claude shape of one tool_call event: { name, input }. A name tools.json maps takes the Claude name, and its key is
-// filled from the first source field that holds a string; any other name and its input stay as they are. run-trace.js and
+// filled from the first source field that holds a string (or a list of one string); any other name and its input stay as they are. run-trace.js and
 // mcp-use-check.js read Copilot runs through it.
 function claudeCall(e, { ev, tools }) {
   const name = String(e[ev.nameField] || e.name || '');
@@ -38,9 +39,11 @@ function claudeCall(e, { ev, tools }) {
   const m = tools.get(name.toLowerCase());
   if (!m) return { name, input: raw };
   const input = { ...raw };
+  // A source holds a string, or (Copilot's grep `paths`) a list of one string, which counts as that string.
+  const one = v => (typeof v === 'string' && v ? v : Array.isArray(v) && v.length === 1 && typeof v[0] === 'string' && v[0] ? v[0] : null);
   if (m.key && !(typeof input[m.key] === 'string' && input[m.key])) {
-    const src = (m.from || [m.key]).find(k => typeof raw[k] === 'string' && raw[k]);
-    if (src) input[m.key] = raw[src];
+    const src = (m.from || [m.key]).find(k => one(raw[k]));
+    if (src) input[m.key] = one(raw[src]);
   }
   return { name: m.as, input };
 }

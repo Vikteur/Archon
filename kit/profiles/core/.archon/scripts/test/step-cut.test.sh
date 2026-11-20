@@ -84,6 +84,31 @@ check "3 the step folded into it" $(grep -qx '## Folded into this step: step 3' 
 check "3 a step folded into another is left out" $(! grep -qF 'four' <<< "$s"; echo $?)
 check "3 no decisions, no answers" $(! grep -q '^## Owner decisions' <<< "$s" && ! grep -q '^## Answers' <<< "$s"; echo $?)
 
+# 3b. The notes step-check.js left come last, under one heading, their own headings one level down; without notes, no
+# heading. missSide reads a note's side.
+printf '# Skills missing — step 2\n\nBuild skills: java, clean-code\n\nThe build agent of step 2 never loaded these.\n' > "$art/skills-missing.md"
+printf '# Scaffold missing — step 2, build side\n\n- `a/B.java`: written by hand\n' > "$art/scaffold-missing.md"
+run
+s=$(step)
+out="$out
+$s"
+check "3b the notes come under one heading, last" $(grep -qx '## Misses of the last round: read these first' <<< "$s" \
+  && [ "$(grep -n '^## ' <<< "$s" | tail -1 | cut -d: -f2-)" = '## Misses of the last round: read these first' ]; echo $?)
+check "3b skills-missing.md is copied, its title a level down" $(grep -qx '### Skills missing — step 2' <<< "$s" && grep -qx 'Build skills: java, clean-code' <<< "$s"; echo $?)
+check "3b scaffold-missing.md is copied after it" $(grep -qx '### Scaffold missing — step 2, build side' <<< "$s" \
+  && [ "$(grep -n 'Scaffold missing' <<< "$s" | cut -d: -f1)" -gt "$(grep -n 'Skills missing' <<< "$s" | cut -d: -f1)" ]; echo $?)
+out=$(node -e 'const {missSide}=require(process.argv[1]); const a=process.argv[2];
+  console.log([missSide(a+"/skills-missing.md"), missSide(a+"/scaffold-missing.md"), missSide(a+"/none.md")].join(","))' "$script" "$art")
+check "3b missSide reads build, build and '' (no file)" $([ "$out" = 'build,build,' ]; echo $?)
+printf 'Test skills: tdd-loop\n' > "$art/skills-missing.md"; printf '# Scaffold missing — step 2, test side\n' > "$art/scaffold-missing.md"; echo old > "$art/x.md"
+out=$(node -e 'const {missSide}=require(process.argv[1]); const a=process.argv[2];
+  console.log([missSide(a+"/skills-missing.md"), missSide(a+"/scaffold-missing.md"), missSide(a+"/x.md")].join(","))' "$script" "$art")
+check "3b missSide reads test, test and '' (no side named)" $([ "$out" = 'test,test,' ]; echo $?)
+rm -f "$art/skills-missing.md" "$art/scaffold-missing.md" "$art/x.md"
+run
+s=$(step)
+check "3b no notes, no heading" $(! grep -q 'Misses of the last round' <<< "$s"; echo $?)
+
 # 4. No open step: step.md from an earlier step is removed.
 sed -i 's/- \[ \]/- [x]/' "$art/plan.md"
 run
@@ -99,6 +124,5 @@ for n in write-tests build-step; do
   out=$(loop_node "$n" prompt | tr -s ' \n' ' ')
   check "5 $n reads step.md" $(grep -qF 'Read $ARTIFACTS_DIR/step.md' <<< "$out"; echo $?)
 done
-
 echo "step-cut: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

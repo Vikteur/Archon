@@ -63,7 +63,11 @@ _hook_normalize_core() { # the shape conversion; hook_normalize_payload below wr
       | ($args | if type == "object" then . else {} end) as $ti
       | (if ($e | type) == "object" and ($e.key // "") != "" and ($ti[$e.key] // null) == null
            then ([$e.from[]? | select($ti[.] != null)] | first // null) as $src
-                | (if $src == null then $ti else $ti + {($e.key): $ti[$src]} end)
+                # Copilot sends a grep folder as `paths`, a string or a list: a list of one string is that string; a
+                # longer list stays a list, which the guards cannot read as one path and so deny.
+                | (if $src == null then $ti
+                   else $ti + {($e.key): ($ti[$src] | if type == "array" and length == 1 and (.[0] | type) == "string"
+                                                       then .[0] else . end)} end)
            else $ti end) as $ti2
       | $o
       + {kit_copilot: true}

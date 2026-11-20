@@ -850,11 +850,18 @@ export async function kitAddCommand(
       return state;
     }
     if (!always) nextLock[relative] = contentHash(content);
+    // An executable the kit ships that the project holds unchanged but not executable (an older kit shipped it 0644,
+    // or a checkout dropped the bit) gets its mode back, and counts as written.
+    const executable = mode !== null && (Number.parseInt(mode, 8) & 0o111) !== 0;
+    if (state === 'unchanged' && executable && (statSync(dest).mode & 0o111) === 0) {
+      if (!dry) chmodSync(dest, 0o755);
+      return 'written';
+    }
     if (state) return state;
     if (!dry) {
       mkdirSync(dirname(dest), { recursive: true });
       writeFileSync(dest, content);
-      if (mode !== null && (Number.parseInt(mode, 8) & 0o111) !== 0) chmodSync(dest, 0o755);
+      if (executable) chmodSync(dest, 0o755);
     }
     return 'written';
   };
