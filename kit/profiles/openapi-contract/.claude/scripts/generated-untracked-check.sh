@@ -3,7 +3,7 @@
 # shared-adapter/build/generated/openapi stay out of git. Refuses a tracked file under any build folder, generated
 # sources that git does not ignore, a committed Java file holding the generator's marker, and a build that produced no
 # generated sources (the check would then prove nothing). Run it after a clean build.
-# The stack (kit key `stack`, env KIT_STACK, default quarkus) names the generator and its source folder: quarkus is
+# The stack (kit key `stack`, env KIT_STACK, default spring) names the generator and its source folder: quarkus is
 # JavaJAXRSSpecServerCodegen under src/gen/java, spring is SpringCodegen under src/main/java. Every check runs on both.
 # Usage: bash .claude/scripts/generated-untracked-check.sh [<repo-root>]   (default: this repository)
 set -uo pipefail
@@ -15,7 +15,7 @@ repo="${1:-$(cd "$here/../.." && pwd)}"
 cd "$repo" || { echo "FAIL: $repo is not a directory"; exit 1; }
 gen=shared-adapter/build/generated/openapi
 # The generator stamps every file it writes with this annotation; a bare mention (a test that reads one) is no marker.
-case "$(kit_get stack quarkus KIT_STACK)" in
+case "$(kit_get stack spring KIT_STACK)" in
   spring) marker='^@.*Generated\(.*SpringCodegen'; src=src/main/java ;;
   *) marker='^@.*Generated\(.*JavaJAXRSSpecServerCodegen'; src=src/gen/java ;;
 esac

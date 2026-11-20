@@ -54,13 +54,14 @@ diff. A blocking verdict sends that part back to its developer (the per-part loo
 - Which review/layer skills load per part → `templates/skills.manifest.yaml` (blueprint repo)
 
 ## Which tool answers which question
-Ask the tool before you open files; read a file only for what its answer leaves out. A tool missing from your
-tool list did not start: fall back to `Read` and `Grep`, and say so in your summary.
+Ask the CLI before you open files, from the repo root; read a file only for what its answer leaves out. The MCP
+tool of the same name (`codegraph_callers`, `search`, ...) answers the same when it is in your tool list. When neither
+answers, fall back to `Read` and `Grep`, and say so in your summary.
 
 | Question | Tool |
 |---|---|
-| Who calls this Java symbol, and what breaks if it changes? | `codegraph_callers`, `codegraph_impact` |
-| How does this area work? | `codegraph_explore`, `codegraph_node` for one symbol |
+| Who calls this Java symbol, and what breaks if it changes? | `codegraph callers <symbol>`, `codegraph impact <symbol>` |
+| How does this area work? | `codegraph explore "<names or a question>"`, `codegraph node <symbol>` for one symbol |
 | Text, config, logs, a string in a test | `Grep` |
 
 ## Ground Rules

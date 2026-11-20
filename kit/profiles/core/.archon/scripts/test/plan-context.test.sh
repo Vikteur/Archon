@@ -131,5 +131,16 @@ bash "$script" "$root/missing.md" > "$root/out.md"; check "kit.yaml build_workfl
 has "## my-build nodes" && grep -qx -- "- only-mine" "$root/out.md" && ! has "## build-feature-copilot nodes"
 check "the nodes of the workflow build_workflow names" $?
 
+# A single-module build: settings.gradle.kts has no include( line. grep matching nothing under pipefail ended the script
+# with no pack at all, leaving only "plan-context.sh failed" on the ticket node's stderr.
+solo="$root/solo"
+mkdir -p "$solo" && cd "$solo" || exit 1
+git init -q && git config user.email t@t && git config user.name t
+printf 'rootProject.name = "solo"\n' > settings.gradle.kts
+git add -A && git commit -qm "feat: one module"
+bash "$script" "$root/missing.md" > "$root/out.md"; check "single-module build exits 0" $?
+grep -qx -- "- (one module: settings.gradle.kts includes none)" "$root/out.md"; check "single-module build says so" $?
+has "## Last 10 commits" && has "feat: one module"; check "single-module build writes the whole pack" $?
+
 echo "plan-context: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

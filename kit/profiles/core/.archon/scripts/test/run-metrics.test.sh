@@ -35,6 +35,8 @@ export PATH="$root/bin:$PATH" STUB_RUNS="$root/runs.json" STUB_GET="$root/get" S
 # no BUILD_WORKFLOW from the caller's environment.
 unset BUILD_WORKFLOW
 export KIT_CONFIG="$root/no-kit.yaml"
+# The run logs and Copilot sessions are fixtures: the real ~/.archon and ~/.copilot are never read.
+export ARCHON_HOME="$root/archon" COPILOT_HOME="$root/copilot"
 
 run() { # run <id> <workflow> <message> <started> [cost]
   local cost=${5:-}
@@ -59,6 +61,14 @@ cat > "$root/runs.json" <<EOF
 ]}
 EOF
 opened $b 2; opened $c 3
+# Run c's plan node ran in Copilot session 12345678-...: two model calls.
+sid=12345678-aaaa-4aaa-8aaa-aaaaaaaaaaaa
+mkdir -p "$ARCHON_HOME/workspaces/o/r/logs" "$COPILOT_HOME/session-state/$sid"
+printf '{"type":"node_complete","step":"plan","duration_ms":5000,"execution":{"binding":{"provider":"copilot","sessionPreview":"12345678"}}}\n' \
+  > "$ARCHON_HOME/workspaces/o/r/logs/$c.jsonl"
+for i in 1 2; do
+  printf '{"type":"session.usage_record","data":{"usage":{"model":"claude-opus-5.5","inputTokens":1000,"cacheReadTokens":700,"cacheWriteTokens":200,"outputTokens":40,"cost":15,"duration":2000,"accounting":{"sourceSessionId":"%s"}}}}\n' "$sid"
+done > "$COPILOT_HOME/session-state/$sid/events.jsonl"
 cat > "$root/prs.json" <<EOF
 [{"url":"$R/2","state":"MERGED","createdAt":"2026-10-01T13:00:00Z","mergedAt":"2026-10-01T15:00:00Z","closedAt":"2026-10-01T15:00:00Z"},
  {"url":"$R/3","state":"CLOSED","createdAt":"2026-10-02T11:00:00Z","mergedAt":null,"closedAt":"2026-10-02T12:00:00Z"}]
@@ -86,6 +96,17 @@ check "runs.spend_usd sums the recorded costs" $?
 [ "$(q 'd.metrics.find(m=>m.name==="runs.spend_usd"&&m.subject==="'$e'")')" = \
   "{\"kind\":\"count\",\"subject\":\"$e\",\"at\":\"2026-10-04T10:00:00.000Z\",\"runs\":[\"$e\"],\"name\":\"runs.spend_usd\",\"unit\":\"usd\",\"value\":0}" ]
 check "a run without a recorded cost spends 0, at its start, as its own producing run" $?
+
+# Copilot usage: per run, node and model, from the session log; cost in Copilot cost units, never in usd.
+[ "$(q 'd.metrics.filter(m=>m.name.startsWith("copilot.")).map(m=>m.name+"="+m.value+" "+m.unit).join()')" = \
+  '"copilot.model_calls=2 calls,copilot.input_tokens=200 tokens,copilot.cache_read_tokens=1400 tokens,copilot.cache_write_tokens=400 tokens,copilot.output_tokens=80 tokens,copilot.cost_units=30 copilot_cost_units,copilot.api_ms=4000 ms"' ]
+check "a Copilot node's usage, fresh input apart from the cache" $?
+[ "$(q 'd.metrics.find(m=>m.name==="copilot.cost_units").subject+" "+d.metrics.find(m=>m.name==="copilot.cost_units").runs')" = "\"$c/plan/claude-opus-5.5 $c\"" ]
+check "subject is run/node/model, the run its own producer" $?
+[ "$(q 'd.metrics.find(m=>m.name==="runs.spend_usd"&&m.subject==="'$c'").value')" = 1 ]
+check "runs.spend_usd stays Archon's recorded cost" $?
+[ "$(q 'new Set(d.metrics.filter(m=>m.name.startsWith("copilot.")).map(m=>m.subject)).size')" = 1 ]
+check "only the run with a Copilot session records copilot.*" $?
 
 # A PR gh does not list is skipped, not counted.
 echo '[]' > "$root/prs.json"

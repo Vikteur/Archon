@@ -1,5 +1,5 @@
 {
-  "_comment": "Owner-editable map from the Copilot CLI's tool-call events (as Archon's copilot provider logs them) to the Claude tool names the audit gates read. Fix this file after the first live run: `node .archon/scripts/copilot-audit.js --names <run-id>` lists the tool names the run log really holds.",
+  "_comment": "Owner-editable map from the Copilot CLI's tool names (lower case, in the preToolUse hook's toolCalls[].name, the postToolUse hook's toolName and Archon's run log) to the Claude tool names the hooks and the audit gates read. Copilot CLI 1.0.114: bash, create, skill, view, grep (its folder in `paths`, one string) and glob were seen in real sessions; powershell, edit, task and web_fetch are the CLI's documented hook names; str_replace_editor, web_search and update_todo are only in its documented Claude mapping. Left unmapped on purpose: apply_patch (one patch can touch any file, so the scope guard denies it to a fenced agent rather than read it as an Edit), ask_user, and a tool with no Claude equivalent (fetch_copilot_cli_documentation): each keeps its runtime name. `node .archon/scripts/copilot-audit.js --names <run-id>` lists the names a run log really holds. Sources and the payload shape: .archon/copilot/baseline.md.",
   "event": { "type": "tool_call", "nameField": "name", "inputField": "rawInput" },
   "tools": {
     "skill": { "as": "Skill", "key": "skill", "from": ["skill", "name", "skill_name"] },
@@ -8,7 +8,12 @@
     "edit": { "as": "Edit", "key": "file_path", "from": ["path", "file_path"] },
     "str_replace_editor": { "as": "Edit", "key": "file_path", "from": ["path", "file_path"] },
     "bash": { "as": "Bash", "key": "command", "from": ["command"] },
-    "grep": "Grep",
-    "glob": "Glob"
+    "powershell": { "as": "Bash", "key": "command", "from": ["command"] },
+    "grep": { "as": "Grep", "key": "path", "from": ["path", "paths"] },
+    "glob": "Glob",
+    "task": "Agent",
+    "web_fetch": "WebFetch",
+    "web_search": "WebSearch",
+    "update_todo": "TodoWrite"
   }
 }

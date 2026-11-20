@@ -12,6 +12,10 @@ build_workflow: build-feature-copilot
 # (manifest entries with when: local_ci) and prunes the unedited ones, kit doctor does not ask for them, and the build
 # workflows take GitHub's checks on the head as the verdict.
 local_ci: true
+# Backlog.md (kit/SPEC.md, Backlog switch): true takes a run's ticket from the Backlog when the request names a TASK id.
+# false: the project keeps its tickets elsewhere (Jira); install-tools.sh leaves Backlog.md out, a run takes the
+# pasted ticket text as its ticket (ticket.sh), and backlog/ is no bookkeeping folder (ci-skip.sh, affected-check.sh).
+backlog: true
 java_version: 26 # kit add takes JavaLanguageVersion.of(N) of build.gradle.kts, buildSrc/ or build-logic/; set to another, it refuses
 pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh, either stack: one <item>|<module>|<task>|<class> line each
 build_shape: # build-shape-check.sh; "-" turns one check off, with a notice

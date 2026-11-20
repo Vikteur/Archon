@@ -29,7 +29,7 @@ inputs from `*Mother`; per-field `assertThat(dto.getX()).isEqualTo(...)`.
 - Don't hand-write what a scaffold template generates, and don't patch around a wrong template in its output — fix the template.
 - Don't assert on a whole serialized JSON string — assert fields.
 - Don't skip the null/empty/enum edge cases — that's where mappers break.
-- Don't boot the application (`@QuarkusTest`) for a pure mapper test.
+- Don't boot the application (`@SpringBootTest`) for a pure mapper test.
 
 ## Definition of done
 - [ ] Base case rendered from the code map's scaffold templates; only the edge cases are hand-written.

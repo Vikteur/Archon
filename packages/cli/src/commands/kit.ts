@@ -253,17 +253,55 @@ export function templateVars(
     ...flattenKitConfig(parseYaml(kit.defaults) as unknown),
     ...flattenKitConfig(parseYaml(kitYamlText) as unknown),
     ...(javaVersion !== null ? { JAVA_VERSION: javaVersion } : {}),
+    ...profileVars(kit, kitYamlText),
     PROJECT_DIR: realpathSync(projectPath),
   };
 }
 
-/** Replace `@@KIT_<NAME>@@`; a missing key renders empty and is recorded once in `missing`. */
+/** The upper-snake name of a profile in an `@@KIT_IF_PROFILE_<NAME>@@` marker: openapi-contract is OPENAPI_CONTRACT. */
+function profileMarkerName(profile: string): string {
+  return profile.replace(/[^A-Za-z0-9]+/g, '_').toUpperCase();
+}
+
+/**
+ * One empty `IF_PROFILE_<NAME>` variable per installed profile (kit.yaml's profiles with the ones they require, else
+ * the defaults'), so a template line marked `@@KIT_IF_PROFILE_<NAME>@@` is kept for an installed profile and dropped
+ * for any other (see renderTemplate).
+ */
+function profileVars(kit: Kit, kitYamlText: string): Record<string, string> {
+  const recorded = stringList((parseYaml(kitYamlText) as Record<string, unknown> | null)?.profiles);
+  const requested =
+    recorded.length > 0
+      ? recorded
+      : stringList((parseYaml(kit.defaults) as Record<string, unknown> | null)?.profiles);
+  let installed: string[];
+  try {
+    installed = resolveProfiles(kit, requested);
+  } catch {
+    installed = requested;
+  }
+  return Object.fromEntries(installed.map(name => [`IF_PROFILE_${profileMarkerName(name)}`, '']));
+}
+
+const PROFILE_MARKER = /@@KIT_(IF_PROFILE_[A-Z0-9_]+)@@/g;
+
+/**
+ * Replace `@@KIT_<NAME>@@`; a missing key renders empty and is recorded once in `missing`. A line that carries an
+ * `@@KIT_IF_PROFILE_<NAME>@@` marker is first dropped whole, its line break too, when that profile is not installed
+ * (no such variable), and otherwise kept with the marker removed.
+ */
 export function renderTemplate(
   content: string,
   vars: Record<string, string>,
   missing: Set<string>
 ): string {
-  return content.replace(/@@KIT_([A-Z0-9_]+)@@/g, (_match, name: string) => {
+  const kept = content
+    .split(/(?<=\n)/)
+    .filter(line =>
+      [...line.matchAll(PROFILE_MARKER)].every(([, name]) => Object.hasOwn(vars, name))
+    )
+    .join('');
+  return kept.replace(/@@KIT_([A-Z0-9_]+)@@/g, (_match, name: string) => {
     if (Object.hasOwn(vars, name)) return vars[name];
     missing.add(name);
     return '';
@@ -1477,6 +1515,35 @@ export function checkHooks(projectPath: string): DoctorCheck {
     : { status: 'fail', name: 'hooks', detail: `missing scripts: ${absent.join(', ')}` };
 }
 
+/**
+ * The Copilot file-hooks switch in the project's .archon/config.yaml. Off (the provider's default), Archon's Copilot
+ * sessions never load .github/hooks, so no kit hook or guard runs in a workflow run.
+ */
+export function checkFileHooks(projectPath: string): DoctorCheck {
+  const name = 'fileHooks';
+  const file = join(projectPath, PROJECT_CONFIG);
+  if (!existsSync(file))
+    return { status: 'warn', name, detail: `${PROJECT_CONFIG} not found; run archon kit add` };
+  const doc = parseDocument(readFileSync(file, 'utf-8'), { uniqueKeys: false });
+  if (doc.errors.length > 0)
+    return { status: 'warn', name, detail: `${PROJECT_CONFIG} does not parse` };
+  const value: unknown = doc.getIn(['assistants', 'copilot', 'fileHooks']);
+  if (value === true)
+    return {
+      status: 'ok',
+      name,
+      detail: `assistants.copilot.fileHooks: true in ${PROJECT_CONFIG} (Copilot runs load .github/hooks)`,
+    };
+  return {
+    status: 'warn',
+    name,
+    detail:
+      value === undefined || value === null
+        ? `assistants.copilot.fileHooks is not set in ${PROJECT_CONFIG}: Copilot runs skip .github/hooks; run archon kit add`
+        : `assistants.copilot.fileHooks is ${String(value)} in ${PROJECT_CONFIG}: Copilot runs skip .github/hooks`,
+  };
+}
+
 export async function kitDoctorCommand(
   targetPath: string,
   kit: Kit,
@@ -1491,6 +1558,7 @@ export async function kitDoctorCommand(
   ];
   checks.push(...(await checkMcpServers(project, options.mcpTimeoutMs ?? 20000)));
   checks.push(checkHooks(project));
+  checks.push(checkFileHooks(project));
 
   const config = readKitYaml(project);
   if (config === null) {

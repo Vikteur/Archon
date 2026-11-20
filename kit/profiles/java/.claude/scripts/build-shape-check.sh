@@ -2,7 +2,7 @@
 # Checks the build's shape: the CI task names exist, only the application module applies the Quarkus plugin,
 # every usecase, adapter and gateway module is a bean archive, the fast-jar layout is produced, and no Python or
 # forbidden remnant (kit key build_shape.forbidden) is back. Run after ./gradlew build.
-# The stack (kit key `stack`, env KIT_STACK, default quarkus) picks the framework checks: on spring, only application
+# The stack (kit key `stack`, env KIT_STACK, default spring) picks the framework checks: on spring, only application
 # applies the Spring Boot plugin (bootJar), every usecase, adapter and gateway package lies inside the
 # @SpringBootApplication's component scan (Spring's form of the bean-archive rule), and the boot jar has the loader
 # layout. The project facts (the module list, the decision note, the forbidden remnant) are kit keys under build_shape
@@ -11,7 +11,7 @@ set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../.archon/scripts/kit-config.sh
 . "$here/../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { local e="${3:-}"; printf '%s' "${!e:-$2}"; }
-stack="$(kit_get stack quarkus KIT_STACK)"
+stack="$(kit_get stack spring KIT_STACK)"
 fail=0
 bad() { echo "FAIL: $1"; fail=1; }
 

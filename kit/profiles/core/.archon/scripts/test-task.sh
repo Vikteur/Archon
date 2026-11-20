@@ -2,7 +2,7 @@
 # Sourced, not run: the Gradle test task a test file runs in, by its JUnit tag, never by its class name (PR #99; the
 # sets are defined in build.gradle.kts). Used by .claude/scripts/affected-check.sh (step-gate.sh
 # shared it until agent-feature was removed, owner decision D19, 2026-10-20).
-# The stack (kit key `stack`, env KIT_STACK, default quarkus) decides the start-up set: on quarkus, startupTest holds
+# The stack (kit key `stack`, env KIT_STACK, default spring) decides the start-up set: on quarkus, startupTest holds
 # the @Tag("quarkus-unit-test") refusal tests that boot Quarkus; a spring build has no such set and no such tag, so
 # there that tag picks nothing and the file falls through to the next rule. resource-test and integration are the same
 # on both stacks.
@@ -10,7 +10,7 @@
 . "$(dirname "${BASH_SOURCE[0]}")/kit-config.sh" 2>/dev/null || kit_get() { local e="${3:-}"; printf '%s' "${!e:-$2}"; }
 # test_startup_tag: the JUnit tag of the start-up set on this stack, or nothing.
 test_startup_tag() {
-  case "$(kit_get stack quarkus KIT_STACK)" in
+  case "$(kit_get stack spring KIT_STACK)" in
     spring) ;;
     *) printf '%s' quarkus-unit-test ;;
   esac

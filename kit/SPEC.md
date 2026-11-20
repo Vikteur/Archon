@@ -54,7 +54,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 
 | Profile | Requires | Content |
 |---|---|---|
-| `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks, `.github/copilot-instructions.md` and the instructions templates. |
+| `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks (`.githooks/` for a person, switched on by `scripts/install-hooks.sh`: `commit-msg`, and `pre-push`, which runs `push-guard.sh check`; `.archon/githooks/` for Archon processes, switched on by the `.archon/config.yaml` env), `.github/copilot-instructions.md` and the instructions templates. |
 | `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
 | `java-quarkus` | java | The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus-flavoured scaffold templates, and the source's run skill → `run-app`. |
 | `java-spring` | java | The same paths as `java-quarkus`, rewritten for Spring Boot. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
@@ -123,6 +123,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 - **Lists.** A list value renders as its items joined with `, `.
 - **Missing keys.** A missing key renders empty, and `kit add` warns about it.
 - **Built-in.** `@@KIT_PROJECT_DIR@@` is not a kit.yaml key: `kit add` renders it as the absolute path of the project it installs into. It replaces the source's main checkout path, for example in the workflows' `denied_tools`.
+- **Per-profile lines.** `@@KIT_IF_PROFILE_<NAME>@@`, where NAME is a profile in upper snake case (`openapi-contract` is `OPENAPI_CONTRACT`), marks a whole line: `kit add` keeps the line, without the marker, when that profile is installed (kit.yaml's profiles with the ones they require), and drops it, line break included, otherwise. A file that names a skill or a tool of one profile marks that line, so a project without the profile never sees it. An archon older than the marker renders it empty and keeps the line.
 - **No overlap.** The syntax never clashes with mustache `{{ }}` or shell `${ }`.
 - **Prefer runtime reads.** A script that can read `.archon/kit.yaml` at runtime should do that, using yq with a default. Use placeholders only where a file can't read config: skill or agent markdown, and JSON hook or MCP files.
 
@@ -136,6 +137,7 @@ gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
 build_workflow: build-feature-copilot   # run-metrics.js, retro-stopped.sh and plan-context.sh find the build workflow by this
 local_ci: true               # false: the project runs its own CI; see Local CI switch
+backlog: true                # false: no Backlog.md, a run's ticket is the pasted text; see Backlog switch
 ci:
   gradle_line: "./gradlew test integrationTest build"   # ci.yml's Gradle run and ci-workflow-check.sh's required one
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
@@ -263,6 +265,23 @@ and by default its OSS Index analyzer sends the dependency coordinates to Sonaty
 artifact hashes to Maven Central (both can be turned off). Snyk and Sonatype's own plugins need a token. CycloneDX
 writes an SBOM and checks nothing; Gradle's dependency verification checks checksums and signatures, not advisories.
 
+## Backlog switch (`backlog`)
+
+`backlog: true`, the default of `kit.defaults.yaml`, keeps tickets in Backlog.md: a request that names a TASK id builds
+that ticket. A project that keeps its tickets elsewhere (Jira) sets `backlog: false` (`archon kit setup` writes it
+unless `--backlog` is given). The scripts read the switch at runtime (`kit_get backlog true`, env `KIT_BACKLOG`):
+
+- `install-tools.sh` leaves Backlog.md out;
+- `ticket.sh` (the build workflow's `ticket` node) never asks the Backlog: the request text is the ticket. It writes
+  that text unchanged to the run's `ticket.md`, in the shape of a Backlog ticket (a `Ticket - <first line>` title,
+  the `Labels:` line of the text, the text under `Description:`), so every node reads one file either way, and takes
+  the STOP labels (`stop-…`) from that `Labels:` line. A request without a TASK id is read the same way with `true`;
+- the pull request text names no Backlog ticket (`pr_note` of the `ticket` node is empty);
+- `backlog/` is no bookkeeping folder: a commit under it runs CI (`ci-skip.sh`, `ci-cost.sh`), and `affected-check.sh`
+  prints it as not checked locally.
+
+`.archon/scripts/test/ticket.test.sh` covers both modes.
+
 ## Conversion rules (kit-sync)
 
 | Source | Target | Rule |
@@ -271,7 +290,7 @@ writes an SBOM and checks nothing; Gradle's dependency verification checks check
 | `.claude/skills/<n>/**` | `.github/skills/<n>/**` | Copied verbatim; the source's run skill (`run-<KIT_SOURCE>`) ships as `run-app`. `.claude/skills/archon-cli/**` does not ship (the `.agents/skills/archon-cli` copy does). In SKILL.md frontmatter it keeps `name`, `description`, `license` and `allowed-tools`, and drops the rest. A dropped `disallowed-tools` or `disable-model-invocation` is added as a body note under `## On Copilot CLI`. |
 | `.agents/skills/archon-cli/**` | the same path | Verbatim. |
 | `.claude/settings.json` `hooks` | `.github/hooks/kit.json` | `{"version":1,"hooks":{<event>:[{"type":"command","bash":"bash .github/hooks/dispatch.sh <ClaudeEvent> '<matcher>' <script path> <args>","timeoutSec":N}]}}`. Events map SessionStart→sessionStart, UserPromptSubmit→userPromptSubmitted, PreToolUse→preToolUse, PostToolUse→postToolUse, PostToolUseFailure→postToolUseFailure, SubagentStart→subagentStart, SubagentStop→subagentStop, SessionEnd→sessionEnd, Stop→agentStop. |
-| — | `.github/hooks/dispatch.sh` | Generated, a fixed script. It reads stdin, normalizes the payload with `.claude/hooks/scripts/payload.sh`, applies the Claude matcher regex (anchored) to the normalized tool name, runs the script with the normalized payload (from `.claude/hooks` for a script under it, else the project root; a missing script is a no-op), turns a PreToolUse exit 2 into a deny with stderr as the reason, and translates a Claude `hookSpecificOutput.permissionDecision` into Copilot's top-level `permissionDecision`/`permissionDecisionReason`. |
+| — | `.github/hooks/dispatch.sh` | Generated, a fixed script. It reads stdin, normalizes the payload with `.claude/hooks/scripts/payload.sh`, applies the Claude matcher regex (anchored) to the normalized tool name, runs the script with the normalized payload (from `.claude/hooks` for a script under it, else the project root; a missing script is a no-op), turns a PreToolUse exit 2 into a deny with stderr as the reason, and translates a Claude `hookSpecificOutput.permissionDecision` into Copilot's top-level `permissionDecision`/`permissionDecisionReason`. A batched payload (Copilot CLI 1.0.114 preToolUse: `{cwd, sessionId, toolCalls: [{id, name, args}]}`) is split into one run per call (`toolCallId`, `toolName`, `toolArgs`); on PreToolUse the first denied call denies the batch, and a batch it cannot read (no jq) is denied. The kit's copy is edited in `kit/` (the kit is no longer synced); `DISPATCH_SH` in `scripts/kit-sync-convert.ts` is the older single-call version. |
 | `.claude/settings.json` `permissions.deny` | `.archon/copilot/deny.json` | Read by `run-guard.sh`, which enforces it in every session, not only in run worktrees. |
 | `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. A rule without `paths:` (general) gets `applyTo: "**"`. |
 | MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/contract-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
@@ -318,10 +337,10 @@ writes an SBOM and checks nothing; Gradle's dependency verification checks check
   list overrides the never-ship list; a suite of a never-ship script never ships either.
 - Tooling the owner removed from the kit (owner decision 2026-11-20), in `NEVER_SHIP_GROUPS` too, so a sync never
   brings it back and a shipped line that names one of its scripts fails the leak check. That is the Groma architecture
-  map (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the `.githooks/pre-push` hook that ran
-  the map check, and their suites), the mutation gate (`mutation-gate.sh`, PIT on the changed classes, its suite and
-  fixtures) and the image CI job's check (`image-check.sh` and its suite). The kit's CI job set is `archon-scripts`
-  and `test`.
+  map (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the source's `.githooks/pre-push` hook that
+  ran the map check (the kit's own `.githooks/pre-push` runs the push guard), and their suites), the mutation gate
+  (`mutation-gate.sh`, PIT on the changed classes, its suite and fixtures) and the image CI job's check
+  (`image-check.sh` and its suite). The kit's CI job set is `archon-scripts` and `test`.
 - What kit-sync strips with them: the `.claude/settings.json` hooks and deny entries that name a never-ship file, and
   the never-ship agents' entries in `.claude/hooks/agent-scopes.json`. A shipped line that still names a never-ship
   file (a script's basename, `delegator.md`, `delegator.agent.md` or a systemd unit) fails the leak check; the
@@ -342,8 +361,8 @@ The Copilot build workflow ships standalone (`scripts/kit-sync-standalone.ts`, a
   reaches the agents as reviewer notes. A run in a container cannot pause, so run it in a worktree.
 - **The run ends at `ready`.** The nodes after it (`auto-merge`, `merged`, `main-ci`, `ticket-files`, `finalize`,
   `close-out`) are cut. Once CI on the head is green the pull request is marked ready for review, and a team member
-  reviews, merges it and closes the Backlog ticket (the run's `map-links` edit is left uncommitted in the backlog
-  checkout for them). A red head or a conflict at `ready` fails the run, so a person sees it. After the merge,
+  reviews, merges it and closes the ticket (with Backlog.md, the run's `map-links` edit is left uncommitted in the
+  backlog checkout for them). A red head or a conflict at `ready` fails the run, so a person sees it. After the merge,
   `cleanup-merged.sh <branch>` deletes the run's branch and worktree.
 - **Checked.** The cut expects exactly those tail ids after `ready`, `implement` to depend on `stop-route` once, and
   every text rewrite to match its count; a result that still reads a cut node's output or names a cut script or the
@@ -376,3 +395,33 @@ beside it and commits it; the kit never writes, prunes or overwrites it. scope-g
 
 Before this, the file replaced `agent-scopes.json` whole, a narrowing hook for the source's removed `test-ban.sh`;
 the kit drops that meaning (no kit file writes it).
+
+## Fences per workflow node (Copilot CLI)
+
+Owner decision 2026-11-20: the agent fences apply to the build workflow's nodes. Archon sets `ARCHON_NODE_EXECUTION`
+(JSON; its `path` is the node id, `<loop>.<id>` inside a loop) and `WORKFLOW_ID` for a node's whole Copilot CLI
+session, and the preToolUse hooks see both (verified on Copilot CLI 1.0.114).
+
+- `.archon/copilot/hooks/run-guard.sh` enforces the node's own `denied_tools`, read from the run's workflow: the
+  file Archon's snapshot of the run (`<archon home>/workspaces/*/*/workflow-source/runs/<WORKFLOW_ID>/manifest.json`,
+  `workflow_name`) names, else the project's `build-feature-copilot.yaml` (`RUN_GUARD_WORKFLOW` overrides it). Copilot
+  keeps only the plain tool names of that list and drops `Bash(...)` patterns, so the guard matches each pattern
+  against the whole command and against each `&&`, `||`, `;`, `&`, `|` or newline segment, in every session, not
+  only in run worktrees. A node the workflow does not hold gets every node's patterns. A node path that is not a plain
+  id, a workflow it cannot find, a `denied_tools` that is not a one-line or multi-line flow list, or a payload it cannot
+  read denies. The no-`backlog task` and other run rules are unchanged.
+- `.github/hooks/dispatch.sh` exports `KIT_NODE` on PreToolUse (the path's last segment; `?` when it is not readable).
+  `.claude/hooks/scripts/scope-guard.sh` then fences every call as the agent `.archon/copilot/node-fences.json` maps the
+  node to, plus that node's additions: `commandAllowlist` prefixes (the `agent-scopes.local.json` entry rules),
+  `allowedFilePaths` (a project path or glob, or `$RUN_ARTIFACTS/`, the run's own
+  `<archon home>/workspaces/<owner>/<repo>/artifacts/runs/<WORKFLOW_ID>/`, which also makes a `$(cat <file>)` of a file
+  there plain text in a command) and `env` (names a command may set in front of an allowed command; never `PATH`,
+  `HOME`, `IFS`, `BASH_ENV` and the like, nor a `LD_`, `GIT_`, `KIT_`, `CLAUDE_`, `COPILOT_`, `ARCHON_`, `GH_` or
+  similar prefix). A subagent of another fenced type inside the node is fenced by its own fence as well.
+- A node not in the file gets the strictest common set the guard computes from it: the commands every listed node may
+  run, and only the paths every one of them may write. A missing file, invalid JSON, an unknown key or agent, or an
+  entry that breaks a rule denies every call inside a node. No fenced agent may write the file.
+- `kit.json` adds a `'*'` preToolUse entry with `--other-tools`, so a tool no other entry checks (`apply_patch`, ...)
+  is denied inside a node; outside a node it does nothing.
+- Outside a node (no `ARCHON_NODE_EXECUTION`) both guards behave as before.
+- Tested by `.archon/scripts/test/node-fence.test.sh` (kit-only).
