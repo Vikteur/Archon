@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Pre-push for a person's push (owner decision D14, 2026-10-20: a push to main is refused). scripts/install-hooks.sh sets
+# core.hooksPath=.githooks for the clone, and git then no longer runs <git common dir>/hooks/pre-push, where
+# push-guard.sh install puts the guard. This file runs that guard the same way: push-guard.sh check from the main
+# checkout, with git's arguments and stdin. Archon processes use .archon/githooks/pre-push instead (their env sets
+# core.hooksPath=.archon/githooks).
+#   Called by git: pre-push <remote> <url>, one "<local ref> <local sha> <remote ref> <remote sha>" line per ref on stdin.
+# Exit: the guard's exit code (non-zero stops the push); 1 when the guard is missing or not executable (fails closed).
+set -uo pipefail
+main=$(git worktree list --porcelain 2>/dev/null | sed -n '1s/^worktree //p')
+[ -n "$main" ] || { echo "pre-push: cannot find the main checkout; push refused" >&2; exit 1; }
+guard="$main/.archon/scripts/push-guard.sh"
+[ -f "$guard" ] || { echo "pre-push: $guard is missing; push refused" >&2; exit 1; }
+[ -x "$guard" ] || { echo "pre-push: $guard is not executable; push refused" >&2; exit 1; }
+exec "$guard" check "$@"

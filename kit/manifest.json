@@ -654,7 +654,7 @@
       "template": false,
       "origin": ".archon/scripts/test/commit-msg.test.sh",
       "kind": "script",
-      "sha256": "b69a479f86ab2f341c8940e2826de900c638ba0771515cd48b975572b326599a"
+      "sha256": "0e3652a609232e7307b244e403e016101f1d3c874ba5d4a34e0174ed17836e41"
     },
     {
       "path": ".archon/scripts/test/copilot-audit.test.sh",
@@ -1253,6 +1253,15 @@
       "sha256": "b156884fac0d80cf8043eddb1d306ce02e8ec681d412b1d8363841a13b9982ae"
     },
     {
+      "path": ".githooks/pre-push",
+      "profile": "core",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "hook",
+      "sha256": "c75d393303a2bd4a2867572f0ef4108532004514d00296d7b92b65d620af7d1d"
+    },
+    {
       "path": ".github/agents/design-critic.agent.md",
       "profile": "core",
       "mode": "0644",
@@ -1642,7 +1651,7 @@
       "template": false,
       "origin": "scripts/install-hooks.sh",
       "kind": "script",
-      "sha256": "3cb26214b3d9f5519813e9ac8bfe6fe0b558d6d0a1e0ea895a6ac5b9bc4a8244"
+      "sha256": "406a0bea45028bfd9a6479099388d265eadfd81db99c957ccbc7231217551cb0"
     },
     {
       "path": "scripts/install-tools.sh",

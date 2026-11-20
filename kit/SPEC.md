@@ -54,7 +54,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 
 | Profile | Requires | Content |
 |---|---|---|
-| `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks, `.github/copilot-instructions.md` and the instructions templates. |
+| `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks (`.githooks/` for a person, switched on by `scripts/install-hooks.sh`: `commit-msg`, and `pre-push`, which runs `push-guard.sh check`; `.archon/githooks/` for Archon processes, switched on by the `.archon/config.yaml` env), `.github/copilot-instructions.md` and the instructions templates. |
 | `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
 | `java-quarkus` | java | The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus-flavoured scaffold templates, and the source's run skill → `run-app`. |
 | `java-spring` | java | The same paths as `java-quarkus`, rewritten for Spring Boot. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
@@ -249,10 +249,10 @@ exists), and read the switch at runtime (`kit_get local_ci true`, env `KIT_LOCAL
   list overrides the never-ship list; a suite of a never-ship script never ships either.
 - Tooling the owner removed from the kit (owner decision 2026-11-20), in `NEVER_SHIP_GROUPS` too, so a sync never
   brings it back and a shipped line that names one of its scripts fails the leak check. That is the Groma architecture
-  map (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the `.githooks/pre-push` hook that ran
-  the map check, and their suites), the mutation gate (`mutation-gate.sh`, PIT on the changed classes, its suite and
-  fixtures) and the image CI job's check (`image-check.sh` and its suite). The kit's CI job set is `archon-scripts`
-  and `test`.
+  map (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the source's `.githooks/pre-push` hook that
+  ran the map check (the kit's own `.githooks/pre-push` runs the push guard), and their suites), the mutation gate
+  (`mutation-gate.sh`, PIT on the changed classes, its suite and fixtures) and the image CI job's check
+  (`image-check.sh` and its suite). The kit's CI job set is `archon-scripts` and `test`.
 - What kit-sync strips with them: the `.claude/settings.json` hooks and deny entries that name a never-ship file, and
   the never-ship agents' entries in `.claude/hooks/agent-scopes.json`. A shipped line that still names a never-ship
   file (a script's basename, `delegator.md`, `delegator.agent.md` or a systemd unit) fails the leak check; the
