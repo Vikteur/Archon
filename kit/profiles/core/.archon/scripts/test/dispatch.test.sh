@@ -24,6 +24,7 @@ cat > "$proj/.claude/hooks/scripts/probe.sh" <<'EOF'
 #!/usr/bin/env bash
 in="$(cat)"
 printf '%s\n' "args=$*" "$in" > "$PROBE_LOG"
+printf '%s' "${KIT_NODE-unset}" > "$PROBE_LOG.node"
 case "${PROBE:-}" in
   deny2)  echo "probe: not this file" >&2; exit 2 ;;
   deny2q) echo 'probe: say "no"' >&2; exit 2 ;;
@@ -58,6 +59,23 @@ expect "a Copilot view call is Read, its path is file_path" "Read|docs/memory.md
   "$(sed -n 2p "$PROBE_LOG" | jq -r '[.tool_name, .tool_input.file_path] | join("|")')"
 dispatch PreToolUse 'Bas' "$probe" <<< "$copilot_bash" >/dev/null
 expect "the matcher is anchored: Bas does not match Bash" no "$(ran)"
+dispatch PreToolUse 'bash' "$probe" <<< "$copilot_bash" >/dev/null
+expect "the matcher reads tool names in any case: bash matches Bash" yes "$(ran)"
+dispatch PreToolUse 'Monitor' "$probe" <<< '{"tool_name":"monitor","tool_input":{}}' >/dev/null
+expect "the matcher reads tool names in any case: Monitor matches monitor" yes "$(ran)"
+dispatch PreToolUse 'bas' "$probe" <<< "$copilot_bash" >/dev/null
+expect "in any case the matcher stays anchored: bas does not match Bash" no "$(ran)"
+dispatch PreToolUse 'Read|Grep|Glob' "$probe" <<< '{"tool_name":"MONITOR","tool_input":{}}' >/dev/null
+expect "in any case another name still does not match" no "$(ran)"
+nx='{"runId":"r","path":"implement.build-step","invocation":1}'
+ARCHON_NODE_EXECUTION="$nx" dispatch PostToolUse '' "$probe" <<< "$copilot_bash" >/dev/null
+expect "KIT_NODE is exported on every event inside a node (PostToolUse, for the audit log)" build-step "$(cat "$PROBE_LOG.node")"
+ARCHON_NODE_EXECUTION="$nx" dispatch PreToolUse 'Bash' "$probe" <<< "$copilot_bash" >/dev/null
+expect "KIT_NODE on PreToolUse" build-step "$(cat "$PROBE_LOG.node")"
+ARCHON_NODE_EXECUTION='{"path":"a b"}' dispatch SessionStart '' "$probe" <<< '{"sessionId":"s1"}' >/dev/null
+expect "an unreadable node path is KIT_NODE ?" '?' "$(cat "$PROBE_LOG.node")"
+( unset ARCHON_NODE_EXECUTION KIT_NODE; dispatch PostToolUse '' "$probe" <<< "$copilot_bash" >/dev/null )
+expect "outside a node KIT_NODE is not set" unset "$(cat "$PROBE_LOG.node")"
 dispatch PreToolUse '*' "$probe" <<< "$copilot_view" >/dev/null
 expect "matcher * runs on every tool" yes "$(ran)"
 dispatch SessionStart '' "$probe" <<< '{"sessionId":"s1"}' >/dev/null

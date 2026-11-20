@@ -278,7 +278,11 @@ unless `--backlog` is given). The scripts read the switch at runtime (`kit_get b
   the STOP labels (`stop-…`) from that `Labels:` line. A request without a TASK id is read the same way with `true`;
 - the pull request text names no Backlog ticket (`pr_note` of the `ticket` node is empty);
 - `backlog/` is no bookkeeping folder: a commit under it runs CI (`ci-skip.sh`, `ci-cost.sh`), and `affected-check.sh`
-  prints it as not checked locally.
+  prints it as not checked locally;
+- `.archon/copilot/hooks/run-guard.sh` lets a run's shell run `backlog task` (owner decision 1, 2026-11-20): it refuses
+  it without `BACKLOG_CWD=` only while the main checkout's `kit_get backlog true` (`KIT_CONFIG=<main>/.archon/kit.yaml`)
+  is not `false`. An absent key, a missing `kit-config.sh` or no main checkout keeps the rule, and the run's own
+  `kit.yaml` cannot lift it.
 
 `.archon/scripts/test/ticket.test.sh` covers both modes.
 
@@ -409,8 +413,27 @@ session, and the preToolUse hooks see both (verified on Copilot CLI 1.0.114).
   against the whole command and against each `&&`, `||`, `;`, `&`, `|` or newline segment, in every session, not
   only in run worktrees. A node the workflow does not hold gets every node's patterns. A node path that is not a plain
   id, a workflow it cannot find, a `denied_tools` that is not a one-line or multi-line flow list, or a payload it cannot
-  read denies. The no-`backlog task` and other run rules are unchanged.
-- `.github/hooks/dispatch.sh` exports `KIT_NODE` on PreToolUse (the path's last segment; `?` when it is not readable).
+  read denies. The other run rules are unchanged; the no-`backlog task` rule follows the backlog switch (Backlog switch).
+  Tool names match in any case in every list the guard reads (`deny.json`, the node's `denied_tools`): a node that
+  denies `Monitor` also refuses `monitor`.
+- No node and no run changes a hook folder: `.github/hooks`, `.archon/copilot` (its `tools.json`, `deny.json` and
+  `node-fences.json` steer the guards), `.claude/hooks`, `.archon/githooks`, `.githooks` and `.git/hooks`, in any case,
+  at any depth and through a symlink. Inside a run worktree or a node, `run-guard.sh` refuses an edit tool on a path in
+  them (`Write`, `Edit`, `MultiEdit`, `NotebookEdit`, Copilot `create`/`edit`/`str_replace_editor`), an `apply_patch`
+  that names one, and a shell (or `write_bash`) command that writes one: redirects, `tee`, `sed -i`, `perl -i`, `awk -i
+  inplace`, `cp`/`mv`/`ln`/`install`/`rsync`/`dd` into them, `rm`/`touch`/`chmod`/`truncate` and the like on them (a
+  recursive one also on a folder that holds them), `find -delete`/`-exec` over them, `git rm`/`mv`/`checkout`/`restore`/
+  `apply` on them or `git -C` into them, `patch`, `tar -x`/`unzip` into them, and inline interpreter code (`node -e`,
+  `python -c`, ...) or a PowerShell write that names one. It reads the command as bash does (quotes, `$'..'`, globs,
+  braces, `~`, variables set earlier in the command, `cd`, `bash -c`, `eval`, heredocs, `$(...)`); a write target it
+  cannot read (command output, an unknown variable, `xargs` input) is refused when the command names `hooks` or
+  `copilot`. Reading them stays allowed, and outside a run and a node nothing changes. Not caught: a path built so the
+  command text never names it, and a script file the agent wrote and then runs. `scope-guard.sh` holds the same folders
+  out of every node's write fence, also a fence that may write anywhere.
+- `.github/hooks/dispatch.sh` exports `KIT_NODE` on every event (the path's last segment; `?` when it is not readable),
+  and matches its matcher against the tool name in any case. Inside a node `audit-log.sh` names the node in its
+  records: `agent` is the node where it was `main` (a subagent or a launcher role keeps its name) and a `node` field
+  holds it (`KIT_NODE`, else the path in `ARCHON_NODE_EXECUTION`); a record outside a node is unchanged.
   `.claude/hooks/scripts/scope-guard.sh` then fences every call as the agent `.archon/copilot/node-fences.json` maps the
   node to, plus that node's additions: `commandAllowlist` prefixes (the `agent-scopes.local.json` entry rules),
   `allowedFilePaths` (a project path or glob, or `$RUN_ARTIFACTS/`, the run's own
