@@ -88,6 +88,24 @@ printf '{"workflow_name":"gone"}' >"$snap/manifest.json"
 rg_case "run-guard: a snapshot without its workflow denies" deny plan 'git status' 'not in the snapshot'
 mv "$snap" "$tmp/snap.off"
 
+# Tool names match in any case: a node whose denied_tools hold Monitor may not call monitor.
+printf 'nodes:\n  - id: plan\n    denied_tools: ["Monitor", "Bash(*gradlew*)"]\n  - id: explore\n' >"$tmp/mon.yaml"
+for t in Monitor monitor MONITOR; do
+  rg plan "$(jq -cn --arg t "$t" --arg d "$proj" '{toolName:$t,toolArgs:{},cwd:$d}')" RUN_GUARD_WORKFLOW="$tmp/mon.yaml"
+  if [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -qF 'hold Monitor'; then ok "run-guard: denied_tools Monitor denies $t"; else bad "run-guard: denied_tools Monitor denies $t" "$out"; fi
+done
+rg explore "$(jq -cn --arg d "$proj" '{toolName:"monitor",toolArgs:{},cwd:$d}')" RUN_GUARD_WORKFLOW="$tmp/mon.yaml"
+if [ "$rc" -eq 0 ]; then ok "run-guard: a node that does not deny Monitor may call monitor"; else bad "run-guard: a node that does not deny Monitor may call monitor" "$out"; fi
+# The hook folders: a node changes none of them, also outside a run worktree; reading them stays allowed.
+rg_case "run-guard: a node may not redirect into a hook folder" deny implement.build-step 'echo x > .github/hooks/kit.json' 'hook folders'
+rg_case "run-guard: a node may not sed -i a hook script" deny implement.build-step 'sed -i s/a/b/ .claude/hooks/scripts/scope-guard.sh' 'hook folders'
+rg_case "run-guard: a node may not cp over the node fences" deny ci-fix.fix 'cp /tmp/x .archon/copilot/node-fences.json' 'hook folders'
+rg_case "run-guard: a node may not rm the git hooks" deny review 'rm -rf .githooks' 'hook folders'
+rg_case "run-guard: a node may read a hook folder" allow implement.build-step 'cat .github/hooks/kit.json'
+rg_case "run-guard: outside a node and a run a hook folder edit passes" allow "" 'echo x > .github/hooks/kit.json'
+rg plan "$(jq -cn --arg d "$proj" '{toolName:"create",toolArgs:{path:".claude/hooks/x.sh",file_text:"x"},cwd:$d}')"
+if [ "$rc" -eq 2 ] && printf '%s' "$out" | grep -qF 'hook folders'; then ok "run-guard: a node may not create a file in a hook folder"; else bad "run-guard: a node may not create a file in a hook folder" "$out"; fi
+
 # ── scope-guard through dispatch.sh: the fence of the node's agent ─────────────────────────────────────────────────
 # sg <node path|""> <matcher> <payload json> [extra script arg] [VAR=value...]: the hook's stdout as Copilot runs it
 sg() {
@@ -134,6 +152,14 @@ cmd "build-step: the full suite stays off the developer list" deny implement.bui
 put "build-step: may write any project path (the developer fence)" allow implement.build-step app/src/main/java/x/A.java
 put "build-step: may not change the node fences" deny implement.build-step .archon/copilot/node-fences.json 'node fences'
 put "build-step: may not change the agent fences" deny implement.build-step .claude/hooks/agent-scopes.json 'agent fences'
+put "build-step: may not write .github/hooks (the developer fence holds the hook folders out)" deny implement.build-step .github/hooks/kit.json 'hook folder'
+put "build-step: may not write .claude/hooks" deny implement.build-step .claude/hooks/scripts/scope-guard.sh 'hook folder'
+put "build-step: may not write .archon/copilot" deny implement.build-step .archon/copilot/tools.json 'hook folder'
+put "build-step: may not write .archon/githooks" deny implement.build-step .archon/githooks/pre-commit 'hook folder'
+put "build-step: may not write .githooks, in another case" deny implement.build-step .GitHooks/commit-msg 'hook folder'
+put "build-step: may not write .git/hooks through ./ and //" deny implement.build-step './.git//hooks/pre-push' 'hook folder'
+put "build-step: may not write a hook folder by its absolute path" deny implement.build-step "$proj/.github/hooks/x.json" 'hook folder'
+put "build-step: a folder called hooks elsewhere is writable" allow implement.build-step app/src/main/java/hooks/A.java
 cmd "review: commits a fix (its node addition)" allow review 'git commit -m "fix: x"'
 cmd "review: may not push (not on reviewer or node list)" deny review 'git push' 'reviewer (node review)'
 put "review: writes src/ (its node addition)" allow review app/src/main/java/x/A.java
@@ -178,6 +204,23 @@ nf_case "node path with .." '{"nodes":{"plan":{"agent":"analyst","allowedFilePat
 nf_case "node env name that changes the shell" '{"nodes":{"plan":{"agent":"analyst","env":["PATH"]}}}' 'changes how a shell'
 nf_case "node env name of git" '{"nodes":{"plan":{"agent":"analyst","env":["GIT_DIR"]}}}' 'changes how a shell'
 nf_case "node with an unknown key" '{"nodes":{"plan":{"agent":"analyst","readPaths":[]}}}' 'may set only'
+
+# A Claude payload with a tool name in another case meets the check of its name (it was let through before); a
+# Copilot name in another case stays denied (its arguments are not mapped).
+for t in WRITE Edit EDIT; do
+  out="$(cd "$proj/.claude/hooks" && jq -cn --arg t "$t" --arg d "$proj" '{tool_name:$t,tool_input:{file_path:"src/A.java"},agent_type:"analyst",cwd:$d}' \
+    | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+  sg_check "scope-guard: a Claude $t of src/ by the analyst meets the write fence" deny 'may only write under'
+done
+out="$(cd "$proj/.claude/hooks" && jq -cn --arg d "$proj" '{tool_name:"BASH",tool_input:{command:"rm -rf x"},agent_type:"analyst",cwd:$d}' \
+  | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+sg_check "scope-guard: a Claude BASH by the analyst meets its command list" deny 'may not run'
+out="$(cd "$proj/.claude/hooks" && jq -cn --arg d "$proj" '{toolName:"Create",toolArgs:{path:"src/A.java"},agentType:"analyst",cwd:$d}' \
+  | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+sg_check "scope-guard: a Copilot Create (any case, mapped through tools.json) meets the write fence" deny 'may only write under'
+out="$(cd "$proj/.claude/hooks" && jq -cn --arg d "$proj" '{toolName:"Apply_Patch",toolArgs:{input:"x"},agentType:"analyst",cwd:$d}' \
+  | env -u KIT_NODE -u ARCHON_NODE_EXECUTION CLAUDE_PROJECT_DIR="$proj" bash "$proj/.claude/hooks/scripts/scope-guard.sh" PreToolUse 2>/dev/null)"
+sg_check "scope-guard: a Copilot tool it cannot read stays denied in any case" deny "Copilot tool"
 
 echo "node-fence: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -352,6 +352,20 @@ check_path() {
     *.archon/copilot/node-fences.json|.archon/copilot/node-fences.json)
       deny "BLOCKED: agent '$agent' may not change the node fences ('$path')." ;;
   esac
+  # Inside an Archon workflow node no agent changes a hook folder, in any case, also one that may write anywhere
+  # (.archon/copilot/hooks/run-guard.sh refuses the shell writes into them). Reading them stays allowed.
+  if [ -n "${node:-}" ] && [ -n "$path" ]; then
+    local hp="/${path//\\//}/"
+    while [ "$hp" != "${hp//\/\//\/}" ]; do hp="${hp//\/\//\/}"; done
+    while [ "$hp" != "${hp//\/.\//\/}" ]; do hp="${hp//\/.\//\/}"; done
+    shopt -s nocasematch
+    case "$hp" in
+      */.github/hooks/*|*/.archon/copilot/*|*/.claude/hooks/*|*/.archon/githooks/*|*/.githooks/*|*/.git/hooks/*)
+        shopt -u nocasematch
+        deny "BLOCKED: agent '$agent' in Archon node '$node' may not change a hook folder ('$path'): no node changes .github/hooks, .archon/copilot, .claude/hooks, .archon/githooks, .githooks or .git/hooks; reading them stays allowed, a person changes them." ;;
+    esac
+    shopt -u nocasematch
+  fi
   [ "$mode" = "any" ] && allow
   [ -n "$path" ] || allow
 
@@ -597,7 +611,18 @@ case "$tool" in
   Write|Edit|MultiEdit|NotebookEdit) check_path ;;
   Bash) check_cmd ;;
   Read|Grep|Glob) check_read ;;
-  *) [ "$origin" = copilot ] || allow
+  *) # A Claude payload: a tool name in another case (write, BASH) meets the check of its name, as every deny list
+     # reads tool names in any case. A Copilot name in another case keeps the deny below: its arguments are not mapped.
+     if [ "$origin" != copilot ]; then
+       shopt -s nocasematch
+       case "$tool" in
+         write|edit|multiedit|notebookedit) shopt -u nocasematch; check_path ;;
+         bash) shopt -u nocasematch; check_cmd ;;
+         read|grep|glob) shopt -u nocasematch; check_read ;;
+       esac
+       shopt -u nocasematch
+       allow
+     fi
      copilot_tool_ok "$tool" || deny "BLOCKED: agent '$agent' may not use the Copilot tool '$tool': the scope guard cannot read what it does, so it denies it for a fenced agent. Use bash, view, create or edit; a new name for one of those belongs in .archon/copilot/tools.json."
      allow ;;
 esac
