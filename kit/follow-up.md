@@ -31,7 +31,9 @@ are not the change's, and the two ci-fix rounds make up most of its time and tok
   - the scratch project had no `integrationTest` task, which the default `ci.gradle_line` runs; the fix agent added it.
   - `build-shape-check.sh` (java profile) assumes a multi-module build: it asks for `:application:bootJar`, an
     `application/build.gradle.kts` with the Spring Boot plugin and a `@SpringBootApplication` under
-    `application/src/main/java`. A single-module project fails it. **Open.** The fix agent then edited the kit-owned
+    `application/src/main/java`. A single-module project fails it. **Fixed:** with no `include` in
+    `settings.gradle.kts`, the root project is the application module and every check holds for it (9 new cases, 8 fail
+    on the old script). The fix agent then edited the kit-owned
     `.claude/scripts/build-shape-check.sh` and its test in the run's branch; no fence stops a run from changing a
     kit-owned file. **Open.**
   Per node, run 4 against run B: explore 24.1 s, 187k, 5 [28.2 s, 201k, 6]; plan 59.4 s, 535k, 11 [31.0 s, 234k, 6];
@@ -64,9 +66,9 @@ plan and review are still heavier: review ran `gradlew test` 7 times for a one-e
 - **Run 3's denies: 37, and 37 `DENY` audit records** (verified: the same count per session in all 22 sessions, each
   with its node). `| tail -15` after affected-check went through 12 times; no agent used `git --no-pager`. The causes:
   - 15 in write-tests: its own retry line asks for `git log … step-base..HEAD`, and test-writer's list has no `git log`.
-    **Open, the owner's call:** add `git log` to test-writer's list, or have write-tests read `git diff --stat
-    <step-base> HEAD` instead (that needs `workflow-contracts`' retry case, which wants `git log` in every retrying
-    node, to accept it for write-tests).
+    **Fixed (owner, 2026-11-20: allow `git log`):** the `write-tests` node adds `git log` in `node-fences.json`, the
+    narrower route; test-writer's own list in `agent-scopes.json` is unchanged, so another test-writer use still may
+    not run it.
   - 11 `ls`/`cat`/`echo` compounds, despite the prompt line; 6 build-step `./gradlew test | tail` (the developer list
     has `./gradlew :` only; it fell back to affected-check); 4 compounds after `;`; 1 `echo` in plan.
   - 1 explore `grep` with 5 paths, denied by design, but its reason reads "jq failed", like a guard crash.
@@ -106,8 +108,8 @@ plan and review are still heavier: review ran `gradlew test` 7 times for a one-e
     2026-11-20).
   - `tail` or `head` with count options only is allowed right after a single `|` or `|&` (owner, 2026-11-20): not
     alone, not after `||` or `;`, not with a file operand, `-f` or a redirect, and what follows is still checked.
-  - `git --no-pager <cmd>` is read as `git <cmd>`, against the same lists (owner, 2026-11-20): `test-writer` still
-    may not run `git log`.
+  - `git --no-pager <cmd>` is read as `git <cmd>`, against the same lists (owner, 2026-11-20): `test-writer` may run
+    `git log` only in the `write-tests` node, which adds it.
   - A deny writes a `DENY` record to `.apm-audit/sessions/<session>.jsonl` (owner, 2026-11-20): the `TOOL` record's
     fields (the arg cut to 200 bytes a line), the node and the reason. Only when that folder exists (the guard makes
     none), and a failed write never changes the decision. `node-fence.test.sh` has 19 more cases (127); the old guard

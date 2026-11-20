@@ -180,7 +180,7 @@
       "template": false,
       "origin": ".archon/copilot/node-fences.json",
       "kind": "config",
-      "sha256": "cfd8e99c605fe70338016393bcc41a8c953057619910ed145c574b0e7f614b12"
+      "sha256": "cab5be2d3f96f430ddaad8deeb4c67b77308f1296450083eeaf26832bc6e51aa"
     },
     {
       "path": ".archon/copilot/tools.json",
@@ -825,7 +825,7 @@
       "template": false,
       "origin": ".archon/scripts/test/node-fence.test.sh",
       "kind": "script",
-      "sha256": "e29b07306afaf774f7812df1805fc01ea1487445c1af0195f57acbc8791879c1"
+      "sha256": "adb3df64feee236683129a4fbdbeb71ca49468d9eb63693103ff83d5b887bf59"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -1985,7 +1985,7 @@
       "template": false,
       "origin": ".claude/scripts/build-shape-check.sh",
       "kind": "script",
-      "sha256": "4e48eecb68acf562ef498da383f9b302ed442dc8adb43b93d5a01a57ea1303de"
+      "sha256": "9a669e00be2381c5ec338c20123d259dd41be166097435179eadfba29bde5e6a"
     },
     {
       "path": ".claude/scripts/ci-gate.sh",
@@ -2881,7 +2881,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "4cc468241bfd6494ac96623db4fc05c79a9732904263cf353a8277a4a8f52fde"
+      "sha256": "deb43290bcd3adb72bc98052dd1b364cef05398d0bf4b9f605af574bf4f7cb51"
     },
     {
       "path": "scripts/test/ci-gate.test.sh",

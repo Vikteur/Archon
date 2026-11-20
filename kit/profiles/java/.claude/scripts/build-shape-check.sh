@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Checks the build's shape: the CI task names exist, only the application module applies the Spring Boot plugin
 # (bootJar), every usecase, adapter and gateway package lies inside the @SpringBootApplication's component scan, the
-# boot jar has the loader layout, and no Python or forbidden remnant (kit key build_shape.forbidden) is back. Run after
+# boot jar has the loader layout, and no Python or forbidden remnant (kit key build_shape.forbidden) is back. In a
+# single-module build (a settings.gradle.kts that includes no module) the root project is the application module: the
+# same checks hold for it, and every package of its own src/main/java lies inside the scan (measured run 28ae4a05: the
+# check asked a single-module Spring Boot project for application/ and failed its CI). Run after
 # ./gradlew build. The project facts (the module list, the decision note, the forbidden remnant) are kit keys under
 # build_shape with this repo's values as defaults; `-` turns one off, and the check then says so.
 set -uo pipefail
@@ -11,6 +14,13 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fail=0
 bad() { echo "FAIL: $1"; fail=1; }
 
+# The application module: application/ in a multi-module build, the root project in a single-module one.
+if grep -qE '^[[:space:]]*include[[:space:]]*\(' settings.gradle.kts 2>/dev/null; then
+  single=0 pre=application/ boot_task=:application:bootJar app=application scan_mods='*-usecase *-adapter *-gateway'
+else
+  single=1 pre= boot_task=:bootJar app="the root project (a single-module build)" scan_mods=.
+fi
+
 # The tasks are the ones CI runs, kit key ci.gradle_line (its words without ./gradlew and the options), and the boot
 # jar's; with the key unset, test, integrationTest and build.
 tasks="" skip=0
@@ -19,7 +29,7 @@ for w in $(kit_get ci.gradle_line "" KIT_CI_GRADLE_LINE); do
   case "$w" in -x | --exclude-task) skip=1 ;; ./gradlew | gradlew | gradle | -*) ;; *) tasks="$tasks $w" ;; esac
 done
 [ -n "$tasks" ] || tasks=" test integrationTest build"
-for t in $tasks :application:bootJar; do
+for t in $tasks $boot_task; do
   ./gradlew -q help --task "$t" >/dev/null 2>&1 || bad "task $t does not exist"
 done
 
@@ -51,39 +61,46 @@ else
 fi
 
 # Only application builds a boot jar. Another module may apply the plugin, with its bootJar off; the root build may only
-# put it on the classpath (apply false).
+# put it on the classpath (apply false). In a single-module build the root build applies it (not apply false).
 splugin='id\("org\.springframework\.boot"\)|alias\(libs\.plugins\.spring\.boot\)'
-grep -qE "$splugin" application/build.gradle.kts || bad "application must apply the Spring Boot plugin"
+if [ "$single" -eq 1 ]; then
+  grep -E "$splugin" build.gradle.kts 2>/dev/null | grep -qv 'apply false' || bad "$app must apply the Spring Boot plugin"
+else
+  grep -qE "$splugin" application/build.gradle.kts || bad "application must apply the Spring Boot plugin"
+fi
 for f in $(grep -lE "$splugin" */build.gradle.kts 2>/dev/null); do
-  [ "$f" = application/build.gradle.kts ] && continue
+  [ "$f" = application/build.gradle.kts ] && [ "$single" -eq 0 ] && continue
   grep -q '"bootJar"' "$f" && grep -q 'enabled = false' "$f" ||
-    bad "$f applies the Spring Boot plugin without turning its bootJar off; only application builds an app"
+    bad "$f applies the Spring Boot plugin without turning its bootJar off; only $app builds an app"
 done
-! grep -E "$splugin" build.gradle.kts | grep -qv 'apply false' || bad "the root build may apply the Spring Boot plugin only with apply false"
+[ "$single" -eq 1 ] || ! grep -E "$splugin" build.gradle.kts | grep -qv 'apply false' ||
+  bad "the root build may apply the Spring Boot plugin only with apply false"
 # Spring finds a module's beans only inside the component scan: every package of a usecase, adapter or gateway module
-# lies under a scanBasePackages entry of the @SpringBootApplication (its own package when it names none).
-boot=$(grep -rlE '^@SpringBootApplication' application/src/main/java 2>/dev/null | head -1)
+# lies under a scanBasePackages entry of the @SpringBootApplication (its own package when it names none); in a
+# single-module build, every package of src/main/java.
+boot=$(grep -rlE '^@SpringBootApplication' "${pre}src/main/java" 2>/dev/null | head -1)
 if [ -z "$boot" ]; then
-  bad "no @SpringBootApplication class under application/src/main/java"
+  bad "no @SpringBootApplication class under ${pre}src/main/java"
 else
   ann=$(tr '\n' ' ' <"$boot" | grep -oE '@SpringBootApplication *(\([^)]*\))?' | head -1)
   bases=$(grep -oE 'scanBasePackages *= *(\{[^}]*\}|"[^"]*")' <<<"$ann" | grep -oE '"[^"]+"' | tr -d '"')
   [ -n "$bases" ] || bases=$(sed -nE 's/^package +([a-zA-Z0-9_.]+);.*/\1/p' "$boot" | head -1)
-  outside=$(for m in *-usecase *-adapter *-gateway; do
+  outside=$(for m in $scan_mods; do
     [ -d "$m/src/main/java" ] || continue
+    label=$m; [ "$m" = . ] && label=root
     grep -rhoE '^package +[a-zA-Z0-9_.]+;' "$m/src/main/java" --include='*.java' | sed -E 's/^package +//; s/;$//' | sort -u |
       while IFS= read -r p; do
         hit=0
         for b in $bases; do case "$p" in "$b"|"$b".*) hit=1 ;; esac; done
-        [ "$hit" -eq 1 ] || echo "$m:$p"
+        [ "$hit" -eq 1 ] || echo "$label:$p"
       done
   done | paste -sd' ' -)
   [ -z "$outside" ] || bad "packages outside the component scan of $boot ($(printf '%s ' $bases)): $outside"
 fi
 
-jar=$(ls application/build/libs/*.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -1)
+jar=$(ls "${pre}"build/libs/*.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -1)
 if [ -z "$jar" ]; then
-  bad "application/build/libs/<name>.jar missing (no boot jar)"
+  bad "${pre}build/libs/<name>.jar missing (no boot jar)"
 elif ! command -v unzip >/dev/null 2>&1; then
   bad "unzip is not installed: cannot read the layout of $jar"
 else

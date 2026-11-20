@@ -141,6 +141,12 @@ put "explore: writes docs/ (the analyst fence)" allow explore docs/notes.md
 cmd "write-tests (implement.write-tests): mkdir -p is its node addition" allow implement.write-tests 'mkdir -p app/src/test/java/x'
 cmd "write-tests: a module test task is its node addition" allow implement.write-tests './gradlew :app:test --tests X'
 put "write-tests: writes a test" allow implement.write-tests app/src/test/java/x/ATest.java
+cmd "write-tests: git log of its own retry check, as the prompt says (its node addition; owner 2026-11-20)" allow \
+  implement.write-tests "git log --format=%s \"\$(cat \"$arts/step-base.sha\")\"..HEAD"
+cmd "write-tests: git log of a substitution outside the run is still denied" deny implement.write-tests \
+  'git log "$(cat /etc/hostname)"..HEAD' 'command substitution'
+cmd "build-step: git log is the developer's own, not a write-tests addition leaking" allow implement.build-step 'git log --oneline -3'
+cmd "explore: git log is not on the analyst's list" deny explore 'git log --oneline -3'
 put "write-tests: may not write production code" deny implement.write-tests app/src/main/java/x/A.java 'test-writer (node write-tests)'
 cmd "build-step: affected-check with its env and a run file, as the prompt says" allow implement.build-step \
   "AFFECTED_NO_SYNC=1 AFFECTED_BASE=\"\$(cat \"$arts/step-base.sha\")\" bash .claude/scripts/affected-check.sh"
@@ -187,7 +193,8 @@ cmd "build-step: a command after tail is still checked" deny implement.build-ste
 # git --no-pager <cmd> is git <cmd> (owner, 2026-11-20): it meets the same list, no more.
 cmd "pr-text: git --no-pager log (its node addition)" allow pr-text 'git --no-pager log --oneline 8dedd27..HEAD'
 cmd "build-step: git --no-pager diff (the developer list)" allow implement.build-step 'git --no-pager diff --stat'
-cmd "write-tests: git --no-pager log is still not on the test-writer list" deny implement.write-tests 'git --no-pager log' "'git"
+cmd "explore: git --no-pager log is still not on the analyst list" deny explore 'git --no-pager log' "'git"
+cmd "write-tests: git --no-pager log meets its node addition git log" allow implement.write-tests 'git --no-pager log --oneline -3'
 cmd "build-step: another git option in front is not stripped" deny implement.build-step 'git --no-pager -c core.pager=x log' "'git"
 # A deny is recorded in the session's audit trail (postToolUse never sees it), with the node, once audit-log.sh has made
 # the folder; every deny above ran without it, and the guard made none.
