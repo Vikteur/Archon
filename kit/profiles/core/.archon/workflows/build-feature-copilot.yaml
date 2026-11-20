@@ -20,6 +20,11 @@ description: |
 # SHA.
 # One human gate: a person approves the plan (plan-approval) before any code is written; a rejection ends the run. The
 # run never merges its own pull request: it ends once the pull request is ready, and a team member reviews and merges.
+# Retries: an agent node with `retry:` (and any agent node, by Archon's default of two transient retries) runs its
+# prompt again on the worktree as the failed attempt left it, commits and edits included. Each node that commits
+# (write-tests, build-step, review, fix) first looks at `git status` and its own commits since its base sha, so an
+# attempt never commits the same work twice or leaves an earlier attempt's mutation in the tree; explore, plan,
+# pr-text and diagnose only (over)write their own artifact. A bash or script node declares no retry, so it gets none.
 # Skills: `skills:` on a node is the exact allow-list for that node (without it the node gets no skill at all). The plan
 # writes a `Test skills:` and a `Build skills:` line per step from the table in docs/step-skills.md, each from that
 # agent's own allow-list; the test agent loads its line and the build agent its own with the skill tool, plus
@@ -425,6 +430,13 @@ nodes:
             add the line it prints, `Hand-written: <repo-relative path> — no-template: <shape>`, under the step in the plan;
             when the templates it finds do not fit what the file needs, write it by hand and add
             `Hand-written: <repo-relative path> — template-misfit: <template> — <why>`.
+            This node may run again on the same step: after a transient failure (the next attempt starts on the worktree as
+            the last one left it) or when the loop comes back to a step whose code is not built yet. So first run `git status`
+            and `git log --format=%s "$(cat "$ARTIFACTS_DIR/step-base.sha")"..HEAD`. On a `(pin only)` step, a change to a
+            file outside a test tree that no commit holds is a mutation an earlier attempt did not revert: revert it from git,
+            that file only, before anything else. When this step's `test(step <n>): ...` commit is there already, its tests
+            stand: do not write them again; do only what that attempt left undone (a red log not written, a `Pin:` line with
+            no `MUTATION:` line in the red log yet, never a second one for the same pin), commit only what is new, and stop.
             Otherwise write the tests the step names, and only tests: they state the behaviour the step adds, so they
             must fail now because that behaviour is missing (a compile error for a class the step creates counts).
             Run them and save the full output to $ARTIFACTS_DIR/red/step-<n>.log, exactly that name (no suffix, also when
@@ -509,6 +521,11 @@ nodes:
             - here: `where` for the controller line and the generated interface method of an operation; `schema` for the@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
               fields a mapper or DTO needs.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
             Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
+            This node may run again after a transient failure; the next attempt starts on the worktree as the last one left
+            it. So first run `git status` and `git log --format=%s "$(cat "$ARTIFACTS_DIR/step-base.sha")"..HEAD`. When
+            step.md's step is already marked `- [x]` in the plan, an earlier attempt built it: commit what that attempt left
+            uncommitted (if anything, after affected-check passes) and stop; never take the next open step here. Uncommitted
+            changes are an earlier attempt's work: build on them, and never commit the same change twice.
             If $ARTIFACTS_DIR/skills-missing.md names `Build skills:`, this step was built without them: load each
             with the skill tool first, check the step's code against them and fix what they change, then go on as
             below (when nothing changed, mark the step and commit nothing).
@@ -630,6 +647,11 @@ nodes:
       - here: `usedBy` on a changed schema field, for an operation the branch missed; `where` on each operation the@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
         branch built, for its status and its tests.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
       Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
+      This node may run again after a transient failure; the next attempt starts on the worktree as the last one left
+      it. So first run `git status` and `git log --oneline "$(cat "$ARTIFACTS_DIR/review-base.sha")"..HEAD`. Revert every
+      change no commit holds from git, file by file, before you mutate anything: it is a mutation an earlier attempt did
+      not revert, or a fix it did not commit (make that fix again, tests first). The commits listed are an earlier
+      attempt's fixes: keep them, never commit a fix twice, and review on from there.
       Read $ARTIFACTS_DIR/review-tests.log: the review-tests node ran `AFFECTED_NO_SYNC=1 bash
       .claude/scripts/affected-check.sh` over the branch once, so do not run it again before you fix anything.
       A long run is cut to its failure lines and its last 200 lines; grep $ARTIFACTS_DIR/review-tests-full.log for
@@ -864,6 +886,10 @@ nodes:
           prompt: |
             Read $ARTIFACTS_DIR/ci-diagnosis.md and apply the fix, tests first: when the fix changes behaviour, commit
             the test that shows the failure alone, then the fix. Run the tests, commit, and `git push`.
+            This node may run again after a transient failure; the next attempt starts on the worktree as the last one
+            left it. So first run `git status` and `git log --oneline "$(cat "$ARTIFACTS_DIR/ci-fix-before.sha")"..HEAD`:
+            the commits listed are an earlier attempt's fix. Never apply it a second time: finish only what that attempt
+            left (an uncommitted change, a push not made), then `git push`.
         # No commit after a diagnosis that starts `CAUSE: main` is no crash: the red came in with the base and
         # nothing on this branch can fix it, so the run ends as blocked (BLOCKED_NEEDS_PERSON, the blocked node) with
         # the diagnosis. No commit after any other diagnosis is a fix the agent failed to make: CI_FIX_NO_COMMIT.

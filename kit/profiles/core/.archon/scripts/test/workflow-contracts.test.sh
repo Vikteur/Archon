@@ -22,6 +22,9 @@
 #  - every skill a node names (its `skills:` allow-list, loop nodes too) is shipped under .github/skills/<skill>/SKILL.md,
 #    and build-feature-copilot's write-tests and build-step name exactly their full lists cut to the installed profiles'
 #    skills (`kit add` drops a line marked for a profile not installed; Copilot warns copilot.skills_missing otherwise);
+#  - build-feature-copilot's committing agent nodes (write-tests, build-step, review, fix) are retry-safe: each prompt says
+#    the node may run again, and has it read `git status` and its own commits since its base sha first (step-base.sha,
+#    review-base.sha, ci-fix-before.sha), so a transient retry never commits the same work twice;
 #  W1, W4 and W5 are ROADMAP R17 (T12); each check also runs on a fixture of the old code, where it must fail.
 #  - a dry run with default stubs of each workflow ends `Simulation outcome: completed`; a build workflow's plan
 #    approval is answered by a stub, and a rejected plan ends `Simulation outcome: cancelled`. It needs the archon CLI;
@@ -152,6 +155,30 @@ node_skills() { # node_skills <workflow yaml> <node id>
     console.log(n ? (n.skills || []).join(",") : "");'
 }
 
+# Each <node>:<base file> whose prompt does not say it may run again, read `git status` and git log from that base sha
+retry_unsafe() { # retry_unsafe <workflow yaml> <node>:<base file>...
+  local wf=$1; shift
+  yq -o=json '.' "$wf" | node -e '
+    const wf = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const find = (ns, id) => { for (const n of ns || []) {
+      if (n.id === id) return n;
+      const f = find(n.loop_group && n.loop_group.nodes, id) || find(n.loop && n.loop.nodes, id) || find(n.nodes, id);
+      if (f) return f;
+    } };
+    for (const pair of process.argv.slice(1)) {
+      const [id, base] = pair.split(":");
+      const n = find(wf.nodes, id), p = (n && n.prompt) || "";
+      const miss = [];
+      if (!n) miss.push("no such node");
+      else {
+        if (!/may run again/.test(p)) miss.push("does not say it may run again");
+        if (!/`git status`/.test(p)) miss.push("reads no `git status`");
+        if (!new RegExp("git log [^`]*" + base.replace(/[.]/g, "[.]") + "[^`]*[.][.]HEAD").test(p)) miss.push("reads no git log since " + base);
+      }
+      if (miss.length) console.log(id + ": " + miss.join(", "));
+    }' "$@"
+}
+
 # <list> cut to the skills <root> ships, order kept, comma-joined
 shipped_of() { # shipped_of <root> <skill>...
   local root=$1 s out=(); shift
@@ -223,6 +250,10 @@ if [ -f "$workflows/build-feature-copilot.yaml" ]; then
     usecase-orchestration api-first-controller domain-dto-mapper persistence-repository jpa-entity-mapping \
     flyway-migrations resilience4j bean-config-di exception-to-http conventional-commits code-generation)
   check "build-feature-copilot: build-step names its skills of the installed profiles ($got)" $([ -n "$got" ] && [ "$got" = "$want" ]; echo $?) "want $want"
+  out=$(retry_unsafe "$workflows/build-feature-copilot.yaml" write-tests:step-base.sha build-step:step-base.sha \
+    review:review-base.sha fix:ci-fix-before.sha)
+  check "build-feature-copilot: write-tests, build-step, review and fix check their own earlier commits before a retry" \
+    $([ -z "$out" ]; echo $?) "$out"
   out=$(open_pr_unleased "$workflows/build-feature-copilot.yaml" "$here/open-pr.sh")
   check "build-feature-copilot: W4 open-pr pushes only with a lease against the head last seen" $([ -z "$out" ]; echo $?) "$out"
   if [ -f "$here/run-buckets.json" ]; then
@@ -425,6 +456,26 @@ check "contracts: a full list is cut to the shipped skills, order kept" \
 sed -i 's/, jvm-testing//; s/clean-code, java/clean-code/' "$tmp/f.yaml"
 out=$(unshipped_skills "$tmp/f.yaml" "$tmp/sk")
 check "contracts: only shipped skills: nothing reported" $([ -z "$out" ]; echo $?) "$out"
+
+cat > "$tmp/r.yaml" <<'EOF'
+nodes:
+  - id: review
+    prompt: |
+      This node may run again. First run `git status` and `git log --oneline "$(cat "$ARTIFACTS_DIR/review-base.sha")"..HEAD`.
+  - id: implement
+    loop_group:
+      nodes:
+        - id: build-step
+          prompt: |
+            Build the step and commit.
+EOF
+out=$(retry_unsafe "$tmp/r.yaml" review:review-base.sha build-step:step-base.sha fix:ci-fix-before.sha)
+check "contracts: a committing node without the retry check is found, loop nodes too, and a missing node is named" \
+  $([ "$out" = "$(printf 'build-step: does not say it may run again, reads no `git status`, reads no git log since step-base.sha\nfix: no such node')" ]; echo $?) "$out"
+out=$(retry_unsafe "$tmp/r.yaml" review:step-base.sha)
+check "contracts: a retry check against another base sha is found" $([ "$out" = "review: reads no git log since step-base.sha" ]; echo $?) "$out"
+out=$(retry_unsafe "$tmp/r.yaml" review:review-base.sha)
+check "contracts: a retry-safe node: nothing reported" $([ -z "$out" ]; echo $?) "$out"
 
 # A dry run with default stubs walks each workflow's control flow without a provider
 if command -v archon >/dev/null 2>&1; then
