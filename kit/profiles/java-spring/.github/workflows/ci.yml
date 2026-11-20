@@ -5,7 +5,7 @@ name: CI
 # .claude/scripts/ci-workflow-check.sh holds it to its rules: every action pinned by commit SHA, every job with a
 # timeout and no if, the contract checked out with the one CI secret and proved read-only, every ./gradlew run given
 # the contract spec, and the job set equal to the last "CI job set" entry of docs/memory.md
-# (`archon-scripts, image, test`). .github/ci-inputs.yml lists each job's inputs.
+# (`archon-scripts, test`). .github/ci-inputs.yml lists each job's inputs.
 on:
   workflow_dispatch:
 
@@ -57,46 +57,6 @@ jobs:
         with:
           name: test-reports
           path: '*/build/reports/tests/'
-
-  image:
-    # No needs: test: the image build and the tests run side by side; a red test job still fails the run. The image is
-    # built and checked on every run and never shipped: no registry, no push.
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      # The image build generates the server interfaces, so it reads the same pinned contract as the test job.
-      - name: Check out the contract
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          repository: @@KIT_CONTRACT_REPO@@
-          path: contract
-          token: ${{ secrets.CONTRACT_TOKEN }}
-      - name: Contract token is read-only
-        run: bash .claude/scripts/contract-read-only-check.sh contract
-      - name: Contract at the pinned ref
-        run: bash .claude/scripts/contract-pin.sh contract
-      # The build stage's Gradle home (its RUN --mount=type=cache) outlives the runner: actions/cache keeps it between
-      # runs, and buildkit-cache-dance moves it into BuildKit's cache mount before the build and back out after it.
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        id: image-gradle-cache
-        with:
-          path: image-gradle-cache
-          key: image-gradle-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml', 'settings.gradle.kts', '**/build.gradle.kts') }}
-          restore-keys: image-gradle-
-      - uses: reproducible-containers/buildkit-cache-dance@5422eac04292c961a382e0f584ea0f03ad9da723 # v3.4.0
-        with:
-          cache-map: '{"image-gradle-cache": "/root/.gradle"}'
-          skip-extraction: ${{ steps.image-gradle-cache.outputs.cache-hit }}
-          utility-image: busybox@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
-      # ci-local.sh names the image per run (CI_IMAGE_TAG) and the check's containers, network and port (IMAGE_CHECK_*).
-      # A tag set here would win over the per-run one, so the default sits in the command.
-      - name: Build the image
-        run: docker build --tag "${CI_IMAGE_TAG:-app:ci}" .
-      # The image contract of the spring stack: the boot jar under /app on the JRE of the toolchain, uid 10001, the
-      # health check on /actuator/health, and the running container answering it with status UP beside a database.
-      - name: Check the image
-        run: bash .claude/scripts/image-check.sh "${CI_IMAGE_TAG:-app:ci}"
 
   archon-scripts:
     # The script gates that need no build: the CI workflow rules (this file), the .archon test suites (four at a time,

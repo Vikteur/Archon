@@ -12,7 +12,7 @@ trap 'rm -rf "$root"' EXIT
 export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=core.autocrlf GIT_CONFIG_VALUE_0=false GIT_CONFIG_KEY_1=gc.auto GIT_CONFIG_VALUE_1=0
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
 export CI_LOCAL_ROOT=$root/ci CI_LEDGER=$root/ci/ledger.jsonl CI_PLAN_RUNNER=runner-1 CI_PLAN_SALT=salt-1 \
-  CI_PLAN_CONTRACT_COMMIT=1111111111111111111111111111111111111111 CI_PLAN_BASE_IMAGES="eclipse-temurin:26 sha256:aa" \
+  CI_PLAN_CONTRACT_COMMIT=1111111111111111111111111111111111111111 \
   CI_PLAN_NOW=1792500000
 unset CI_SCOPE CI_REUSE CI_PLAN_SCOPE_FILE CI_PLAN_SALT_FILE CI_PLAN_MAX_AGE
 mkdir -p "$CI_LOCAL_ROOT"; : > "$CI_LEDGER"
@@ -21,7 +21,7 @@ check() { # check <name> <got> <want>
   if [ "$2" = "$3" ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1: got '$2', want '$3'"; fi
 }
 
-# The repo: the five jobs, this repo's manifest, a Gradle-ish tree, bookkeeping folders, a Docker context.
+# The repo: the jobs, this repo's manifest, a Gradle-ish tree, bookkeeping folders.
 r=$root/repo
 mkdir -p "$r/.github/workflows" "$r/.claude/scripts" "$r/scripts/test" "$r/app/src/main/java/x" "$r/app/src/test/java/x" \
   "$r/foo-domain/src/main/java/x" "$r/backlog/tasks" "$r/docs/retro" "$r/docs/tokenomics/daily-token-reports" "$r/config"
@@ -30,9 +30,6 @@ jobs:
   test:
     steps:
       - run: ./gradlew build && bash scripts/test/unit.test.sh
-  image:
-    steps:
-      - run: bash scripts/test/image.test.sh
   archon-scripts:
     steps:
       - run: bash scripts/test/unit.test.sh
@@ -40,14 +37,11 @@ YML
 cp "$here/.github/ci-inputs.yml" "$r/.github/ci-inputs.yml"
 cp "$script" "$r/.claude/scripts/ci-plan.sh"
 echo 'echo unit; cat config/settings.txt' > "$r/scripts/test/unit.test.sh"
-echo 'docker build .' > "$r/scripts/test/image.test.sh"
 echo 'a=1' > "$r/config/settings.txt"
 printf '@@KIT_CONTRACT_TAG_KEY@@=v1.0.0\n' > "$r/gradle.properties"
 echo 'echo gradle' > "$r/gradlew"
 echo 'include("app")' > "$r/settings.gradle.kts"
 echo 'plugins {}' > "$r/app/build.gradle.kts"
-printf 'FROM eclipse-temurin:26 AS build\nCOPY . .\n' > "$r/Dockerfile"
-printf '*\n!gradlew\n!settings.gradle.kts\n!*/build.gradle.kts\n!*/src/main/\nbuild/\n' > "$r/.dockerignore"
 echo 'class A {}' > "$r/app/src/main/java/x/A.java"
 echo 'class ATest {}' > "$r/app/src/test/java/x/ATest.java"
 echo 'class Y {}' > "$r/foo-domain/src/main/java/x/Y.java"
@@ -79,8 +73,8 @@ green() { # green <sha> <job> <fp> [extra jq object]
 out=$(plan "$c0")
 check "a header line" "$(printf '%s\n' "$out" | head -n 1 | cut -d' ' -f1-2)" "# ci-plan"
 check "one line per ci.yml job, in its order" "$(printf '%s\n' "$out" | sed 1d | cut -d' ' -f1 | sort | tr '\n' ' ')" \
-  "archon-scripts image test "
-check "every job has a fingerprint" "$(printf '%s\n' "$out" | sed 1d | grep -cE ' fp=[0-9a-f]{64}$')" 3
+  "archon-scripts test "
+check "every job has a fingerprint" "$(printf '%s\n' "$out" | sed 1d | grep -cE ' fp=[0-9a-f]{64}$')" 2
 check "an empty ledger reuses nothing" "$(printf '%s\n' "$out" | sed 1d | cut -d' ' -f2 | sort -u)" run
 check "the plan is deterministic" "$(plan "$c0")" "$out"
 check "the reason goes to stderr" "$(grep -c 'test: run, no green run' "$root/err")" 1
@@ -93,9 +87,7 @@ mv "$CI_LEDGER.off" "$CI_LEDGER"
 # --- which change moves which fingerprint -------------------------------------------------------------------------
 c_backlog=$(commit backlog backlog/tasks/task-2.md 'new task' docs/retro/r2.md 'r2' docs/tokenomics/daily-token-reports/d2.md 'd')
 o_backlog=$(plan "$c_backlog")
-for j in test image; do
-  check "a bookkeeping-only change keeps the $j fingerprint" "$(fp $j "$o_backlog")" "$(fp $j "$out")"
-done
+check "a bookkeeping-only change keeps the test fingerprint" "$(fp test "$o_backlog")" "$(fp test "$out")"
 [ "$(fp archon-scripts "$o_backlog")" != "$(fp archon-scripts "$out")" ]
 check "a bookkeeping change moves archon-scripts (the whole tree)" "$?" 0
 # The test job is the Java side (owner decision 2026-10-23): a pipeline-script change keeps it, docs/memory.md moves it.
@@ -109,32 +101,25 @@ c_leaf=$(commit leaf docs/code-maps/test-data.md 'leaf 1')
 c_test=$(commit src-test app/src/test/java/x/ATest.java 'class ATest { int x; }')
 o_test=$(plan "$c_test")
 [ "$(fp test "$o_test")" != "$(fp test "$o_backlog")" ]; check "a src/test change moves test" "$?" 0
-# The image job's codegen and WireMock suites build every module (2026-10-23): a src/test change moves it too, a
-# pipeline-script change does not.
-[ "$(fp image "$o_test")" != "$(fp image "$o_backlog")" ]; check "a src/test change moves image (its Gradle suites)" "$?" 0
-check "an .archon-only change keeps the image fingerprint" "$(fp image "$o_arch")" "$(fp image "$o_backlog")"
 c_main=$(commit src-main app/src/main/java/x/A.java 'class A { int y; }')
 o_main=$(plan "$c_main")
-[ "$(fp image "$o_main")" != "$(fp image "$o_test")" ]; check "a src/main change moves image" "$?" 0
+[ "$(fp test "$o_main")" != "$(fp test "$o_test")" ]; check "a src/main change moves test" "$?" 0
 c_ci=$(commit ci .github/workflows/ci.yml "$(cat "$r/.github/workflows/ci.yml")
 # a comment")
 o_ci=$(plan "$c_ci")
-check "a ci.yml edit moves every job" "$(for j in test image archon-scripts; do [ "$(fp $j "$o_ci")" != "$(fp $j "$o_main")" ] && echo x; done | wc -l | tr -d ' ')" 3
+check "a ci.yml edit moves every job" "$(for j in test archon-scripts; do [ "$(fp $j "$o_ci")" != "$(fp $j "$o_main")" ] && echo x; done | wc -l | tr -d ' ')" 2
 c_man=$(commit manifest .github/ci-inputs.yml "$(cat "$r/.github/ci-inputs.yml")
 # a comment")
 o_man=$(plan "$c_man")
-check "a manifest change moves every job" "$(for j in test image archon-scripts; do [ "$(fp $j "$o_man")" != "$(fp $j "$o_ci")" ] && echo x; done | wc -l | tr -d ' ')" 3
+check "a manifest change moves every job" "$(for j in test archon-scripts; do [ "$(fp $j "$o_man")" != "$(fp $j "$o_ci")" ] && echo x; done | wc -l | tr -d ' ')" 2
 c_self=$(commit self .claude/scripts/ci-plan.sh "$(cat "$script")
 # changed")
 o_self=$(plan "$c_self")
-check "a planner change in the tree moves every job" "$(for j in test image archon-scripts; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 3
+check "a planner change in the tree moves every job" "$(for j in test archon-scripts; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 2
 check "another salt moves the fingerprint" "$( [ "$(CI_PLAN_SALT=salt-2 plan "$c_self" | grep '^test ')" != "$(line test "$o_self" | sed 's/^/test /')" ] && echo moved)" moved
 check "another runner class moves the fingerprint" "$( [ "$(CI_PLAN_RUNNER=runner-2 plan "$c_self" | grep '^archon-scripts ')" != "archon-scripts $(line archon-scripts "$o_self")" ] && echo moved)" moved
 check "another contract commit moves test" "$( [ "$(fp test "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" != "$(fp test "$o_self")" ] && echo moved)" moved
 check "another contract commit keeps archon-scripts" "$(fp archon-scripts "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" "$(fp archon-scripts "$o_self")"
-check "another base image keeps test" "$(fp test "$(CI_PLAN_BASE_IMAGES=other plan "$c_self")")" "$(fp test "$o_self")"
-[ "$(fp image "$(CI_PLAN_BASE_IMAGES=other plan "$c_self")")" != "$(fp image "$o_self")" ]
-check "another base image moves image" "$?" 0
 
 # An exclusion a reader names is cancelled for that plan.
 c_name=$(commit names-backlog config/settings.txt 'dir=backlog/tasks')
@@ -171,11 +156,7 @@ check "code keeps the word rule: a bare backlog in a script cancels" "$?" 0
 c_comment=$(commit restore scripts/test/unit.test.sh 'echo unit; cat config/settings.txt')
 
 
-# .dockerignore that does not deny by default: the image reads the whole tree.
-c_di=$(commit dockerignore .dockerignore 'build/')
-o_di=$(plan "$c_di")
-c_di2=$(commit dockerignore-2 docs/memory.md 'memory 3')
-[ "$(fp image "$(plan "$c_di2")")" != "$(fp image "$o_di")" ]; check "an allow-by-default .dockerignore gives image the whole tree" "$?" 0
+# A branch pin cannot be resolved to a commit: the contract jobs run.
 c_branch=$(commit branch-pin gradle.properties '@@KIT_CONTRACT_TAG_KEY@@=feature/x')
 o_branch=$(plan "$c_branch")
 check "a branch pin runs test without a fingerprint" "$(line test "$o_branch")" "run fp=-"
@@ -265,7 +246,7 @@ c_x=$(commit conflict docs/retro/r4.md 'other')
 git -C "$r" checkout -q main
 o_x=$(plan "$c_x" --base "$c_m")
 check "a conflict runs every job without a fingerprint" "$(printf '%s\n' "$o_x" | sed 1d | sort -u | cut -d' ' -f2- | sort -u)" "run fp=-"
-check "a conflict still lists every job" "$(printf '%s\n' "$o_x" | sed 1d | wc -l | tr -d ' ')" 3
+check "a conflict still lists every job" "$(printf '%s\n' "$o_x" | sed 1d | wc -l | tr -d ' ')" 2
 
 # --- an invalid manifest ------------------------------------------------------------------------------------------
 git -C "$r" checkout -q -b bad "$c_m"
@@ -290,7 +271,7 @@ git -C "$r" rm -q .claude/scripts/ci-plan.sh && c_np=$(commit no-planner)
 git -C "$r" checkout -q main
 o_none=$(bash "$script" --self-from "$c_np" "$r" "$c_m" 2>/dev/null)
 check "a base without a planner: every job runs" "$(printf '%s\n' "$o_none" | sed 1d | cut -d' ' -f2- | sort -u)" "run fp=-"
-check "a base without a planner: every job listed" "$(printf '%s\n' "$o_none" | sed 1d | wc -l | tr -d ' ')" 3
+check "a base without a planner: every job listed" "$(printf '%s\n' "$o_none" | sed 1d | wc -l | tr -d ' ')" 2
 
 # --- audit --------------------------------------------------------------------------------------------------------
 wt=$root/wt

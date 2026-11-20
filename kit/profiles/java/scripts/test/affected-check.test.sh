@@ -170,7 +170,7 @@ new_repo "$r"
 mkdir -p backlog && echo a > backlog/t.md && echo a > Dockerfile && echo a > other.txt
 run
 check "backlog is not listed" bash -c '! grep -qF "backlog/t.md" <<< "$1"' _ "$out"
-check "not checked: Dockerfile for image" said "not checked locally: Dockerfile (image)"
+check "not checked: Dockerfile for every job" said "not checked locally: Dockerfile (every job)"
 check "not checked: anything else for every job" said "not checked locally: other.txt (every job)"
 check "not checked: still nothing runs" ran_nothing
 
@@ -295,7 +295,6 @@ echo 'contract.tag=v2' > gradle.properties && git add -A && git commit -qm p
 run
 check "gradle.properties: every module" has "gradlew :application:test :x-adapter:test :x-domain:test :x-usecase:test :y-gateway:test :application:integrationTest :x-adapter:integrationTest :y-gateway:integrationTest :application:startupTest :application:resourceTest"
 check "gradle.properties: the CI workflow tests" has "contract-pin.test.sh "
-check "gradle.properties: the image build is named as not checked" said "not checked locally: the image build (image)"
 
 # The archon suite selection: a hook or .gitignore change runs what the selector picks; a failed selection runs all.
 new_repo "$r"

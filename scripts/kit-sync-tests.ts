@@ -58,8 +58,6 @@ export const SUITE_EXCLUDE: Record<string, string> = {
     "it copies the source's .gitignore into its fixtures and needs its contract bundle",
   'scripts/test/ci-workflow-check.test.sh':
     "its fixtures are the source's ci.yml (its contract checkout step and job set), not the kit's",
-  'scripts/test/image-check.test.sh':
-    "it asserts the source's Dockerfile base images and its app's ops and throttle settings",
   'scripts/test/test-set-coverage.test.sh':
     "it reads the source's root build.gradle.kts test-set list",
   // Project files that never ship.

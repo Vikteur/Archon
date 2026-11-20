@@ -207,7 +207,8 @@ contract:
   brings it back and a shipped line that names one of its scripts fails the leak check: the Groma architecture map
   (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the `.githooks/pre-push` hook that ran the
   map check, and their suites) and the mutation gate (`mutation-gate.sh`, PIT on the changed classes, its suite and
-  fixtures).
+  fixtures), and the image CI job's check (`image-check.sh` and its suite): the kit's CI job set is `archon-scripts`
+  and `test`.
 - What kit-sync strips with them: the `.claude/settings.json` hooks and deny entries that name a never-ship file, and
   the never-ship agents' entries in `.claude/hooks/agent-scopes.json`. A shipped line that still names a never-ship
   file (a script's basename, `delegator.md`, `delegator.agent.md` or a systemd unit) fails the leak check; the

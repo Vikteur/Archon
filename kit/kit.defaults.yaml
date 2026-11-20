@@ -2,7 +2,7 @@
 # project and renders the kit's @@KIT_<KEY>@@ placeholders from it; scripts read it at runtime with yq
 # (.archon/scripts/kit-config.sh). Hand-written: the defaults suit a Spring Boot Gradle project.
 profiles: [core, java, java-spring, openapi-contract, mijn-gezondheid]
-stack: spring # quarkus | spring: the gates that differ per framework branch on it (image, build shape, pin proofs)
+stack: spring # quarkus | spring: the gates that differ per framework branch on it (build shape, pin proofs)
 base_branch: main
 gh_accounts: [] # gh-switch-account skill: the gh accounts to switch between, e.g. [alice, alice-work]
 agent_cli: copilot # install-tools.sh and kit-config.sh: the agent CLI this project runs, claude | copilot

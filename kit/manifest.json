@@ -758,7 +758,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-spike.test.sh",
       "kind": "script",
-      "sha256": "a21bb0ebfa749b1bbdb0a7a1c501870f6adc6ba1080afaa84ca5205a33217f2b"
+      "sha256": "203297ef80c6902a699b1364d56e485cc0f2617e0d75f056f8a8385718d37fba"
     },
     {
       "path": ".archon/scripts/test/pr-refresh.test.sh",
@@ -1154,7 +1154,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-local.sh",
       "kind": "script",
-      "sha256": "60ec33c863bb0896ce9751b8b501d355940c4224b62b4d129fddf87e91453296"
+      "sha256": "195d9c651fabad1248a2a751bb8226989b7d50dcb9bf45a0d32b1abf3c143c43"
     },
     {
       "path": ".claude/scripts/ci-plan.sh",
@@ -1163,7 +1163,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-plan.sh",
       "kind": "script",
-      "sha256": "1d0c2f4b1dfd23b1d05c13b89d13db683ddb1186a2385310390784f1aa0bda89"
+      "sha256": "9e1213b78a334510f3ab621425e246c0ee8bebeef7326adcadfc8983c59170c4"
     },
     {
       "path": ".claude/scripts/ci-queue.sh",
@@ -1663,7 +1663,7 @@
       "template": false,
       "origin": "scripts/test/ci-local.test.sh",
       "kind": "script",
-      "sha256": "b16a517cf8aae64333a71a5a017ffd47fce8740cd185688500ad6676271e9cbf"
+      "sha256": "355fb7810a78494b3561ebaa406ce2a5e3b1f668db24c52fcf44e9afee3612db"
     },
     {
       "path": "scripts/test/ci-plan.test.sh",
@@ -1672,7 +1672,7 @@
       "template": true,
       "origin": "scripts/test/ci-plan.test.sh",
       "kind": "script",
-      "sha256": "8777225475bb2b45da3c14f51e36c32bedb8afa6bf5440a522c1dc8b0067764e"
+      "sha256": "1f45b604bf1821ee5139e735fa8060f571bf90c54b9de4baf44651a37858c2d2"
     },
     {
       "path": "scripts/test/ci-queue.test.sh",
@@ -1699,7 +1699,7 @@
       "template": false,
       "origin": "scripts/test/gate-change-check.test.sh",
       "kind": "script",
-      "sha256": "10dc559ec2fa8372b2feeaab384a3b46d2f5e33863cd2ac1cdbac7ee0317e064"
+      "sha256": "b798c02893f2ba3daa2a0a19ba74e91a0a76ee94c1b47a2a0c557eaf35cc1a00"
     },
     {
       "path": "scripts/test/install-tools.test.sh",
@@ -1753,7 +1753,7 @@
       "template": false,
       "origin": "scripts/tools.conf",
       "kind": "config",
-      "sha256": "e5676da796bf110d954fd5b60f4440403b0e86a11effeda17126b778183a125b"
+      "sha256": "c1d0058f036d748800c94677b832483dd179127d7fa1412ddf3168fe462c63ff"
     },
     {
       "path": "scripts/web-uis.sh",
@@ -1771,7 +1771,7 @@
       "template": false,
       "origin": ".claude/scripts/affected-check.sh",
       "kind": "script",
-      "sha256": "d961828ab55869da6b52d1dc0d1805d9d10fc5692430bbc69899d1c4bfa95fe3"
+      "sha256": "25bb323dac993a8ef3f92b77aaa939da0f9ffd22cc95cf04c025af242e0423f4"
     },
     {
       "path": ".claude/scripts/build-shape-check.sh",
@@ -1789,7 +1789,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-workflow-check.sh",
       "kind": "script",
-      "sha256": "087570bfe12a233071a7040b17e199126b13c5f1e798c6548b9482930b8f10f2"
+      "sha256": "2c759e022ad9c290a28ac96b4eb4d25e793501641f4806ebc1b9c8e653533ba8"
     },
     {
       "path": ".claude/scripts/class-version-check.sh",
@@ -1799,15 +1799,6 @@
       "origin": ".claude/scripts/class-version-check.sh",
       "kind": "script",
       "sha256": "17e3a52b9f05eb998fe8feeec4d90ba6ab358ad203b2dadeaf748de73a7c1d08"
-    },
-    {
-      "path": ".claude/scripts/image-check.sh",
-      "profile": "java",
-      "mode": "0755",
-      "template": false,
-      "origin": ".claude/scripts/image-check.sh",
-      "kind": "script",
-      "sha256": "1d3fe6ffce3fe1a604cf2bf11a0b80604945c75341335639e48f57351b260688"
     },
     {
       "path": ".claude/scripts/pin-proof-check.sh",
@@ -2340,7 +2331,7 @@
       "template": false,
       "origin": null,
       "kind": "doc",
-      "sha256": "cbb9078a9be99b1a1257fbfa0f79a83f076ed8b3d96861b2b92a9b28292c6c4a",
+      "sha256": "7bb2dfdcb93cdd4e5fd66c419c04909eac3e9fc8d8ee14134fa070f2e9c2d8ea",
       "createOnly": true
     },
     {
@@ -2656,7 +2647,7 @@
       "template": false,
       "origin": "scripts/test/affected-check.test.sh",
       "kind": "script",
-      "sha256": "95f2f8f35e5223cc2fd6df31365f5dca55b1c911224cc37c2dc8bdc7ef11d17c"
+      "sha256": "017708f9c7eda46d75ed4bb1e20a4a78bbef702e5bc473a50809ad467df58792"
     },
     {
       "path": "scripts/test/ci-workflow-scope.test.sh",
@@ -2710,7 +2701,7 @@
       "template": false,
       "origin": ".github/ci-inputs.yml",
       "kind": "config",
-      "sha256": "637b90768587c723bab9e7d6a3e22a51628110ebbc7a34aa63d51ac05644578e"
+      "sha256": "71d4591e0535f81b96785303bba25c8303b6c20fe1db85ab35a42159f2ba6a9c"
     },
     {
       "path": ".github/skills/api-first-controller/SKILL.md",
@@ -2791,7 +2782,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "e6887af6331b7ea76198d777708d9e7d34b6a8494af88e37b712eb9e89db8bc2"
+      "sha256": "487323b1092ddc11f9a5232a06f5d0c98f17083f24d2da47efdd4434f5d19a3b"
     },
     {
       "path": "docs/code-maps/api-first-controller.md",
@@ -3018,7 +3009,7 @@
       "template": false,
       "origin": ".github/ci-inputs.yml",
       "kind": "config",
-      "sha256": "84ade3dde1d2d8cbfd571a34f1ed146fcad4ff0472409805e1f08f25dde36424"
+      "sha256": "a2aafcc55dd4b2b34d0b95581977ad2e56039e95459bd09cb5e8d09d4f2dc132"
     },
     {
       "path": ".github/skills/api-first-controller/SKILL.md",
@@ -3126,7 +3117,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "a370c16a71d69ca3ae33ddbcd6faee63afed6346b76d137738472823ae7b8837"
+      "sha256": "dba264d57c09fdf9b75568925d2e4b702100e631d151765d68443ee2491bf9a5"
     },
     {
       "path": "docs/code-maps/api-first-controller.md",

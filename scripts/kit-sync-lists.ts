@@ -215,6 +215,8 @@ export const NEVER_SHIP_GROUPS: Record<string, string[]> = {
     ],
   'The mutation gate (PIT on the changed domain, usecase and gateway classes), never wired into a build.':
     ['.claude/scripts/mutation-gate.sh', 'scripts/test/mutation-gate.test.sh'],
+  "The image CI job's check of a built image (a multi-stage Dockerfile contract not every project follows).":
+    ['.claude/scripts/image-check.sh', 'scripts/test/image-check.test.sh'],
 };
 
 export const NEVER_SHIP: string[] = Object.values(NEVER_SHIP_GROUPS).flat();
@@ -335,7 +337,6 @@ export const FILES: Record<Profile, string[]> = {
     '.claude/scripts/build-shape-check.sh',
     '.claude/scripts/ci-workflow-check.sh',
     '.claude/scripts/class-version-check.sh',
-    '.claude/scripts/image-check.sh',
     '.claude/scripts/pin-proof-check.sh',
     '.claude/scripts/test-set-coverage.java',
     '.claude/scripts/test-set-coverage.sh',

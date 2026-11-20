@@ -20,8 +20,8 @@
 # Fingerprint, per job: sha256 over the salt (CI_PLAN_SALT, else the file CI_PLAN_SALT_FILE, default
 # $CI_LOCAL_ROOT/ci-plan.salt; none = "none"), the runner class (CI_PLAN_RUNNER, else OS, bash, git, java, node, yq, jq
 # and docker versions), the executed planner's blob, the job's manifest rule (.github/ci-inputs.yml) and the
-# exclusions that held, the git ls-tree lines of its inputs at the tested tree, the contract commit the pin of
-# gradle.properties resolves to (jobs with contract: true), and the local ids of the Dockerfile's base images (docker-context).
+# exclusions that held, the git ls-tree lines of its inputs at the tested tree, and the contract commit the pin of
+# gradle.properties resolves to (jobs with contract: true).
 # Reuse sources come from the ledger CI_LEDGER (default $HOME/ci-local/ledger.jsonl), one JSON object a line,
 # read defensively (a line that does not parse, or lacks a field, is no source). A source is a record with
 #   event   "verdict" or "end"              sha     the commit the job ran on (40 hex), not this <sha>
@@ -48,14 +48,14 @@
 # made with `strace -f -qq -y -e trace=open,openat,openat2 -e status=successful`. --record appends the violations to
 # the ledger. Reads through git objects are invisible to strace.
 # CI_LOCAL_ROOT defaults to $HOME/ci-local. Overrides for tests: CI_PLAN_NOW (epoch), CI_PLAN_CONTRACT_COMMIT,
-# CI_PLAN_CONTRACT_REMOTE (default https://github.com/@@KIT_CONTRACT_REPO@@.git), CI_PLAN_BASE_IMAGES.
+# CI_PLAN_CONTRACT_REMOTE (default https://github.com/@@KIT_CONTRACT_REPO@@.git).
 set -uo pipefail
 export LC_ALL=C
 
 SELF=${BASH_SOURCE[0]}
 # D3 v1: the only folders a job may leave out, and the only jobs that may leave them out.
 ALLOWED_EXCLUDE=" backlog/ docs/retro/ docs/tokenomics/daily-token-reports/ docs/tokenomics/ticket-token-reports/ "
-EXCLUDE_JOBS=" test image "
+EXCLUDE_JOBS=" test "
 MANIFEST=.github/ci-inputs.yml
 WORKFLOW=.github/workflows/ci.yml
 PLANNER_PATH=.claude/scripts/ci-plan.sh
@@ -87,7 +87,7 @@ if [ "${1:-}" = --self-from ]; then
   exit 0
 fi
 
-# pat_re <entry>: the anchored ERE of a manifest or .dockerignore entry.
+# pat_re <entry>: the anchored ERE of a manifest entry.
 pat_re() {
   local p=${1#./} dir="" re
   p=${p#/}
@@ -217,25 +217,6 @@ contract_commit() {
   echo "$pin $c"
 }
 
-# docker_patterns: "I <re>" lines of the Docker context: the ! entries when .dockerignore denies by default.
-docker_patterns() {
-  local first e
-  git -C "$repo" show "$tree:.dockerignore" 2>/dev/null | tr -d '\r' | sed 's/[[:space:]]*$//' \
-    | grep -vE '^(#|$)' > "$tmp/dockerignore"
-  first=$(head -n 1 "$tmp/dockerignore")
-  if [ "$first" != '*' ]; then echo "I .*"; return 1; fi
-  sed -n 's/^!//p' "$tmp/dockerignore" | while IFS= read -r e; do echo "I $(pat_re "$e")"; done
-}
-
-base_images() {
-  if [ -n "${CI_PLAN_BASE_IMAGES+x}" ]; then printf '%s\n' "$CI_PLAN_BASE_IMAGES"; return; fi
-  git -C "$repo" show "$tree:Dockerfile" 2>/dev/null | tr -d '\r' \
-    | awk 'toupper($1) == "FROM" { for (i = 2; i <= NF; i++) if ($i !~ /^--/) { print $i; break } }' | sort -u \
-    | while IFS= read -r img; do
-        echo "$img $(timeout 5 docker image inspect --format '{{.Id}}' "$img" 2>/dev/null || echo absent)"
-      done
-}
-
 # ledger_source <job> <fp> <runner>: the newest SHA that may be reused for the job, or "violation", or nothing.
 ledger_source() {
   jq -nrR --arg job "$1" --arg fp "$2" --arg runner "$3" --arg sha "$sha" --arg rule "$rule_hash" \
@@ -263,7 +244,7 @@ ledger_source() {
 
 # plan_job <job>: sets fp, decision, source, why for one job.
 plan_job() {
-  local job=$1 rule e name re hit pins ctx="" contract="-" images="-" kept=""
+  local job=$1 rule e name re hit pins contract="-" kept=""
   fp=- decision=run source="" why="" rule_hash=""
   if [ -n "$manifest_bad" ]; then why="manifest: $manifest_bad"; return; fi
   rule=$(job_rule "$job")
@@ -273,11 +254,6 @@ plan_job() {
   while IFS= read -r e; do [ -n "$e" ] && echo "A $(pat_re "$e")" >> "$tmp/pat"; done < <(yq '.always[]' "$tmp/manifest" | tr -d '\r')
   job_list "$job" inputs > "$tmp/inputs"
   while IFS= read -r e; do [ -n "$e" ] && echo "I $(pat_re "$e")" >> "$tmp/pat"; done < "$tmp/inputs"
-  if job_flag "$job" docker-context; then
-    docker_patterns > "$tmp/dpat" || ctx="(.dockerignore does not deny by default: the whole tree)"
-    cat "$tmp/dpat" >> "$tmp/pat"
-    images=$(base_images)
-  fi
   # An exclusion holds only when no reader names its folder as a word (a reader that names it may read it).
   job_list "$job" exclude > "$tmp/excl"
   if [ -s "$tmp/excl" ]; then
@@ -306,9 +282,9 @@ plan_job() {
   git -C "$repo" -c core.quotePath=false ls-tree -r --full-tree "$tree" | select_inputs "$tmp/pat" > "$tmp/in.$job"
   fp=$( {
     echo "ci-plan-fp v1"; echo "salt $salt"; echo "runner $runner"; echo "planner $planner"; echo "job $job"
-    echo "rule $rule"; echo "kept-exclusions $kept"; echo "contract $contract"; echo "base-images $images"
+    echo "rule $rule"; echo "kept-exclusions $kept"; echo "contract $contract"
     echo "inputs"; cat "$tmp/in.$job"; } | hash)
-  explain "$job: $(wc -l < "$tmp/in.$job" | tr -d ' ') input files${kept:+, excluding $kept}${ctx:+ $ctx}; contract $contract; fp=$fp"
+  explain "$job: $(wc -l < "$tmp/in.$job" | tr -d ' ') input files${kept:+, excluding $kept}; contract $contract; fp=$fp"
   if [ -n "$force" ]; then why=$force; return; fi
   source=$(ledger_source "$job" "$fp" "$runner")
   case "$source" in
@@ -404,7 +380,7 @@ audit_setup() {
   elif ! manifest_bad=$(check_manifest); then manifest_bad=${manifest_bad:-does not parse}
   else manifest_bad=""
   fi
-  CI_PLAN_CONTRACT_COMMIT=${CI_PLAN_CONTRACT_COMMIT:-audit} CI_PLAN_BASE_IMAGES=${CI_PLAN_BASE_IMAGES:-audit} plan_job "$job"
+  CI_PLAN_CONTRACT_COMMIT=${CI_PLAN_CONTRACT_COMMIT:-audit} plan_job "$job"
   if [ -f "$tmp/in.$job" ]; then sed 's/^[^\t]*\t//' "$tmp/in.$job" | sort -u > "$tmp/inputs.all"
   else
     note "audit $job: no input set ($why); every read is reported"; : > "$tmp/inputs.all"

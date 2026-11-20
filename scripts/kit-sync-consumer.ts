@@ -73,6 +73,13 @@ export const CONSUMER_TARGETED: Record<string, Rewrite[]> = {
       2,
     ],
     ['the groma step is stricter', 'the lint step is stricter', 2],
+    // The new job of a case: the source's image job does not ship.
+    [
+      "printf '  image:\\n    steps:\\n      - run: docker build .\\n'",
+      "printf '  extra:\\n    steps:\\n      - run: echo extra\\n'",
+      1,
+    ],
+    ['entry "ci.yml gets the image job"', 'entry "ci.yml gets the extra job"', 1],
   ],
   // A neutral second job in the fixtures: the source's Groma and mutation jobs do not ship.
   '.archon/scripts/test/red-triage.test.sh': [

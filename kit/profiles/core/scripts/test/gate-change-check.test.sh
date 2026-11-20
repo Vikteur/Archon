@@ -85,10 +85,10 @@ new_repo; sed -i 's/# the jobs/# the CI jobs/' .github/workflows/ci.yml; commit;
 check "2 a comment in ci.yml is no gate change" "$([ "$rc" -eq 0 ]; echo $?)"
 new_repo; sed -i 's/timeout-minutes: 30/timeout-minutes: 40/' .github/workflows/ci.yml; commit; run main
 check "2 a key outside the job set and steps is no gate change" "$([ "$rc" -eq 0 ]; echo $?)"
-new_repo; printf '  image:\n    steps:\n      - run: docker build .\n' >> .github/workflows/ci.yml; commit; run main
+new_repo; printf '  extra:\n    steps:\n      - run: echo extra\n' >> .github/workflows/ci.yml; commit; run main
 check "2 a new job without an entry fails" "$([ "$rc" -eq 1 ] && said 'gate changed: ci.yml (.github/workflows/ci.yml: the job set)' \
   && said 'FAIL: ci.yml changed, but the change adds no decision entry'; echo $?)"
-entry "ci.yml gets the image job"; commit; run main
+entry "ci.yml gets the extra job"; commit; run main
 check "2 ... and passes with a dated entry that names ci.yml" "$([ "$rc" -eq 0 ] && said 'gate-change-check: ok'; echo $?)"
 new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml; entry "the lint step is stricter"; commit; run main
 check "2 a changed step with an entry that does not name ci.yml fails" "$([ "$rc" -eq 1 ] \

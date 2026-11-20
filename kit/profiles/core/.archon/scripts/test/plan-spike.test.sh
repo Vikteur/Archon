@@ -95,7 +95,6 @@ mention_only=(
   .claude/hooks/scripts/lint-format.sh     # a hook; names it in a hint
   .claude/scripts/ci-workflow-check.sh     # checks the workflow text
   .claude/scripts/class-version-check.sh   # names it in an error
-  .claude/scripts/image-check.sh           # checks the Dockerfile text
   scripts/tokenomics/tokenomics.js         # parses commands
 )
 for f in $(cd "$top" && git ls-files -- '*.sh' '*.js' '*.mjs' | grep -v '/test/' | xargs grep -l 'gradlew' 2>/dev/null); do

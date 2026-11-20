@@ -13,12 +13,10 @@
 # Keys per job:
 #   inputs           what the job reads. A job whose steps walk a directory (./gradlew, git ls-files, find) takes .
 #   exclude          literal folders taken out of `inputs`. Only backlog/, docs/retro/ and the docs/tokenomics reports
-#                    are allowed, only for test and image; ci-plan.sh refuses any other. An exclusion holds
+#                    are allowed, only for test; ci-plan.sh refuses any other. An exclusion holds
 #                    for a plan only when its folder's name occurs as a word in none of the job's readers.
 #   readers          globs whose text the exclusion proof reads, beside the scripts the job's run: lines reach
 #   contract         the job reads the contract at the pin of gradle.properties: the resolved commit is an input
-#   docker-context   the Docker build context is an input: the ! entries of .dockerignore when it denies by default
-#                    (starts with *), otherwise the whole tree; the local ids of the Dockerfile's base images too
 version: 1
 
 # Inputs of every job: the planner, its manifest, the runner and the gate that reads its statuses, the workflow (whole
@@ -53,16 +51,6 @@ jobs:
       - .gitignore
     exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
     readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
-    contract: true
-
-  image:
-    # The build reads the Docker context (from .dockerignore); image-check.sh reads the Dockerfile and the toolchain's
-    # Java version from the build files beside it.
-    inputs: [Dockerfile, .dockerignore, .claude/scripts/, "*/src/**", "*.gradle.kts", gradle/, gradlew, gradle.properties]
-    exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
-    readers: [Dockerfile, .dockerignore, "*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties,
-      settings.gradle.kts]
-    docker-context: true
     contract: true
 
   archon-scripts:

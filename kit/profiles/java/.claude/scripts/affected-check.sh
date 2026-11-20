@@ -28,7 +28,7 @@
 #   - an agent instruction text (CLAUDE.md, AGENTS.md, .claude/CLAUDE.md, rules, agents, SKILL.md, .archon/workflows):
 #     scripts/test/agent-script-names.test.sh (every script it names exists).
 #   - anything else (docs, skills): nothing, and the path is printed as "not checked locally: <path>
-#     (<job>)", with the CI job that still checks it. A Gradle change also prints that the image build is not checked.
+#     (<job>)", with the CI job that still checks it.
 #   - backlog/, AGENTS.md, CLAUDE.md: nothing, and nothing is printed (no CI job checks them on their own).
 # Usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync]
 # Prints each command before it runs it, stops at the first failure with its exit code, or prints
@@ -168,7 +168,6 @@ while IFS= read -r f; do
   fi
   case "$f" in
     backlog/*|AGENTS.md|CLAUDE.md|.archon/*|.claude/hooks/*|.gitignore|*.md) ;;
-    Dockerfile|.dockerignore) not_checked "$f" "image" ;;
     *) not_checked "$f" "every job" ;;
   esac
 done <<< "$changed"
@@ -208,7 +207,6 @@ if [ -n "$archon_hits" ]; then
     for t in .archon/scripts/test/*.test.sh; do add_suite "$t"; done
   fi
 fi
-[ -n "$tasks" ] && not_checked "the image build" "image"
 
 cmds=()
 # A gate change without its decision entry fails first: it costs a second and no test can make it pass.
@@ -216,7 +214,7 @@ cmds=()
 [ -n "$tasks" ] && cmds+=("./gradlew$tasks")
 cmds+=("${tests[@]+"${tests[@]}"}")
 if [ "$workflows" -eq 1 ]; then
-  # The CI workflow check and its suites: four in archon-scripts' "Every script suite passes", two in the image job.
+  # The CI workflow check and its suites: four in archon-scripts' "Every script suite passes", two in the test job.
   for c in "bash .claude/scripts/ci-workflow-check.sh" "bash scripts/test/contract-read-only-check.test.sh" \
            "bash scripts/test/ci-workflow-check.test.sh" "bash scripts/test/ci-workflow.test.sh" \
            "bash scripts/test/generated-untracked-check.test.sh" "bash scripts/test/codegen.test.sh" \
@@ -226,7 +224,7 @@ if [ "$workflows" -eq 1 ]; then
       *codegen.test.sh|*generated-untracked-check.test.sh)
         # Both generate from the real bundle and fail without it.
         if [ ! -f contract/dist/openapi.yaml ]; then
-          not_checked "${c#bash }, no contract checkout at contract/dist/openapi.yaml" "image"; continue
+          not_checked "${c#bash }, no contract checkout at contract/dist/openapi.yaml" "test"; continue
         fi ;;
     esac
     case " ${cmds[*]+"${cmds[*]}"} " in *" $c "*) ;; *) cmds+=("$c") ;; esac

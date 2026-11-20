@@ -148,7 +148,7 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   'scripts/tokenomics/commit-reports.sh': [
     ["<repo dir: wedding-portal's main checkout>", "<repo dir: the project's main checkout>", 1],
   ],
-  // The build and image gates: the source's own values sit in their defaults; an install reads its kit.yaml.
+  // The build gate: the source's own values sit in its defaults; an install reads its kit.yaml.
   '.claude/scripts/build-shape-check.sh': [
     [
       'no Python or\n# rekord-api remnant is back.',
@@ -159,16 +159,6 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
     ['"\\"${root_name:-wedding-portal}\\""', '"\\"${root_name:-}\\""', 1],
     ['kit_get build_shape.memory_marker UD-17 ', 'kit_get build_shape.memory_marker - ', 1],
     ['kit_get build_shape.forbidden rekord-api ', 'kit_get build_shape.forbidden - ', 1],
-  ],
-  '.claude/scripts/image-check.sh': [
-    ['wedding-image-check', 'app-image-check', 2],
-    ['db_user="wedding_portal"\ndb_name="wedding_portal"', 'db_user="app"\ndb_name="app"', 1],
-    [' and the ops/throttle settings.', '.', 1],
-    [
-      '   -e WEDDING_OPS_USERNAME="ops" -e WEDDING_OPS_PASSWORD="$(openssl rand -hex 16)" \\\n  -e WEDDING_THROTTLE_SERVER_KEY="$(openssl rand -base64 32)" "$image")"',
-      ' "$image")"',
-      1,
-    ],
   ],
   '.claude/scripts/ci-local.sh': [
     ['wedding-portal:ci-', 'app:ci-', 2],

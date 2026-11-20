@@ -48,65 +48,17 @@ jobs:
         run: .claude/scripts/class-version-check.sh
       - name: Build shape
         run: .claude/scripts/build-shape-check.sh
+      # The script suites that need the JDK, Gradle and the contract checkout (back from the image job, 2026-11-20).
+      - name: Codegen tests
+        run: bash scripts/test/generated-untracked-check.test.sh && bash scripts/test/codegen.test.sh
+      - name: WireMock harness
+        run: bash scripts/test/wiremock-harness.test.sh
       - name: Upload test reports
         if: failure() && steps.gradle.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-reports
           path: '*/build/reports/tests/'
-
-  image:
-    # No needs: test (owner decision D10, 2026-10-20): the image build and the tests run side by side; a red test job still
-    # fails the run.
-    # Phase 0 builds and checks the image on every run and never ships it (UD-13.e): no registry, no push.
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      # The image build generates the server interfaces, so it reads the same pinned contract as the test job.
-      - name: Check out rekord-contract
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          repository: @@KIT_CONTRACT_REPO@@
-          path: contract
-          token: ${{ secrets.CONTRACT_TOKEN }}
-      - name: Contract token is read-only
-        run: bash .claude/scripts/contract-read-only-check.sh contract
-      - name: Contract at the pinned ref
-        run: bash .claude/scripts/contract-pin.sh contract
-      - name: Image job wiring
-        run: bash scripts/test/ci-image.test.sh
-      - name: Image check refuses a wrong image
-        run: bash scripts/test/image-check.test.sh
-      # The script suites that need the JDK, Gradle and the contract checkout, moved here from the test job (owner
-      # decision 2026-10-23): this job already has the contract, and its ~40 s leave room beside the test job's build.
-      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
-        with:
-          distribution: temurin
-          java-version: '26'
-      - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
-      - name: Codegen tests
-        run: bash scripts/test/generated-untracked-check.test.sh && bash scripts/test/codegen.test.sh
-      - name: WireMock harness
-        run: bash scripts/test/wiremock-harness.test.sh
-      # The build stage's Gradle home (its RUN --mount=type=cache) outlives the runner: actions/cache keeps it between
-      # runs, and buildkit-cache-dance moves it into BuildKit's cache mount before the build and back out after it.
-      # Without it, every fresh runner downloads the Gradle distribution and every dependency again.
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        id: image-gradle-cache
-        with:
-          path: image-gradle-cache
-          key: image-gradle-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties', 'gradle/libs.versions.toml', 'settings.gradle.kts', '**/build.gradle.kts') }}
-          restore-keys: image-gradle-
-      - uses: reproducible-containers/buildkit-cache-dance@5422eac04292c961a382e0f584ea0f03ad9da723 # v3.4.0
-        with:
-          cache-map: '{"image-gradle-cache": "/root/.gradle"}'
-          # An exact hit already holds what this build needs; extracting it again only costs time.
-          skip-extraction: ${{ steps.image-gradle-cache.outputs.cache-hit }}
-          # busybox 1.37 by digest, not the action's default latest tag.
-          utility-image: busybox@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
-      - name: Build and check the image
-        run: bash scripts/test/image.test.sh
 
   archon-scripts:
     # The shell test suites of the build-feature scripts (.archon/scripts/test/*.test.sh), moved here from the
