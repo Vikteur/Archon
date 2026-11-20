@@ -1771,7 +1771,7 @@
       "template": false,
       "origin": "scripts/test/groma-delta.test.sh",
       "kind": "script",
-      "sha256": "c4f532ce55a3fea959c2e3168b9035f788bc831943bb56825d3b720f91d4c49a"
+      "sha256": "b65b666a5c120ffed31df2897d418ccf0f53af369107b6757db8f0264e61ac62"
     },
     {
       "path": "scripts/test/install-tools.test.sh",

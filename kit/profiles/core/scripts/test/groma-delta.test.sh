@@ -11,6 +11,8 @@ root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
+# The cases need a missing description to be a FAIL line: groma_descriptions defaults to optional (a note).
+export KIT_GROMA_DESCRIPTIONS=required
 
 check() { # check <name> <condition exit code>
   if [ "$2" -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1"; sed 's/^/    /' "$root/err" 2>/dev/null; fi
