@@ -819,6 +819,37 @@ describe('dependency check', () => {
     expect(lines.some(l => l.startsWith('core,java,java-quarkus,openapi-contract: '))).toBe(false);
   });
 
+  test('a CI line marked for a profile needs its script only in a set with that profile', () => {
+    const marked = (shipsPin: boolean) =>
+      depsCheck([
+        {
+          profile: 'java-spring',
+          path: '.github/workflows/ci.yml',
+          content:
+            'run: bash .claude/scripts/contract-pin.sh contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@\n' +
+            'run: bash .claude/scripts/pin-proof-check.sh\n',
+        },
+        ...(shipsPin
+          ? [{ profile: 'openapi-contract', path: '.claude/scripts/contract-pin.sh', content: '' }]
+          : []),
+      ]);
+    const shipped = marked(true);
+    expect(shipped.some(l => l.includes('contract-pin.sh'))).toBe(false);
+    expect(shipped).toContain(
+      'core,java,java-spring: .github/workflows/ci.yml needs .claude/scripts/pin-proof-check.sh (a CI step runs it)'
+    );
+    expect(shipped).toContain(
+      'core,java,java-spring,openapi-contract: .github/workflows/ci.yml needs .claude/scripts/pin-proof-check.sh (a CI step runs it)'
+    );
+    const missing = marked(false);
+    expect(missing).toContain(
+      'core,java,java-spring,openapi-contract: .github/workflows/ci.yml needs .claude/scripts/contract-pin.sh (a CI step runs it)'
+    );
+    expect(missing).not.toContain(
+      'core,java,java-spring: .github/workflows/ci.yml needs .claude/scripts/contract-pin.sh (a CI step runs it)'
+    );
+  });
+
   test('a known gap is reported, an unknown one fails, an unused entry is named', () => {
     const r = judgeDeps([
       'core,java: .claude/scripts/ci-local.sh needs .github/workflows/ci.yml (it reads it)',

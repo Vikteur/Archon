@@ -89,12 +89,7 @@ export const KNOWN_GAPS: { match: RegExp; reason: string }[] = [
     reason:
       'the java agents name the contract server inline and its CLI as their MCP fallback; without openapi-contract neither runs, install that profile',
   },
-  {
-    match:
-      /^core,openapi-contract: \.github\/workflows\/ci\.yml needs \.claude\/scripts\/\S+ \(a CI step runs it\)/,
-    reason:
-      "no java profile: openapi-contract's ci.yml is the Spring build's workflow with the contract steps, which wins over java-spring's; without java there is no Gradle build for it to run",
-  },
+
   {
     match:
       /^core,java,java-quarkus(,openapi-contract)?: \.github\/workflows\/ci\.yml needs (\.archon\/)?scripts\/test\/\S+ \(a CI step runs it\)|^core,java,java-quarkus: \.github\/workflows\/ci\.yml needs \.claude\/scripts\/\S+ \(a CI step runs it\)/,
@@ -124,6 +119,21 @@ export function judgeDeps(lines: string[]): {
   return { failures, known, unused };
 }
 
+const PROFILE_MARKER = /@@KIT_IF_PROFILE_([A-Z0-9_]+)@@/g;
+
+/**
+ * A file's content as kit add renders it for a set: a line marked `@@KIT_IF_PROFILE_<NAME>@@` is kept only when that
+ * profile is in the set (packages/cli/src/commands/kit.ts, renderTemplate), so a marked contract step needs its
+ * script only in a set with openapi-contract.
+ */
+export function keptLines(content: string, set: Profile[]): string {
+  const names = new Set(set.map(p => p.replace(/[^A-Za-z0-9]+/g, '_').toUpperCase()));
+  return content
+    .split(/(?<=\n)/)
+    .filter(line => [...line.matchAll(PROFILE_MARKER)].every(([, name]) => names.has(name ?? '')))
+    .join('');
+}
+
 /** What one set's files need, deduplicated: `[file, needs, why]`. */
 function needsInSet(
   set: Profile[],
@@ -135,7 +145,8 @@ function needsInSet(
     for (const { script, needs } of STACK_NEEDS.filter(s => paths.has(s.script)))
       for (const n of needs) out.set(`${script}\0${n}`, [script, n, 'it reads it']);
   for (const f of inSet)
-    for (const { needs, why } of needsOf(f)) out.set(`${f.path}\0${needs}`, [f.path, needs, why]);
+    for (const { needs, why } of needsOf({ ...f, content: keptLines(f.content, set) }))
+      out.set(`${f.path}\0${needs}`, [f.path, needs, why]);
   return [...out.values()];
 }
 

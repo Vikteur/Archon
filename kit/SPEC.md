@@ -188,12 +188,15 @@ take that verdict by SHA (`ci-by-sha.sh`). A project that runs its own CI, such 
   `local-ci-status` and `red-triage` under `.archon/scripts/test/`;
 - java: `.claude/scripts/ci-workflow-check.sh` and `.claude/scripts/ci-gate.sh`, with `scripts/test/ci-workflow-scope.test.sh`,
   `ci-workflow-check.test.sh` and `ci-gate.test.sh`;
-- java-quarkus, java-spring and openapi-contract: `.github/workflows/ci.yml` and `.github/ci-inputs.yml`.
+- java-spring: `.github/workflows/ci.yml` and `.github/ci-inputs.yml`.
 
-**The CI definition per profile.** java-spring's `ci.yml` and `ci-inputs.yml` hold no contract step: no contract
-checkout, no read-only token check, no `contract-pin.sh` or `generated-untracked-check.sh`, no `-Pcontract.spec`.
-openapi-contract ships its own copies at the same paths, the same workflow with those steps, and wins as the later
-profile, so a set with openapi-contract keeps today's contract gates. `ci-workflow-check.sh` follows the install: it
+**The CI definition per profile.** java-spring ships the one `ci.yml` and `ci-inputs.yml`; openapi-contract ships
+none. Their contract parts (the contract checkout with the read-only token check, `contract-pin.sh`,
+`generated-untracked-check.sh`, the contract-lint gate, `-Pcontract.spec` on every `./gradlew` run, and the test job's
+`.gitignore`, `.spectral.yaml` and `contract: true` inputs) are the lines marked `@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@`,
+so `kit add` keeps them only in a set with openapi-contract, and a set without it renders no contract step. A run line
+that carries `-Pcontract.spec` is a folded scalar with that argument on a line of its own, so both renders parse to one
+command line. The dependency check reads each file as the set renders it. `ci-workflow-check.sh` follows the install: it
 holds a workflow to the contract rules (a `CONTRACT_TOKEN` checkout, the pin and read-only steps, `-Pcontract.spec`)
 when the lock tracks `.claude/scripts/contract-pin.sh`, that script is in the tree, `profiles` in `kit.yaml` names
 openapi-contract, or there is no lock; otherwise it fails a kit-owned workflow that has any contract step or names

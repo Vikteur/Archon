@@ -4,9 +4,10 @@ name: CI
 # this file on its own (no push or pull_request trigger); workflow_dispatch only keeps it a valid workflow.
 # .claude/scripts/ci-workflow-check.sh holds it to its rules: every action pinned by commit SHA, every job with a
 # timeout and no if, and the job set equal to the last "CI job set" entry of docs/memory.md (`archon-scripts, test`).
-# .github/ci-inputs.yml lists each job's inputs. This is the workflow of a project without the openapi-contract
-# profile: no contract checkout, no CI secret. That profile ships its own ci.yml at this path, which wins over this one
-# and adds the contract steps; the check holds a project that has it to the contract rules too.
+# .github/ci-inputs.yml lists each job's inputs. The contract steps (the contract checked out with the one CI secret
+# and proved read-only, its pin, the spec on every ./gradlew run, the generated-code and contract-lint gates) are the
+# lines marked for the openapi-contract profile: kit add keeps them only where that profile is installed, and the
+# check holds such a project to the contract rules.
 on:
   workflow_dispatch:
 
@@ -19,6 +20,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # The contract, read with the one read-only CI secret. An empty secret fails this step and nothing after it@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      # runs; the failure-only step below is gated on the gradle step's outcome.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - name: Check out the contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        with:@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+          repository: @@KIT_CONTRACT_REPO@@@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+          path: contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+          token: ${{ secrets.CONTRACT_TOKEN }}@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - name: Contract token is read-only@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        run: bash .claude/scripts/contract-read-only-check.sh contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - name: Contract at the pinned ref@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        run: bash .claude/scripts/contract-pin.sh contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
@@ -28,9 +41,13 @@ jobs:
       # The task list is kit key ci.gradle_line (ci-workflow-check.sh requires it). --build-cache reuses task outputs
       # and --parallel runs independent modules side by side; the configuration cache is the project's own choice
       # (org.gradle.configuration-cache=true in gradle.properties), since a plugin that does not support it fails the build.
+      # Each run is one folded line; its contract spec argument is a line of its own, kept with the openapi-contract profile.
       - name: Build and test
         id: gradle
-        run: @@KIT_CI_GRADLE_LINE@@ --build-cache --parallel --stacktrace
+        run: >-
+          @@KIT_CI_GRADLE_LINE@@ --build-cache --parallel
+          -Pcontract.spec=contract/dist/openapi.yaml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+          --stacktrace
       # A green build that ran no test proves nothing: the JUnit XML must count a test (ci-gate.sh, kit key
       # gates.tests_ran). After a red build the same count says whether any test ran before it broke.
       - name: Tests ran
@@ -43,6 +60,8 @@ jobs:
         run: bash .claude/scripts/pin-proof-check.sh
       # No test-set-coverage step: it guards a build that skips a test set by tag, and this build splits test and
       # integrationTest by tag without skipping one (it also needs Java 24+). Add it when the build starts skipping a set.
+      - name: Generated code untracked@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        run: bash .claude/scripts/generated-untracked-check.sh@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
       - name: Java bytecode of the toolchain
         run: bash .claude/scripts/class-version-check.sh
       # The Spring Boot plugin only in application, the boot jar's layout, every module under the component scan.
@@ -50,9 +69,18 @@ jobs:
         run: bash .claude/scripts/build-shape-check.sh
       # Report-only gates (kit/SPEC.md): each prints its findings and passes until its kit key gates.<gate> is block.
       - name: Format (Spotless, report-only)
-        run: bash .claude/scripts/ci-gate.sh format ./gradlew spotlessCheck --build-cache --parallel --stacktrace
+        run: >-
+          bash .claude/scripts/ci-gate.sh format ./gradlew spotlessCheck --build-cache --parallel
+          -Pcontract.spec=contract/dist/openapi.yaml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+          --stacktrace
       - name: Coverage (JaCoCo, report-only)
-        run: bash .claude/scripts/ci-gate.sh coverage ./gradlew jacocoTestReport --build-cache --parallel --stacktrace
+        run: >-
+          bash .claude/scripts/ci-gate.sh coverage ./gradlew jacocoTestReport --build-cache --parallel
+          -Pcontract.spec=contract/dist/openapi.yaml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+          --stacktrace
+      # The pinned contract, linted with its own ruleset (contract/.spectral.yaml), else spectral:oas.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - name: Contract lint (Spectral, report-only)@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        run: bash .claude/scripts/ci-gate.sh contract-lint contract/dist/openapi.yaml@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
       - name: Upload test reports
         if: failure() && steps.gradle.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
