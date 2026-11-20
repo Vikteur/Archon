@@ -1,0 +1,18 @@
+{{!
+  Domain event: an immutable record of something that happened, published through the DomainEventPublisher port
+  (common-domain) by the use case after the change is saved; adapters listen to it (search indexing, cache).
+  Publish it from the use case: inject DomainEventPublisher and call domainEventPublisher.publish(new <Name>(...))
+  after the save; verify(domainEventPublisher).publish(...) in its test.
+  Exemplars: dashboard-usecase .../events/PageCreatedEvent.java, .../usecase/CreateOrUpdateDynamicPageUseCase.java
+  Target: <capability>-usecase/src/main/java/<pkg>/events/<Name>Event.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (everything before "Event", e.g. GadgetCreated), domainPackage, Aggregate, aggregate
+  Left to you: the listener in the adapter, the publish call in the use case.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.event.DomainEvent;
+import {{{domainPackage}}}.{{{Aggregate}}};
+
+public record {{{Name}}}Event({{{Aggregate}}} {{{aggregate}}}) implements DomainEvent {
+}

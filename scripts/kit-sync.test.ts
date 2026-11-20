@@ -517,7 +517,7 @@ describe('MCP fallback (the kit only)', () => {
     );
     const r = judgeDeps(lines.filter(l => l.includes('cli.mjs')));
     expect(r.failures.length).toBeGreaterThan(0);
-    expect(r.failures.every(l => l.includes(',openapi-contract:'))).toBe(true);
+    expect(r.failures.every(l => /(^|,)openapi-contract[,:]/.test(l))).toBe(true);
     expect(r.known.some(l => l.startsWith('core,java: ') && l.includes('cli.mjs'))).toBe(true);
   });
 });
@@ -717,9 +717,12 @@ describe('project nouns and Copilot paths', () => {
 describe('dependency check', () => {
   test('enumerates the installable sets', () => {
     const sets = installableSets().map(s => s.join(','));
-    expect(sets).toHaveLength(8);
+    expect(sets).toHaveLength(9);
     expect(sets).toContain('core');
     expect(sets).toContain('core,java,java-spring,openapi-contract');
+    // the project profile only on top of what it requires
+    expect(sets).toContain('core,java,java-spring,openapi-contract,mijn-gezondheid');
+    expect(sets.filter(s => s.includes('mijn-gezondheid'))).toHaveLength(1);
     expect(sets.some(s => s.includes('java-quarkus') && s.includes('java-spring'))).toBe(false);
     expect(sets.some(s => s.includes('java-quarkus') && !s.includes(',java,'))).toBe(false);
   });
@@ -1135,6 +1138,10 @@ describe('sync on a fixture repo', () => {
     if (first) first.path = `${PROJECT_TEMPLATES}x.mustache`;
     writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
     expect(verifyKit(out).join('\n')).toContain(`lies in ${PROJECT_TEMPLATES}`);
+    // only a project profile may ship there
+    if (first) first.profile = 'mijn-gezondheid';
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
+    expect(verifyKit(out).join('\n')).not.toContain(`lies in ${PROJECT_TEMPLATES}`);
   });
 
   test('is deterministic', () => {
@@ -1291,7 +1298,33 @@ describe('the committed kit', () => {
   const kit = join(dirname(import.meta.path), '..', 'kit');
   const manifest = JSON.parse(readFileSync(join(kit, 'manifest.json'), 'utf8')) as {
     files: { path: string; profile: string }[];
+    profiles: Record<string, { requires: string[]; project?: boolean }>;
   };
+  test("the project profile ships the repo's templates and scaffold.json; no generic profile ships any", () => {
+    const project = manifest.files.filter(f => f.path.startsWith(PROJECT_TEMPLATES));
+    expect(project.length).toBeGreaterThan(100);
+    expect(new Set(project.map(f => f.profile))).toEqual(new Set(['mijn-gezondheid']));
+    expect(manifest.profiles['mijn-gezondheid']).toMatchObject({
+      requires: ['java-spring', 'openapi-contract'],
+      project: true,
+    });
+    for (const name of ['scaffold.json', 'README.md', 'domain/entity.mustache']) {
+      expect(project.some(f => f.path === `${PROJECT_TEMPLATES}${name}`)).toBe(true);
+    }
+    const config = JSON.parse(
+      readFileSync(join(kit, `profiles/mijn-gezondheid/${PROJECT_TEMPLATES}scaffold.json`), 'utf8')
+    ) as { context?: { modules?: string[] } };
+    expect(config.context?.modules?.length).toBeGreaterThan(0);
+    for (const [name, meta] of Object.entries(manifest.profiles)) {
+      if (name !== 'mijn-gezondheid') expect(meta.project).toBeUndefined();
+    }
+    // the portal's own nouns stay in its profile
+    for (const f of manifest.files.filter(x => x.profile !== 'mijn-gezondheid')) {
+      expect(readFileSync(join(kit, 'profiles', f.profile, f.path), 'utf8')).not.toContain(
+        'be.mijngezondheid'
+      );
+    }
+  });
   test('git ignores no file the manifest lists', () => {
     const paths = manifest.files.map(f => `profiles/${f.profile}/${f.path}`);
     const r = Bun.spawnSync(['git', '-C', kit, 'check-ignore', '--no-index', '--stdin'], {

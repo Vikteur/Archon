@@ -217,12 +217,22 @@ rm "$w"/docs/scaffold-templates/project/domain/orphan.*
 mkdir -p "$w/docs/code-maps"
 printf '## Scaffold\n\n| Template | Target | Variables | Left to you |\n|---|---|---|---|\n| [domain/kitthing](../scaffold-templates/domain/kitthing.mustache) | `<capability>-lib/src/main/java/<pkg>/<Name>.java` | package | - |\n' \
   > "$w/docs/code-maps/kit-leaf.md"
+forkit() { out="$(cd "$w" && bash scripts/scaffold.sh --for zz-lib/src/main/java/a/b/zz/Kit.java 2>&1)"; }
 wiring
-check "5 projectOnly: a row that links a kit template fails, and --for offering it" \
-  "$([ "$rc" -eq 1 ] && has 'kit template linked: domain/kitthing (kit-leaf)' && has 'FAIL - 2 --for never offers a kit template'; echo $?)"
+check "5 projectOnly: a kit leaf's row that links a kit template is dropped, so the wiring passes" "$([ "$rc" -eq 0 ]; echo $?)"
+forkit
+check "5 ... and --for offers only the repo's own template there" \
+  "$(has 'project/domain/thing (skill ' && ! has 'domain/kitthing (skill '; echo $?)"
 sed -i 's/"projectOnly": true/"projectOnly": false/' "$w/docs/scaffold-templates/project/scaffold.json"
+forkit
+check "5 without projectOnly --for offers the kit template too" "$(has 'domain/kitthing (skill '; echo $?)"
 wiring
-check "5 ... and passes without projectOnly" "$([ "$rc" -eq 0 ]; echo $?)"
+check "5 ... and the wiring passes" "$([ "$rc" -eq 0 ]; echo $?)"
+printf '| [domain/thing](../scaffold-templates/domain/thing.mustache) | `<capability>-lib/src/<set>/java/<pkg>/<Name>.java` | package | - |\n' \
+  >> "$w/docs/code-maps/kit-leaf.md"
+wiring
+check "5 a looser kit row the repo's template takes over does not outrank that template's own row" \
+  "$([ "$rc" -eq 0 ] && ! has ' outranked at '; echo $?)"
 rm -r "$w/docs/scaffold-templates/project"
 wiring
 check "5 a repo without templates of its own passes with nothing to check" "$([ "$rc" -eq 0 ] && has 'nothing to check'; echo $?)"

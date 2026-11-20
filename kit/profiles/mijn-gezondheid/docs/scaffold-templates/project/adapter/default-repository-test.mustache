@@ -1,0 +1,79 @@
+{{!
+  Repository adapter test: a @DataJpaTest slice against a Testcontainers Postgres with the module's Flyway
+  migrations, through the module's AbstractRepositoryTest (module/abstract-repository-test).
+  Exemplar: authentication-adapter src/test .../repository/DefaultBlockedAudienceRepositoryTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/repository/Default<Name>RepositoryTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, domainPackage, fixture (Mother scenario), keyName, KeyCap, keyType (omit for no key)
+  Left to you: cases for finders you added, constraint violations (DataIntegrityViolationException).
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+
+class Default{{{Name}}}RepositoryTest extends AbstractRepositoryTest {
+
+    @Autowired
+    private Default{{{Name}}}Repository repository;
+
+    @Autowired
+    private {{{Name}}}JpaRepository jpaRepository;
+
+    @BeforeEach
+    void setUp() {
+        jpaRepository.deleteAll();
+    }
+
+    @Test
+    void givenNew{{{Name}}}_whenSave_thenPersistAndReturnIt() {
+        // When
+        var saved = repository.save({{{fixture}}}());
+
+        // Then
+        assertThat(saved).isEqualTo({{{fixture}}}());
+        assertThat(jpaRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void givenStored{{{Name}}}_whenFindAll_thenReturnIt() {
+        // Given
+        repository.save({{{fixture}}}());
+
+        // When
+        var result = repository.findAll();
+
+        // Then
+        assertThat(result).containsExactly({{{fixture}}}());
+    }
+{{#keyName}}
+
+    @Test
+    void givenStored{{{Name}}}_whenFindBy{{{KeyCap}}}_thenReturnIt() {
+        // Given
+        var stored = repository.save({{{fixture}}}());
+
+        // When
+        var result = repository.findBy{{{KeyCap}}}(stored.get{{{KeyCap}}}());
+
+        // Then
+        assertThat(result).contains(stored);
+    }
+
+    @Test
+    void givenStored{{{Name}}}_whenDeleteBy{{{KeyCap}}}_thenRemoveIt() {
+        // Given
+        var stored = repository.save({{{fixture}}}());
+
+        // When
+        repository.deleteBy{{{KeyCap}}}(stored.get{{{KeyCap}}}());
+
+        // Then
+        assertThat(jpaRepository.count()).isZero();
+    }
+{{/keyName}}
+}

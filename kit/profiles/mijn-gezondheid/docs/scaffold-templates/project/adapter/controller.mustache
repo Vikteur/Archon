@@ -1,0 +1,67 @@
+{{!
+  API-first controller: implements the OpenAPI-generated <Api> interface (openApiConventions in the adapter's
+  build.gradle.kts), delegates to use cases and maps with the DomainToDTOMapper. Generated methods return
+  ResponseEntity. Copy each operation's signature from the generated interface (build/generated/openapi).
+  Two kinds of operation:
+    query   (command false): return ResponseEntity.ok(<body>);
+    command (command true):  <call> returns a Notification; errors give 400 with the generated NotificationDTO
+                             (add "notification" to the module's openApiConventions models), success gives 204.
+  Authorization is NOT decided here: "preAuthorize" comes from the ticket / access matrix. Leave it out only for
+  /api/admin/** operations, which the admin SecurityFilterChain guards (as OAuthAdminController).
+  "logAction" is the @LogUser audit text (optional).
+  Exemplars: vaccination-adapter .../controller/VaccinationController.java (query),
+             authentication-adapter .../controller/OAuthAdminController.java (command)
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/controller/<Name>Controller.java
+  Package: "package" is the full package of the file (no suffix is appended): the generated apiPackage.
+  Vars:   package, Name, Api (generated interface, e.g. VaccinationApi), imports[] (use cases, java.util.List, ...),
+          mapper (bool: inject <Name>DomainToDTOMapper as domainToDTOMapper), useCases[type, field],
+          operations[method, returnType (e.g. List<VaccinationDTO>), params (the generated parameter list),
+                     logAction, preAuthorize (SpEL, e.g. @verifyMandateForTopicAccessUseCase.execute('VACCINATIONS')),
+                     command (bool), body (query: Java expression of the response body),
+                     call (command: Java expression returning the Notification)]
+  Left to you: error mapping beyond the central RestExceptionHandler, other status codes.
+}}
+package {{{package}}};
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@RestController
+@RequiredArgsConstructor
+public class {{{Name}}}Controller implements {{{Api}}} {
+
+{{#useCases}}
+    private final {{{type}}} {{{field}}};
+{{/useCases}}
+{{#mapper}}
+    private final {{{Name}}}DomainToDTOMapper domainToDTOMapper;
+{{/mapper}}
+{{#operations}}
+
+    @Override
+{{#logAction}}
+    @be.mijngezondheid.logging.LogUser(action = "{{{logAction}}}")
+{{/logAction}}
+{{#preAuthorize}}
+    @org.springframework.security.access.prepost.PreAuthorize("{{{preAuthorize}}}")
+{{/preAuthorize}}
+    public ResponseEntity<{{{returnType}}}> {{{method}}}({{{params}}}) {
+{{#command}}
+        var notification = {{{call}}};
+        if (notification.hasErrors()) {
+            return ResponseEntity.badRequest().body(NotificationDTO.builder()
+                    .errors(notification.getErrors())
+                    .build());
+        }
+        return ResponseEntity.noContent().build();
+{{/command}}
+{{^command}}
+        return ResponseEntity.ok({{{body}}});
+{{/command}}
+    }
+{{/operations}}
+}

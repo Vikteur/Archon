@@ -660,6 +660,39 @@ describe('kit', () => {
       expect(await add({ profiles: ['core'] })).toBe(0);
       expect(readFileSync(join(project, 'notes.md'), 'utf-8')).toBe('notes\n');
     });
+
+    // A project profile (manifest `project: true`) carries one repo's own templates: it alone may write there.
+    const withProject = (text: string): Kit => {
+      const kit = makeKit();
+      kit.manifest.profiles.repo = { requires: ['java'], description: 'one repo', project: true };
+      addFile(kit, 'repo', own, text);
+      return kit;
+    };
+    it('a project profile writes there, replaces an unedited file and keeps an edited one', async () => {
+      expect(unsafeManifestPath(own, true)).toBeNull();
+      expect(unsafeManifestPath('../x', true)).not.toBeNull();
+      expect(await add({ profiles: ['repo'] }, withProject('v1\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('v1\n');
+      expect(readKitLock(project)[own]).toBe(sha('v1\n'));
+      expect(await add({ profiles: ['repo'] }, withProject('v2\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('v2\n');
+      writeFileSync(join(project, own), 'mine\n');
+      logs.length = 0;
+      expect(await add({ profiles: ['repo'] }, withProject('v3\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('mine\n');
+      expect(logs.join('\n')).toContain(`kept (differs)  ${own}`);
+    });
+    it('the same path from a profile that is no project profile is still refused', async () => {
+      const kit = withProject('v1\n');
+      kit.manifest.profiles.repo.project = false;
+      expect(await add({ profiles: ['repo'], force: true }, kit)).toBe(1);
+      expect(existsSync(join(project, own))).toBe(false);
+    });
+    it('leaving the project profile out removes none of its files, unedited ones included', async () => {
+      expect(await add({ profiles: ['repo'] }, withProject('v1\n'))).toBe(0);
+      expect(await add({ profiles: ['java'], force: true }, withProject('v1\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('v1\n');
+    });
   });
 
   describe('files the kit no longer ships', () => {

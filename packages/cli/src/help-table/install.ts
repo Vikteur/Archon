@@ -35,7 +35,8 @@ const kitSetupFlags: FlagHelp[] = [
   { spec: '--contract <file>', description: 'OpenAPI contract (.yaml, .yml or .json)' },
   {
     spec: '--profile <a,b,c>',
-    description: 'Kit profiles (default: last run, then core,java,java-spring,openapi-contract)',
+    description:
+      'Kit profiles (default: last run, then core,java,java-spring,openapi-contract,mijn-gezondheid)',
   },
   { spec: '--backlog', description: 'Use Backlog.md for tickets (absent: off)' },
   { spec: '--yes', description: 'Skip the confirmation' },

@@ -1,0 +1,22 @@
+{{!
+  Domain exception: an unchecked exception for a state the caller cannot recover from in the use case (not found,
+  already exists); the central RestExceptionHandler (application) maps it to a status. Validation problems are
+  Notifications, not exceptions.
+  Exemplar: report-domain .../collection/ReportCollectionNotFoundException.java
+  Target: <capability>-domain/src/main/java/<pkg>/<Name>Exception.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (everything before "Exception", e.g. GadgetNotFound)
+  Left to you: the handler mapping in application .../exceptionhandling/RestExceptionHandler.java.
+}}
+package {{{package}}};
+
+public class {{{Name}}}Exception extends RuntimeException {
+
+    public {{{Name}}}Exception(final String message) {
+        super(message);
+    }
+
+    public {{{Name}}}Exception(final String message, final Throwable cause) {
+        super(message, cause);
+    }
+}

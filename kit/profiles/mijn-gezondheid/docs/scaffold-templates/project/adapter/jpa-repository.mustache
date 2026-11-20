@@ -1,0 +1,28 @@
+{{!
+  Spring Data repository for the JPA entity; used only by the context's Default<Name>Repository.
+  Exemplar: authentication-adapter .../repository/jpa/BlockedAudienceJpaRepository.java
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/repository/<Name>JpaRepository.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, keyType, keyName, KeyCap (the key is one of the entity's fields; omit for no key)
+          imports[] (e.g. java.util.UUID for the key type)
+  Left to you: derived or @Query finders the port needs.
+}}
+package {{{package}}};
+
+import org.springframework.data.jpa.repository.JpaRepository;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+{{#keyName}}
+
+import java.util.Optional;
+{{/keyName}}
+
+public interface {{{Name}}}JpaRepository extends JpaRepository<{{{Name}}}JpaEntity, Long> {
+{{#keyName}}
+
+    Optional<{{{Name}}}JpaEntity> findBy{{{KeyCap}}}({{{keyType}}} {{{keyName}}});
+
+    void deleteBy{{{KeyCap}}}({{{keyType}}} {{{keyName}}});
+{{/keyName}}
+}

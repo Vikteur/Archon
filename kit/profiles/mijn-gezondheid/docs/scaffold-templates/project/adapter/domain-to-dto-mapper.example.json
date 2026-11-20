@@ -1,0 +1,33 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetDomainToDTOMapper.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer",
+  "Dto": "VaccinationDTO",
+  "mappings": [
+    {
+      "dtoField": "description",
+      "DtoCap": "Description",
+      "expr": "domain.getDescription()"
+    },
+    {
+      "dtoField": "countryCode",
+      "DtoCap": "CountryCode",
+      "expr": "domain.getCountryCode()"
+    },
+    {
+      "dtoField": "administerDate",
+      "DtoCap": "AdministerDate",
+      "expr": "domain.getAdministerDate()"
+    },
+    {
+      "dtoField": "type",
+      "DtoCap": "Type",
+      "expr": "\"GADGET\""
+    }
+  ]
+}

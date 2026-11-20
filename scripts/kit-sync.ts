@@ -248,7 +248,7 @@ function classifyByList(path: string): Assignment {
   );
 }
 
-/** A repo's own scaffold templates: the kit never ships into this folder (kit.ts PROJECT_OWNED_DIRS). */
+/** A repo's own scaffold templates: only a project profile ships into this folder (kit.ts PROJECT_OWNED_DIRS). */
 export const PROJECT_TEMPLATES = 'docs/scaffold-templates/project/';
 
 export function classify(
@@ -705,9 +705,12 @@ export function verifyKit(out: string): string[] {
       prev = { rank, path: f.path };
     }
     listed.add(key);
-    if (f.path.startsWith(PROJECT_TEMPLATES))
+    if (
+      f.path.startsWith(PROJECT_TEMPLATES) &&
+      PROFILE_META[f.profile as Profile]?.project !== true
+    )
       problems.push(
-        `manifest: ${key} lies in ${PROJECT_TEMPLATES}, the repo's own folder (kit add refuses it)`
+        `manifest: ${key} lies in ${PROJECT_TEMPLATES}, the repo's own folder (kit add refuses it but from a project profile)`
       );
     const content = verifyEntry(out, f, problems);
     if (content !== null) files.push({ profile: f.profile, path: f.path, content });

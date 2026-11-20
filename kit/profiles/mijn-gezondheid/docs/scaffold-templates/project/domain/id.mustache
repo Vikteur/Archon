@@ -1,0 +1,18 @@
+{{!
+  Typed identifier: a record over a UUID with of(); keeps ids of different aggregates apart in signatures.
+  Exemplar: report-domain .../collection/CollectionId.java
+  Target: <capability>-domain/src/main/java/<pkg>/<Name>Id.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (the aggregate; the record is <Name>Id)
+  Left to you: nothing.
+}}
+package {{{package}}};
+
+import java.util.UUID;
+
+public record {{{Name}}}Id(UUID value) {
+
+    public static {{{Name}}}Id of(final UUID id) {
+        return new {{{Name}}}Id(id);
+    }
+}

@@ -1,0 +1,40 @@
+{
+  "_target": "zzsmoke-domain/src/test/java/be/mijngezondheid/zzsmoke/domain/gadget/GadgetFixedMother.java",
+  "package": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "Name": "Gadget",
+  "Mother": "GadgetFixedMother",
+  "imports": [
+    "java.time.LocalDate",
+    "java.util.UUID"
+  ],
+  "constants": [
+    {
+      "type": "UUID",
+      "constant": "KETTLE_ID",
+      "value": "UUID.fromString(\"8c3f1a2b-4d5e-4f60-9a7b-1c2d3e4f5a6b\")"
+    }
+  ],
+  "fixtures": [
+    {
+      "method": "kettle",
+      "values": [
+        {
+          "name": "externalId",
+          "example": "KETTLE_ID"
+        },
+        {
+          "name": "description",
+          "example": "\"Smart kettle\""
+        },
+        {
+          "name": "countryCode",
+          "example": "\"BE\""
+        },
+        {
+          "name": "administerDate",
+          "example": "LocalDate.of(2024, 5, 2)"
+        }
+      ]
+    }
+  ]
+}

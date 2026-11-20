@@ -1,0 +1,6 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/repository/StringListConverter.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.repository",
+  "Name": "StringList",
+  "separator": ","
+}

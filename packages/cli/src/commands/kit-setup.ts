@@ -43,7 +43,13 @@ export {
   type SetupUi,
 } from './kit-setup-ui';
 
-export const DEFAULT_SETUP_PROFILES = ['core', 'java', 'java-spring', 'openapi-contract'];
+export const DEFAULT_SETUP_PROFILES = [
+  'core',
+  'java',
+  'java-spring',
+  'openapi-contract',
+  'mijn-gezondheid',
+];
 const CONTRACT_EXTENSIONS = new Set(['.yaml', '.yml', '.json']);
 const MCP_JSON = join('.github', 'mcp.json');
 const CODEGRAPH_SETUP = '.archon/scripts/codegraph-setup.sh';

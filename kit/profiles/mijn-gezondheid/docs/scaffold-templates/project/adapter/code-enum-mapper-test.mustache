@@ -1,0 +1,55 @@
+{{!
+  Two-way enum mapper test: every pair both ways (@MethodSource), null rejected both ways.
+  Exemplar: allergy-intolerance-adapter src/test .../gateway/AllergyIntoleranceCriticalityMapperTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/<Name>MapperTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, Domain, External, imports[], pairs[domain, external]
+  Left to you: cases for a default branch you added.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class {{{Name}}}MapperTest {
+
+    @ParameterizedTest
+    @MethodSource("pairs")
+    void givenExternalValue_whenToDomain_thenReturnMappedValue(final {{{External}}} external, final {{{Domain}}} domain) {
+        assertThat({{{Name}}}Mapper.toDomain(external)).isEqualTo(domain);
+    }
+
+    @ParameterizedTest
+    @MethodSource("pairs")
+    void givenDomainValue_whenToExternal_thenReturnMappedValue(final {{{External}}} external, final {{{Domain}}} domain) {
+        assertThat({{{Name}}}Mapper.toExternal(domain)).isEqualTo(external);
+    }
+
+    @Test
+    void givenNull_whenToDomain_thenThrowNullPointerException() {
+        assertThatThrownBy(() -> {{{Name}}}Mapper.toDomain(null)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void givenNull_whenToExternal_thenThrowNullPointerException() {
+        assertThatThrownBy(() -> {{{Name}}}Mapper.toExternal(null)).isInstanceOf(NullPointerException.class);
+    }
+
+    static Stream<Arguments> pairs() {
+        return Stream.<Arguments>builder()
+{{#pairs}}
+                .add(Arguments.of({{{External}}}.{{{external}}}, {{{Domain}}}.{{{domain}}}))
+{{/pairs}}
+                .build();
+    }
+}

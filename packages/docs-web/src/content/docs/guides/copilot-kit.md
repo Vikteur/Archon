@@ -104,6 +104,7 @@ fetches and lists the new Archon commits and the plan, and changes nothing.
 | `--branch <name>` | Use another branch name for the commit. |
 | `--no-pull` | Do not pull the repositories first. |
 | `--no-tools` | Do not update the tools (jq, yq, gh, node, codegraph, copilot, rtk, ...). |
+| `--add-profile <a,b>` | Add profiles to the saved ones, for example `--add-profile mijn-gezondheid` on an install from before that profile. The next update keeps them. |
 | `--no-commit` | Leave the update uncommitted. |
 | `--no-restart` | Leave a running `archon serve` on the old build. |
 | `--web` | Start the MCP Inspectors at the end. |
@@ -135,7 +136,7 @@ After you confirm the summary, it runs these steps, each with a spinner:
 | Step | What it does |
 |------|--------------|
 | Tools | Runs the kit's tool installer for the backend (`archon kit tools`), with `INSTALL_TOOLS_BACKLOG=0` when Backlog.md is off, so `backlog` is not installed. |
-| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract` unless you pick others. |
+| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract,mijn-gezondheid` unless you pick others. |
 | Contract | Sets `contract.spec_path` in the backend's `.archon/kit.yaml` to the absolute contract path and `backlog` to `true` or `false`, then runs `.archon/scripts/contract-mcp-setup.sh`. |
 | CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
 | Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
@@ -164,7 +165,7 @@ archon kit setup --backend ~/code/backend --frontend ~/code/frontend \
 | `--backend <path>` | The backend repository |
 | `--frontend <path>` | The frontend repository; leave it out to skip the frontend |
 | `--contract <file>` | The OpenAPI contract file |
-| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract,mijn-gezondheid`) |
 | `--backlog` | Use Backlog.md for tickets; leave it out for off (`backlog: false` in `kit.yaml`) |
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
@@ -214,6 +215,7 @@ A profile is a group of kit files. You choose the profiles when you install.
 | `java-quarkus` | `java` | Quarkus versions of the skills, the scaffold templates, the CI workflow and `run-app`. |
 | `java-spring` | `java` | The same set as `java-quarkus`, rewritten for Spring Boot. |
 | `openapi-contract` | `core` | The `contract-api` MCP server, contract readiness and pin checks, DB parity, and the contract agent. |
+| `mijn-gezondheid` | `java-spring`, `openapi-contract` | A project profile: that project's own scaffold templates, their `## Scaffold` table and `scaffold.json` in `docs/scaffold-templates/project/`. `scripts/scaffold/new-context.sh`, `smoke.sh` and the wiring check run on them as installed. A template you edit is kept on the next update. |
 
 `java-quarkus` and `java-spring` are mutually exclusive. Pick one. Each profile pulls in
 the profiles it requires, so you do not need to list `core` or `java` yourself.
@@ -239,7 +241,7 @@ The defaults below suit a Spring Boot Gradle project.
 
 | Key | Default | What it sets |
 |---|---|---|
-| `profiles` | `[core, java, java-spring, openapi-contract]` | The profiles installed. `kit add --profile` replaces this list. |
+| `profiles` | `[core, java, java-spring, openapi-contract, mijn-gezondheid]` | The profiles installed. `kit add --profile` replaces this list. |
 | `stack` | `spring` | `quarkus` or `spring`. The gates that differ per framework branch on it. |
 | `base_branch` | `main` | The branch that runs target and rebase against. |
 | `gh_accounts` | `[]` | The `gh` accounts the `gh-switch-account` skill switches between. |

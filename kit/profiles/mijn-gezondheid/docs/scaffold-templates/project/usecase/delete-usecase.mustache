@@ -1,0 +1,43 @@
+{{!
+  Delete use case: validate the key, delete through the port, return the Notification.
+  Exemplar: therapeutic-relation-usecase .../exclusion/usecase/DeleteTherapeuticExclusionUseCase.java
+  Target: <capability>-usecase/src/main/java/<pkg>/Delete<Name>UseCase.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, portPackage, keyType, keyName, KeyCap, keyNotBlank (bool: String key)
+          imports[] (e.g. java.util.UUID for the key type)
+  Left to you: a not-found Notification (findBy<Key> first) when deleting a missing one is an error.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Notification;
+import be.mijngezondheid.common.domain.validation.ObjectValidator;
+import be.mijngezondheid.common.domain.validation.StringValidator;
+import {{{portPackage}}}.{{{Name}}}Repository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Transactional
+@RequiredArgsConstructor
+public class Delete{{{Name}}}UseCase {
+
+    private final {{{Name}}}Repository {{{name}}}Repository;
+
+    public Notification execute({{{keyType}}} {{{keyName}}}) {
+        var notification = Notification.empty();
+{{#keyNotBlank}}
+        StringValidator.notBlank("{{{keyName}}}", {{{keyName}}}, notification);
+{{/keyNotBlank}}
+{{^keyNotBlank}}
+        ObjectValidator.notNull("{{{keyName}}}", {{{keyName}}}, notification);
+{{/keyNotBlank}}
+        if (notification.hasErrors()) {
+            return notification;
+        }
+
+        {{{name}}}Repository.deleteBy{{{KeyCap}}}({{{keyName}}});
+        return Notification.empty();
+    }
+}

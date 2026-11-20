@@ -1,0 +1,52 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/repository/GadgetJpaEntity.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.repository",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer",
+  "table": "gadget",
+  "imports": [
+    "java.time.LocalDate",
+    "java.util.UUID"
+  ],
+  "fields": [
+    {
+      "type": "UUID",
+      "name": "externalId",
+      "Cap": "ExternalId",
+      "example": "UUID.fromString(\"5f1c1f6e-2f0a-4c8e-9a51-3b7c2d1e0f00\")",
+      "column": "external_id",
+      "sqlType": "UUID",
+      "unique": true
+    },
+    {
+      "type": "String",
+      "name": "description",
+      "Cap": "Description",
+      "example": "\"Smart thermometer\"",
+      "notBlank": true,
+      "column": "description",
+      "sqlType": "VARCHAR(255)"
+    },
+    {
+      "type": "String",
+      "name": "countryCode",
+      "Cap": "CountryCode",
+      "example": "\"BE\"",
+      "notBlank": true,
+      "column": "country_code",
+      "sqlType": "VARCHAR(2)"
+    },
+    {
+      "type": "LocalDate",
+      "name": "administerDate",
+      "Cap": "AdministerDate",
+      "example": "LocalDate.of(2024, 3, 1)",
+      "column": "administer_date",
+      "sqlType": "DATE"
+    }
+  ]
+}

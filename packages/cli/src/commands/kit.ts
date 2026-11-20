@@ -113,17 +113,27 @@ export function shellQuote(word: string): string {
 const RESERVED_PATHS = new Set(['.archon/kit.yaml', '.archon/kit.lock.json']);
 
 /**
- * The repo's own folders: the kit never ships, overwrites or removes a file in them, so a manifest entry there is
- * refused and a lock entry there is never pruned (docs/scaffold-templates/project/ holds the repo's own templates).
+ * The repo's own folders (docs/scaffold-templates/project/ holds the repo's own templates): a generic profile never
+ * ships a file there, so its manifest entry is refused. Only a project profile (manifest `project: true`, the files of
+ * one repo) may; kit add then treats them as any kit file: written when missing, replaced while unedited, kept once the
+ * repo edits them. A lock entry there is never pruned, so leaving the profile out never removes the repo's templates.
  */
 export const PROJECT_OWNED_DIRS = ['docs/scaffold-templates/project/'];
 
+const inProjectOwnedDir = (path: string): boolean => {
+  const normal = path
+    .split(/[\\/]/)
+    .filter(seg => seg !== '' && seg !== '.')
+    .join('/');
+  return PROJECT_OWNED_DIRS.some(dir => `${normal}/`.startsWith(dir));
+};
+
 /**
  * Why a manifest path cannot be written inside the project, or null when it can: an absolute path, a
- * drive letter, a `..` segment (either separator), one of kit add's own files or a path in a project-owned folder is
- * refused. The prune of files the kit dropped skips a lock entry this refuses.
+ * drive letter, a `..` segment (either separator), one of kit add's own files or, unless `projectProfile`, a path in a
+ * project-owned folder is refused. The prune of files the kit dropped skips a lock entry in a project-owned folder.
  */
-export function unsafeManifestPath(path: string): string | null {
+export function unsafeManifestPath(path: string, projectProfile = false): string | null {
   if (path === '' || path.startsWith('/') || path.startsWith('\\') || isAbsolute(path)) {
     return 'an absolute path';
   }
@@ -132,8 +142,8 @@ export function unsafeManifestPath(path: string): string | null {
   if (segments.includes('..')) return 'a .. segment';
   const normal = segments.filter(seg => seg !== '' && seg !== '.').join('/');
   if (RESERVED_PATHS.has(normal)) return "kit add's own file";
-  if (PROJECT_OWNED_DIRS.some(dir => `${normal}/`.startsWith(dir))) {
-    return "in the repo's own scaffold templates (docs/scaffold-templates/project/)";
+  if (!projectProfile && PROJECT_OWNED_DIRS.some(dir => `${normal}/`.startsWith(dir))) {
+    return "in the repo's own scaffold templates (docs/scaffold-templates/project/), from a profile that is no project profile";
   }
   return null;
 }
@@ -711,7 +721,10 @@ export async function kitAddCommand(
   };
 
   const unsafe = kit.manifest.files
-    .map(file => ({ file, why: unsafeManifestPath(file.path) }))
+    .map(file => ({
+      file,
+      why: unsafeManifestPath(file.path, kit.manifest.profiles[file.profile]?.project === true),
+    }))
     .filter(entry => entry.why !== null);
   if (unsafe.length > 0) {
     for (const { file, why } of unsafe) {
@@ -804,7 +817,12 @@ export async function kitAddCommand(
   // that still holds what kit add wrote is the kit's own and goes; one the project edited stays, with its lock entry,
   // so the next run lists it again until the project removes it. --force never removes an edited file.
   for (const relative of Object.keys(lock).sort()) {
-    if (Object.hasOwn(nextLock, relative) || unsafeManifestPath(relative) !== null) continue;
+    if (
+      Object.hasOwn(nextLock, relative) ||
+      unsafeManifestPath(relative, true) !== null ||
+      inProjectOwnedDir(relative)
+    )
+      continue;
     const state = pruneFile(project, relative, lock[relative] ?? '', dry);
     if (state === null) continue;
     if (state !== 'removed') nextLock[relative] = lock[relative] ?? '';

@@ -1,0 +1,37 @@
+{
+  "_target": "zzsmoke-adapter/src/test/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetControllerTest.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "Gadget",
+  "imports": [
+    "be.mijngezondheid.zzsmoke.usecase.gadget.GetGadgetsUseCase",
+    "java.util.List",
+    "static be.mijngezondheid.zzsmoke.domain.gadget.GadgetMother.thermometer"
+  ],
+  "useCases": [
+    {
+      "type": "GetGadgetsUseCase",
+      "field": "getGadgetsUseCase"
+    }
+  ],
+  "cases": [
+    {
+      "test": "givenStoredGadgets_whenGetVaccinations_thenReturnThem",
+      "stub": "when(getGadgetsUseCase.execute()).thenReturn(List.of(thermometer()))",
+      "request": "get(\"/api/vaccination\").header(\"X-context\", \"PAGE\").header(\"X-Accept-Language\", \"nl\")",
+      "jsonPaths": [
+        {
+          "path": "$[0].description",
+          "value": "\"Smart thermometer\""
+        },
+        {
+          "path": "$[0].countryCode",
+          "value": "\"BE\""
+        }
+      ],
+      "status": "isOk"
+    }
+  ],
+  "beans": [
+    "GadgetDomainToDTOMapper"
+  ]
+}

@@ -1,0 +1,24 @@
+{{!
+  Gateway test configuration: scans the gateway package and provides the qualified RestClient the gateways inject.
+  Exemplar: captcha-gateway src/test .../TestConfig.java
+  Target: <capability>-gateway/src/test/java/<pkg>/TestConfig.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, gatewayPackage, restClient (bean name, e.g. ehealthRestClient, jvmProxyRestClient)
+  Left to you: mocks for other beans in the scanned package.
+}}
+package {{{package}}};
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
+
+@Configuration
+@ComponentScan(basePackages = "{{{gatewayPackage}}}")
+public class TestConfig {
+
+    @Bean
+    public RestClient {{{restClient}}}() {
+        return RestClient.create();
+    }
+}

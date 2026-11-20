@@ -104,6 +104,16 @@ out="$(run 0 saved-no-frontend --archon-dir "$HOME/archon" --dry-run)"
 contains "$out" "frontend (none)" "saved no frontend"
 contains "$out" "backlog off" "saved backlog off"
 
+# --add-profile adds to the saved profiles, once each, in the order given.
+out="$(run 0 add-profile --archon-dir "$HOME/archon" --add-profile mijn-gezondheid --add-profile java,x --dry-run)"
+contains "$out" "profiles core,java,mijn-gezondheid,x," "added profiles"
+out="$(run 1 add-profile-no-name --add-profile)"
+contains "$out" "--add-profile needs a profile name" "add-profile without a name"
+printf '{"backend": "%s", "contract": "%s"}\n' "$tmp/be" "$tmp/api/openapi.yaml" > "$HOME/.archon/kit-setup.json"
+out="$(run 1 add-profile-unsaved --archon-dir "$HOME/archon" --add-profile mijn-gezondheid --dry-run)"
+contains "$out" "no saved profiles" "add-profile without saved profiles"
+save "" false
+
 # The checks.
 out="$(run 1 backend-not-git --archon-dir "$HOME/archon" --backend "$tmp/plain" --dry-run)"
 contains "$out" "is not a git repository" "backend not git"

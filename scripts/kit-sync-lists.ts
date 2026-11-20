@@ -12,6 +12,7 @@ export const PROFILES = [
   'java-quarkus',
   'java-spring',
   'openapi-contract',
+  'mijn-gezondheid',
 ] as const;
 export type Profile = (typeof PROFILES)[number];
 export type Kind =
@@ -26,7 +27,14 @@ export type Kind =
   | 'config'
   | 'doc';
 
-export const PROFILE_META: Record<Profile, { requires: Profile[]; description: string }> = {
+/**
+ * `project: true` marks a profile that carries one repo's own files (kit/SPEC.md, Project profiles): the only profile
+ * whose files may lie in docs/scaffold-templates/project/, the repo's own folder. A generic profile never may.
+ */
+export const PROFILE_META: Record<
+  Profile,
+  { requires: Profile[]; description: string; project?: boolean }
+> = {
   core: {
     requires: [],
     description:
@@ -51,6 +59,12 @@ export const PROFILE_META: Record<Profile, { requires: Profile[]; description: s
     requires: ['core'],
     description:
       'The contract-api MCP server, contract-agent-readiness, contract-pin, contract-db-parity and the contract-agent.',
+  },
+  'mijn-gezondheid': {
+    requires: ['java-spring', 'openapi-contract'],
+    project: true,
+    description:
+      "The mijn-gezondheid portal's own scaffold templates and its scaffold.json (docs/scaffold-templates/project/), from the hand-written kit/overlays/mijn-gezondheid: java's new-context.sh, smoke.sh and the wiring check run on them as installed.",
   },
 };
 
@@ -330,6 +344,7 @@ export const FILES: Record<Profile, string[]> = {
     'scripts/contract-db-parity/**',
     'scripts/portal-mcp/**',
   ],
+  'mijn-gezondheid': [],
 };
 
 /** A scaffold template that names one of these is Quarkus-flavoured; every other template is stack-neutral. */

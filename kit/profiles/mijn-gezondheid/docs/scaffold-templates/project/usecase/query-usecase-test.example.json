@@ -1,0 +1,10 @@
+{
+  "_target": "zzsmoke-usecase/src/test/java/be/mijngezondheid/zzsmoke/usecase/gadget/GetGadgetsUseCaseTest.java",
+  "package": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer"
+}

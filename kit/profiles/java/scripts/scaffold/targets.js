@@ -1,12 +1,15 @@
 // The scaffold templates' targets, read from the `## Scaffold` tables of docs/code-maps/*.md: which template renders a
 // file at a given path. Shared by scripts/scaffold.sh --for, the scaffold step and the scaffold-check gate
 // (.archon/scripts/), so they can never disagree on what fits.
-// The repo's own templates live in docs/scaffold-templates/project/, a folder the kit never ships or updates:
+// The repo's own templates live in docs/scaffold-templates/project/, a folder only a project profile of the kit
+// writes (kit/SPEC.md, Project profiles), and the repo then owns:
 //   - project/<layer>/<name>.mustache beside a kit template <layer>/<name> takes over that template's rows (its Target,
 //     Variables and Left to you stay), so a fix to a kit template needs no edit to a kit-owned leaf;
 //   - a new template gets its row in the `## Scaffold` table of docs/scaffold-templates/project/README.md, linked
 //     relative to that folder: | [project/<layer>/<name>](<layer>/<name>.mustache) | `<Target>` | <Variables> | <Left> |
 // The repo's rows come first, so where two Targets are as specific, --for lists the repo's template first.
+// "projectOnly": true in docs/scaffold-templates/project/scaffold.json drops every other row: the repo renders only its
+// own templates, without editing the kit's leaves.
 // A Target cell's placeholders: `<capability>` a module prefix, `<pkg>` one or more package directories, `<Name>` (any
 // capitalised placeholder) a class name, `<NNN>` digits, any other `<x>` one path segment, `**` anything, `...` the
 // previous row's target up to its package; a src/test target also matches src/testFixtures.
@@ -100,7 +103,17 @@ function templateTargets(root) {
         own.push({ ...r, template });
     }
   }
-  return [...own, ...rest];
+  return projectOnly(root) ? own : [...own, ...rest];
+}
+
+// "projectOnly": true in the repo's scaffold.json (an unreadable file counts as false: the wiring test reports it)
+function projectOnly(root) {
+  try {
+    const c = JSON.parse(read(path.join(root, PROJECT, 'scaffold.json')) || '{}');
+    return c !== null && c.projectOnly === true;
+  } catch {
+    return false;
+  }
 }
 
 // The Target as a regex over a repo-relative path. With { capture: true } each `<capability>` and capitalised

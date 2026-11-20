@@ -1,7 +1,7 @@
 // scripts/scaffold/new-context.sh: scaffold a new bounded context, the module set the repo's own templates describe.
 //   node new-context.js <repo root> [--<flag>]... <capability> <Ctx> <basePackage> [<arg>]...
 // What a context is comes from the `context` object of docs/scaffold-templates/project/scaffold.json, a file of the
-// repo's own (the kit never ships or updates docs/scaffold-templates/project/):
+// repo's own (a project profile of the kit may ship it, kept once the repo edits it):
 //   "modules": ["domain", ...]          the modules every context gets, each <capability>-<module>
 //   "flags": {"gateway": ["gateway"]}   each --<flag> and the modules it adds; the flag is a true/false variable
 //   "args": ["apis", ...]               the positional arguments after <basePackage>, each a variable

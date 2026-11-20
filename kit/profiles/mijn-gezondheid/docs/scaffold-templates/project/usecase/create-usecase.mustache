@@ -1,0 +1,47 @@
+{{!
+  Create use case: validate the input, build the entity through its Factory, save it, return the Notification.
+  jakarta.transaction.Transactional and no @Service: TransactionalConventionTest (application/src/test/.../
+  architecture) enforces the first, and the context's <Ctx>BeanConfig registers every *UseCase class.
+  Exemplars: therapeutic-relation-usecase .../exclusion/usecase/CreateTherapeuticExclusionUseCase.java,
+             .../DeleteTherapeuticExclusionUseCase.java (request validation first)
+  Target: <capability>-usecase/src/main/java/<pkg>/Create<Name>UseCase.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, fields[name, Cap]
+          (the input is Create<Name>Request from usecase/request, in the same package)
+  Left to you: resolving the caller (AuthenticationFacade), lookups through other use cases, events.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Notification;
+import {{{domainPackage}}}.Create{{{Name}}}DomainRequest;
+import {{{domainPackage}}}.{{{Name}}}Factory;
+import {{{portPackage}}}.{{{Name}}}Repository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
+@Transactional
+@RequiredArgsConstructor
+public class Create{{{Name}}}UseCase {
+
+    private final {{{Name}}}Repository {{{name}}}Repository;
+    private final {{{Name}}}Factory {{{name}}}Factory;
+
+    public Notification execute(Create{{{Name}}}Request request) {
+        var notification = request.validate();
+        if (notification.hasErrors()) {
+            return notification;
+        }
+
+        var creation = {{{name}}}Factory.create(Create{{{Name}}}DomainRequest.builder()
+{{#fields}}
+                .{{{name}}}(request.get{{{Cap}}}())
+{{/fields}}
+                .build());
+        if (creation.getNotification().hasErrors()) {
+            return creation.getNotification();
+        }
+
+        {{{name}}}Repository.save(creation.getValue());
+        return Notification.empty();
+    }
+}

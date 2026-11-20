@@ -1,0 +1,14 @@
+{
+  "_target": "zzsmoke-usecase/src/main/java/be/mijngezondheid/zzsmoke/usecase/gadget/GetGadgetUseCase.java",
+  "package": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "imports": [
+    "java.util.UUID"
+  ],
+  "keyType": "UUID",
+  "keyName": "externalId",
+  "KeyCap": "ExternalId"
+}

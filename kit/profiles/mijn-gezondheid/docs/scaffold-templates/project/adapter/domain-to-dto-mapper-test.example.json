@@ -1,0 +1,28 @@
+{
+  "_target": "zzsmoke-adapter/src/test/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetDomainToDTOMapperTest.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer",
+  "mappings": [
+    {
+      "DtoCap": "Description",
+      "expr": "\"Smart thermometer\""
+    },
+    {
+      "DtoCap": "CountryCode",
+      "expr": "\"BE\""
+    },
+    {
+      "DtoCap": "AdministerDate",
+      "expr": "java.time.LocalDate.of(2024, 3, 1)"
+    },
+    {
+      "DtoCap": "Type",
+      "expr": "\"GADGET\""
+    }
+  ]
+}

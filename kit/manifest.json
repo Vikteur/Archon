@@ -32,6 +32,14 @@
         "core"
       ],
       "description": "The contract-api MCP server, contract-agent-readiness, contract-pin, contract-db-parity and the contract-agent."
+    },
+    "mijn-gezondheid": {
+      "requires": [
+        "java-spring",
+        "openapi-contract"
+      ],
+      "project": true,
+      "description": "The mijn-gezondheid portal's own scaffold templates and its scaffold.json (docs/scaffold-templates/project/), from the hand-written kit/overlays/mijn-gezondheid: java's new-context.sh, smoke.sh and the wiring check run on them as installed."
     }
   },
   "exclusive": [
@@ -1605,7 +1613,7 @@
       "template": false,
       "origin": "docs/code-maps/README.md",
       "kind": "doc",
-      "sha256": "5a2c993824aef014140b735fee65b51ba045bbd3f8d4b419261e720203ac38ba"
+      "sha256": "b418dcd1c00b7ebc969af2928100beccad2fd7cca40b1c3bf470ab77e07da544"
     },
     {
       "path": "docs/code-maps/clean-architecture.md",
@@ -2650,7 +2658,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "8a15bfba75f63a86dbb27f4fd209ae7e5bae4df6ee06f1f420cc6ba15520ae2b"
+      "sha256": "6af457c74d090ba9be267ff9c6e10013c2c6c99c79c35c66236538919d78218f"
     },
     {
       "path": "scripts/scaffold/new-context.sh",
@@ -2695,7 +2703,7 @@
       "template": false,
       "origin": "scripts/scaffold/targets.js",
       "kind": "script",
-      "sha256": "77f6bb5e37d18b4521cdd1e96e2b7a900338e71cb849953c6462d85cc21ff2ec"
+      "sha256": "726b8eca43900904fee1e33d2ed188806f28848db2733850281f0dd63de645e8"
     },
     {
       "path": "scripts/test/affected-check.test.sh",
@@ -2758,7 +2766,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "f67f9b93025d13deb4f21312f9161829bb43363091c015d01b69834cf451a8b3"
+      "sha256": "607ad13be4ee727c67f6958bb5f5dd6408ccfe5ac702335344470194eae335e7"
     },
     {
       "path": "scripts/test/scaffold-wiring.test.sh",
@@ -2767,7 +2775,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "f3e625b8a7de05a9f5768547613b1ba16b1dca03b9fc5e5016b1d03c4d0892ee"
+      "sha256": "7478d37ee3eaf6c09e80959c61bf986e72c61c012455b2ecbf585abb46be73c8"
     },
     {
       "path": "scripts/test/scaffold.test.sh",
@@ -3848,6 +3856,1122 @@
       "origin": "scripts/test/fixtures/portal-mcp/schemas.yaml",
       "kind": "config",
       "sha256": "f50a5e078385f11bd561cf8c5c77e0d9bbd86ee7bd5d694d24b628f28c8c0799"
+    },
+    {
+      "path": "docs/scaffold-templates/project/README.md",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6b29081998d8e3c3eff113c2edc79f72baab5ee00994b21b1fb9114373c51289"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "bf446b1a9497838527d5bd36dc53268fed32b1302ceae1428165b314230bfa1e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "c46b3cdb67a947e1d2780fa9d794be9ff16f947b4a6d0c19470953ee5c83ff01"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8752995d18d025c021cc28d444fd9d57539509a27b25b0c3fc4b24a9b1fa6158"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d0b7ff0249641a1eedb2df082993b82a4ac5481076e6a91900bd633066e839bb"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/bean-config.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6dc979fc07f0e1ae345907f10b9b3713b6c641a20c21d1383c5f304f94700906"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/bean-config.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "afe8d509b4ed4303955458e39373741117f290dbc1b1b9bf34ef829e7f3285c1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "b3b89d250e0d1ace2772403b20f34345df6fae4309032af014e5a20264997510"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e559ad2d3ea6195d39efb357a8593287bcba2f046d93a75fffd137913808b4b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ed22168ba3664867bbddab547cf6387f63cb06c7357088680d596cad15316023"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "87771bc6d90ad1a4d2fd8f469e3d60267edcf34803518f4466e101b5e0c1693f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "73025397a44386468da207047f7386fb77d62802a4911c3a1f91f17a253dac15"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "264f4571d55c7cf4e50dfca6f5d63e022d04d23ff69ef1c1edeea113c17e236d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f3eb9ab9c966f012bdef4b30c5b68f724f8bb310d6349da7547a7f8c84c5bc7b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "06adbe75cfbf08ff0a0c3ec182b42800320c27fe9c710b9ad3fad9b890c9fd40"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller-test.admin.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0fe931ba746cf44b797fa3d979df97bc8261df0d0166633351a0243c30ac7416"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cb6d68ef33c312cdeb2ddede5d8bafe0e576a0ba15ddb0c8b329dc0ea3b8fc95"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a549eadf77c54f405e1b4904bd479395210e65b8addf15eb4cbbfa7b4219626e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller.admin.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3e967743395165d59456bfc4a1c2afba753c5457da4f9df4362982254ccce9b3"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a674a215d496737d6d1f84e0f55a89b22f2260f3f67ee964609deaf9a861411d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "eccebaaedeba93b945a955994a6e177409ebc6a665ac9d47b480c6fd897a7842"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0b98477cbff77bf850e922679aec549f1d2f44a772ae39d07e1a538a1cd8713f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d023ba823018f3164e1ed20ed65ded8dd4f4e2f3a46ebb49a3084984496d920a"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "24770c8b47bcf217c43ba8ec38a71ef9c050a19bdeb0822570205db87d89d56b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "29092853f71a7665107b1a5c49e44ba73d50ab92859b0c0c0dcb5a01d37d078f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f264adb29ca1a4705f1c92bed7f5b36853b31727c54dac84b5718dac8ae58554"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "93f94b4e04a8776b39874fc35d8bccade8c13746c4172716b39cd839884e091e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d42a73a3fb9510f48bbb63847a1307a2374ccfdbc22398f8bb5516b135c1cac5"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "972a0bc1e0600caeab05207781a55c516efa6a684ee5b12d2029f6dd8183e7b0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/flyway-migration.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "850f0e0d4fef77fdbef821ff10a0b7cd8f8b9e00abd31d1c8594e55b171944e7"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/flyway-migration.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "46f343ad4b3b7d77ab7c33b19a22b8de7c2b2d53124680f1d3577a53e0554a2f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "031fda3db4adb206f4e8545b89bbe361a34a13f8abf10837f73a291d11eac183"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "39354cd8927c03c477fc48af8f043c4b7bccaf521883f9eb082a0a54c16caccc"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "867e934dcbd57fb2ae485982e6ca83b295fcef4f99c373c6e07e6f960eae1a97"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "25fe01f49c0d5b1515c2e98f3ef8bee98f30239b363283f5357a815a72cb1837"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-entity.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "aeb8d799282ee4bc74df500f7a701c4df711b4551822d8b18f84fdc9bf7627c4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-entity.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "05c04840a55f8ed2be74c0e1b4d7dfdc65df1eac09f1f1e726b07b2899bc80c8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-repository.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "13a604190db14aefa1d354980afc5addcb5825d366370a2d1b3b2b2ba5fde25f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-repository.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "95d665db6c2c2426ae4e499cbd2946032d326e12b67358bd8da3365f0b38dfb3"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "039a654b153bc2fb9d7bf6daf5ef8dc9c7cb69cfe14c002a4deb818b590d64e4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3d2c858611b3218048a9191a3447c507732a3a1984906f3c1bdbf6f0b26e332e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "7dbfdf2c7ca1d5934b1bf491163b0ab5363bbb82fdcf114450bf0e7aae004cdc"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "73bd405bd195db5e13d0fc4ced159672783bfbc19773d82d51b546cb5050eebe"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "aa208c378ce92368b8378ada4e3445479a9288ca4fdb2e2d8e1be3a3d7dd4572"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "c94cc6fbe6f7a0cba9aa9b670b2946758d2c7a389d08e271b9066f7e956fad97"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8ff249ed9fe1cd2587d57e23718b9e2276801d3806acd9410354e843caed97d0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum.external.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "300c8acc2940c38728a1b12cbc5446850697c49cf67f93da308b9ae6974b4efe"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "515d9fabf283bf74f6fb746a0ddfd58d4cdff75cc5d3462e2cc6c642064aa8db"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/create-request.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "9338c6d9be17333d75b2a310467c351d771e7b9105e3bfe114d936ac8cba6425"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/create-request.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "fac61cbfc76ca805b652512f1ebcbb0df19571866e7c81ce68063f3828ac7de2"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "09db567c57fdbb5247e3f9135e055e6832805b41acfc3cc63b8305e366f65df9"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "2a9e159aaa42fe70ca46b330695d800b65834d549fb67eaf86b78a38ac8115ef"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d91890333d6a310d2a9d4852bf152b6a5ca546854bfd5ab4b8f99fa080823026"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8a713f33cae2ad258db0c1757467ce8080c7ecccb1c0725cc85a54e6d6b8f2a8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/exception.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e54a255510aa0b3ceb46a6ba5e654961c8303d273f404cdc42dd40ad7d6761fe"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/exception.gateway.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "84e6e16d4bb364d0c72fc85fce438f66c8d9a7b7191019a8cb55564c5dd31b9f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/exception.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f78074faa39a6011613341b9c5af22b897ebcf1392d69ba31ade8085ab35979e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e5a4a5ec1e1ab189ae3fd6eec2ea9e7dc65f73384934f0edf68529aac3066d01"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "89a71f75dd02ff983827d443578d470b07c3dcf045e2f953d03a836ab79ed0a7"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "5c2479ac8839fcdf03be5082cc9ef3cb65e9cd8eee6be0cb0fbd59de138d22c1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "1550d0ba7fef8fa5617a2c610160127df998fae3ee113877534181c0c2c02462"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/fixed-mother.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e0ca697726d64efcf5477ce13c2fc70cc3bdcf0ba0e51f5eb439cc282e6d8f36"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/fixed-mother.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3bde3416a8d7cad0fad51be6c19a037e06a8c0403f56762a0300aec99bebbccb"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/id.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "64feafd269c48c8ee3977f5fd2b72bdf2686cd9d7c9d077a8f4a5c8fee826ec2"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/id.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "549de45c6b8c8dc2ee6a85b52f6a8d9aa31915a599e2273996b3008c59c1a7e8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/mother.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8ec8505cb66340ae57b511e294fb260690c706b3b728391e99f60e6ea7477ff5"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/mother.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a3c3079662301ad06ee05d0ac0813eb53e5476a257faa38642e70fa25b40eb1f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "5496ad67ffc2eaae3af9d4aaf177c1679fe53dadebd584b290a95c6be967ef5c"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "74331e6dd13e4976bddb0c8c32e0b8fcfbc2e714402b1b5b5097b233278385ce"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "20c7a2517dea36b20abfc1fd390c09f971b5cfb2af0d1a98c0dff355ae9aedf9"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "21ffcea53846f28d9913ce1256e6ed717f5cb9aa96b8a3f99b7d09b0a938697b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto-mother.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "36c3fd80cdd7fa5716a0e5801783b4aa28e44791b7429cfb77dd149ec6261585"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto-mother.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0ffd92f5c37b3b7de55cb3a3a9f92b130c940bd721744805b90c35355d160207"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "592d5394158f76e16159392c090ea3dc7bf178f93d0669dc88a1f4a63dc2fc31"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "7f56b899aaaf58f619e8bab563f7cf85daf663b5ba5ec8147f16e0c7ec9792c0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f09d2f84f3cb40a1b4135ed65953964419a720ad0da234c29ac4783963a02c2d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "575211efbf3f7c2a2fb540f503a98006c26870838c1dbd13e513c09c0d589f87"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "453ddf8374f52140303cb1f73938a8f3320d8cfcee13cd089103f685501c37db"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "695eaf244a173ed02eb53d3a9cf13ead296046ba265eafb752a808f0b6e22cf4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ea1bb11886165044c84d98b9439b8c60900c8ba4c832b1abe7c9bb45c4d9623f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cfd79c247055ef66a550dd8d2d110cad148961af3fdb1df7c4e850702b51b904"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/abstract-repository-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ff145207dcce136d73656773b77b58ddbb5a2a9a604e770a85776a4ee35918fa"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/abstract-repository-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a3708425af8ddf11c0275e6328c80f6ed4e9638aebcd20588fcf048793b63830"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/adapter-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "561c8c6d3e9fd2342e66eddd3d5b656e2fcd28008e07dc13815092c312a98b39"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/adapter-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ccc459daa98fd6c7905a6a097affacffd17057fa23c613f8c5c2c684a331c1b1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/domain-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "2e4b658584e36a0e6a04e272476ab50a983a1ade30521f9c148939678d2a5727"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/domain-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "752ce6d76f8ccdd94007f7ce4963d23bac69c839f18f8b5a8e0c448c70ce6c70"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "df55acac8c5ad048dbcb1af3bb0c4179337b277d11581ab049d8d3da97a2b757"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "657d0c53535f34411e1da53e4035bb96a763838cea109160e4f1046d4d2c58f1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-test-config.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "5b00de30ae7575f89a0c4c8d2d10e16286470faf4db87b274fe5b333d145d487"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-test-config.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "41fb15502ff4e56ba8b5aee1a1f39f502b305084c5a2f8499552c56772958405"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/test-application-properties.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "56861c241656efbe9f2d7d44cb01d6c3f8a76ebdf70da92aa7d0d1e56f6b0e27"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/test-application-properties.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cead78c5a27ca107f1a834d3ff9ad7b72eb71b1d2ec1bc6854b0975a7e2ca1b4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/usecase-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8ba4ddec6fba38c68dc60a3c8db81c1cd999d31282ab43840b6273ba0322949b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/usecase-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a110843f32cd5b1a8e1cb5278bdaf5c9cffcf2961ef1fab336586852d2073d40"
+    },
+    {
+      "path": "docs/scaffold-templates/project/scaffold.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ad0be8c9d162b4f18baf4c3629a60097f02c51a7b0c673ee3b7c79921074bc3d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "defd5ead218eb8bbed51b9de859dbc3c63d70e885f20e6d33bca36da9df3da17"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a32940cc21048157a6971340acc4474d974ffec2fe20de95e5d9bc2967a07ca9"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "985d4b9f7c3a7f06a01e2c32c91f4b103feb84e3c69748122a2487ae32aa8402"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e827370d6ee5e03fcb39a370c0b12e97b1910c1331d10aa7fe722f8f40be5403"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6ceafa2ecc2c0cf1337df56cdfc6cd4e1a23b7a7408ba448daf5b3246758cd6c"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8709f658cfdba5a9df70684f6a2d7642d6e36b18ca1079ef9c8881c5b16eb7e0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "b24b42edc81d8383c28dc5549dbc9e17342fddf6a524d5f866fbb4fd273daecb"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e49227e2cb9501514032eabb8d8f85ce9bb95d9d699a7940152188321dc62ef"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/domain-event.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0f5bfb1877e8cb9a665e6fa526038baf8fa9348b6509ac74872968576f5df525"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/domain-event.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "68ef9a0dd9bd50e86ac785f0814132d861ec5eef115d01db22b14c8705626886"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/facade-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e7af52e995682602eec08e9fadcde3654058b201e5d1c1332fa0f318fa68ad1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/facade-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3fd06d69af0af5cd508d3b94d97f6c57d770cf67afb63d5cd6e34791e4e4b442"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0a09cc75694ad2c9a6119b3e52f8b253d6554ddf8204d5e4b36fec102a7cdd4e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f651c18707dd4676eb666c0a9825606c6466f32096be0d1b7d437dc0b650f32d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "af6d55d31f54e8390c774ab46e709d1680caa99e17dcc7d7efc39f33c076935e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "c97be0838af1390b42e2545587bc9111d3259208d588a8608036cf4c06af4f99"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/projection.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "76af859312df6f1fec5af9cf9b5958c5eee0e6b5c51ddce5d4dced623db432b1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/projection.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "196d8ca433c3707a72dbdcfda268c84160e7dad803951e7a44d2d81896939645"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-repository-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8203f32972cee33230a4e8a51c940c936eaec6254fd4d7c8291f5b1cddb7b289"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-repository-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cc71f99a0cc340501a2a040f1e6f925041490eb31a340f764b07b41bfc9465f8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "237ae46e975a2415eb3ed3d5c9d47dee8e1cba21c6f1bcd727a534d737083666"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6212c0cae7336f892a324a222628be2ba44bfce094937b5142c3435c537668f3"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "83a0a22fa9c3770aeb1a8cbfaa9e748036cad7b9722eaf521386660138a2a233"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a0c72e8145b9428e3b9c130b80c9c93e165cf9cbdee9e82375b87ec7116186c8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/repository-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a99eb8bda7a742bfe8b71020f03c2050690c314fd4bbdbc9acf6bbe37c1e3fd5"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/repository-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "443b6a51d8a9153e1d309cc1d40c224ce12f694ca9f5d8bceb3b5138803aaf09"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/request.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3f694f6da9b70acf88db0c535459171b4e5cd1c3992af8c23cca325194a2a90b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/request.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e503d865b09ea4fd7348f73da8024bee8132ca228b161dc074529dd2780f26f"
     }
   ],
   "aliases": {

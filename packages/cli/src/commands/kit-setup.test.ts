@@ -47,6 +47,7 @@ function makeKit(): Kit {
         java: profile(['core']),
         'java-spring': profile(['java']),
         'openapi-contract': profile(['core']),
+        'mijn-gezondheid': profile(['java-spring', 'openapi-contract']),
       },
       exclusive: [],
       files: [],
@@ -365,7 +366,7 @@ describe('kit setup', () => {
         { command: 'bash', args: ['scripts/web-uis.sh', 'start', '--open'], cwd: backend },
       ]);
       expect(kitAddOptions[0]).toMatchObject({
-        profiles: ['core', 'java', 'java-spring', 'openapi-contract'],
+        profiles: ['core', 'java', 'java-spring', 'openapi-contract', 'mijn-gezondheid'],
         trust: true,
         noTools: true,
         set: [`contract.spec_path=${contract}`, 'backlog=false'],
@@ -402,7 +403,7 @@ describe('kit setup', () => {
         backend,
         frontend,
         contract,
-        profiles: ['core', 'java', 'java-spring', 'openapi-contract'],
+        profiles: ['core', 'java', 'java-spring', 'openapi-contract', 'mijn-gezondheid'],
         backlog: false,
       });
     });

@@ -88,8 +88,9 @@ export const CONSUMER_TARGETED: Record<string, Rewrite[]> = {
       "leaf's `## Scaffold` section lists its own).\n\n" +
         "The kit's templates are worked examples too: their names and types come from the reference set, so their output rarely\n" +
         'compiles as is in another repo, and the kit owns them (`.archon/kit.lock.json`), so an update overwrites a local fix.\n' +
-        "Put the repo's own templates in `docs/scaffold-templates/project/<layer>/<name>.mustache` instead: the kit never ships,\n" +
-        'updates or removes a file there, and `scripts/scaffold.sh project/<layer>/<name> ...` renders it. `--for`, the\n' +
+        "Put the repo's own templates in `docs/scaffold-templates/project/<layer>/<name>.mustache` instead: the kit never removes\n" +
+        'a file there and only a project profile of the repo ships one (kept once edited), and\n' +
+        '`scripts/scaffold.sh project/<layer>/<name> ...` renders it. `--for`, the\n' +
         'scaffold step and the scaffold-check gate (all through `scripts/scaffold/targets.js`) take them up without an edit to a\n' +
         "kit-owned leaf: a repo template with a kit template's name (`project/domain/id` beside `domain/id`) takes over that\n" +
         "template's rows, and a new one is offered from the `## Scaffold` table of `docs/scaffold-templates/project/README.md`,\n" +

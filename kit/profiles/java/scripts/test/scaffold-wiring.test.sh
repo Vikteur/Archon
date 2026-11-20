@@ -60,10 +60,11 @@ for (const t of templates) {
   try { target = JSON.parse(fs.readFileSync(ex, 'utf8'))._target; } catch (e) { problems.push(`example not JSON: ${t}: ${e.message}`); continue; }
   if (!target) { problems.push(`no _target: ${t}`); continue; }
   const fits = rows.filter(r => r.re.test(target));
-  const own = fits.find(r => r.template === t);
-  if (!own) { if (rows.some(r => r.template === t)) problems.push(`row of ${t} does not match its _target ${target}`); continue; }
+  // the template's most specific row there: a looser row of its own (a kit row it took over) outranks nothing
+  const own = Math.max(...fits.filter(r => r.template === t).map(r => literal(r.target)));
+  if (own === -Infinity) { if (rows.some(r => r.template === t)) problems.push(`row of ${t} does not match its _target ${target}`); continue; }
   const best = Math.max(...fits.map(r => literal(r.target)));
-  if (literal(own.target) < best) problems.push(`${t} outranked at ${target} by ${fits.filter(r => literal(r.target) === best).map(r => r.template).join(', ')}`);
+  if (own < best) problems.push(`${t} outranked at ${target} by ${fits.filter(r => literal(r.target) === best).map(r => r.template).join(', ')}`);
 }
 for (const r of rows) {
   if (projectOnly === 'true' && !r.template.startsWith('project/')) problems.push(`kit template linked: ${r.template} (${r.skill})`);

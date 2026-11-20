@@ -1,0 +1,8 @@
+{
+  "_target": "zzsmoke-gateway/src/main/java/be/mijngezondheid/zzsmoke/gateway/GadgetGateway.java",
+  "package": "be.mijngezondheid.zzsmoke.gateway",
+  "Name": "Gadget",
+  "name": "gadget",
+  "dtoPackage": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "bearer": true
+}

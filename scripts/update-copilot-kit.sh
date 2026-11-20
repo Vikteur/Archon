@@ -24,6 +24,8 @@ Options:
   --contract <file>     the OpenAPI contract file (default: the last setup's)
   --archon-dir <path>   the Archon clone (default: the clone this script is in, else ~/archon)
   --branch <name>       branch for the update commit (default: chore/archon-kit-<archon commit>)
+  --add-profile <a,b>   also install these kit profiles, beside the saved ones (kept for the next update),
+                        e.g. --add-profile mijn-gezondheid for that repo's own scaffold templates
   --no-pull             do not pull the backend, frontend and contract repositories first
   --no-tools            do not update the tools (jq, yq, gh, node, codegraph, copilot, rtk, ...)
   --no-commit           leave the updated kit files uncommitted
@@ -56,7 +58,7 @@ main() {
   local BACKEND="" FRONTEND="" CONTRACT="" ARCHON_DIR="" BRANCH=""
   local HAVE_BACKEND=0 HAVE_FRONTEND=0 HAVE_CONTRACT=0
   local PULL=1 TOOLS=1 COMMIT=1 RESTART=1 WEB=0 REBUILD=0 FORCE=0 DRY_RUN=0
-  local ARCHON_DONE=0 LOG=""
+  local ARCHON_DONE=0 LOG="" ADD_PROFILES=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -66,6 +68,7 @@ main() {
       --contract)   CONTRACT="${2:?--contract needs a file}"; HAVE_CONTRACT=1; shift 2 ;;
       --archon-dir) ARCHON_DIR="${2:?--archon-dir needs a path}"; shift 2 ;;
       --branch)     BRANCH="${2:?--branch needs a name}"; shift 2 ;;
+      --add-profile) ADD_PROFILES="${ADD_PROFILES:+$ADD_PROFILES,}${2:?--add-profile needs a profile name}"; shift 2 ;;
       --no-pull)    PULL=0; shift ;;
       --no-tools)   TOOLS=0; shift ;;
       --no-commit)  COMMIT=0; shift ;;
@@ -106,6 +109,13 @@ main() {
   fi
   [ -n "$BACKEND" ] || die "no saved setup in $saved: pass --backend and --contract, or run install-copilot-kit.sh first"
   [ -n "$CONTRACT" ] || die "no contract in $saved: pass --contract"
+  if [ -n "$ADD_PROFILES" ]; then
+    [ -n "$PROFILES" ] || die "no saved profiles in $saved to add $ADD_PROFILES to: run archon kit setup --profile <a,b,c> once"
+    local p
+    for p in ${ADD_PROFILES//,/ }; do
+      case ",$PROFILES," in *",$p,"*) ;; *) PROFILES="$PROFILES,$p" ;; esac
+    done
+  fi
   BACKEND="$(abspath "$BACKEND")"
   CONTRACT="$(abspath "$CONTRACT")"
   [ -z "$FRONTEND" ] || FRONTEND="$(abspath "$FRONTEND")"

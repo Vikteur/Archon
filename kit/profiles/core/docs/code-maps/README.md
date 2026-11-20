@@ -21,8 +21,9 @@ leaf's `## Scaffold` section lists its own).
 
 The kit's templates are worked examples too: their names and types come from the reference set, so their output rarely
 compiles as is in another repo, and the kit owns them (`.archon/kit.lock.json`), so an update overwrites a local fix.
-Put the repo's own templates in `docs/scaffold-templates/project/<layer>/<name>.mustache` instead: the kit never ships,
-updates or removes a file there, and `scripts/scaffold.sh project/<layer>/<name> ...` renders it. `--for`, the
+Put the repo's own templates in `docs/scaffold-templates/project/<layer>/<name>.mustache` instead: the kit never removes
+a file there and only a project profile of the repo ships one (kept once edited), and
+`scripts/scaffold.sh project/<layer>/<name> ...` renders it. `--for`, the
 scaffold step and the scaffold-check gate (all through `scripts/scaffold/targets.js`) take them up without an edit to a
 kit-owned leaf: a repo template with a kit template's name (`project/domain/id` beside `domain/id`) takes over that
 template's rows, and a new one is offered from the `## Scaffold` table of `docs/scaffold-templates/project/README.md`,
