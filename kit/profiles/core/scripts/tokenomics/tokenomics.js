@@ -652,6 +652,9 @@ function loadJournals(files) {
 }
 
 // ---------- Archon ----------
+// Archon's SQLite writes started_at as 'YYYY-MM-DD HH:MM:SS' in UTC with no zone mark; Date.parse reads that as local time.
+const sqliteUtc = v => { const t = str(v); return /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d(\.\d+)?$/.test(t) ? `${t.replace(' ', 'T')}Z` : t; };
+
 function loadArchon(cfg) {
   if (cfg.archonRuns) {
     const j = readJson(path.resolve(cfg.archonRuns));
@@ -674,7 +677,7 @@ function loadArchon(cfg) {
     const runs = new Map();
     for (const r of db.prepare('SELECT id, workflow_name, user_message, working_path, started_at FROM remote_agent_workflow_runs').all()) {
       runs.set(r.id, { id: str(r.id), workflowName: str(r.workflow_name), userMessage: str(r.user_message), workingPath: str(r.working_path), branch: '',
-        startedAt: str(r.started_at), nodes: new Map() });
+        startedAt: sqliteUtc(r.started_at), nodes: new Map() });
     }
     const events = db.prepare("SELECT workflow_run_id AS rid, step_name AS step, event_type AS type, data FROM remote_agent_workflow_events WHERE event_type IN ('node_completed','node_failed')").all();
     for (const e of events) {
