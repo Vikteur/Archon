@@ -430,6 +430,8 @@ answer it with `bash .archon/scripts/answer-blocked.sh <plan.md> "<answer>"`, th
 - Each MCP server in `.github/mcp.json`, by a `tools/list` call. A server that does not
   answer is reported.
 - Hooks: whether the hooks are installed and wired.
+- fileHooks: whether `assistants.copilot.fileHooks` is `true` in `.archon/config.yaml`. Off, Archon's Copilot
+  runs never load `.github/hooks`, so no kit hook or guard runs. `archon kit add` turns it on.
 - Drift: files whose content differs from the kit's version and the lock.
 
 `archon kit tools [path] --check` runs only the tool check. `archon kit list` shows the
