@@ -171,7 +171,7 @@ if command -v yq >/dev/null 2>&1; then
   bl 'backlog task edit 12 -s Done'; check "backlog: false allows backlog task" "$([ "$rc" -eq 0 ] && [ -z "$out" ]; echo $?)"
   printf 'backlog: False\n' > "$main/.archon/kit.yaml"
   bl 'backlog task list --plain'; check "backlog: False (any case) allows backlog task" "$([ "$rc" -eq 0 ]; echo $?)"
-  for c in 'git push origin main' 'git commit --no-verify -m x' "git -C $main status" 'bash .archon/scripts/commit-tickets.sh'; do
+  for c in 'git push origin main' 'git commit --no-verify -m x' "git -C $main status" "cd $main && ls"; do
     bl "$c"; check "backlog: false keeps the other run rules: $c" "$([ "$rc" -eq 2 ]; echo $?)"
   done
 else
