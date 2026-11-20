@@ -137,7 +137,7 @@ build_workflow: build-feature-copilot   # run-metrics.js, retro-stopped.sh and p
 local_ci: true               # false: the project runs its own CI; see Local CI switch
 backlog: true                # false: no Backlog.md, a run's ticket is the pasted text; see Backlog switch
 ci:
-  gradle_line: "./gradlew test integrationTest build"   # ci.yml's Gradle run and ci-workflow-check.sh's required one
+  gradle_line: "./gradlew test integrationTest build"   # ci.yml's Gradle run, ci-workflow-check.sh's required one, build-shape-check.sh's tasks
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice

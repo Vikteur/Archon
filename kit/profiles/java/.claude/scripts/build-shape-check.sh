@@ -11,7 +11,15 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fail=0
 bad() { echo "FAIL: $1"; fail=1; }
 
-for t in test integrationTest build :application:bootJar; do
+# The tasks are the ones CI runs, kit key ci.gradle_line (its words without ./gradlew and the options), and the boot
+# jar's; with the key unset, test, integrationTest and build.
+tasks="" skip=0
+for w in $(kit_get ci.gradle_line "" KIT_CI_GRADLE_LINE); do
+  [ "$skip" -eq 1 ] && { skip=0; continue; }
+  case "$w" in -x | --exclude-task) skip=1 ;; ./gradlew | gradlew | gradle | -*) ;; *) tasks="$tasks $w" ;; esac
+done
+[ -n "$tasks" ] || tasks=" test integrationTest build"
+for t in $tasks :application:bootJar; do
   ./gradlew -q help --task "$t" >/dev/null 2>&1 || bad "task $t does not exist"
 done
 
