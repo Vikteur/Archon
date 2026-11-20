@@ -137,7 +137,17 @@ fi
 # Claude Code stamps agent_type on every event fired inside a subagent: on a tool event it is
 # authoritative and beats the stack (which parallel subagents interleave).
 case "$event" in postToolUse|postToolUseFailure) [ -n "$agent_evt" ] && agent="$agent_evt" ;; esac
-[ -n "$agent" ] || agent="${audit_role:-main}"
+# Inside an Archon workflow node the record names the node: KIT_NODE (dispatch.sh exports it), else the last segment
+# of the "path" in ARCHON_NODE_EXECUTION (implement.build-step is build-step). A name that is not a plain word is no node.
+# Outside a subagent the node then stands where "main" stood; a record outside a node is as it always was.
+audit_node="${KIT_NODE:-}"
+if [ -z "$audit_node" ] || [ "$audit_node" = "?" ]; then
+  audit_node=""
+  node_re='"path"[[:space:]]*:[[:space:]]*"([^"\\]*)"'
+  [ -n "${ARCHON_NODE_EXECUTION:-}" ] && [[ $ARCHON_NODE_EXECUTION =~ $node_re ]] && audit_node="${BASH_REMATCH[1]##*.}"
+fi
+[[ $audit_node =~ ^[A-Za-z0-9_-]+$ ]] || audit_node=""
+[ -n "$agent" ] || agent="${audit_role:-${audit_node:-main}}"
 
 esc() {  # esc <text> — sets ESC to the JSON-string-escaped text (control chars stripped, then \ and ")
   local LC_ALL=C s="$1" bs='\' q='"'
@@ -149,6 +159,7 @@ emit() {  # emit <type> [s:<key> <string> | r:<key> <raw json>]... — append on
   esc "$session"; out="{\"type\":\"$type\",\"event\":\"$event\",\"session\":\"$ESC\""
   esc "$agent"; out="$out,\"agent\":\"$ESC\""
   esc "$ts"; out="$out,\"ts\":\"$ESC\",\"loggedAt\":\"$logged_at\""
+  [ -z "$audit_node" ] || out="$out,\"node\":\"$audit_node\""
   while [ $# -ge 2 ]; do
     k="${1#?:}"
     case "$1" in

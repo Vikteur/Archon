@@ -3,7 +3,7 @@
 # GitHub Copilot CLI; .github/hooks/kit.json calls it once per hook of the source's .claude/settings.json:
 #   bash .github/hooks/dispatch.sh <ClaudeEvent> '<matcher>' <script path> [args...]
 # It reads the hook payload on stdin and normalizes it to the Claude shape with .claude/hooks/scripts/payload.sh
-# (when present), skips the hook when the Claude matcher (a regex over the tool name, anchored) does not match, and
+# (when present), skips the hook when the Claude matcher (a regex over the tool name, anchored, in any case) does not match, and
 # runs the script with the normalized payload on stdin: from .claude/hooks for a script under it (as settings.json
 # does), else from the project root. On PreToolUse it turns a Claude deny (hookSpecificOutput.permissionDecision, or
 # exit 2 with the reason on stderr) into Copilot's top-level permissionDecision/permissionDecisionReason. A missing
@@ -23,10 +23,11 @@ root="${CLAUDE_PROJECT_DIR:-}"
 export CLAUDE_PROJECT_DIR="$root"
 [ -f "$root/$script" ] || exit 0
 # Inside an Archon workflow node (ARCHON_NODE_EXECUTION, set by Archon for the node's whole CLI session, a JSON object
-# whose "path" is the node path), PreToolUse exports KIT_NODE, the last segment of that path (implement.build-step is
-# build-step), so the scope guard fences the call by the node's agent (.archon/copilot/node-fences.json). A path that is
-# not readable gives KIT_NODE=?, a node no fence names, so the guard applies its strictest set.
-if [ "$event" = PreToolUse ] && [ -n "${ARCHON_NODE_EXECUTION:-}" ]; then
+# whose "path" is the node path), every event exports KIT_NODE, the last segment of that path (implement.build-step is
+# build-step): on PreToolUse the scope guard fences the call by the node's agent (.archon/copilot/node-fences.json), and
+# the audit log names the node in its records. A path that is not readable gives KIT_NODE=?, a node no fence names, so
+# the guard applies its strictest set.
+if [ -n "${ARCHON_NODE_EXECUTION:-}" ]; then
   node_re='"path"[[:space:]]*:[[:space:]]*"([^"\\]*)"'
   KIT_NODE="?"
   if [[ $ARCHON_NODE_EXECUTION =~ $node_re ]]; then
@@ -54,7 +55,10 @@ run_one() { # run_one <normalized payload> [script args...]: sets out, rc and re
   out=""; rc=-1; reason=""
   if [ -n "$matcher" ] && [ "$matcher" != "*" ]; then
     [[ $p =~ $re ]] && tool="${BASH_REMATCH[1]}"
-    [[ $tool =~ ^($matcher)$ ]] || return 0
+    # Tool names match in any case, as every deny list reads them (a matcher Bash meets bash and BASH).
+    shopt -s nocasematch
+    if ! [[ $tool =~ ^($matcher)$ ]]; then shopt -u nocasematch; return 0; fi
+    shopt -u nocasematch
   fi
   case "$script" in
     .claude/hooks/*) dir="$root/.claude/hooks" ;;
