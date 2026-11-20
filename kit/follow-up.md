@@ -28,9 +28,12 @@ The run took 92 calls, 4,006,844 input and 36,885 output tokens, and 708 cost un
 - **`effort` per node: accepted.** `session.start` shows reasoningEffort low, high and medium per node (verified in
   the run's logs by the subagent).
 - **Hook records name the node** (`"node":"explore"`, …). The trace and the usage per node were written.
-- **The fences hold:** 20 denies, each naming the node. Most were `cd`, `ls`, `echo`, `cat`, variable assignments
-  and one `git log` form that are not on the node's list. This friction is the likely cause of the extra turns in
-  plan, build-step and review. **Owner decision open:** widening the lists would loosen a fence, so it is not done.
+- **The fences hold:** 20 denies, each naming the node. Of the 18 command denies, 12 were shell reads of the run's
+  own files (`cat`, `ls`, `echo` in one line) that `view`, `glob` and `grep` cover, 6 were the `2>&1` bug below, and
+  the rest were pipes to `tail` or `head` and a `git log` form outside the test writer's list. This friction is the
+  likely cause of the extra turns in plan, build-step and review. The lists are not widened (owner, 2026-11-20):
+  the prompts that name a run file now say to read files with `view`, `glob` and `grep`, never `cat`, `ls` or `echo`.
+  **Open, the owner's call:** a read-only filter (`tail`, `head`) after a pipe.
 - **Push guard, end to end: partly.** The real `push-guard.sh` refused the push to the scratch project's main.
   `open-pr` was not reached, so a branch push through the hook is not verified.
 - **Not verified:** the `; <n> tests` local-ci status and CI running Gradle (no run reached CI), and a second
@@ -44,6 +47,11 @@ The run took 92 calls, 4,006,844 input and 36,885 output tokens, and 708 cost un
     the old `payload.sh` denies it, the new one allows it.
   - `mcp-use-check` counted only `mcp__<server>__` names, so it reported `mcp: 0` for a node that did call CodeGraph
     (a false warning on plan). It now also counts `<server>-` and `codegraph-`.
+  - The scope guard split a command at the `&` of a `2>&1` redirect and denied a "command" named `1` (6 denies;
+    the write-tests prompt itself asks for the full output in `red/step-<n>.log`). The `&` of an unescaped `>&` or
+    `<&` now stays in its segment; a real `&` after it still splits, and so does one behind an escaped `\>`. The old
+    guard also let `<(…)` and `>(…)` through, a process substitution that hides a command as `$(` does: it is now
+    denied. `node-fence.test.sh` has 10 new cases; 8 of them fail on the old guard.
   - `.githooks/commit-msg` stayed 0644 after `kit add`: an older kit shipped it 0644, and `kit add` left the mode of
     a file whose content was unchanged. It now gives such an executable its mode back, and counts it as written.
 - **Still to do:** a complete run to `open-pr`. The kit update has to reach the scratch project's `origin/main`
