@@ -7,55 +7,66 @@ open. Unless a line says "verified", the facts come from the report of the lane 
 
 ## The measured run (step 3 of [plan.md])
 
-One `build-feature-copilot` run on the scratch project, 2026-11-20, Sonnet subagent, isolated Archon built at
-`56763529a`. Run `8c961580…` (`--from main`) stopped at `tdd-check`. The kit update commit was in its branch range,
-because the update could not reach the scratch project's `origin/main`: the real push guard refused that push, as
-it should (verified). An earlier try (`aeaac6ad…`) stopped at `ticket`, because its worktree was cut from the old
-`origin/main` without `kit-gitignore.sh`. So no run reached `open-pr`, and the numbers below are for
-explore → review only, against run B of `kit/profiles/core/.archon/copilot/baseline.md` (in brackets):
+Two `build-feature-copilot` runs on the scratch project, 2026-11-20, each driven by a Sonnet subagent with an isolated
+Archon. Neither is complete, so the baseline is not replaced.
 
-| Node | Wall | Input tokens | Turns |
+- **Run 1, `8c961580…`** (kit `56763529a`) stopped at `tdd-check`: the kit update commit was in its branch range,
+  because the real push guard refused the update's push to the scratch project's `main`, as it should (verified).
+- **Run 2, `5961dce9…`** (kit `718137727`, the update merged through a scratch pull request) ran every model node in
+  about 5.5 min including the plan approval, pushed `feat/health-3` and opened draft PR #3, then failed at `open-pr`:
+  `pr-body.sh` wrote `pr-body: wrote …` on stdout before `open-pr.sh`'s JSON, and the node's `output_format` needs one
+  JSON document (`failureKind: output_contract`). The line came with `f2fd954b2`, already in `local/console`; it is
+  fixed on this branch (below). `ci`, `triage`, `ci-fix` and `ready` did not run.
+
+Per node: wall time, Copilot input tokens, turns. Run 2 against baseline run B of
+`kit/profiles/core/.archon/copilot/baseline.md` and run 1:
+
+| Node | Run 2 | Run B | Run 1 |
 |---|---|---|---|
-| explore | 33.5 s [28.2] | 252,554 [200,989] | 6 [6] |
-| plan | 61.4 s [31.0] | 589,705 | 13 [6] |
-| write-tests (2 tries) | 57.0 s [30.9] | | 15 [7] |
-| build-step (2 tries) | 71.5 s [23.3] | 1,017,235 | 27 [8] |
-| review | 177.1 s [70.3] | 1,588,768 | 31 [8] |
+| explore (haiku, low) | 32.5 s, 278k, 7 | 28.2 s, 201k, 6 | 33.5 s, 253k, 6 |
+| plan (opus, high) | 75.8 s, 510k, 10 | 31.0 s, 234k, 6 | 61.4 s, 590k, 13 |
+| write-tests (sonnet, medium) | 42.4 s, 487k, 12 | 30.9 s, 263k, 7 | 57.0 s (2 tries), 15 |
+| build-step (sonnet, medium) | 30.3 s, 390k, 10 | 23.3 s, 296k, 8 | 71.5 s (2 tries), 1.02M, 27 |
+| review (opus, high) | 116.0 s, 957k, 24 | 70.3 s, 267k, 8 | 177.1 s, 1.59M, 31 |
+| pr-text (sonnet, low) | 11.4 s, 126k, 5 | 10.9 s, 102k, 4 | not reached |
 
-The run took 92 calls, 4,006,844 input and 36,885 output tokens, and 708 cost units [50 calls, 1,689,207, 21,669,
-372]. The baseline is not replaced: this run is not complete.
+Run 2 took 68 calls, about 2.75M input and 29,102 output tokens, and 544 cost units [run B: 50 calls, 1.69M, 21,669,
+372]. Against run 1, write-tests and build-step ran once each and build-step fell from 27 turns to 10. Against run B,
+plan and review are still heavier: review ran `gradlew test` 7 times for a one-endpoint change.
 
-- **`effort` per node: accepted.** `session.start` shows reasoningEffort low, high and medium per node (verified in
-  the run's logs by the subagent).
-- **Hook records name the node** (`"node":"explore"`, …). The trace and the usage per node were written.
-- **The fences hold:** 20 denies, each naming the node. Of the 18 command denies, 12 were shell reads of the run's
-  own files (`cat`, `ls`, `echo` in one line) that `view`, `glob` and `grep` cover, 6 were the `2>&1` bug below, and
-  the rest were pipes to `tail` or `head` and a `git log` form outside the test writer's list. This friction is the
-  likely cause of the extra turns in plan, build-step and review. The lists are not widened (owner, 2026-11-20):
-  the prompts that name a run file now say to read files with `view`, `glob` and `grep`, never `cat`, `ls` or `echo`.
-  **Open, the owner's call:** a read-only filter (`tail`, `head`) after a pipe.
-- **Push guard, end to end: partly.** The real `push-guard.sh` refused the push to the scratch project's main.
-  `open-pr` was not reached, so a branch push through the hook is not verified.
-- **Not verified:** the `; <n> tests` local-ci status and CI running Gradle (no run reached CI), and a second
-  workflow with `fileHooks` (the kit has none: `run-metrics` is a script node only).
+- **`effort` per node: accepted** (`reasoningEffort` in each node's `session.start`, both runs).
+- **Fence denies: 20 in run 1, 14 in run 2.** Run 2 has no `2>&1` deny: `./gradlew test > red/step-1.log 2>&1` was
+  allowed. What is still denied: shell `cat`, `ls`, `echo` and `grep` (6, against 12), pipes to `tail` or `head` after
+  a build (6), `git --no-pager log` forms (4), a `for` loop, and a `grep` with a list of 3 paths (denied by design).
+  **Open, the owner's call:** a read-only filter (`tail`, `head`) after a pipe, and `git --no-pager log`.
+- **The audit records hold no denies.** The `.apm-audit` records come from postToolUse, which a denied call never
+  reaches. They name the node (`"node":"<node>"`). A deny names the node only in its message, and only Copilot's own
+  session log (`events.jsonl`) keeps it. **Open:** record denies in the audit trail too.
+- **The push through `.githooks/pre-push`: partly.** `core.hooksPath` is `.githooks`, and the worktree's `pre-push`
+  calls the real `push-guard.sh`; run 1 saw it refuse `main`, and run 2's branch push went through. That the hook ran
+  on the branch push is inferred, not seen.
+- **`mcp-use`:** explore `mcp: 1` (Copilot's `codegraph-codegraph_explore`, now counted); plan `mcp: 0, cli: 0` with a
+  genuine warning (5 hand searches, no CodeGraph).
 - **Tool names Copilot sent:** `bash`, `view`, `glob`, `grep`, `edit`, `create`, `skill`, and MCP tools as
-  `<server>-<tool>` (`codegraph-codegraph_explore`, `_node`, `_callers`, `_impact`).
-- **Fixed on this branch from what the run found:**
-  - A `grep` whose `paths` is a list was denied, because the scope guard could not read it (jq failed). Now a list
-    of one string counts as that path, in `payload.sh` and in `claudeCall` (`copilot-audit.js`, also read by
-    `run-trace.js` and `mcp-use-check.js`). A longer list is still denied. `node-fence.test.sh` replays the call:
-    the old `payload.sh` denies it, the new one allows it.
-  - `mcp-use-check` counted only `mcp__<server>__` names, so it reported `mcp: 0` for a node that did call CodeGraph
-    (a false warning on plan). It now also counts `<server>-` and `codegraph-`.
-  - The scope guard split a command at the `&` of a `2>&1` redirect and denied a "command" named `1` (6 denies;
-    the write-tests prompt itself asks for the full output in `red/step-<n>.log`). The `&` of an unescaped `>&` or
+  `<server>-<tool>`. Not compared with `tools.json` entry by entry.
+- **Not verified:** the `; <n> tests` local-ci status, CI running Gradle, `ready` and the CI-fix loop (no run reached
+  `ci`), the `<(`/`>(` deny and the list-of-one `grep` in a real run (only in the suites), and a second workflow with
+  `fileHooks` (the kit has none).
+- **Fixed on this branch from what the runs found:**
+  - `pr-body.sh` writes its note to stderr; `pr-body.test.sh` case 2b checks stdout stays empty (fails on the old
+    script).
+  - The scope guard split a command at the `&` of a `2>&1` redirect and denied a "command" named `1` (6 denies in
+    run 1; the write-tests prompt asks for the full output in `red/step-<n>.log`). The `&` of an unescaped `>&` or
     `<&` now stays in its segment; a real `&` after it still splits, and so does one behind an escaped `\>`. The old
     guard also let `<(…)` and `>(…)` through, a process substitution that hides a command as `$(` does: it is now
     denied. `node-fence.test.sh` has 10 new cases; 8 of them fail on the old guard.
-  - `.githooks/commit-msg` stayed 0644 after `kit add`: an older kit shipped it 0644, and `kit add` left the mode of
-    a file whose content was unchanged. It now gives such an executable its mode back, and counts it as written.
-- **Still to do:** a complete run to `open-pr`. The kit update has to reach the scratch project's `origin/main`
-  first, through a pull request there or a push the owner allows.
+  - The prompts that name a run file say to read files with `view`, `glob` and `grep`, never `cat`, `ls` or `echo`.
+    No list is widened (owner, 2026-11-20).
+  - A `grep` whose `paths` is a list of one string counts as that path, in `payload.sh` and in `claudeCall`
+    (`copilot-audit.js`, also read by `run-trace.js` and `mcp-use-check.js`); a longer list is still denied.
+  - `mcp-use-check` counts Copilot's MCP names (`<server>-`, `codegraph-`), not only `mcp__<server>__`.
+  - `kit add` gives an unchanged executable its mode back (`.githooks/commit-msg` stayed 0644 after an update).
+- **Still to do:** a complete run through `ci` to `ready`, once this fix is on the scratch project's `main`.
 
 ## Fences and guards
 
