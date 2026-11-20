@@ -9,11 +9,14 @@ import { parse as parseYaml } from 'yaml';
 import { removeTempTree } from '@archon/paths/test-utils';
 import { applySetOverrides, type Kit } from './kit';
 import {
+  BACKLOG_LINE,
   addExtraProject,
+  agentsAfterGromaInit,
   checkContractPath,
   checkRepoPath,
   expandPath,
   kitSetupCommand,
+  kitWebCommand,
   mergeMcpServer,
   readSetupDefaults,
   saveSetupDefaults,
@@ -86,6 +89,11 @@ describe('kit setup', () => {
   let kitAddOptions: Parameters<KitSetupDeps['kitAdd']>[1][];
   let toolEnvs: NodeJS.ProcessEnv[];
   let failWhen: (call: Call) => boolean;
+  /** URLs the stub browser opened, URLs that never answer, and the logs archon serve was started with. */
+  let opened: string[];
+  let silent: Set<string>;
+  let served: string[];
+  let webOutput: string;
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'archon-kit-setup-test-'));
@@ -110,7 +118,15 @@ describe('kit setup', () => {
     kitAddOptions = [];
     toolEnvs = [];
     failWhen = () => false;
+    opened = [];
+    silent = new Set();
+    served = [];
+    webOutput = 'Backlog board: http://localhost:6420\nArchon web UI: http://localhost:3090';
   });
+
+  const GROMA_AGENTS =
+    '<!-- groma:start -->\n## Groma\nrun `groma agent-instructions`\n<!-- groma:end -->\n\n' +
+    '<!-- BACKLOG.MD GUIDELINES START -->\nBacklog.md workflow\n<!-- BACKLOG.MD GUIDELINES END -->\n';
 
   afterEach(async () => {
     await removeTempTree(root);
@@ -168,8 +184,16 @@ describe('kit setup', () => {
         const call = { command, args, cwd };
         calls.push(call);
         output(`ran ${command} ${args.join(' ')}\n`);
-        if (args[0] === 'scripts/web-uis.sh' && args[1] === 'start') {
-          output('Backlog board: http://localhost:6420\nArchon web UI: http://localhost:3090');
+        if (args[0] === 'scripts/web-uis.sh' && args[1] === 'start') output(webOutput);
+        // groma init as the real one: groma/, a Backlog.md board and its block in AGENTS.md
+        if (command === 'groma' && args[0] === 'init') {
+          mkdirSync(join(cwd, 'groma'), { recursive: true });
+          writeFileSync(join(cwd, 'groma', 'index.md'), '# map\n');
+          mkdirSync(join(cwd, 'backlog'), { recursive: true });
+          writeFileSync(join(cwd, 'backlog', 'config.yml'), 'default_port: 6420\n');
+          const agents = join(cwd, 'AGENTS.md');
+          const before = existsSync(agents) ? `${readFileSync(agents, 'utf-8')}\n` : '';
+          writeFileSync(agents, before + GROMA_AGENTS);
         }
         return failWhen(call) ? 1 : 0;
       },
@@ -202,6 +226,15 @@ describe('kit setup', () => {
       },
       checkMcp: async () => [{ status: 'ok', name: 'mcp codegraph', detail: '6 tools' }],
       which: () => true,
+      ready: async url => !silent.has(url),
+      open: url => {
+        opened.push(url);
+        return true;
+      },
+      startServe: logPath => {
+        served.push(logPath);
+        silent.delete('http://localhost:3090/api/health');
+      },
       now: () => new Date(2026, 10, 19, 8, 5, 9),
       stderr: text => void stderr.push(text),
       ...overrides,
@@ -282,6 +315,18 @@ describe('kit setup', () => {
   });
 
   describe('config edits', () => {
+    it('AGENTS.md after groma init: the Backlog.md block goes only when off and new', () => {
+      const block = '<!-- BACKLOG.MD GUIDELINES START -->\nx\n<!-- BACKLOG.MD GUIDELINES END -->\n';
+      expect(agentsAfterGromaInit(`# g\n\n${block}`, null, false)).toBe('# g\n');
+      expect(agentsAfterGromaInit(`# g\n\n${block}`, block, false)).toBe(`# g\n\n${block}`);
+      expect(agentsAfterGromaInit(block, null, false)).toBeNull();
+      expect(agentsAfterGromaInit(null, null, true)).toBeNull();
+      expect(agentsAfterGromaInit('# g\n', null, true)).toBe(`# g\n\n${BACKLOG_LINE}\n`);
+      expect(agentsAfterGromaInit(`# g\n${BACKLOG_LINE}\n`, null, true)).toBe(
+        `# g\n${BACKLOG_LINE}\n`
+      );
+    });
+
     it('adds the frontend to codegraph.extra_projects once, keeping the comments', () => {
       const once = addExtraProject('# top\nbase_branch: main # branch\n', '/fe');
       expect(once).toContain('# top');
@@ -361,10 +406,15 @@ describe('kit setup', () => {
         { command: 'bash', args: ['.archon/scripts/contract-mcp-setup.sh'], cwd: backend },
         { command: 'bash', args: ['.archon/scripts/codegraph-setup.sh', backend], cwd: backend },
         { command: 'bash', args: ['.archon/scripts/codegraph-setup.sh', frontend], cwd: backend },
+        { command: 'groma', args: ['init', '--directory', 'groma', 'backend'], cwd: backend },
+        { command: 'groma', args: ['scanner', 'add', '@groma/scanner-java'], cwd: backend },
+        { command: 'groma', args: ['scan'], cwd: backend },
         { command: 'rtk', args: ['init', '--copilot'], cwd: backend },
         { command: 'rtk', args: ['init', '--copilot'], cwd: frontend },
-        { command: 'bash', args: ['scripts/web-uis.sh', 'start', '--open'], cwd: backend },
+        { command: 'bash', args: ['scripts/web-uis.sh', 'start'], cwd: backend },
       ]);
+      expect(opened).toEqual(['http://localhost:6420', 'http://localhost:3090']);
+      expect(served).toEqual([]);
       expect(kitAddOptions[0]).toMatchObject({
         profiles: ['core', 'java', 'java-spring', 'openapi-contract', 'mijn-gezondheid'],
         trust: true,
@@ -560,6 +610,93 @@ describe('kit setup', () => {
         existsSync(join(archonHome, 'logs')) ? readdirSync(join(archonHome, 'logs')) : []
       ).toEqual([]);
       expect(lines.filter(line => line.startsWith('cancel'))).toHaveLength(3);
+    });
+
+    it('sets up the Groma map; without Backlog.md the board and block groma init wrote go', async () => {
+      writeFileSync(join(backend, 'AGENTS.md'), '# Mine\n');
+      expect(await kitSetupCommand(flags({ noWeb: true }), deps())).toBe(0);
+      expect(existsSync(join(backend, 'groma', 'index.md'))).toBe(true);
+      expect(existsSync(join(backend, 'backlog'))).toBe(false);
+      const agents = readFileSync(join(backend, 'AGENTS.md'), 'utf-8');
+      expect(agents).toStartWith('# Mine\n');
+      expect(agents).toContain('groma agent-instructions');
+      expect(agents).not.toContain('BACKLOG.MD GUIDELINES');
+      const out = lines.join('\n');
+      expect(out).toContain('ok Groma map: groma init, java scanner, first scan');
+      expect(out).toContain('the pre-push check (groma-check) refuses a push');
+    });
+
+    it('with Backlog.md the board stays and AGENTS.md says where the tickets live', async () => {
+      expect(await kitSetupCommand(flags({ backlog: true, noWeb: true }), deps())).toBe(0);
+      expect(existsSync(join(backend, 'backlog', 'config.yml'))).toBe(true);
+      const agents = readFileSync(join(backend, 'AGENTS.md'), 'utf-8');
+      expect(agents).toContain('BACKLOG.MD GUIDELINES START');
+      expect(agents).toContain(BACKLOG_LINE);
+    });
+
+    it('adds no java scanner without the java profile, and keeps a map that is already there', async () => {
+      expect(await kitSetupCommand(flags({ noWeb: true, profiles: ['core'] }), deps())).toBe(0);
+      expect(ran('groma').map(c => c.args[0])).toEqual(['init', 'scan']);
+      calls = [];
+      lines = [];
+      expect(await kitSetupCommand(flags({ noWeb: true }), deps())).toBe(0);
+      expect(ran('groma')).toEqual([]);
+      const out = lines.join('\n');
+      expect(out).toContain('Groma map: skipped (groma/ is already there)');
+      expect(out).not.toContain('refuses a push');
+    });
+
+    it('skips the Groma map when groma is not on PATH', async () => {
+      const which = (command: string): boolean => command !== 'groma';
+      expect(await kitSetupCommand(flags({ noWeb: true }), deps({ which }))).toBe(0);
+      expect(ran('groma')).toEqual([]);
+      expect(lines.join('\n')).toContain('Groma map: skipped (groma is not on PATH)');
+    });
+
+    it('opens each web view only once it answers; one that never does fails the step', async () => {
+      webOutput =
+        'mcp-codegraph: http://127.0.0.1:6274/?MCP_INSPECTOR_API_TOKEN=abc\n' +
+        'mcp-contract-api: http://127.0.0.1:6284/?MCP_INSPECTOR_API_TOKEN=def\n' +
+        'groma: http://127.0.0.1:6421 (log x)\nbacklog: skipped, no Backlog.md board\n';
+      silent.add('http://127.0.0.1:6284/?MCP_INSPECTOR_API_TOKEN=def');
+      expect(await kitSetupCommand(flags(), deps())).toBe(1);
+      expect(opened).toEqual([
+        'http://127.0.0.1:6274/?MCP_INSPECTOR_API_TOKEN=abc',
+        'http://127.0.0.1:6421',
+        'http://localhost:3090',
+      ]);
+      const out = lines.join('\n');
+      expect(out).toContain(
+        'mcp-contract-api: http://127.0.0.1:6284/?MCP_INSPECTOR_API_TOKEN=def   (not opened'
+      );
+      expect(out).toContain('fail Web views: failed (no answer from http://127.0.0.1:6284/');
+      expect(out).not.toContain('backlog: skipped');
+    });
+
+    it('starts archon serve when the Archon web UI does not answer, then opens it', async () => {
+      webOutput = 'mcp-codegraph: http://127.0.0.1:6274/?MCP_INSPECTOR_API_TOKEN=abc\n';
+      silent.add('http://localhost:3090/api/health');
+      expect(await kitSetupCommand(flags(), deps())).toBe(0);
+      expect(served).toEqual([join(archonHome, 'logs', 'serve-20261119-080509.log')]);
+      expect(opened).toContain('http://localhost:3090');
+      expect(lines.join('\n')).toContain('archon: http://localhost:3090 (started, log');
+    });
+
+    it('kit web starts, waits for and opens the views of a project alone', async () => {
+      mkdirSync(join(backend, 'scripts'), { recursive: true });
+      writeFileSync(join(backend, 'scripts', 'web-uis.sh'), '#!/bin/bash\n');
+      expect(await kitWebCommand('home/code/backend', deps())).toBe(0);
+      expect(calls).toEqual([
+        { command: 'bash', args: ['scripts/web-uis.sh', 'start'], cwd: backend },
+      ]);
+      expect(opened).toEqual(['http://localhost:6420', 'http://localhost:3090']);
+      expect(lines.join('\n')).toContain(
+        `Stop them: cd ${backend} && bash scripts/web-uis.sh stop`
+      );
+      silent.add('http://localhost:6420');
+      expect(await kitWebCommand(backend, deps())).toBe(1);
+      expect(await kitWebCommand(frontend, deps())).toBe(1);
+      expect(lines.join('\n')).toContain('Web views failed: the backend has no scripts/web-uis.sh');
     });
 
     it('--yes skips the confirmation in a terminal', async () => {

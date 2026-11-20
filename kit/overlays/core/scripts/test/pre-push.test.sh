@@ -3,7 +3,7 @@
 # stops the push when the check fails or the groma CLI is missing; scripts/install-hooks.sh switches it on per clone.
 # It builds throwaway git repos with a stub check script, so it tests the hook, not the real map, and does not depend on
 # whether the real groma CLI is installed. A repo without groma/ has not set Groma up: the hook and groma-check.sh print
-# a notice and pass. `backlog: false` drops groma-check.sh's Backlog.md checks.
+# a notice and pass. `backlog: false` drops groma-check.sh's Backlog.md checks, `agent_cli: copilot` its CLAUDE.md check.
 # Usage: bash scripts/test/pre-push.test.sh
 set -uo pipefail
 # No automatic gc or maintenance in the throwaway repos: a background gc racing the next git call was the suspected
@@ -363,6 +363,28 @@ check "backlog: true in kit.yaml wins over the defaults' false" test "$rc" -eq 1
 r="$(backlog_repo blenv - -)"
 rc="$(run_check "$r" blenv KIT_BACKLOG=0)"; last_err="$tmp/blenv.err"
 check "KIT_BACKLOG=0 switches the Backlog.md checks off" test "$rc" -eq 0
+
+# --- (m) agent_cli: copilot drops the CLAUDE.md import check (Copilot CLI reads AGENTS.md itself); other CLIs keep it
+cli_repo() { # cli_repo <name> <kit.yaml agent_cli line or ->: a map repo without CLAUDE.md, Backlog.md off
+  local d
+  d="$(new_map_repo "$1")"
+  git -C "$d" rm -q CLAUDE.md
+  mkdir -p "$d/.archon"
+  printf 'profiles: [core]\nbacklog: false\n%s\n' "$([ "$2" = - ] || echo "$2")" > "$d/.archon/kit.yaml"
+  git -C "$d" add -A && git -C "$d" commit -q -m cli
+  echo "$d"
+}
+r="$(cli_repo clicop 'agent_cli: copilot')"
+rc="$(run_check "$r" clicop)"; last_err="$tmp/clicop.err"
+check "agent_cli: copilot passes without a CLAUDE.md" test "$rc" -eq 0
+check "agent_cli: copilot says the CLAUDE.md import is skipped" grep -q 'skipped: the CLAUDE.md import' "$tmp/clicop.out"
+r="$(cli_repo cliclaude 'agent_cli: claude')"
+rc="$(run_check "$r" cliclaude)"; last_err="$tmp/cliclaude.err"
+check "agent_cli: claude still fails without a CLAUDE.md that imports AGENTS.md" \
+  bash -c '[ "$1" -eq 1 ] && grep -q "CLAUDE.md does not import AGENTS.md" "$2"' _ "$rc" "$tmp/cliclaude.err"
+r="$(cli_repo clinone -)"
+rc="$(run_check "$r" clinone KIT_AGENT_CLI=copilot)"; last_err="$tmp/clinone.err"
+check "KIT_AGENT_CLI=copilot drops the CLAUDE.md import check" test "$rc" -eq 0
 
 echo "pre-push tests: $passed passed, $failed failed"
 [[ "$failed" -eq 0 ]]

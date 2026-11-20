@@ -46,6 +46,15 @@ script then cannot log `gh` in for you.
    It does this only in a repository whose tree was clean before the run, and it never
    pushes.
 9. **A dry run**: runs a dry run of `build-feature-copilot`.
+10. **The web views**: runs `archon kit web` on the backend: the MCP Inspectors (the codegraph server of each repository
+    and the contract server on your contract), the Groma map, the Backlog.md board when it is
+    on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
+    view in the browser only once it answers, and names a view that does not answer within
+    90 seconds. `archon kit web <backend>` does the same later.
+
+When `groma-check` fails on the committed first scan of the Groma map (an element without a
+description), the closing list says so: the pre-push check refuses a push until an agent
+curates the map (it runs `groma agent-instructions`) and you commit `groma/`.
 
 | Option | Effect |
 |--------|--------|
@@ -54,7 +63,7 @@ script then cannot log `gh` in for you.
 | `--archon-dir <path>` | Use another folder for the Archon clone (default `~/archon`). |
 | `--branch <name>` | Use another branch name for the commit. |
 | `--no-commit` | Leave the kit uncommitted. |
-| `--no-web` | Do not start the MCP Inspectors. |
+| `--no-web` | Do not start and open the web views at the end. |
 | `--no-smoke` | Skip the dry run of `build-feature-copilot`. |
 | `--dry-run` | Check the paths and print the plan, without changing anything. |
 
@@ -96,6 +105,11 @@ fetches and lists the new Archon commits and the plan, and changes nothing.
    in each repository whose tree was clean before the run. It never pushes.
 7. **The server**: restarts a running `archon serve` with the same arguments, so it runs
    the new build.
+8. **The web views**: runs `archon kit web` on the backend, after the restart: the MCP Inspectors (the codegraph server of each repository
+   and the contract server on your contract), the Groma map, the Backlog.md board when it is
+   on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
+   view in the browser only once it answers, and names a view that does not answer within
+   90 seconds. `archon kit web <backend>` does the same later.
 
 | Option | Effect |
 |--------|--------|
@@ -107,7 +121,7 @@ fetches and lists the new Archon commits and the plan, and changes nothing.
 | `--add-profile <a,b>` | Add profiles to the saved ones, for example `--add-profile mijn-gezondheid` on an install from before that profile. The next update keeps them. |
 | `--no-commit` | Leave the update uncommitted. |
 | `--no-restart` | Leave a running `archon serve` on the old build. |
-| `--web` | Start the MCP Inspectors at the end. |
+| `--no-web` | Do not start and open the web views at the end (`--web`, the old flag, is the default now). |
 | `--rebuild` | Rebuild Archon even when the clone is up to date. |
 | `--force` | Update even while a build run is running. |
 | `--dry-run` | Print what would be updated, change nothing. |
@@ -141,14 +155,16 @@ After you confirm the summary, it runs these steps, each with a spinner:
 | CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
 | Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
 | rtk hooks | Runs `rtk init --copilot` in each repository, when `rtk` is on `PATH`. It never installs the global hooks. |
+| Groma map | When `groma` is on `PATH` and the backend has no `groma/` yet: `groma init --directory groma <backend name>`, the Java scanner when a `java` profile is installed, and a first `groma scan`. With Backlog.md off it removes the `backlog/` board and the Backlog.md block that `groma init` adds; `AGENTS.md` keeps its Groma block. |
 | Servers check | Starts each MCP server of both repositories, as `kit doctor` does. |
-| Web views | Runs `bash scripts/web-uis.sh start --open` in the backend and lists the URLs. |
+| Web views | Runs `bash scripts/web-uis.sh start` in the backend, starts `archon serve` when its health URL does not answer, waits up to 90 seconds for each view, and opens each one that answers in the browser (`wslview`, `explorer.exe`, `xdg-open` or `open`; `WEB_UIS_OPEN` picks another). A view that does not answer fails the step. |
 
 The output of every step goes to a log, `~/.archon/logs/kit-setup-<time>.log`, not to the
 terminal. A step that fails is shown as failed with that log path. The later steps still
 run, and the command exits 1 at the end.
 
-The last screen lists the web view URLs, the command that stops them
+The last screen lists the web view URLs, a note when the Groma map is a first scan (commit
+it, and have an agent curate it when the pre-push check asks), the command that stops them
 (`bash scripts/web-uis.sh stop` in the backend), the log path and the Copilot login: run
 `copilot`, then `/login`, and finish it in a browser signed in as the GitHub account that
 has Copilot. That account may differ from the one `gh` uses.
@@ -170,7 +186,7 @@ archon kit setup --backend ~/code/backend --frontend ~/code/frontend \
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
 | `--no-rtk` | Skip the rtk hooks |
-| `--no-web` | Do not start the web views |
+| `--no-web` | Do not start or open the web views (`archon kit web` does that alone) |
 
 Without a terminal, `--backend` and `--contract` are required. Without them, the command
 prints its usage and exits 2.

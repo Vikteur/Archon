@@ -28,7 +28,7 @@ Options:
   --archon-dir <path>   where the Archon clone lives (default: ~/archon)
   --branch <name>       branch for the kit commit (default: chore/archon-kit)
   --no-commit           leave the kit files uncommitted
-  --no-web              do not start the MCP Inspectors at the end
+  --no-web              do not start and open the web views at the end
   --no-smoke            skip the dry run of build-feature-copilot
   --dry-run             check the machine and the paths, print the plan, change nothing
   -h, --help            this text
@@ -38,12 +38,16 @@ What it does, in order (a rerun is safe; it updates what is there):
   2. installs Bun if it is missing
   3. clones or updates the Archon fork (Vikteur/Archon, branch local/console), builds and installs it
   4. pulls the contract's repository when it is a clean git checkout
-  5. runs `archon kit setup`: tools (jq, yq, gh, node, codegraph, copilot, rtk, the MCP Inspector),
-     the kit, the contract MCP server, both CodeGraph indexes, the rtk hooks, the web views
+  5. runs `archon kit setup`: tools (jq, yq, gh, node, codegraph, copilot, rtk, groma, the MCP
+     Inspector), the kit, the contract MCP server, both CodeGraph indexes, the Groma map (groma init
+     and a first scan), the rtk hooks
   6. logs gh in when it is not (in a terminal only)
   7. runs `archon kit doctor` on the backend
   8. commits the kit on a new branch in each repo whose tree was clean before (it never pushes)
   9. runs a dry run of build-feature-copilot
+ 10. starts the web views and opens each in the browser once it answers (`archon kit web`): the MCP
+     Inspectors (codegraph of each repo, the contract server on your contract), the Groma map, the
+     Backlog.md board when it is on, and the Archon web UI (`archon serve`, started when it is not running)
 It assumes Copilot CLI is up to date and logged in. It never writes a token anywhere.
 Log: ~/.archon/logs/install-copilot-kit-<timestamp>.log
 USAGE
@@ -99,7 +103,7 @@ if [ "$DRY_RUN" = 0 ]; then
 fi
 
 # ---------------------------------------------------------------- 1. checks
-step "1/9 Checking the machine and the paths"
+step "1/10 Checking the machine and the paths"
 case "$(uname -s)" in
   Linux)  grep -qi microsoft /proc/version 2>/dev/null && ok "WSL" || ok "Linux" ;;
   Darwin) ok "macOS" ;;
@@ -125,10 +129,10 @@ if [ "$DRY_RUN" = 1 ]; then
   echo "Dry run: nothing changed. The plan:"
   echo "  archon     clone or update $FORK_URL ($FORK_BRANCH) in $ARCHON_DIR, build and install it"
   echo "  contract   $CONTRACT"
-  echo "  backend    $BACKEND (kit, contract MCP, codegraph, rtk)"
+  echo "  backend    $BACKEND (kit, contract MCP, codegraph, Groma map, rtk)"
   echo "  frontend   ${FRONTEND:-(none)}"
   echo "  backlog    $(onoff "$BACKLOG" on off)"
-  echo "  web views  $(onoff "$WEB" on off)"
+  echo "  web views  $(onoff "$WEB" "start and open them once they answer (archon kit web)" off)"
   echo "  commit     $(onoff "$COMMIT" "on, branch $BRANCH, only in repos clean before the run" off)"
   echo "  smoke run  $(onoff "$SMOKE" "build-feature-copilot --dry-run" skipped)"
   exit 0
@@ -152,7 +156,7 @@ command -v copilot >/dev/null && ok "copilot $(copilot --version 2>/dev/null | h
   || warn "copilot is not on PATH yet; kit setup installs it, then log in with: copilot, /login"
 
 # ---------------------------------------------------------------- 2. bun
-step "2/9 Bun"
+step "2/10 Bun"
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 export PATH="$BUN_INSTALL/bin:$HOME/.local/bin:$PATH"
 if command -v bun >/dev/null; then
@@ -164,7 +168,7 @@ else
 fi
 
 # ---------------------------------------------------------------- 3. archon
-step "3/9 Archon (fork $FORK_BRANCH) in $ARCHON_DIR"
+step "3/10 Archon (fork $FORK_BRANCH) in $ARCHON_DIR"
 if [ -d "$ARCHON_DIR/.git" ]; then
   url="$(git -C "$ARCHON_DIR" remote get-url origin 2>/dev/null || true)"
   case "$url" in *Vikteur/Archon*) ;; *) die "$ARCHON_DIR is a clone of '$url', not the fork; pass --archon-dir <other folder>" ;; esac
@@ -199,7 +203,7 @@ if [ -f "$ARCHON_DIR/scripts/update-copilot-kit.sh" ]; then
 fi
 
 # ---------------------------------------------------------------- 4. contract
-step "4/9 Contract repository"
+step "4/10 Contract repository"
 CONTRACT_REPO="$(git -C "$(dirname "$CONTRACT")" rev-parse --show-toplevel 2>/dev/null || true)"
 if [ -z "$CONTRACT_REPO" ]; then
   ok "the contract is not in a git checkout; used as it is"
@@ -212,17 +216,17 @@ else
 fi
 
 # ---------------------------------------------------------------- 5. kit setup
-step "5/9 archon kit setup"
+step "5/10 archon kit setup"
 setup_args=(--backend "$BACKEND" --contract "$CONTRACT" --yes)
 [ -z "$FRONTEND" ] || setup_args+=(--frontend "$FRONTEND")
 [ "$BACKLOG" = 1 ] && setup_args+=(--backlog)
-[ "$WEB" = 1 ] || setup_args+=(--no-web)
+setup_args+=(--no-web)   # step 10 opens them, once the rest is done
 SETUP_OK=1
 archon kit setup "${setup_args[@]}" || { SETUP_OK=0; warn "kit setup reported a failed step; its log is in ~/.archon/logs/kit-setup-*.log"; }
 hash -r
 
 # ---------------------------------------------------------------- 6. gh login
-step "6/9 GitHub CLI login"
+step "6/10 GitHub CLI login"
 if ! command -v gh >/dev/null; then
   warn "gh is not installed; kit setup's tool step should have done that"
 elif gh auth status >/dev/null 2>&1; then
@@ -234,12 +238,12 @@ else
 fi
 
 # ---------------------------------------------------------------- 7. doctor
-step "7/9 archon kit doctor"
+step "7/10 archon kit doctor"
 DOCTOR_OK=1
 (cd "$BACKEND" && archon kit doctor .) || { DOCTOR_OK=0; warn "kit doctor is not all green; see above"; }
 
 # ---------------------------------------------------------------- 8. commit
-step "8/9 Commit the kit (local only, never pushed)"
+step "8/10 Commit the kit (local only, never pushed)"
 commit_repo() {  # <repo> <was clean> <message>
   local repo="$1" clean="$2" msg="$3"
   if [ "$COMMIT" = 0 ]; then warn "$repo: --no-commit, left uncommitted"; return; fi
@@ -262,13 +266,30 @@ commit_repo "$BACKEND" "$BACKEND_CLEAN" "chore: add the Archon Copilot kit"
 [ -z "$FRONTEND" ] || commit_repo "$FRONTEND" "$FRONTEND_CLEAN" "chore: add codegraph MCP and rtk for Copilot"
 
 # ---------------------------------------------------------------- 9. smoke
-step "9/9 Dry run of build-feature-copilot"
+step "9/10 Dry run of build-feature-copilot"
 if [ "$SMOKE" = 0 ]; then
   ok "skipped (--no-smoke)"
 elif (cd "$BACKEND" && archon workflow run build-feature-copilot --dry-run --default-stubs); then
   ok "the dry run completed"
 else
   warn "the dry run failed; see above"
+fi
+
+# ---------------------------------------------------------------- 10. web views
+step "10/10 Web views"
+if [ "$WEB" = 0 ]; then
+  ok "skipped (--no-web); open them later with: archon kit web $BACKEND"
+else
+  archon kit web "$BACKEND" || warn "not every web view answered; see the lines above (archon kit web $BACKEND retries)"
+fi
+
+# A first Groma scan fails the pre-push check until an agent curates the map.
+GROMA_NOTE=""
+if [ -d "$BACKEND/groma" ] && [ -f "$BACKEND/.claude/scripts/groma-check.sh" ] \
+  && ! (cd "$BACKEND" && bash .claude/scripts/groma-check.sh >/dev/null 2>&1); then
+  GROMA_NOTE="  - Curate the Groma map before the first push: the pre-push check refuses it until then.
+    Ask an agent to curate it (it runs \`groma agent-instructions\`), then commit groma/.
+"
 fi
 
 # ---------------------------------------------------------------- summary
@@ -282,10 +303,11 @@ fi
 cat <<EOF
 
 Next:
-  - Push the branch '$BRANCH' in each committed repo and open a PR, as you usually do.
+${GROMA_NOTE}  - Push the branch '$BRANCH' in each committed repo and open a PR, as you usually do.
   - Work in Copilot:  cd $BACKEND && copilot     then /agent to pick an agent, /mcp for the servers
   - Build something:  cd $BACKEND && archon workflow run build-feature-copilot "what to build"
-  - Stop the MCP Inspectors: cd $BACKEND && bash scripts/web-uis.sh stop
+  - Open the web views again: archon kit web $BACKEND
+  - Stop them: cd $BACKEND && bash scripts/web-uis.sh stop
   - Update this machine later (Archon, the kit, the tools): archon-kit-update
   - If /mcp says the servers are "blocked by policy", that is your organization's registry;
     the agents fall back to the codegraph and contract CLIs by themselves.

@@ -142,7 +142,9 @@ use Backlog.md for tickets (default no). After a confirmation it installs the to
 to `true` or `false` in `kit.yaml`, runs the contract MCP setup, builds
 the CodeGraph index of both repositories, gives the frontend the codegraph MCP server,
 folder trust and a `codegraph.extra_projects` entry in the backend's `kit.yaml`, runs
-`rtk init --copilot` in each repository, checks every MCP server and starts the web views.
+`rtk init --copilot` in each repository, initializes the Groma map (`groma init` and a first
+scan, when the backend has no `groma/` yet), checks every MCP server, and starts the web views
+and opens each in the browser once it answers.
 The [Copilot Kit guide](/guides/copilot-kit/) describes each step.
 
 ```bash
@@ -163,7 +165,7 @@ archon kit setup --backend ~/code/backend --contract ~/code/contract/dist/openap
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
 | `--no-rtk` | Skip the rtk hooks |
-| `--no-web` | Do not start the web views |
+| `--no-web` | Do not start or open the web views (`archon kit web` does that alone) |
 
 The answers are saved in `<archon home>/kit-setup.json` (the three paths, the
 profiles and the Backlog.md answer). Each step's output goes to `<archon home>/logs/kit-setup-<time>.log`; a failed
@@ -172,6 +174,16 @@ step names that log, and the later steps still run. Without a terminal, `--backe
 
 Exit codes: `0` done or cancelled, `1` a step failed, `2` a usage error (missing or invalid
 flags, an unknown profile).
+
+### `kit web [path]`
+
+Starts the web views of a backend that has the kit (`scripts/web-uis.sh start`): one MCP
+Inspector per MCP server, the Groma map when `groma/` exists, the Backlog.md board when
+`backlog/config.yml` exists, and the Archon web UI, with `archon serve` started when its
+health URL does not answer. It waits up to 90 seconds for each view and opens each one that
+answers in the browser. The log goes to `<archon home>/logs/kit-web-<time>.log`.
+
+Exit codes: `0` every view opened, `1` a view did not answer or the start failed.
 
 ### `kit add [path]`, `kit doctor [path]`, `kit tools [path]`, `kit list`
 

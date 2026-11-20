@@ -7,7 +7,8 @@
 # the CLI (default: groma). Whatever the scan leaves in groma/ is undone when the script ends, however it ends.
 # A repo without groma/ has not set Groma up: the script prints a notice (a GitHub Actions ::notice:: in Actions) and
 # passes, so neither the pre-push hook nor CI blocks on a map the project does not keep. `backlog: false` in
-# .archon/kit.yaml (else in kit.defaults.yaml beside it; env KIT_BACKLOG first) drops the two Backlog.md checks.
+# .archon/kit.yaml (else in kit.defaults.yaml beside it; env KIT_BACKLOG first) drops the two Backlog.md checks, and
+# `agent_cli: copilot` (read the same way; env KIT_AGENT_CLI first) the CLAUDE.md import check.
 # Usage: groma-check.sh
 set -euo pipefail
 
@@ -31,6 +32,13 @@ for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
   [[ -f "$f" ]] && use_backlog=$(sed -n 's/^backlog:[[:space:]]*["'"'"']\{0,1\}\([a-z01]*\).*/\1/p' "$f" | head -n 1)
 done
 case "$use_backlog" in false | 0 | no | off) use_backlog=0 ;; *) use_backlog=1 ;; esac
+# The agent CLI (agent_cli, read the same way; env KIT_AGENT_CLI first): Copilot CLI reads AGENTS.md itself, so a
+# Copilot project needs no CLAUDE.md that imports it.
+agent_cli="${KIT_AGENT_CLI:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$agent_cli" ]] || break
+  [[ -f "$f" ]] && agent_cli=$(sed -n 's/^agent_cli:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
 
 fail() {
   echo "FAIL: $1" >&2
@@ -108,7 +116,9 @@ if [[ "$use_backlog" == 1 && -d backlog/tasks ]]; then
 fi
 
 echo "Check: agent sessions load Groma's instructions and find the tickets"
-if ! grep -qx '@AGENTS.md' CLAUDE.md 2>/dev/null; then
+if [[ "$agent_cli" == copilot ]]; then
+  echo "  skipped: the CLAUDE.md import (agent_cli: copilot reads AGENTS.md itself)"
+elif ! grep -qx '@AGENTS.md' CLAUDE.md 2>/dev/null; then
   fail "CLAUDE.md does not import AGENTS.md"
 fi
 if ! grep -q 'groma agent-instructions' AGENTS.md 2>/dev/null; then

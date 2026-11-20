@@ -1483,7 +1483,7 @@ export async function kitCommand(
     subcommand !== 'tools'
   ) {
     console.error(
-      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, setup, tools`
+      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, setup, tools, web`
     );
     return 1;
   }

@@ -42,7 +42,7 @@ const kitSetupFlags: FlagHelp[] = [
   { spec: '--yes', description: 'Skip the confirmation' },
   { spec: '--no-tools', description: 'Skip the tool installer' },
   { spec: '--no-rtk', description: 'Skip the rtk hooks' },
-  { spec: '--no-web', description: 'Do not start the web views' },
+  { spec: '--no-web', description: 'Do not start or open the web views (see kit web)' },
 ];
 
 const kitToolsFlags: FlagHelp[] = [

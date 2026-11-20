@@ -14,7 +14,7 @@ export const attachmentCommands = {
     setup: {
       args: '[--backend <path> --contract <file>]',
       description:
-        'Guided install of the kit into a backend and frontend (tools, contract, CodeGraph, rtk, web views)',
+        'Guided install of the kit into a backend and frontend (tools, contract, CodeGraph, Groma, rtk, web views)',
     },
     add: {
       args: '[path]',
@@ -32,6 +32,11 @@ export const attachmentCommands = {
     list: {
       args: '',
       description: 'List kit profiles and which are installed here',
+    },
+    web: {
+      args: '[path]',
+      description:
+        'Start the MCP Inspectors, the Groma map, the board and the Archon web UI, and open each once it answers',
     },
   },
   provider: {
