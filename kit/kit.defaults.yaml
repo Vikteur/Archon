@@ -7,6 +7,11 @@ base_branch: main
 gh_accounts: [] # gh-switch-account skill: the gh accounts to switch between, e.g. [alice, alice-work]
 agent_cli: copilot # install-tools.sh and kit-config.sh: the agent CLI this project runs, claude | copilot
 build_workflow: build-feature-copilot
+# Local CI (kit/SPEC.md, Local CI switch): true runs CI on this machine (ci-local.sh, .github/workflows/ci.yml) and
+# takes its verdict by SHA. false: the project runs its own CI (GitHub Actions); kit add leaves the local-CI files out
+# (manifest entries with when: local_ci) and prunes the unedited ones, kit doctor does not ask for them, and the build
+# workflows take GitHub's checks on the head as the verdict.
+local_ci: true
 java_version: 26 # kit add takes JavaLanguageVersion.of(N) of build.gradle.kts, buildSrc/ or build-logic/; set to another, it refuses
 pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh, either stack: one <item>|<module>|<task>|<class> line each
 build_shape: # build-shape-check.sh; "-" turns one check off, with a notice

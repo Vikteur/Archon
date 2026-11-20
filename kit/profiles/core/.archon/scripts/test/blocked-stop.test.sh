@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for .archon/scripts/blocked-stop.sh against throwaway plans, and for its place in the build loops of
-# build-feature: a `BLOCKED:` plan stops inside the loop, so it never reaches skill-check.
+# build-feature-copilot: a `BLOCKED:` plan stops inside the loop, so it never reaches skill-check.
 # Usage: bash .archon/scripts/test/blocked-stop.test.sh   (exit 0 = all pass)
 set -uo pipefail
 
@@ -81,7 +81,7 @@ verdict() { # verdict <loop json>: prints the problems, nothing when the loop st
       }
     }' "$1"
 }
-for w in build-feature; do
+for w in build-feature-copilot; do
   ls_=$(loops "$w")
   out="$ls_"
   check "4 $w has a loop that ends on BLOCKED:" $([ -n "$ls_" ]; echo $?)

@@ -147,7 +147,7 @@ ok "no base: left to the gates" $(grep -q '"ok":true' <<< "$out"; echo $?)
 
 # The build loop of build-feature runs this check after each agent, behind blocked-stop, and its build agent waits on
 # the test side.
-out=$(yq -o=json '.nodes[] | select(.id == "implement") | .loop_group.nodes' "$here/../workflows/build-feature.yaml" | node -e '
+out=$(yq -o=json '.nodes[] | select(.id == "implement") | .loop_group.nodes' "$here/../workflows/build-feature-copilot.yaml" | node -e '
   const b = JSON.parse(require("fs").readFileSync(0, "utf8"));
   const after = (id, side) => b.find(n => (n.depends_on || []).includes(id)
     && /blocked-stop\.sh[\s\S]*&&[\s\S]*step-check\.js/.test(n.bash || "") && new RegExp(`step-check\\.js.* ${side}\\b`).test(n.bash || ""));

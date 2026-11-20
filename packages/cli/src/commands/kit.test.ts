@@ -45,6 +45,8 @@ import {
   type DoctorCheck,
   type Kit,
 } from './kit';
+import * as validateRoute from './validate';
+import * as routeLoader from '../routes/route-loader';
 
 const sha = (t: string): string => createHash('sha256').update(t).digest('hex');
 
@@ -511,6 +513,25 @@ describe('kit', () => {
         fileHooks: true,
       });
     });
+    it("kit add validates only the project's workflows, never Archon's bundled ones", async () => {
+      const kit = makeKit();
+      addFile(kit, 'core', '.archon/workflows/w.yaml', 'name: w\n');
+      const loader = spyOn(routeLoader, 'loadRoute').mockImplementation(load => load());
+      const validate = spyOn(validateRoute, 'validateWorkflowsCommand').mockResolvedValue(0);
+      try {
+        expect(await add({ skipValidate: false }, kit)).toBe(0);
+        expect(validate).toHaveBeenCalledTimes(1);
+        expect(validate.mock.calls[0]).toEqual([
+          project,
+          undefined,
+          false,
+          { sources: ['project'] },
+        ]);
+      } finally {
+        loader.mockRestore();
+        validate.mockRestore();
+      }
+    });
     it('a fileHooks the project set itself is kept', () => {
       expect(enableFileHooks('assistants:\n  copilot:\n    fileHooks: false\n')).toMatchObject({
         state: 'off',
@@ -775,6 +796,82 @@ describe('kit', () => {
       expect(await add({ profiles: ['java'] }, without(makeKit(), 'java/src.txt'))).toBe(0);
       expect(readFileSync(outside, 'utf-8')).toBe('java file\n');
       expect(logs.join('\n')).toContain('skipped (symlink)  src.txt');
+    });
+  });
+
+  describe('the local_ci switch (manifest when)', () => {
+    /** The kit with one local-CI file, switched by local_ci, which the defaults turn on. */
+    const ciKit = (): Kit => {
+      const kit = makeKit();
+      addFile(kit, 'core', 'ci/local.sh', 'local ci\n');
+      kit.manifest.files[kit.manifest.files.length - 1].when = 'local_ci';
+      kit.defaults += 'local_ci: true\n';
+      return kit;
+    };
+    const ciFile = () => join(project, 'ci/local.sh');
+    it('the default writes the switched file', async () => {
+      expect(await add({}, ciKit())).toBe(0);
+      expect(readFileSync(ciFile(), 'utf-8')).toBe('local ci\n');
+      expect(readKitLock(project)['ci/local.sh']).toBe(sha('local ci\n'));
+    });
+    it('local_ci false writes none of the switched files and every other file', async () => {
+      expect(await add({ set: ['local_ci=false'] }, ciKit())).toBe(0);
+      expect(existsSync(ciFile())).toBe(false);
+      expect(readKitLock(project)['ci/local.sh']).toBeUndefined();
+      expect(readFileSync(join(project, 'README.md'), 'utf-8')).toBe('# core\n');
+      expect(existsSync(join(project, 'scripts/run.sh'))).toBe(true);
+    });
+    it("reads the project's kit.yaml, not only --set", async () => {
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\nlocal_ci: false\n');
+      expect(await add({}, ciKit())).toBe(0);
+      expect(existsSync(ciFile())).toBe(false);
+    });
+    it('reads a quoted or upper-case false as off, as the runtime scripts do', async () => {
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      for (const value of ['"false"', "'False'", 'FALSE']) {
+        writeFileSync(join(project, '.archon/kit.yaml'), `profiles: [core]\nlocal_ci: ${value}\n`);
+        expect(await add({}, ciKit())).toBe(0);
+        expect(existsSync(ciFile())).toBe(false);
+      }
+      expect(await add({ set: ['local_ci=False'] }, ciKit())).toBe(0);
+      expect(existsSync(ciFile())).toBe(false);
+    });
+    it('a kit whose defaults leave the key out ships the file', async () => {
+      const kit = ciKit();
+      kit.defaults = makeKit().defaults;
+      expect(await add({}, kit)).toBe(0);
+      expect(existsSync(ciFile())).toBe(true);
+    });
+    it('doctor does not report a switched-off file missing', async () => {
+      expect(await add({}, ciKit())).toBe(0);
+      unlinkSync(ciFile());
+      const yaml = join(project, '.archon/kit.yaml');
+      writeFileSync(yaml, readFileSync(yaml, 'utf-8').replace('local_ci: true', 'local_ci: false'));
+      const kit = ciKit();
+      const drift = computeDrift(project, kit, resolveProfiles(kit, ['core']));
+      expect(drift.missing).toEqual([]);
+      expect(drift.modified).toEqual([]);
+    });
+    it('doctor still reports it missing while the switch is on', async () => {
+      expect(await add({}, ciKit())).toBe(0);
+      unlinkSync(ciFile());
+      const kit = ciKit();
+      expect(computeDrift(project, kit, resolveProfiles(kit, ['core'])).missing).toEqual([
+        'ci/local.sh',
+      ]);
+    });
+    it('switching off prunes the unedited file and keeps an edited one', async () => {
+      expect(await add({}, ciKit())).toBe(0);
+      expect(await add({ set: ['local_ci=false'] }, ciKit())).toBe(0);
+      expect(existsSync(ciFile())).toBe(false);
+      expect(await add({ set: ['local_ci=true'] }, ciKit())).toBe(0);
+      expect(existsSync(ciFile())).toBe(true);
+      writeFileSync(ciFile(), 'my ci\n');
+      logs.length = 0;
+      expect(await add({ set: ['local_ci=false'], force: true }, ciKit())).toBe(0);
+      expect(readFileSync(ciFile(), 'utf-8')).toBe('my ci\n');
+      expect(logs.join('\n')).toContain('kept (no longer in the kit)  ci/local.sh');
     });
   });
 

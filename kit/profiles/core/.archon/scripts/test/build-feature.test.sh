@@ -9,7 +9,7 @@
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-wf="$here/../workflows/build-feature.yaml"
+wf="$here/../workflows/build-feature-copilot.yaml"
 pass=0; fail=0; out=""
 root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT
@@ -121,7 +121,7 @@ out="$plan_prompt"
 check "10 plan: no step only runs checks" $(grep -q 'Never write a step that only runs tests, checks or gates' <<< "$plan_prompt"; echo $?)
 check "10 plan: criteria proven by a check go under Checks for review" $(grep -q '## Checks for review' <<< "$plan_prompt"; echo $?)
 check "10 plan: verify-only is no longer 'only runs checks'" $(! grep -q 'it only runs checks' <<< "$plan_prompt"; echo $?)
-check "10 plan: loads clean-architecture with the Skill tool, which skill-check requires" $(grep -q 'Load clean-architecture with the Skill tool first, always' <<< "$plan_prompt"; echo $?)
+check "10 plan: loads clean-architecture with the skill tool, which skill-check requires" $(grep -q 'Load clean-architecture with the skill tool first, always' <<< "$plan_prompt"; echo $?)
 check "10 review reads Checks for review" $(grep -q '## Checks for review' <<< "$review_prompt"; echo $?)
 
 # 11. No committing agent may skip the hook; the agent nodes may not use Monitor.

@@ -101,7 +101,7 @@ rm -f "$plan"
 expect fail "no plan fails" 'no plan'
 
 # build-feature runs it in plan-check, before any agent writes code, and the planner is told the rule.
-wf="$here/../workflows/build-feature.yaml"
+wf="$here/../workflows/build-feature-copilot.yaml"
 yq '.nodes[] | select(.id == "plan-check") | .script' "$wf" | grep -q 'plan-order\.js'
 r=$?; if [ "$r" -eq 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: plan-check runs plan-order.js"; fi
 

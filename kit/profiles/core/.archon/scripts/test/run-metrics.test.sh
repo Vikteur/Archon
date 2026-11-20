@@ -31,6 +31,10 @@ cat "$STUB_PRS"
 STUB
 chmod +x "$root/bin/"*
 export PATH="$root/bin:$PATH" STUB_RUNS="$root/runs.json" STUB_GET="$root/get" STUB_PRS="$root/prs.json"
+# The build workflow is the kit's default (build-feature-copilot) unless a case configures one: no project kit.yaml and
+# no BUILD_WORKFLOW from the caller's environment.
+unset BUILD_WORKFLOW
+export KIT_CONFIG="$root/no-kit.yaml"
 
 run() { # run <id> <workflow> <message> <started> [cost]
   local cost=${5:-}
@@ -46,11 +50,11 @@ a=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa b=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb c=cccccccc
 d=dddddddddddddddddddddddddddddddd e=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee f=ffffffffffffffffffffffffffffffff
 cat > "$root/runs.json" <<EOF
 {"total":6,"runs":[
- $(run $a build-feature "Build TASK-7" 2026-10-01T10:00:00.000Z 2.5),
- $(run $b build-feature "Build TASK-7" 2026-10-01T12:00:00.000Z 4),
- $(run $c build-feature "Build TASK-8" 2026-10-02T10:00:00.000Z 1),
+ $(run $a build-feature-copilot "Build TASK-7" 2026-10-01T10:00:00.000Z 2.5),
+ $(run $b build-feature-copilot "Build TASK-7" 2026-10-01T12:00:00.000Z 4),
+ $(run $c build-feature-copilot "Build TASK-8" 2026-10-02T10:00:00.000Z 1),
  $(run $d archon-comprehensive-pr-review "Review PR #2 of o/r" 2026-10-03T10:00:00.000Z 0.5),
- $(run $e build-feature "Build TASK-9" 2026-10-04T10:00:00.000Z),
+ $(run $e build-feature-copilot "Build TASK-9" 2026-10-04T10:00:00.000Z),
  $(run $f run-metrics "" 2026-10-05T10:00:00.000Z)
 ]}
 EOF
@@ -96,6 +100,27 @@ check "an incomplete run listing exits 1" $?
 sed -i 's/"total":7/"total":6/' "$root/runs.json"
 out="$(STUB_GH_FAIL=1 node "$script" 2>&1)"; [ $? -eq 1 ] && echo "$out" | grep -q "gh pr list"
 check "a failing gh exits 1 and names the command" $?
+
+# The build runs are the ones of the configured build_workflow: a run of that workflow is credited with the PR it
+# opened, a run of any other workflow (the kit's default here) is not looked up, so its PR is credited to nobody.
+g=11111111111111111111111111111111 h=22222222222222222222222222222222
+printf 'build_workflow: my-build\n' > "$root/kit.yaml"
+cat > "$root/runs.json" <<EOF
+{"total":2,"runs":[
+ $(run $g my-build "Build TASK-10" 2026-10-06T10:00:00.000Z 1),
+ $(run $h build-feature-copilot "Build TASK-11" 2026-10-06T12:00:00.000Z 1)
+]}
+EOF
+opened $g 4; opened $h 5
+cat > "$root/prs.json" <<EOF
+[{"url":"$R/4","state":"OPEN","createdAt":"2026-10-06T11:00:00Z","mergedAt":null,"closedAt":null},
+ {"url":"$R/5","state":"OPEN","createdAt":"2026-10-06T13:00:00Z","mergedAt":null,"closedAt":null}]
+EOF
+out="$(KIT_CONFIG="$root/kit.yaml" node "$script" 2>/dev/null)"
+[ "$(q 'd.metrics.find(m=>m.name==="sdlc.prs_opened"&&m.subject.endsWith("/4")).runs')" = "[\"$g\"]" ]
+check "a run of the configured build_workflow is credited with the PR it opened" $?
+[ "$(q 'd.metrics.filter(m=>m.subject.endsWith("/5")).length')" = 0 ]
+check "a run of another workflow is not taken for a build run" $?
 
 echo "run-metrics.test.sh: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

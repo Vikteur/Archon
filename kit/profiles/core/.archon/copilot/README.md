@@ -1,7 +1,7 @@
 # Copilot CLI kit
 
-Runs this repo's `build-feature` workflow on the GitHub Copilot CLI as `build-feature-copilot`. Copilot CLI only, never
-VS Code. The workflow is generated from `build-feature.yaml` by the kit; do not edit it.
+Runs this repo's build workflow, `build-feature-copilot`, on the GitHub Copilot CLI. Copilot CLI only, never VS Code.
+The workflow ships with the kit, and a kit update replaces it only while it is unedited: change it in the kit, not here.
 
 ## What Copilot reads (Copilot CLI 1.0.114, `copilot help config`)
 

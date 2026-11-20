@@ -8,6 +8,7 @@ import { providerRegistry } from '@archon/providers';
 import { discoverWorkflowsWithConfig } from '@archon/workflows/workflow-discovery';
 import { suggestWorkflowNames } from '@archon/workflows/router';
 import { workflowLoadErrorName } from '@archon/workflows/schemas/workflow';
+import type { WorkflowSource } from '@archon/workflows/schemas/workflow';
 import { writeStdout } from '../utils/stdout';
 import {
   validateWorkflowResources,
@@ -80,6 +81,16 @@ function formatWorkflowResult(result: WorkflowValidationResult): string {
 // Workflow validation command
 // =============================================================================
 
+/** Which discovered workflows a validation covers. */
+export interface WorkflowValidationScope {
+  /**
+   * Only the workflows from these sources; omitted: every source. `kit add` passes `['project']`: a bundled
+   * workflow's problem (one with no provider when no default provider is set) says nothing about the install.
+   * Load errors carry no source and are always reported.
+   */
+  sources?: readonly WorkflowSource[];
+}
+
 /**
  * Validate all workflows or a specific workflow.
  * Returns exit code: 0 = all valid, 1 = errors found.
@@ -87,10 +98,11 @@ function formatWorkflowResult(result: WorkflowValidationResult): string {
 export async function validateWorkflowsCommand(
   cwd: string,
   name?: string,
-  json?: boolean
+  json?: boolean,
+  scope: WorkflowValidationScope = {}
 ): Promise<number> {
   const config = await buildValidationConfig(cwd);
-  const results = await collectWorkflowResults(cwd, config);
+  const results = await collectWorkflowResults(cwd, config, scope);
 
   let filteredResults = results;
   if (name) {
@@ -117,7 +129,8 @@ export async function validateWorkflowsCommand(
 
 async function collectWorkflowResults(
   cwd: string,
-  config: ValidationConfig
+  config: ValidationConfig,
+  scope: WorkflowValidationScope
 ): Promise<WorkflowValidationResult[]> {
   const mergedConfig = await loadConfig(cwd);
   const defaultProvider = mergedConfig.assistant;
@@ -140,6 +153,7 @@ async function collectWorkflowResults(
   }
 
   for (const { workflow, source, parseWarnings } of workflowEntries) {
+    if (scope.sources && !scope.sources.includes(source)) continue;
     const issues = await validateWorkflowResources(
       workflow,
       cwd,

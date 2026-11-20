@@ -2,12 +2,12 @@
 # Build the plan node's context pack (P2: a script, not a model): the facts every plan looked up on its own, read once.
 #   plan-context.sh <ticket.md>
 # Writes Markdown to stdout: the dependency tickets (title, status, final summary), the Gradle modules and what each one
-# depends on, the build-feature nodes, the sections of docs/memory.md with their line numbers, the docs/code-maps
+# depends on, the build workflow's nodes, the sections of docs/memory.md with their line numbers, the docs/code-maps
 # leaves, every script's header line and test, the contract operations the ticket names with where they live in the
 # code (scripts/contract-mcp/plan-ops.mjs, docs/mcp/plan.md C2), and the last 10 commits. Run from the root of the run's
 # checkout. The operations need the @@KIT_CONTRACT_SERVER_NAME@@ server's node_modules and contract/dist/openapi.yaml (mcp-setup.sh); without
 # them, or when the ticket names no operation, that section is left out.
-# The section list is what 16 plan nodes read most (2026-10-18): build-feature.yaml in 15, the build files in 14,
+# The section list is what 16 plan nodes read most (2026-10-18): the build workflow in 15, the build files in 14,
 # docs/memory.md in 13, and a script's header to learn its flags in most.
 #
 # The Backlog is read from the main checkout that holds backlog/, never from the run's worktree (as ticket.sh finds
@@ -60,10 +60,13 @@ if [ -f settings.gradle.kts ]; then
   for m in $mods; do if [ ! -f "$m/build.gradle.kts" ]; then echo "- $m"; fi; done
 fi
 
-wf=.archon/workflows/build-feature.yaml
+# The build workflow the project runs (build_workflow of .archon/kit.yaml, else the kit's default).
+. "$(dirname "${BASH_SOURCE[0]}")/kit-config.sh"
+build_wf=$(kit_get build_workflow build-feature-copilot BUILD_WORKFLOW)
+wf=".archon/workflows/$build_wf.yaml"
 if [ -f "$wf" ]; then
   echo
-  echo "## build-feature nodes (id ← depends_on; indented: inside the node above), from $wf"
+  echo "## $build_wf nodes (id ← depends_on; indented: inside the node above), from $wf"
   echo
   awk '
     function flush() { if (id != "") print pad "- " id (dep != "" ? " ← " dep : ""); id = ""; dep = "" }

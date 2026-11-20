@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { trackTempRoots } from '@archon/paths/test-utils';
@@ -7,7 +14,13 @@ import { renderBundledKit } from './generate-bundled-kit';
 import { depsCheck, installableSets, judgeDeps, KNOWN_GAPS } from './kit-sync-deps';
 import { genericThisRepo, renamePath } from './kit-sync-generic';
 import { SRC } from './kit-sync-source-name';
-import { applySuiteNouns, classifySuite, suiteOf, suiteSubject } from './kit-sync-tests';
+import {
+  applySuiteNouns,
+  classifySuite,
+  SUITE_FIXTURES,
+  suiteOf,
+  suiteSubject,
+} from './kit-sync-tests';
 import {
   applyGlobalRewrites,
   applyRewrites,
@@ -693,6 +706,13 @@ describe('the source name', () => {
     );
     expect(sourcePathOf('.claude/hooks/x.sh')).toBe('.claude/hooks/x.sh');
   });
+
+  test('the SPEC has the Source name section the module refers to', () => {
+    const spec = readFileSync(join(import.meta.dir, '..', 'kit', 'SPEC.md'), 'utf8');
+    const section = spec.split(/^## /m).find(s => s.startsWith('Source name\n'));
+    expect(section).toBeDefined();
+    for (const name of ['KIT_SOURCE', 'archon-kit', 'sample-app']) expect(section).toContain(name);
+  });
 });
 
 describe('project nouns and Copilot paths', () => {
@@ -908,6 +928,20 @@ describe('never-ship files', () => {
       expect(NEVER_SHIP).toContain(p);
   });
 
+  test("a never-ship suite's fixtures stay out with it: its SUITE_FIXTURES entry is no dead rule", () => {
+    // The source still tracks these fixtures; without the entry suiteOf throws on them and the sync fails.
+    expect(classify('scripts/test/fixtures/mutation-gate/killed.xml', '')).toEqual({
+      exclude: true,
+      why: 'its suite never ships',
+    });
+    for (const [dir, suite] of Object.entries(SUITE_FIXTURES))
+      if (NEVER_SHIP.includes(suite))
+        expect(classify(`${dir}x.xml`, '')).toEqual({
+          exclude: true,
+          why: 'its suite never ships',
+        });
+  });
+
   test('the groups hold no path twice, and keep the tools a person runs', () => {
     const all = Object.values(NEVER_SHIP_GROUPS).flat();
     expect(new Set(all).size).toBe(all.length);
@@ -1031,20 +1065,31 @@ describe('standalone build workflow', () => {
     expect(standaloneWorkflow('.archon/workflows/other.yaml', wf)).toBe(wf);
   });
 
-  test('the shipped workflows stop for the plan approval, end at ready and keep the same nodes', () => {
-    const idsOf = (p: string): string[] =>
-      [
-        ...readFileSync(join(import.meta.dir, '..', 'kit', 'profiles', 'core', p), 'utf8').matchAll(
-          /^ {2}- id: ([\w-]+)$/gm
-        ),
-      ].map(m => m[1] ?? '');
-    const claude = idsOf(BUILD_WORKFLOW);
-    const copilot = idsOf(COPILOT_WORKFLOW);
-    expect(copilot).toEqual(claude);
-    expect(claude.at(-1)).toBe('ready');
-    for (const id of TAIL_IDS) expect(claude).not.toContain(id);
-    expect(claude.indexOf('plan-approval')).toBe(claude.indexOf('stop-route') + 1);
-    expect(claude.indexOf('implement')).toBeGreaterThan(claude.indexOf('plan-rejected'));
+  test('the shipped build workflow stops for the plan approval and ends at ready', () => {
+    const ids = [
+      ...readFileSync(
+        join(import.meta.dir, '..', 'kit', 'profiles', 'core', COPILOT_WORKFLOW),
+        'utf8'
+      ).matchAll(/^ {2}- id: ([\w-]+)$/gm),
+    ].map(m => m[1] ?? '');
+    expect(ids.at(-1)).toBe('ready');
+    for (const id of TAIL_IDS) expect(ids).not.toContain(id);
+    expect(ids.indexOf('plan-approval')).toBe(ids.indexOf('stop-route') + 1);
+    expect(ids.indexOf('implement')).toBeGreaterThan(ids.indexOf('plan-rejected'));
+  });
+
+  test('the kit ships only the Copilot build workflow, not the Claude one', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(import.meta.dir, '..', 'kit', 'manifest.json'), 'utf8')
+    ) as {
+      files: { path: string }[];
+    };
+    const paths = manifest.files.map(f => f.path);
+    expect(paths).toContain(COPILOT_WORKFLOW);
+    expect(paths).not.toContain(BUILD_WORKFLOW);
+    expect(existsSync(join(import.meta.dir, '..', 'kit', 'profiles', 'core', BUILD_WORKFLOW))).toBe(
+      false
+    );
   });
 });
 
@@ -1172,6 +1217,23 @@ describe('sync on a fixture repo', () => {
     if (first) first.profile = 'mijn-gezondheid';
     writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
     expect(verifyKit(out).join('\n')).not.toContain(`lies in ${PROJECT_TEMPLATES}`);
+  });
+
+  test('verify refuses a manifest when that kit.defaults.yaml does not set to a boolean', () => {
+    const src = fixture();
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-when-')));
+    expect(sync(src, out, false, NO_REWRITES).kit.failures).toEqual([]);
+    const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8')) as {
+      files: { when?: string }[];
+    };
+    const first = manifest.files[0];
+    if (first) first.when = 'local_ci';
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
+    expect(verifyKit(out).join('\n')).toContain('switched by local_ci, which kit.defaults.yaml');
+    write(out, 'kit.defaults.yaml', 'local_ci: "yes"\n');
+    expect(verifyKit(out).join('\n')).toContain('switched by local_ci');
+    write(out, 'kit.defaults.yaml', 'local_ci: true\n');
+    expect(verifyKit(out)).toEqual([]);
   });
 
   test('is deterministic', () => {

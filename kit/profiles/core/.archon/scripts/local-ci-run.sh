@@ -48,6 +48,19 @@ for v in arg want; do
 done
 case "$arg$want" in *[\'\"]*) echo "local-ci-run: a quote in the argument ($arg${want:+ --head $want}); pass the pull request or commit unquoted" >&2; exit 2 ;; esac
 
+# Local CI off (local_ci: false in .archon/kit.yaml, kit/SPEC.md Local CI switch): the project's own CI (GitHub Actions)
+# runs on every push and gives the verdict, which ci-by-sha.sh reads, so there is nothing to run here: exit 0. --logs
+# says where the failing logs are instead, and exits 1 (no local folder).
+if . "$here/kit-config.sh" 2>/dev/null && [ "$(kit_get local_ci true)" = false ]; then
+  if [ -n "$logs" ]; then
+    echo "local CI is off (local_ci: false in .archon/kit.yaml): no local logs. Read the failing check on GitHub:"
+    echo "  gh pr checks <pr>   then   gh run view <run-id> --log-failed"
+    exit 1
+  fi
+  echo "local-ci-run: local CI is off (local_ci: false in .archon/kit.yaml); GitHub's checks give the verdict (ci-by-sha.sh)" >&2
+  exit 0
+fi
+
 main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
 ci_root=${CI_LOCAL_ROOT:-$(dirname "$main")/ci-local}
 

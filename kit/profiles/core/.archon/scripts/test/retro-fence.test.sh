@@ -22,7 +22,7 @@ case_() { # case_ <label> <want> <decision>
 home_win="$(cygpath -w "$HOME" 2>/dev/null || printf '%s' "$HOME")"
 
 # Reads it may make: the workflow, the handoff and docs files, the run artifacts and logs.
-case_ "retro reads the workflow" none "$(read_ retro "$root/.archon/workflows/build-feature.yaml")"
+case_ "retro reads the workflow" none "$(read_ retro "$root/.archon/workflows/build-feature-copilot.yaml")"
 case_ "retro reads a docs leaf (relative path)" none "$(read_ retro docs/memory.md)"
 case_ "retro reads the ticket" none "$(read_ retro "$root/backlog/tasks/task-1.md")"
 case_ "retro reads a run's plan.md in the artifacts" none \

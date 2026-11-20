@@ -93,6 +93,9 @@ green build: a dropped column and a leaked personal identifier both pass CI.
   `.claude/scripts/ci-local.sh --post`, which posts one `local-ci/<job>` status per job on the commit). Take the
   verdict read **by commit SHA**, `bash .archon/scripts/ci-by-sha.sh <sha>` (through `.archon/scripts/local-ci-status.sh`),
   as the answer; on red, `bash .archon/scripts/local-ci-run.sh --logs <sha>` names the folder with the job logs.
+  With `local_ci: false` in `.archon/kit.yaml` the project's own CI (GitHub Actions) is the verdict: the same two
+  scripts still apply, `local-ci-run.sh` then runs nothing and `ci-by-sha.sh` reads GitHub's checks on the commit; a
+  red check's log is `gh run view <run-id> --log-failed`.
   A test run you start yourself is a fast check, never the verdict.
 - **Before a push, run `.claude/scripts/affected-check.sh`, never the full suite locally** — it first merges
   `origin/@@KIT_BASE_BRANCH@@` into a branch that is behind, then runs only the tests the branch's change touches

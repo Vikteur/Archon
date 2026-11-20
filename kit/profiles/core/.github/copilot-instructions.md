@@ -30,5 +30,5 @@ Never approve or reject `plan-approval` yourself: show the user the plan path an
 (`archon workflow get <run-id> --json`), and run `approve` or `reject` only on the user's own words.
 
 The run asks its blocked questions through `attention`; answer them from the ticket and `docs/memory.md`, and ask
-the owner when you do not know. Never merge: the run stops once for a person to approve the plan and ends when its pull request is ready, and a team member reviews and merges it. The run tooling follows `BUILD_WORKFLOW` (default `build-feature`). Setup of this kit:
+the owner when you do not know. Never merge: the run stops once for a person to approve the plan and ends when its pull request is ready, and a team member reviews and merges it. The run tooling follows `build_workflow` of `.archon/kit.yaml` (env `BUILD_WORKFLOW`, default `build-feature-copilot`). Setup of this kit:
 `.archon/copilot/README.md`.
