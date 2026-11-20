@@ -307,3 +307,33 @@ beside it and commits it; the kit never writes, prunes or overwrites it. scope-g
 
 Before this, the file replaced `agent-scopes.json` whole, a narrowing hook for the source's removed `test-ban.sh`;
 the kit drops that meaning (no kit file writes it).
+
+## Fences per workflow node (Copilot CLI)
+
+Owner decision 2026-11-20: the agent fences apply to the build workflow's nodes. Archon sets `ARCHON_NODE_EXECUTION`
+(JSON; its `path` is the node id, `<loop>.<id>` inside a loop) and `WORKFLOW_ID` for a node's whole Copilot CLI
+session, and the preToolUse hooks see both (verified on Copilot CLI 1.0.114).
+
+- `.archon/copilot/hooks/run-guard.sh` enforces the node's own `denied_tools`, read from the run's workflow: the
+  file Archon's snapshot of the run (`<archon home>/workspaces/*/*/workflow-source/runs/<WORKFLOW_ID>/manifest.json`,
+  `workflow_name`) names, else the project's `build-feature-copilot.yaml` (`RUN_GUARD_WORKFLOW` overrides it). Copilot
+  keeps only the plain tool names of that list and drops `Bash(...)` patterns, so the guard matches each pattern
+  against the whole command and against each `&&`, `||`, `;`, `&`, `|` or newline segment, in every session, not
+  only in run worktrees. A node the workflow does not hold gets every node's patterns. A node path that is not a plain
+  id, a workflow it cannot find, a `denied_tools` that is not a one-line or multi-line flow list, or a payload it cannot
+  read denies. The no-`backlog task` and other run rules are unchanged.
+- `.github/hooks/dispatch.sh` exports `KIT_NODE` on PreToolUse (the path's last segment; `?` when it is not readable).
+  `.claude/hooks/scripts/scope-guard.sh` then fences every call as the agent `.archon/copilot/node-fences.json` maps the
+  node to, plus that node's additions: `commandAllowlist` prefixes (the `agent-scopes.local.json` entry rules),
+  `allowedFilePaths` (a project path or glob, or `$RUN_ARTIFACTS/`, the run's own
+  `<archon home>/workspaces/<owner>/<repo>/artifacts/runs/<WORKFLOW_ID>/`, which also makes a `$(cat <file>)` of a file
+  there plain text in a command) and `env` (names a command may set in front of an allowed command; never `PATH`,
+  `HOME`, `IFS`, `BASH_ENV` and the like, nor a `LD_`, `GIT_`, `KIT_`, `CLAUDE_`, `COPILOT_`, `ARCHON_`, `GH_` or
+  similar prefix). A subagent of another fenced type inside the node is fenced by its own fence as well.
+- A node not in the file gets the strictest common set the guard computes from it: the commands every listed node may
+  run, and only the paths every one of them may write. A missing file, invalid JSON, an unknown key or agent, or an
+  entry that breaks a rule denies every call inside a node. No fenced agent may write the file.
+- `kit.json` adds a `'*'` preToolUse entry with `--other-tools`, so a tool no other entry checks (`apply_patch`, ...)
+  is denied inside a node; outside a node it does nothing.
+- Outside a node (no `ARCHON_NODE_EXECUTION`) both guards behave as before.
+- Tested by `.archon/scripts/test/node-fence.test.sh` (kit-only).

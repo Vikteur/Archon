@@ -17,6 +17,19 @@ The workflow ships with the kit, and a kit update replaces it only while it is u
 - Hook input: preToolUse comes batched, `{cwd, sessionId, toolCalls: [{id, name, args}]}`; `.github/hooks/dispatch.sh`
   runs each hook once per call and `hooks/run-guard.sh` checks every call. Tool names map through `tools.json`.
   [baseline.md](baseline.md) has the payload shapes and the per-node time and tokens of two real runs.
+- Fences per node (owner decision 2026-11-20): Archon sets `ARCHON_NODE_EXECUTION` (its `path` names the node) and
+  `WORKFLOW_ID` for a node's whole Copilot session, and both reach the hooks. `hooks/run-guard.sh` then enforces the node's
+  own `denied_tools`, read from the run's workflow (Archon's snapshot of the run, else `build-feature-copilot.yaml`), in
+  every session, not only in run worktrees: Copilot itself keeps only the plain tool names of that list and drops the
+  `Bash(...)` patterns. `dispatch.sh` names the node (`KIT_NODE`, the last segment of the path) and
+  `.claude/hooks/scripts/scope-guard.sh` fences each call as the agent [node-fences.json](node-fences.json) maps the node
+  to (explore and plan analyst, write-tests test-writer, build-step and fix developer, review and pr-text reviewer,
+  diagnose debugger), with only the additions that node's prompt needs. A node not in that file gets the strictest
+  common set, and a node path, workflow, list or file a guard cannot read denies the call. The
+  `.archon/scripts/test/node-fence.test.sh` suite covers both guards.
+- Known limit, not fixed: a `preToolUse` hook that outruns its `timeoutSec` fails open on Copilot CLI (measured on
+  1.0.78), and a non-zero exit denies. The guards are kept fast for that reason (scope-guard denies a command longer
+  than `SCOPE_GUARD_MAX_CMD` instead of reading it slowly): keep any guard you add fast too.
 
 ## Set up (owner, once)
 

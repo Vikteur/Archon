@@ -22,6 +22,19 @@ root="${CLAUDE_PROJECT_DIR:-}"
 [ -n "$root" ] || root="$PWD"
 export CLAUDE_PROJECT_DIR="$root"
 [ -f "$root/$script" ] || exit 0
+# Inside an Archon workflow node (ARCHON_NODE_EXECUTION, set by Archon for the node's whole CLI session, a JSON object
+# whose "path" is the node path), PreToolUse exports KIT_NODE, the last segment of that path (implement.build-step is
+# build-step), so the scope guard fences the call by the node's agent (.archon/copilot/node-fences.json). A path that is
+# not readable gives KIT_NODE=?, a node no fence names, so the guard applies its strictest set.
+if [ "$event" = PreToolUse ] && [ -n "${ARCHON_NODE_EXECUTION:-}" ]; then
+  node_re='"path"[[:space:]]*:[[:space:]]*"([^"\\]*)"'
+  KIT_NODE="?"
+  if [[ $ARCHON_NODE_EXECUTION =~ $node_re ]]; then
+    KIT_NODE="${BASH_REMATCH[1]##*.}"
+    [[ $KIT_NODE =~ ^[A-Za-z0-9_-]+$ ]] || KIT_NODE="?"
+  fi
+  export KIT_NODE
+fi
 
 payload="$(cat)"
 if [ -f "$root/.claude/hooks/scripts/payload.sh" ]; then
