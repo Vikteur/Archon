@@ -1,0 +1,11 @@
+{{!
+  Adapter test properties: Testcontainers Postgres through the jdbc:tc URL (init_postgres.sql creates the DBCR
+  schema the migrations call) and this module's DDL migrations.
+  Exemplar: report-adapter/src/test/resources/application.properties
+  Target: <capability>-adapter/src/test/resources/application.properties
+  Vars:   none (the module's init_postgres.sql is a copy of the repo root's, made by scripts/scaffold/new-context.sh)
+  Left to you: properties of other beans under test.
+}}
+# localhost:5432 is ignored but needed because of bug https://github.com/testcontainers/testcontainers-java/issues/4121
+spring.datasource.url=jdbc:tc:postgresql:13.18://localhost:5432/mijngezondheid?TC_INITSCRIPT=init_postgres.sql
+spring.flyway.locations=classpath:db/migration/ddl

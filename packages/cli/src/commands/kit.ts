@@ -20,8 +20,10 @@ import {
   mkdtempSync,
   realpathSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
+  rmdirSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -66,6 +68,8 @@ export const KIT_DEFAULTS = '.archon/kit.defaults.yaml';
 /** What kit add last wrote, path → sha256: a file still holding it is the kit's own, so a newer kit updates it. */
 export const KIT_LOCK = join('.archon', 'kit.lock.json');
 const DISPATCH = '.github/hooks/dispatch.sh';
+/** The project's Archon config: a kit file that kit add then merges the aliases and file hooks into. */
+const PROJECT_CONFIG = '.archon/config.yaml';
 
 export function readKitLock(projectPath: string): Record<string, string> {
   try {
@@ -109,18 +113,37 @@ export function shellQuote(word: string): string {
 const RESERVED_PATHS = new Set(['.archon/kit.yaml', '.archon/kit.lock.json']);
 
 /**
- * Why a manifest path cannot be written inside the project, or null when it can: an absolute path, a
- * drive letter, a `..` segment (either separator) or one of kit add's own files is refused.
+ * The repo's own folders (docs/scaffold-templates/project/ holds the repo's own templates): a generic profile never
+ * ships a file there, so its manifest entry is refused. Only a project profile (manifest `project: true`, the files of
+ * one repo) may; kit add then treats them as any kit file: written when missing, replaced while unedited, kept once the
+ * repo edits them. A lock entry there is never pruned, so leaving the profile out never removes the repo's templates.
  */
-export function unsafeManifestPath(path: string): string | null {
+export const PROJECT_OWNED_DIRS = ['docs/scaffold-templates/project/'];
+
+const inProjectOwnedDir = (path: string): boolean => {
+  const normal = path
+    .split(/[\\/]/)
+    .filter(seg => seg !== '' && seg !== '.')
+    .join('/');
+  return PROJECT_OWNED_DIRS.some(dir => `${normal}/`.startsWith(dir));
+};
+
+/**
+ * Why a manifest path cannot be written inside the project, or null when it can: an absolute path, a
+ * drive letter, a `..` segment (either separator), one of kit add's own files or, unless `projectProfile`, a path in a
+ * project-owned folder is refused. The prune of files the kit dropped skips a lock entry in a project-owned folder.
+ */
+export function unsafeManifestPath(path: string, projectProfile = false): string | null {
   if (path === '' || path.startsWith('/') || path.startsWith('\\') || isAbsolute(path)) {
     return 'an absolute path';
   }
   if (/^[A-Za-z]:/.test(path)) return 'a drive letter';
   const segments = path.split(/[\\/]/);
   if (segments.includes('..')) return 'a .. segment';
-  if (RESERVED_PATHS.has(segments.filter(seg => seg !== '' && seg !== '.').join('/'))) {
-    return "kit add's own file";
+  const normal = segments.filter(seg => seg !== '' && seg !== '.').join('/');
+  if (RESERVED_PATHS.has(normal)) return "kit add's own file";
+  if (!projectProfile && PROJECT_OWNED_DIRS.some(dir => `${normal}/`.startsWith(dir))) {
+    return "in the repo's own scaffold templates (docs/scaffold-templates/project/), from a profile that is no project profile";
   }
   return null;
 }
@@ -347,6 +370,79 @@ function readJsonObject(path: string): Record<string, unknown> | null {
   }
 }
 
+/** Where a Gradle build names its Java toolchain, in the order the kit's scripts read them (class-version-check.sh). */
+export const TOOLCHAIN_PLACES = ['build.gradle.kts', 'buildSrc', 'build-logic'];
+const TOOLCHAIN = /JavaLanguageVersion\.of\(\s*(\d+)\s*\)/;
+
+/**
+ * The Java toolchain the project's build names: the first `JavaLanguageVersion.of(N)` in build.gradle.kts, else in a
+ * Gradle file under buildSrc/, else under build-logic/ (files in name order, build output skipped), or null.
+ */
+export function buildToolchain(projectPath: string): { version: string; file: string } | null {
+  const gradleFiles = (dir: string): string[] => {
+    const out: string[] = [];
+    const walk = (rel: string): void => {
+      const abs = join(projectPath, rel);
+      let entries: string[];
+      try {
+        entries = readdirSync(abs).sort();
+      } catch {
+        return;
+      }
+      for (const name of entries) {
+        const child = join(rel, name);
+        const st = lstatSync(join(projectPath, child));
+        if (st.isDirectory()) {
+          if (name !== 'build' && name !== '.gradle') walk(child);
+        } else if (/\.gradle(\.kts)?$|\.kt$/.test(name)) out.push(child);
+      }
+    };
+    walk(dir);
+    return out;
+  };
+  for (const place of TOOLCHAIN_PLACES) {
+    const abs = join(projectPath, place);
+    if (!existsSync(abs)) continue;
+    const files = statSync(abs).isDirectory() ? gradleFiles(place) : [place];
+    for (const file of files) {
+      const match = TOOLCHAIN.exec(readFileSync(join(projectPath, file), 'utf-8'));
+      if (match?.[1]) return { version: match[1], file: file.split(sep).join('/') };
+    }
+  }
+  return null;
+}
+
+/**
+ * kit.yaml's java_version against the build's toolchain. Set by the project (its kit.yaml or a --set) it must name the
+ * toolchain, else kit add refuses; not set, it is the toolchain's (a new kit.yaml gets that value, not the defaults').
+ * Returns the kit.yaml text to write and the value to render, or the refusal.
+ */
+export function javaVersionFor(
+  projectPath: string,
+  kitYamlText: string,
+  setByProject: boolean
+): { text: string; version: string | null } | { error: string } {
+  const toolchain = buildToolchain(projectPath);
+  if (toolchain === null) return { text: kitYamlText, version: null };
+  if (setByProject) {
+    const configured = (parseYaml(kitYamlText) as Record<string, unknown> | null)?.java_version;
+    if (String(configured) !== toolchain.version)
+      return {
+        error:
+          `kit.yaml java_version ${String(configured)} does not match the build's toolchain, ` +
+          `JavaLanguageVersion.of(${toolchain.version}) in ${toolchain.file}: set java_version: ${toolchain.version} ` +
+          'or remove the key, and kit add takes it from the build',
+      };
+    return { text: kitYamlText, version: toolchain.version };
+  }
+  const doc = parseDocument(kitYamlText);
+  if (doc.has('java_version')) doc.set('java_version', Number(toolchain.version));
+  return {
+    text: doc.has('java_version') ? doc.toString() : kitYamlText,
+    version: toolchain.version,
+  };
+}
+
 function readKitYaml(projectPath: string): Record<string, unknown> | null {
   const path = join(projectPath, KIT_YAML);
   if (!existsSync(path)) return null;
@@ -484,7 +580,14 @@ export async function kitToolsCommand(
 
 // ---------------------------------------------------------------------------
 
-type FileState = 'written' | 'unchanged' | 'kept' | 'skipped (symlink)' | 'skipped (outside)';
+type FileState =
+  | 'written'
+  | 'unchanged'
+  | 'kept'
+  | 'removed'
+  | 'kept (no longer in the kit)'
+  | 'skipped (symlink)'
+  | 'skipped (outside)';
 
 /**
  * What `kit add` does with a file the project may already hold: null writes it. A create-only file (manifest
@@ -499,6 +602,36 @@ export function existingFileState(
   if (!existsSync(dest)) return null;
   if (toLf(readFileSync(dest, 'utf-8')) === toLf(content)) return 'unchanged';
   return force && !createOnly ? null : 'kept';
+}
+
+/**
+ * A file kit add wrote (lock hash `hash`) that the kit no longer ships: 'removed' when it still holds that content
+ * (dry: it would be), 'kept (no longer in the kit)' when the project edited it, a skip when it is a link or lies
+ * outside the project, null when it is already gone. Folders the removal leaves empty go too, up to the project.
+ */
+export function pruneFile(
+  project: string,
+  relative: string,
+  hash: string,
+  dry: boolean
+): FileState | null {
+  const problem = destinationProblem(project, relative);
+  if (problem !== null) return problem === 'symlink' ? 'skipped (symlink)' : 'skipped (outside)';
+  const dest = join(project, relative);
+  if (!existsSync(dest) || !statSync(dest).isFile()) return null;
+  if (contentHash(readFileSync(dest, 'utf-8')) !== hash) return 'kept (no longer in the kit)';
+  if (dry) return 'removed';
+  rmSync(dest);
+  const root = resolve(project);
+  for (
+    let dir = dirname(dest);
+    dir !== root && dir.startsWith(`${root}${sep}`);
+    dir = dirname(dir)
+  ) {
+    if (readdirSync(dir).length > 0) break;
+    rmdirSync(dir);
+  }
+  return 'removed';
 }
 
 export async function kitAddCommand(
@@ -564,17 +697,34 @@ export async function kitAddCommand(
     console.error(`Error: ${(err as Error).message}`);
     return 1;
   }
+  // java_version follows the build's toolchain (JavaLanguageVersion.of(N)): derived unless the project set it, and
+  // refused when the project set another one, so ci.yml never sets up a JDK the build does not compile for.
+  const javaSetByProject =
+    otherSets.some(
+      entry => entry.slice(0, Math.max(entry.indexOf('='), 0)).trim() === 'java_version'
+    ) ||
+    (kitYamlExists && existingConfig !== null && Object.hasOwn(existingConfig, 'java_version'));
+  const java = javaVersionFor(project, kitYamlText, javaSetByProject);
+  if ('error' in java) {
+    console.error(`Error: ${java.error}`);
+    return 1;
+  }
+  kitYamlText = java.text;
   const config = parseYaml(kitYamlText) as unknown;
   // The kit defaults sit under the project's values, so a key the kit added after this kit.yaml
   // was written still renders (an existing kit.yaml is never rewritten with the new keys).
   const vars = {
     ...flattenKitConfig(parseYaml(kit.defaults) as unknown),
     ...flattenKitConfig(config),
+    ...(java.version !== null ? { JAVA_VERSION: java.version } : {}),
     PROJECT_DIR: realpathSync(project),
   };
 
   const unsafe = kit.manifest.files
-    .map(file => ({ file, why: unsafeManifestPath(file.path) }))
+    .map(file => ({
+      file,
+      why: unsafeManifestPath(file.path, kit.manifest.profiles[file.profile]?.project === true),
+    }))
     .filter(entry => entry.why !== null);
   if (unsafe.length > 0) {
     for (const { file, why } of unsafe) {
@@ -604,11 +754,14 @@ export async function kitAddCommand(
       if (lock[relative] !== undefined) nextLock[relative] = lock[relative];
       return problem === 'symlink' ? 'skipped (symlink)' : 'skipped (outside)';
     }
-    // A file that still holds what kit add last wrote there was never edited: a newer kit replaces it.
+    // A file that still holds what kit add last wrote there was never edited: a newer kit replaces it. A config.yaml
+    // that is the kit's text plus the merge is the kit's too (a lock from before the merged hash was recorded).
+    const held =
+      lock[relative] !== undefined && existsSync(dest) ? readFileSync(dest, 'utf-8') : null;
     const untouched =
-      lock[relative] !== undefined &&
-      existsSync(dest) &&
-      contentHash(readFileSync(dest, 'utf-8')) === lock[relative];
+      held !== null &&
+      (contentHash(held) === lock[relative] ||
+        (relative === PROJECT_CONFIG && toLf(held) === toLf(mergedConfigText(content, kit))));
     const state = existingFileState(
       dest,
       content,
@@ -659,6 +812,66 @@ export async function kitAddCommand(
   for (const key of [...missing].sort()) {
     console.warn(`Warning: kit.yaml has no value for @@KIT_${key}@@, rendered empty`);
   }
+
+  // 4b. Files kit add wrote that the kit no longer ships (a newer kit dropped them, or a profile was left out). One
+  // that still holds what kit add wrote is the kit's own and goes; one the project edited stays, with its lock entry,
+  // so the next run lists it again until the project removes it. --force never removes an edited file.
+  for (const relative of Object.keys(lock).sort()) {
+    if (
+      Object.hasOwn(nextLock, relative) ||
+      unsafeManifestPath(relative, true) !== null ||
+      inProjectOwnedDir(relative)
+    )
+      continue;
+    const state = pruneFile(project, relative, lock[relative] ?? '', dry);
+    if (state === null) continue;
+    if (state !== 'removed') nextLock[relative] = lock[relative] ?? '';
+    results.push({ path: relative, state });
+  }
+
+  const count = (state: FileState): number => results.filter(r => r.state === state).length;
+  for (const result of results.filter(r => r.state !== 'written' && r.state !== 'unchanged')) {
+    const label =
+      result.state === 'kept'
+        ? 'kept (differs)'
+        : result.state === 'removed' && dry
+          ? 'would be removed'
+          : result.state;
+    console.log(`  ${label}  ${result.path}`);
+  }
+  const skipped = count('skipped (symlink)') + count('skipped (outside)');
+  const gone = count('removed');
+  const stale = count('kept (no longer in the kit)');
+  console.log(
+    `Files: ${count('written')} ${dry ? 'would be written' : 'written'}, ${count('unchanged')} unchanged, ${count('kept')} kept (differs)` +
+      (count('kept') > 0 ? ' (use --force to overwrite)' : '') +
+      (gone > 0 ? `, ${gone} ${dry ? 'would be removed' : 'removed'} (no longer in the kit)` : '') +
+      (stale > 0
+        ? `, ${stale} no longer in the kit but edited, kept (remove ${stale === 1 ? 'it' : 'them'} yourself)`
+        : '') +
+      (skipped > 0
+        ? `, ${skipped} skipped (a symlink or outside the project, never written through)`
+        : '')
+  );
+  if (keptUnlocked.length > 0) {
+    console.log(
+      `${keptUnlocked.length} ${keptUnlocked.length === 1 ? 'file predates' : 'files predate'} the kit lock and ${keptUnlocked.length === 1 ? 'differs' : 'differ'} from the kit; review ${keptUnlocked.length === 1 ? 'it' : 'them'} and rerun with --force to take the kit's version`
+    );
+  }
+
+  // 5. Aliases and the Copilot file hooks in .archon/config.yaml. When kit add owns that file (it holds what the lock
+  // records), the lock records the merged text: else the next run reads the merge as the project's edit and keeps
+  // the file, so a newer kit's config.yaml would never land.
+  const configPath = join(project, PROJECT_CONFIG);
+  const ownedConfig =
+    !dry &&
+    nextLock[PROJECT_CONFIG] !== undefined &&
+    existsSync(configPath) &&
+    contentHash(readFileSync(configPath, 'utf-8')) === nextLock[PROJECT_CONFIG];
+  mergeProjectConfig(project, kit, dry);
+  if (ownedConfig && existsSync(configPath)) {
+    nextLock[PROJECT_CONFIG] = contentHash(readFileSync(configPath, 'utf-8'));
+  }
   if (!dry) {
     const files = Object.fromEntries(
       Object.entries(nextLock).sort(([a], [b]) => a.localeCompare(b))
@@ -672,27 +885,6 @@ export async function kitAddCommand(
       console.warn(`Warning: ${KIT_LOCK} is a symlink or lies outside the project, not written`);
     }
   }
-
-  const count = (state: FileState): number => results.filter(r => r.state === state).length;
-  for (const result of results.filter(r => r.state !== 'written' && r.state !== 'unchanged')) {
-    console.log(`  ${result.state === 'kept' ? 'kept (differs)' : result.state}  ${result.path}`);
-  }
-  const skipped = count('skipped (symlink)') + count('skipped (outside)');
-  console.log(
-    `Files: ${count('written')} ${dry ? 'would be written' : 'written'}, ${count('unchanged')} unchanged, ${count('kept')} kept (differs)` +
-      (count('kept') > 0 ? ' (use --force to overwrite)' : '') +
-      (skipped > 0
-        ? `, ${skipped} skipped (a symlink or outside the project, never written through)`
-        : '')
-  );
-  if (keptUnlocked.length > 0) {
-    console.log(
-      `${keptUnlocked.length} ${keptUnlocked.length === 1 ? 'file predates' : 'files predate'} the kit lock and ${keptUnlocked.length === 1 ? 'differs' : 'differ'} from the kit; review ${keptUnlocked.length === 1 ? 'it' : 'them'} and rerun with --force to take the kit's version`
-    );
-  }
-
-  // 5. Aliases and the Copilot file hooks in .archon/config.yaml.
-  mergeProjectConfig(project, kit, dry);
 
   // 6. Tools.
   const installTools = join(project, 'scripts', 'install-tools.sh');
@@ -824,8 +1016,17 @@ export function enableFileHooks(existing: string): FileHooksResult {
   return { text: doc.toString(), state: 'added' };
 }
 
+/** A config.yaml text with the kit's aliases and the Copilot file hooks merged in, as mergeProjectConfig writes it. */
+export function mergedConfigText(text: string, kit: Kit): string {
+  const merged =
+    Object.keys(kit.manifest.aliases).length === 0
+      ? text
+      : mergeAliases(text, kit.manifest.aliases).text;
+  return enableFileHooks(merged).text;
+}
+
 function mergeProjectConfig(project: string, kit: Kit, dry: boolean): void {
-  const configPath = join(project, '.archon', 'config.yaml');
+  const configPath = join(project, PROJECT_CONFIG);
   try {
     const existing = existsSync(configPath) ? readFileSync(configPath, 'utf-8') : '';
     const merged =
@@ -1282,7 +1483,7 @@ export async function kitCommand(
     subcommand !== 'tools'
   ) {
     console.error(
-      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, setup, tools`
+      `${subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`}\nAvailable: add, doctor, list, setup, tools, web`
     );
     return 1;
   }

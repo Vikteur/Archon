@@ -1,0 +1,16 @@
+{
+  "_target": "zzsmoke-gateway/src/test/java/be/mijngezondheid/zzsmoke/gateway/DefaultGadgetGatewayTest.java",
+  "package": "be.mijngezondheid.zzsmoke.gateway",
+  "configPackage": "be.mijngezondheid.zzsmoke.gateway",
+  "Name": "Gadget",
+  "name": "gadget",
+  "dtoPackage": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "bearer": true,
+  "restClient": "zzsmokeRestClient",
+  "property": "properties.endpoint.zzsmoke.gadgets",
+  "path": "/gadgets",
+  "exceptionClass": "be.mijngezondheid.zzsmoke.gateway.ZzsmokeGatewayException",
+  "responseBody": "[{\\\"externalId\\\":\\\"5f1c1f6e-2f0a-4c8e-9a51-3b7c2d1e0f00\\\",\\\"label\\\":\\\"Smart thermometer\\\",\\\"countryCode\\\":\\\"BE\\\",\\\"administerDate\\\":\\\"2024-03-01\\\"}]",
+  "firstField": "description",
+  "firstValue": "\"Smart thermometer\""
+}

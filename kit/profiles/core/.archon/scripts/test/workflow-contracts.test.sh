@@ -6,8 +6,7 @@
 #  - no bash or until_bash field puts a node output (`$<id>.output.<field>`) inside double quotes: Archon substitutes
 #    the output already single-quoted, so the quotes stay in the argument (TASK-65: the ci node passed `'…/pull/147'`
 #    to local-ci-run.sh, which read the pull request as 147'). Assign it unquoted first (`pr=$<id>.output.pr`);
-#  - a run never merges (owner decision 2026-10-18, TASK-58): no gh pr merge, no merge-ready.sh, auto-merge.sh only
-#    with --no-merge (ROADMAP R9);
+#  - a run never merges: no gh pr merge and no merge API call; a team member merges;
 #  - W1, every repo script a workflow names (.archon/scripts/…, .claude/scripts/…, .claude/hooks/scripts/…,
 #    .github/skills/<skill>/scripts/…, scripts/…) exists, so a renamed or unmerged script fails here, not in a run;
 #  - W4, open-pr keeps its lease: build-feature's open-pr node runs open-pr.sh, and every push in open-pr.sh carries
@@ -18,11 +17,10 @@
 #    .archon/config.yaml points core.hooksPath at .archon/githooks, whose hooks are executable: the commit-shape hook
 #    runs in every run worktree and an agent cannot skip it (owner decision D12, 2026-10-20);
 #  - build-feature's ci-fix loop starts with red-head (a head red on the same job as main stops as RED_FROM_MAIN), a fix
-#    without a commit fails as CI_FIX_NO_COMMIT, and diagnose and fix may not push to main or commit tickets (D13, D14;
-#    the failure classifier matches those two tokens);
-#  - build-feature's main-ci node passes main-ci.sh both the merge commit and the head (R14).
+#    without a commit fails as CI_FIX_NO_COMMIT, and diagnose and fix may not push to main or commit tickets (D13, D14).
 #  W1, W4 and W5 are ROADMAP R17 (T12); each check also runs on a fixture of the old code, where it must fail.
-#  - a dry run with default stubs of each workflow ends `Simulation outcome: completed`. It needs the archon CLI;
+#  - a dry run with default stubs of each workflow ends `Simulation outcome: completed`; a build workflow's plan
+#    approval is answered by a stub, and a rejected plan ends `Simulation outcome: cancelled`. It needs the archon CLI;
 #    without it this part is reported as SKIPPED, never as passed.
 # Usage: bash .archon/scripts/test/workflow-contracts.test.sh   (exit 0 = all pass)
 set -uo pipefail
@@ -70,10 +68,9 @@ quoted_outputs() { # quoted_outputs <workflow yaml>
 }
 
 # The lines that merge a pull request, one `<line>:<text>` per line, comments left out. A run never merges its own pull
-# request: the delegator or the owner does (owner decision 2026-10-18, TASK-58), through merge-ready.sh (ROADMAP R9).
+# request: a team member does.
 merges() { # merges <workflow yaml>
-  grep -nE 'gh pr merge|merge-ready\.sh|gh api [^#]*/pulls/[^ ]*/merge|auto-merge\.sh' "$1" | grep -vE '^[0-9]+:\s*#' \
-    | grep -vE '^[0-9]+:[^#]*auto-merge\.sh[^#]*--no-merge' | grep -E 'gh pr merge|merge-ready\.sh|/merge|auto-merge\.sh'
+  grep -nE 'gh pr merge|gh api [^#]*/pulls/[^ ]*/merge' "$1" | grep -vE '^[0-9]+:\s*#'
 }
 
 # The repo scripts a workflow names that do not exist under <root>, one `<line>: <path>` per line (W1)
@@ -149,14 +146,6 @@ ci_fix_gaps() { # ci_fix_gaps <workflow yaml>
   for r in RED_FROM_MAIN CI_FIX_NO_COMMIT; do grep -q "$r" "$1" || echo "no $r token"; done
 }
 
-# What build-feature's main-ci node lacks, one line each: it hands main-ci.sh the merge commit and the head (R14)
-main_ci_gaps() { # main_ci_gaps <workflow yaml>
-  local b; b=$(yq -r '.nodes[] | select(.id == "main-ci") | .bash // ""' "$1")
-  grep -q 'main-ci\.sh' <<< "$b" || echo "main-ci does not run main-ci.sh"
-  grep -q '\$merged\.output\.merge' <<< "$b" || echo "main-ci does not pass \$merged.output.merge"
-  grep -q '\$merged\.output\.head' <<< "$b" || echo "main-ci does not pass \$merged.output.head"
-}
-
 for wf in "$workflows"/*.yaml; do
   name=$(basename "$wf" .yaml)
   out=$(unguarded_commits "$wf")
@@ -165,9 +154,9 @@ for wf in "$workflows"/*.yaml; do
   check "$name: no node output inside double quotes in bash" $([ -z "$out" ]; echo $?) "$out"
   out=$(undeclared "$wf")
   check "$name: every node read through \$<id>.output.<field> declares output_format" $([ -z "$out" ]; echo $?) "$out"
-  # A run never merges its own pull request: the delegator or the owner does (owner decision 2026-10-18, TASK-58)
+  # A run never merges its own pull request: a team member does
   out=$(merges "$wf")
-  check "$name: never merges (no gh pr merge, no merge-ready.sh, auto-merge.sh only with --no-merge)" $([ -z "$out" ]; echo $?) "$out"
+  check "$name: never merges (no gh pr merge, no merge API call)" $([ -z "$out" ]; echo $?) "$out"
   out=$(missing_scripts "$wf" "$repo")
   check "$name: W1 every repo script it names exists" $([ -z "$out" ]; echo $?) "$out"
   # Seconds after a push GitHub still reports the old head, so local CI on a pull request names the commit it expects
@@ -182,8 +171,6 @@ if [ -f "$workflows/build-feature.yaml" ]; then
   out=$(ci_fix_gaps "$workflows/build-feature.yaml")
   check "build-feature: ci-fix starts with red-head, names its two failure tokens, may not push main or commit tickets" \
     $([ -z "$out" ]; echo $?) "$out"
-  out=$(main_ci_gaps "$workflows/build-feature.yaml")
-  check "build-feature: main-ci passes main-ci.sh the merge commit and the head" $([ -z "$out" ]; echo $?) "$out"
   out=$(open_pr_unleased "$workflows/build-feature.yaml" "$here/open-pr.sh")
   check "build-feature: W4 open-pr pushes only with a lease against the head last seen" $([ -z "$out" ]; echo $?) "$out"
   if [ -f "$here/run-buckets.json" ]; then
@@ -223,23 +210,21 @@ sed -i 's/^    bash: echo .{"ok":true}.$/&\n    output_format: { type: object, p
 out=$(undeclared "$tmp/w.yaml")
 check "contracts: a node that declares output_format is not reported" $(! grep -q '^probe' <<< "$out"; echo $?) "$out"
 
-# never merges: each way a run could merge is found; the gate's --no-merge call and a comment are not
+# never merges: each way a run could merge is found; another script and a comment are not
 cat > "$tmp/m.yaml" <<'EOF'
 nodes:
-  # a run never calls merge-ready.sh or gh pr merge
+  # a run never calls gh pr merge
   - id: gate
-    bash: bash .archon/scripts/auto-merge.sh "$pr" --no-merge
+    bash: bash .archon/scripts/ci-by-sha.sh --check
   - id: merge
     bash: |
-      bash .archon/scripts/merge-ready.sh "$pr"
       gh pr merge "$pr" --squash
-      bash .archon/scripts/auto-merge.sh "$pr"
       gh api -X PUT repos/o/r/pulls/7/merge
 EOF
 out=$(merges "$tmp/m.yaml")
-check "contracts: merge-ready.sh, gh pr merge, auto-merge.sh without --no-merge and the merge API are found" \
-  $([ "$(grep -c . <<< "$out")" -eq 4 ] && grep -q 'merge-ready' <<< "$out"; echo $?) "$out"
-check "contracts: auto-merge.sh --no-merge and a comment are not reported" \
+check "contracts: gh pr merge and the merge API are found" \
+  $([ "$(grep -c . <<< "$out")" -eq 2 ] && grep -q 'gh pr merge' <<< "$out"; echo $?) "$out"
+check "contracts: another script and a comment are not reported" \
   $(! grep -qE '^(2|4):' <<< "$out"; echo $?) "$out"
 
 # W1: a named script that does not exist is found; one that exists, a glob and a variable path are not
@@ -356,16 +341,21 @@ EOF
 out=$(ci_fix_gaps "$tmp/f.yaml")
 check "contracts: the failure-recovery ci-fix loop is not reported" $([ -z "$out" ]; echo $?) "$out"
 
-# main-ci: a node that passes only the merge commit (before R14) is found
-printf 'nodes:\n  - id: main-ci\n    bash: |\n      merge=$merged.output.merge\n      bash .archon/scripts/main-ci.sh "$merge"\n' > "$tmp/mc.yaml"
-out=$(main_ci_gaps "$tmp/mc.yaml")
-check "contracts: a main-ci node without the head is found" $([ "$out" = 'main-ci does not pass $merged.output.head' ]; echo $?) "$out"
-
 # A dry run with default stubs walks each workflow's control flow without a provider
 if command -v archon >/dev/null 2>&1; then
   for wf in "$workflows"/*.yaml; do
     name=$(basename "$wf" .yaml)
-    out=$(cd "$repo" && archon workflow run "$name" "dry run" --dry-run --default-stubs 2>&1)
+    stubs=()
+    if [ "$(yq '[.nodes[] | select(.id == "plan-approval")] | length' "$wf")" -gt 0 ]; then
+      # The plan approval pauses a dry run: a reject stub ends it cancelled, an approve stub walks on to ready.
+      printf '{"plan-approval": {"decision": "reject", "text": "dry run"}}\n' > "$tmp/reject.json"
+      out=$(cd "$repo" && archon workflow run "$name" "dry run" --dry-run --default-stubs --stubs "$tmp/reject.json" 2>&1)
+      check "$name: a rejected plan ends the dry run cancelled" $(grep -q '^Simulation outcome: cancelled' <<< "$out"; echo $?) \
+        "$(grep -E '^(FAILED|Simulation outcome|Error)' <<< "$out")"
+      printf '{"plan-approval": {"decision": "approve", "text": "dry run"}}\n' > "$tmp/approve.json"
+      stubs=(--stubs "$tmp/approve.json")
+    fi
+    out=$(cd "$repo" && archon workflow run "$name" "dry run" --dry-run --default-stubs "${stubs[@]}" 2>&1)
     check "$name: a dry run with default stubs completes" $(grep -q '^Simulation outcome: completed' <<< "$out"; echo $?) \
       "$(grep -E '^(FAILED|Simulation outcome|Error)' <<< "$out")"
   done

@@ -4,12 +4,10 @@
   "Bash(*commit -n *)",
   "Bash(*core.hooksPath*)",
   "Bash(*push-guard.sh allow*)",
-  "Bash(*supervisor-ctl.sh uninstall*)",
   "Bash(*systemctl --user enable*)",
   "Bash(*systemctl --user start*)",
   "Bash(sudo *)",
   "Edit(.git/hooks/**)",
-  "Edit(/etc/delegator-supervisor/**)",
   "Edit(/etc/push-guard/**)",
   "Edit(~/.config/systemd/user/**)"
 ]

@@ -19,6 +19,17 @@ The examples originate from a pseudonymized reference set. Shared material in th
 [jvm-testing] leaf), and the mustache templates in `docs/scaffold-templates/` (rendered by `scripts/scaffold.sh`; each
 leaf's `## Scaffold` section lists its own).
 
+The kit's templates are worked examples too: their names and types come from the reference set, so their output rarely
+compiles as is in another repo, and the kit owns them (`.archon/kit.lock.json`), so an update overwrites a local fix.
+Put the repo's own templates in `docs/scaffold-templates/project/<layer>/<name>.mustache` instead: the kit never removes
+a file there and only a project profile of the repo ships one (kept once edited), and
+`scripts/scaffold.sh project/<layer>/<name> ...` renders it. `--for`, the
+scaffold step and the scaffold-check gate (all through `scripts/scaffold/targets.js`) take them up without an edit to a
+kit-owned leaf: a repo template with a kit template's name (`project/domain/id` beside `domain/id`) takes over that
+template's rows, and a new one is offered from the `## Scaffold` table of `docs/scaffold-templates/project/README.md`,
+a table like a leaf's whose links are relative to that folder. Prefer the repo's template where both fit. Keep a
+working `<name>.example.json` next to each, so a script can render every template and compile the result.
+
 Leaves: [api-first-controller], [archunit-fitness], [bean-config-di], [clean-architecture], [clean-code], [code-generation], [conventional-commits], [contract-agent-readiness], [contract-db-parity], [design-review], [domain-dto-mapper], [domain-events], [domain-modeling], [domain-to-dto-mapper-tests], [exception-to-http], [flyway-migrations], [grill-plan], [grill-pr], [java], [jpa-entity-mapping], [junit-tests], [jvm-testing], [object-mother-builders], [openapi-rest-client-codegen], [persistence-repository], [resilience4j], [tdd-loop], [test-data], [testcontainers], [usecase-bdd-spec], [usecase-orchestration], [validation-notification-result].
 
 [api-first-controller]: api-first-controller.md

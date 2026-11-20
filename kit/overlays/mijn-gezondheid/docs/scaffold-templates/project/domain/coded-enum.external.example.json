@@ -1,0 +1,15 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/gateway/ExternalGadgetKind.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.gateway",
+  "Name": "ExternalGadgetKind",
+  "constants": [
+    {
+      "constant": "SENSOR_DEVICE",
+      "code": "SENSOR"
+    },
+    {
+      "constant": "ACTUATOR_DEVICE",
+      "code": "ACTUATOR"
+    }
+  ]
+}

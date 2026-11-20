@@ -2,9 +2,8 @@
 # Pre-push guard (P2: a script, not a model; owner decision 2026-10-20, D14 and its "kleine uitzondering"): a push to
 # main is refused, day or night, unless either
 #   - every commit it adds is an exempt one: a script that commits to main by design made it and it changes only that
-#     script's own paths (EXEMPT below: commit-tickets.sh and close-out.sh backlog/, retro-commit.sh docs/retro/, the
-#     token reports' scripts/tokenomics/commit-reports.sh docs/tokenomics/, and since 2026-11-19 stop-approve.sh
-#     .archon/stop/approvals/: the owner's chat approvals, recorded in the list round). The guard does not take the caller's word
+#     script's own paths (EXEMPT below: a ticket commit backlog/, retro-commit.sh docs/retro/, the
+#     token reports' scripts/tokenomics/commit-reports.sh docs/tokenomics/). The guard does not take the caller's word
 #     for which script it is: it reads the changed paths of every commit in the push range itself, and each commit must
 #     stay inside ONE entry's paths; a merge commit, a commit touching any other path, a forced (non-fast-forward)
 #     push, or a range it cannot read is not exempt; or
@@ -19,9 +18,7 @@
 #                                         to main, for <minutes> (30, at most 240). It must run as root: the entry is a
 #                                         root-owned file in /etc/push-guard/allow, which an agent cannot write without
 #                                         the owner's sudo password.
-#   push-guard.sh paths                   print the exempt path prefixes, one per line: merge-turn.sh reads them, so a
-#                                         commit on main that the guard lets through as exempt never makes a pull
-#                                         request behind (one list, no drift).
+#   push-guard.sh paths                   print the exempt path prefixes, one per line (one list, no drift).
 #   push-guard.sh install                 switch the hook on for this clone and its worktrees: writes
 #                                         <git common dir>/hooks/pre-push, which runs this script from the main checkout.
 #                                         It does not set core.hooksPath (that would also switch on .githooks/pre-push).
@@ -35,13 +32,12 @@ ALLOW_DIR=/etc/push-guard/allow
 OWNER_UID=0
 USED=${HOME:-/nonexistent}/.local/state/push-guard/used
 BRANCH=refs/heads/main
-# The scripts that may push to main without an allow, and the only paths their commits may change (owner decisions
-# 2026-10-20 and, for the approvals, 2026-11-19). "<who>|<path prefix>"; a commit is exempt when all its paths share one entry's prefix.
+# The scripts that may push to main without an allow, and the only paths their commits may change (owner decision
+# 2026-10-20). "<who>|<path prefix>"; a commit is exempt when all its paths share one entry's prefix.
 EXEMPT=(
-  "commit-tickets.sh, close-out.sh|backlog/"
+  "ticket commits|backlog/"
   "retro-commit.sh|docs/retro/"
   "scripts/tokenomics/commit-reports.sh|docs/tokenomics/"
-  "stop-approve.sh|.archon/stop/approvals/"
 )
 
 usage() { echo "push-guard: $*" >&2; echo "usage: push-guard.sh check <remote> <url> | allow <sha> [<minutes>] | paths | install" >&2; exit 2; }

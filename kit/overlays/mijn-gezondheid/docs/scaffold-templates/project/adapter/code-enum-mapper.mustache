@@ -1,0 +1,39 @@
+{{!
+  Two-way enum mapper between a domain enum and an external one (FHIR/HL7 code, gateway enum, generated DTO enum):
+  static switch expressions, so a constant added on either side fails the build until it is mapped.
+  Exemplar: allergy-intolerance-adapter .../gateway/AllergyIntoleranceCriticalityMapper.java
+  Target: <capability>-adapter/src/main/java/<pkg>/<Name>Mapper.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (mapper prefix, e.g. GadgetKind), Domain, External (simple names), imports[] (both enums),
+          pairs[domain (constant), external (constant)] (one per constant; both sides complete)
+  Left to you: a default branch with logging when the external enum has values the domain ignores
+               (as mapCriticality, which then returns null).
+}}
+package {{{package}}};
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class {{{Name}}}Mapper {
+
+    public static {{{Domain}}} toDomain(@NonNull final {{{External}}} external) {
+        return switch (external) {
+{{#pairs}}
+            case {{{external}}} -> {{{Domain}}}.{{{domain}}};
+{{/pairs}}
+        };
+    }
+
+    public static {{{External}}} toExternal(@NonNull final {{{Domain}}} domain) {
+        return switch (domain) {
+{{#pairs}}
+            case {{{domain}}} -> {{{External}}}.{{{external}}};
+{{/pairs}}
+        };
+    }
+}

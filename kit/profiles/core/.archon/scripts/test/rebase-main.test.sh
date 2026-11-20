@@ -166,7 +166,7 @@ check "9 head unchanged" $([ "$(git -C "$dir" rev-parse HEAD)" = "$before" ]; ec
 check "9 origin untouched" $([ "$(git -C "$dir.git" rev-parse feat/x)" = "$pushed" ]; echo $?)
 check "9 base file absent" $([ ! -f "$dir/other.txt" ]; echo $?)
 
-# 10. --no-push: the rebase goes through, but nothing is pushed; origin keeps the old head (rebase-behind.sh pushes).
+# 10. --no-push: the rebase goes through, but nothing is pushed; origin keeps the old head (the caller pushes).
 repo ten union
 commit_in "$dir" docs/memory.md $'\n## Entry F\nfrom the feature'
 git -C "$dir" push -q origin feat/x 2>/dev/null

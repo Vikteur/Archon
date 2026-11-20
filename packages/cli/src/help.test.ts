@@ -261,12 +261,13 @@ Commands:
   serve                      Start the web UI server (binary installs download server and UI on first run)
   skill add [path]           Add archon-cli into .claude/skills and .agents/skills
   kit setup [--backend <path> --contract <file>]
-                             Guided install of the kit into a backend and frontend (tools, contract, CodeGraph, rtk, web views)
+                             Guided install of the kit into a backend and frontend (tools, contract, CodeGraph, Groma, rtk, web views)
   kit add [path]             Install the Copilot kit (profiles, kit.yaml, aliases, hooks) into a git project
   kit doctor [path]          Check kit tools, Copilot auth and trust, MCP servers, hooks and file drift
   kit tools [path] [--check] [--no-backlog]
                              Run the project scripts/install-tools.sh (--check only verifies)
   kit list                   List kit profiles and which are installed here
+  kit web [path]             Start the MCP Inspectors, the Groma map, the board and the Archon web UI, and open each once it answers
   provider add <id...>       Add maintained providers matching this Archon release (connects your agent CLI or SDK)
   plugin add <owner/repo[/path][@tag]>
                              Add a plugin from GitHub (default: binary plugins the latest release, workflow packs the default branch)

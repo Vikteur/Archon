@@ -5,6 +5,13 @@
 # scripts/web-uis.sh.)
 # Needs the groma CLI (npm install -g groma.md) and a clean groma/ in the work tree, because it rescans. GROMA names
 # the CLI (default: groma). Whatever the scan leaves in groma/ is undone when the script ends, however it ends.
+# A repo without groma/ has not set Groma up: the script prints a notice (a GitHub Actions ::notice:: in Actions) and
+# passes, so neither the pre-push hook nor CI blocks on a map the project does not keep. `backlog: false` in
+# .archon/kit.yaml (else in kit.defaults.yaml beside it; env KIT_BACKLOG first) drops the two Backlog.md checks, and
+# `agent_cli: copilot` (read the same way; env KIT_AGENT_CLI first) the CLAUDE.md import check, and
+# `groma_descriptions: optional` (read the same way; env KIT_GROMA_DESCRIPTIONS first; the default) turns an element
+# without a description into a note; `required` fails it. `groma_curation` (env KIT_GROMA_CURATION first) does the
+# same for a map that is still its first scan.
 # Usage: groma-check.sh
 set -euo pipefail
 
@@ -13,6 +20,42 @@ groma="${GROMA:-groma}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 failures=0
+
+if [[ ! -d groma ]]; then
+  notice="groma-check: not set up: run groma init (no groma/ folder, so the map checks are skipped)"
+  if [[ "${GITHUB_ACTIONS:-}" == true ]]; then echo "::notice::$notice"; else echo "$notice"; fi
+  exit 0
+fi
+
+# Backlog.md is optional (as scripts/install-tools.sh reads it: sed, since yq may not be installed): off drops the
+# ticket checks below.
+use_backlog="${KIT_BACKLOG:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$use_backlog" ]] || break
+  [[ -f "$f" ]] && use_backlog=$(sed -n 's/^backlog:[[:space:]]*["'"'"']\{0,1\}\([a-z01]*\).*/\1/p' "$f" | head -n 1)
+done
+case "$use_backlog" in false | 0 | no | off) use_backlog=0 ;; *) use_backlog=1 ;; esac
+# The agent CLI (agent_cli, read the same way; env KIT_AGENT_CLI first): Copilot CLI reads AGENTS.md itself, so a
+# Copilot project needs no CLAUDE.md that imports it.
+agent_cli="${KIT_AGENT_CLI:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$agent_cli" ]] || break
+  [[ -f "$f" ]] && agent_cli=$(sed -n 's/^agent_cli:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
+# Descriptions (groma_descriptions, read the same way; env KIT_GROMA_DESCRIPTIONS first): optional unless required.
+descriptions="${KIT_GROMA_DESCRIPTIONS:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$descriptions" ]] || break
+  [[ -f "$f" ]] && descriptions=$(sed -n 's/^groma_descriptions:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
+[[ "$descriptions" == required ]] || descriptions=optional
+# Curation (groma_curation, read the same way; env KIT_GROMA_CURATION first): optional unless required.
+curation="${KIT_GROMA_CURATION:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$curation" ]] || break
+  [[ -f "$f" ]] && curation=$(sed -n 's/^groma_curation:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
+[[ "$curation" == required ]] || curation=optional
 
 fail() {
   echo "FAIL: $1" >&2
@@ -27,14 +70,20 @@ elif ! grep -q '"id": *"java"' groma/scanners.json; then
 fi
 
 echo "Check: the map is curated, not a first scan"
+[[ "$curation" == required ]] || echo "  optional: groma_curation: optional (a first scan is a note, not a failure)"
 if [[ -d groma ]] && "$groma" agent-instructions 2>/dev/null | head -1 | grep -q 'still its first scan'; then
-  fail "groma agent-instructions reports a first scan; curate the map"
+  if [[ "$curation" == required ]]; then
+    fail "groma agent-instructions reports a first scan; curate the map"
+  else
+    echo "  note: groma agent-instructions reports a first scan; curate the map when you can"
+  fi
 fi
 
 echo "Check: every element has a description"
+[[ "$descriptions" == required ]] || echo "  optional: groma_descriptions: optional (a missing one is a note, not a failure)"
 while IFS= read -r file; do
   if ! sed -n '/^---$/,/^---$/p' "$file" | grep -qE '^description: *[^ ]'; then
-    fail "$file has no description"
+    if [[ "$descriptions" == required ]]; then fail "$file has no description"; else echo "  note: $file has no description"; fi
   fi
 done < <(grep -rlE '^type: (C4|Person|External)' groma 2>/dev/null || true)
 
@@ -58,10 +107,12 @@ if [[ -d groma ]]; then
 fi
 
 echo "Check: every open ticket is pinned to the map"
+[[ "$use_backlog" == 1 ]] || echo "  skipped: backlog: false (Backlog.md is off)"
 # The board shows a ticket only when its references name a map element id exactly; a ticket that names none is
 # invisible there ("No mapped tasks"). Open means To Do or In Progress; epics (label epic) group tickets and need none.
-if [[ -d backlog/tasks && -d groma ]]; then
-  ids=" $(grep -rh -A1 '^groma:' groma | sed -n 's/^ *id: *//p' | tr -d "\"'\r" | tr '\n' ' ')"
+if [[ "$use_backlog" == 1 && -d backlog/tasks ]]; then
+  # A map with no element yet matches nothing: without `|| true`, set -e and pipefail ended the script here, silently.
+  ids=" $({ grep -rh -A1 '^groma:' groma || true; } | sed -n 's/^ *id: *//p' | tr -d "\"'\r" | tr '\n' ' ')"
   # One awk reads every ticket's front matter itself (getline), and prints the open, non-epic ones whose references
   # name no map id. A shell loop per ticket started several processes each, which took half a minute on Windows.
   while IFS= read -r file; do
@@ -88,13 +139,15 @@ if [[ -d backlog/tasks && -d groma ]]; then
 fi
 
 echo "Check: agent sessions load Groma's instructions and find the tickets"
-if ! grep -qx '@AGENTS.md' CLAUDE.md 2>/dev/null; then
+if [[ "$agent_cli" == copilot ]]; then
+  echo "  skipped: the CLAUDE.md import (agent_cli: copilot reads AGENTS.md itself)"
+elif ! grep -qx '@AGENTS.md' CLAUDE.md 2>/dev/null; then
   fail "CLAUDE.md does not import AGENTS.md"
 fi
 if ! grep -q 'groma agent-instructions' AGENTS.md 2>/dev/null; then
   fail "AGENTS.md has no Groma block"
 fi
-if ! grep -q 'Backlog.md backlog' AGENTS.md 2>/dev/null; then
+if [[ "$use_backlog" == 1 ]] && ! grep -q 'Backlog.md backlog' AGENTS.md 2>/dev/null; then
   fail "AGENTS.md does not say the tickets live in this repo's Backlog.md backlog"
 fi
 

@@ -47,13 +47,16 @@ Profiles are installed in this order. When two profiles carry the same path, the
 
 | Profile | Requires | Content |
 |---|---|---|
-| `core` | — | The Archon run tooling: delegator, STOP policy, merge, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks, `.github/copilot-instructions.md` and the instructions templates. |
+| `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks, `.github/copilot-instructions.md` and the instructions templates. |
 | `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/PIT/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
 | `java-quarkus` | java | The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus-flavoured scaffold templates, and run-wedding-portal → `run-app`. |
 | `java-spring` | java | The same paths as `java-quarkus`, rewritten for Spring Boot. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
 | `openapi-contract` | core | The contract-api MCP server (`scripts/contract-mcp/**`, from the source's `scripts/portal-mcp/**`), `scripts/contract-agent-readiness/**`, contract-pin, contract-db-parity and the contract-agent. |
+| `mijn-gezondheid` | java-spring, openapi-contract | A project profile: that repo's own scaffold templates, their `## Scaffold` table and its `scaffold.json` in `docs/scaffold-templates/project/`, from the hand-written `kit/overlays/mijn-gezondheid/`. java's `new-context.sh`, `smoke.sh` and the wiring check run on them as installed. |
 
-`java-quarkus` and `java-spring` are mutually exclusive. The default for a new project is `core,java,java-spring,openapi-contract`.
+`java-quarkus` and `java-spring` are mutually exclusive. The default for a new project, and for `archon kit setup`, is `core,java,java-spring,openapi-contract,mijn-gezondheid`. An install from before keeps its saved profiles: `archon-kit-update --add-profile mijn-gezondheid` adds it once, and the update after keeps it.
+
+**Project profiles.** A profile with `"project": true` in the manifest carries one repo's own files. It alone may ship into `docs/scaffold-templates/project/`, the repo's own folder: `kit add` refuses a generic profile's file there, and kit-sync's verify fails it. A project profile's files behave as any kit file: written when missing, replaced while unedited, kept once the repo edits them (`--force` takes the kit's). The kit never prunes a file in that folder, so leaving the profile out never removes the repo's templates. A generic profile carries no project noun; a project profile is where they go.
 
 ## manifest.json
 
@@ -63,7 +66,8 @@ Profiles are installed in this order. When two profiles carry the same path, the
   "source": { "name": "wedding-portal", "commit": "<sha>" },
   "profiles": {
     "core": { "requires": [], "description": "..." },
-    "java": { "requires": ["core"], "description": "..." }
+    "java": { "requires": ["core"], "description": "..." },
+    "mijn-gezondheid": { "requires": ["java-spring", "openapi-contract"], "description": "...", "project": true }
   },
   "exclusive": [["java-quarkus", "java-spring"]],
   "files": [
@@ -115,13 +119,12 @@ Profiles are installed in this order. When two profiles carry the same path, the
 profiles: [core, java, java-spring, openapi-contract]
 stack: spring                # quarkus | spring: the gates that differ per framework branch on it
 base_branch: main
-owner: ""                    # .archon/stop/policy.json: the name approvals are recorded for
-timezone: UTC                # .archon/stop/policy.json and park-ticket.sh: the zone of approval ids and parked notes
 gh_accounts: []              # gh-switch-account skill
-ntfy_topic: ""               # notify-owner.sh
-agent_cli: copilot           # supervisor/delegator scripts: claude | copilot
+agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
+groma_descriptions: optional # groma-check.sh: optional (an undescribed map element is a note) | required
+groma_curation: optional     # groma-check.sh: optional (a first-scan map is a note) | required
 build_workflow: build-feature-copilot
-java_version: 21
+java_version: 21              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
   modules: "-"               # the settings.gradle.kts modules, space-separated
@@ -153,7 +156,7 @@ contract:
 
 | Source | Target | Rule |
 |---|---|---|
-| `.claude/agents/<n>.md` | `.github/agents/<n>.agent.md` | Frontmatter becomes `name`, `description`, `model`, `tools`, `mcp-servers`, `hooks` and `include-custom-instructions: true`. An agent with an entry in `.claude/hooks/agent-scopes.json` gets its own `hooks: {preToolUse: [{type: command, command: "env KIT_AGENT=<n> bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse", timeoutSec: 60}]}`, which Copilot CLI runs only while that agent is selected: a root session (`copilot --agent <n>`) sends no agent field, so payload.sh names the agent from `KIT_AGENT` (a subagent's call carries `agentType` and `agentId`, and `KIT_AGENT` never overrides them). A hook that outlives its timeout fails open under Copilot CLI and a non-zero exit denies, so scope-guard keeps 60 s and denies a command longer than `SCOPE_GUARD_MAX_CMD` (16384) instead of reading it slowly; an agent name that is not shell-safe fails the sync. The model maps opus→`claude-opus-5.5`, sonnet→`claude-sonnet-5.5`, haiku→`claude-haiku-5.5`. Tools map Read/Grep/Glob→`read`+`search`, Edit/Write/MultiEdit/NotebookEdit→`edit`, any `Bash(...)`→`execute`, WebFetch/WebSearch→`web`, `Agent(...)`→`agent`, `mcp__<s>__*`→`<s>/*`, `mcp__<s>__<t>`→`<s>/<t>`, and drops Skill (skills load by name), PushNotification, SendMessage and ListAgents. The `skills:` list becomes a body line `Load these skills first: a, b.`. An unknown tool fails the sync. `mcpServers` (a map or a list of one-key maps) becomes `mcp-servers` entries `{type: local, command, args, tools: ["*"], env}`, dropping `alwaysLoad`. Under a closing `## On Copilot CLI` the body notes each Claude-only tool that is dropped, the `Bash(...)` patterns as the shell allowlist to keep to, and the `Agent(...)` names as the only agents to delegate to. The source's contract server name (`portal-api`) becomes `@@KIT_CONTRACT_SERVER_NAME@@` in tools, servers and body. **MCP fallback** (the kit only; the source's agents stay on MCP): an organization's MCP registry policy can block the kit's local servers, so an agent with a shell (`Bash` or `Bash(...)`) and an `mcp__codegraph__` tool may also run `codegraph explore`, `codegraph node`, `codegraph callers`, `codegraph callees`, `codegraph impact` and `codegraph query` (never init, uninit, index, sync, daemon or unlock), and one with a contract server tool `node scripts/contract-mcp/cli.mjs` (the server's CLI, the same answers). Its shell note adds them as `<cmd> *`, a `MCP fallback:` note says when and how to run them, and `.claude/hooks/agent-scopes.json` gets them appended to that agent's `commandAllowlist` (once; an agent without one, or without a shell, gets none), so scope-guard's prefix match lets `codegraph explore "x"` and `node scripts/contract-mcp/cli.mjs search cancel vendor` through, also behind a stripped `rtk `. An agent that names the contract CLI needs `scripts/contract-mcp/cli.mjs` (Dependency check). |
+| `.claude/agents/<n>.md` | `.github/agents/<n>.agent.md` | Frontmatter becomes `name`, `description`, `model`, `tools`, `mcp-servers`, `hooks` and `include-custom-instructions: true`. An agent with an entry in `.claude/hooks/agent-scopes.json` gets its own `hooks: {preToolUse: [{type: command, command: "env KIT_AGENT=<n> bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse", timeoutSec: 60}]}`, which Copilot CLI runs only while that agent is selected: a root session (`copilot --agent <n>`) sends no agent field, so payload.sh names the agent from `KIT_AGENT` (a subagent's call carries `agentType` and `agentId`, and `KIT_AGENT` never overrides them). A hook that outlives its timeout fails open under Copilot CLI and a non-zero exit denies, so scope-guard keeps 60 s and denies a command longer than `SCOPE_GUARD_MAX_CMD` (16384) instead of reading it slowly; an agent name that is not shell-safe fails the sync. The model maps opus→`claude-opus-5.5`, sonnet→`claude-sonnet-5.5`, haiku→`claude-haiku-5.5`. Tools map Read/Grep/Glob→`read`+`search`, Edit/Write/MultiEdit/NotebookEdit→`edit`, any `Bash(...)`→`execute`, WebFetch/WebSearch→`web`, `Agent(...)`→`agent`, `mcp__<s>__*`→`<s>/*`, `mcp__<s>__<t>`→`<s>/<t>`, and drops Skill (skills load by name), PushNotification, SendMessage and ListAgents. The `skills:` list becomes a body line `Load these skills first: a, b.`. An unknown tool fails the sync. `mcpServers` (a map or a list of one-key maps) becomes `mcp-servers` entries `{type: local, command, args, tools: ["*"], env}`, dropping `alwaysLoad`. Under a closing `## On Copilot CLI` the body notes each Claude-only tool that is dropped, the `Bash(...)` patterns as the shell allowlist to keep to, and the `Agent(...)` names as the only agents to delegate to. The source's contract server name (`portal-api`) becomes `@@KIT_CONTRACT_SERVER_NAME@@` in tools, servers and body. **MCP fallback** (the kit only; the source's agents stay on MCP): an organization's MCP registry policy can block the kit's local servers, so an agent with a shell (`Bash` or `Bash(...)`) and an `mcp__codegraph__` tool may also run `codegraph explore`, `codegraph node`, `codegraph callers`, `codegraph callees`, `codegraph impact` and `codegraph query` (never init, uninit, index, sync, daemon or unlock), and one with a contract server tool `node scripts/contract-mcp/cli.mjs` (the server's CLI, the same answers). Its shell note adds them as `<cmd> *`, a `MCP fallback:` note says when and how to run them, and `.claude/hooks/agent-scopes.json` gets them appended to that agent's `commandAllowlist` (once; an agent without one, or without a shell, gets none), so scope-guard's prefix match lets `codegraph explore "x"` and `node scripts/contract-mcp/cli.mjs search cancel vendor` through, also behind a stripped `rtk `. An agent that names the contract CLI needs `scripts/contract-mcp/cli.mjs` (Dependency check). **Scaffold scripts** (the kit only, `SCAFFOLD_COMMANDS` in `scripts/kit-sync-convert.ts`): a repo's own templates in `docs/scaffold-templates/project/` are used by three generic scripts of the java profile (kit overlays, with no project noun): `scripts/scaffold/new-context.sh` (a new module set rendered from them and registered in the build), `scripts/scaffold/smoke.sh` (every template rendered with its `<name>.example.json` in a throwaway copy, then built; `--render-only` stops after the render) and `scripts/test/scaffold-wiring.test.sh` (every template linked from a `## Scaffold` row, found by `--for` and rendered by the build's scaffold step, without a build). What a module set is and what to build comes from the repo's own `docs/scaffold-templates/project/scaffold.json`, which only a project profile ships (Profiles): `context` (`modules`, `flags`, `args`, `help`, `files` rendered or copied in order, `register` for the settings' `include(` block and the dependents' `implementation(project(...))` lines), `smoke` (`context`: the `new-context.sh` arguments, `gradle`: the `./gradlew` tasks) and `projectOnly` (`scripts/scaffold/targets.js` drops every row that links a kit template, so `--for`, the scaffold step and the scaffold-check gate offer only the repo's own, without an edit to a kit-owned leaf; the wiring check also fails such a row); the headers of `scripts/scaffold/new-context.js` and `smoke.sh` give the form. Without it `new-context.sh` says so and exits 1, `smoke.sh` renders without a context or a build, and the wiring check skips what it needs. `kit add` keeps a repo's own copy of a script it did not write (`--force` takes the kit's). `scripts/scaffold/smoke.sh`, `new-context.sh` and the wiring check are tested by `scripts/test/scaffold-project.test.sh` on a fixture repo. An agent with a shell gets them on its shell note, in a `Scaffold scripts:` note that says when to run them, and on its `commandAllowlist`: developer `scripts/scaffold/new-context.sh`, `scripts/scaffold/smoke.sh` and both checks (`scripts/test/scaffold.test.sh`, the renderer's or a repo's own in its place, and `scripts/test/scaffold-wiring.test.sh`); test-writer `scripts/scaffold/smoke.sh --render-only` and both checks; analyst and reviewer `scripts/scaffold.sh --for` (read-only), `scripts/scaffold/smoke.sh --render-only` and both checks. No other agent gets one. |
 | `.claude/skills/<n>/**` | `.github/skills/<n>/**` | Copied verbatim; `run-wedding-portal` ships as `run-app`. `.claude/skills/archon-cli/**` does not ship (the `.agents/skills/archon-cli` copy does). In SKILL.md frontmatter it keeps `name`, `description`, `license` and `allowed-tools`, and drops the rest. A dropped `disallowed-tools` or `disable-model-invocation` is added as a body note under `## On Copilot CLI`. |
 | `.agents/skills/archon-cli/**` | the same path | Verbatim. |
 | `.claude/settings.json` `hooks` | `.github/hooks/kit.json` | `{"version":1,"hooks":{<event>:[{"type":"command","bash":"bash .github/hooks/dispatch.sh <ClaudeEvent> '<matcher>' <script path> <args>","timeoutSec":N}]}}`. Events map SessionStart→sessionStart, UserPromptSubmit→userPromptSubmitted, PreToolUse→preToolUse, PostToolUse→postToolUse, PostToolUseFailure→postToolUseFailure, SubagentStart→subagentStart, SubagentStop→subagentStop, SessionEnd→sessionEnd, Stop→agentStop. |
@@ -161,9 +164,9 @@ contract:
 | `.claude/settings.json` `permissions.deny` | `.archon/copilot/deny.json` | Read by `run-guard.sh`, which enforces it in every session, not only in run worktrees. |
 | `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. A rule without `paths:` (general) gets `applyTo: "**"`. |
 | MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/contract-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
-| `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | Copied when the source tracks it; otherwise generated with `.archon/scripts/copilot-workflow.js`. Both workflows ship. After each MCP paragraph of its prompts (the line `Grep stays the tool for text, config, logs and strings; without the tools, read as before.`) it adds one sentence naming the CLI fallback (`WORKFLOW_FALLBACK`); a workflow without that line fails the sync. |
+| `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | Copied when the source tracks it; otherwise generated with the source's `.archon/scripts/copilot-workflow.js` (the generator itself does not ship). Both workflows ship, made standalone (see Plan approval and human merge). After each MCP paragraph of its prompts (the line `Grep stays the tool for text, config, logs and strings; without the tools, read as before.`) it adds one sentence naming the CLI fallback (`WORKFLOW_FALLBACK`); a workflow without that line fails the sync. |
 | Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync-lists.ts`. `.github/workflows/ci.yml`, `.github/ci-inputs.yml` and `ci-workflow-check.sh` are Quarkus-built and go to `java-quarkus`. A scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject` goes to `java-quarkus`, every other one to `java`. |
-| Every shipped text file | — | After conversion: `run-wedding-portal` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path (and its systemd form `%h/wedding-portal`) becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). The project nouns go (`NOUN_REWRITES`): `portal-api` and `mcp__portal-api__` become `@@KIT_CONTRACT_SERVER_NAME@@`, `rekordContractTag` becomes `@@KIT_CONTRACT_TAG_KEY@@`, `portal-mcp` becomes `contract-mcp` and `portal-metrics` becomes `run-metrics`, and the files ship renamed to match (`scripts/contract-mcp/**`, `.archon/scripts/contract-mcp-setup.sh`, `.archon/workflows/run-metrics.yaml`). Then the Claude Code paths move to where the kit ships them (`PATH_REWRITES`): `.claude/agents/<n>.md` → `.github/agents/<n>.agent.md`, `.claude/rules/<l>.md` → `.github/instructions/<l>.instructions.md`, the bare folders → `.github/agents` and `.github/instructions`, and `.claude/skills` (either slash) → `.github/skills`; the files that mean the Claude paths themselves keep them (`PATH_SKIP`: `.archon/copilot/README.md`, `skill-check.js`, `audit-log.sh`, `verify-claims.sh`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and both build-feature workflows), the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime), the STOP policy's `owner`, `timezone` and hub repo (`@@KIT_OWNER@@`, `@@KIT_TIMEZONE@@`, `@@KIT_CONTRACT_REPO@@`), and the project names in comments and messages (`NOUN_TARGETED`). |
+| Every shipped text file | — | After conversion: `run-wedding-portal` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path (and its systemd form `%h/wedding-portal`) becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). The project nouns go (`NOUN_REWRITES`): `portal-api` and `mcp__portal-api__` become `@@KIT_CONTRACT_SERVER_NAME@@`, `rekordContractTag` becomes `@@KIT_CONTRACT_TAG_KEY@@`, `portal-mcp` becomes `contract-mcp` and `portal-metrics` becomes `run-metrics`, and the files ship renamed to match (`scripts/contract-mcp/**`, `.archon/scripts/contract-mcp-setup.sh`, `.archon/workflows/run-metrics.yaml`). Then the Claude Code paths move to where the kit ships them (`PATH_REWRITES`): `.claude/agents/<n>.md` → `.github/agents/<n>.agent.md`, `.claude/rules/<l>.md` → `.github/instructions/<l>.instructions.md`, the bare folders → `.github/agents` and `.github/instructions`, and `.claude/skills` (either slash) → `.github/skills`; the files that mean the Claude paths themselves keep them (`PATH_SKIP`: `.archon/copilot/README.md`, `skill-check.js`, `audit-log.sh`, `verify-claims.sh`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and both build-feature workflows), the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime), the standalone text (`STANDALONE_TARGETED` in `scripts/kit-sync-standalone-text.ts`: the lines that name what never ships), and the project names in comments and messages (`NOUN_TARGETED`). |
 | `docs/code-maps/<leaf>.md` (core, java) | same | A listed leaf's `## This repo (<source>)` section, which holds the source's facts, ships as a `## This repo` stub that asks the project to fill it in (`THIS_REPO_LEAVES`). The sync fails when a listed leaf lost the section or an unlisted core or java leaf has one. |
 | `.claude/CLAUDE.md` | same (core overlay) | `kit/overlays/core/.claude/CLAUDE.md`: the constitution (P1–P8), the STOP list and How work moves kept, the source's dates, ticket ids and project paths dropped, and its values placeholders (`@@KIT_BASE_BRANCH@@`, `@@KIT_CONTRACT_REPO@@`, `@@KIT_CONTRACT_SERVER_NAME@@`, `@@KIT_BUILD_WORKFLOW@@`, `@@KIT_COMMANDS_TEST@@`). Its `sourceSha256` makes `--check` report it stale when the source's CLAUDE.md changes. |
 
@@ -193,10 +196,66 @@ contract:
   files. `java` ships a create-only starter `docs/memory.md` (an overlay) that holds only the "CI job set" entry
   `ci-workflow-check.sh` reads (N7).
 - A test suite that only works against the source project (see Test suites).
-- `night-preflight` (owner decision 2026-11-19): `.archon/scripts/night-preflight.sh`, its test
-  `.archon/scripts/test/night-preflight.test.sh` and its doc `docs/archon/script/night-preflight.md`. They are on the
-  never-ship list (`NEVER_SHIP` in `scripts/kit-sync-lists.ts`), which no copy list overrides. The generated
-  `.github/agents/delegator.agent.md` drops step 6 of the night list (the owner runs `night-preflight.sh`) and renumbers
-  the build step to 6; the rewrite expects the source text exactly once and fails the sync when it changed. A shipped
-  file that still names a never-ship script by path fails the leak check; the one exception is a
-  `delegator-fence.test.sh` line that only asserts the fence denies it.
+- The source's unattended machinery (owner decision 2026-11-19): the kit's team starts one run per ticket, approves its
+  plan and merges its pull request, so nothing picks tickets, runs at night, queues merges or keeps a STOP approval
+  ledger. `NEVER_SHIP_GROUPS` in `scripts/kit-sync-lists.ts` lists every path, each with its test, in five groups: the
+  delegator (ticket picking, parallel runs, the run watchers, its agent, settings and decision schema), the night runs
+  (`night-preflight`, the supervisor, the systemd units, the owner pings, run recovery and the failure classifier), the
+  merge queue and the post-merge close-out (`auto-merge.sh`, `merge-turn.sh`, `wait-merge.sh`, `merge-ready.sh`,
+  `main-ci.sh`, `ticket-files.sh`, `close-out.sh` and the scripts only they call), the STOP approval ledger
+  (`stop-approve.sh`, `stop-check.sh`, `stop-round.sh`, `.archon/stop/**`) and the Copilot workflow generator. No copy
+  list overrides the never-ship list; a suite of a never-ship script never ships either.
+- What kit-sync strips with them: the `.claude/settings.json` hooks and deny entries that name a never-ship file, and
+  the never-ship agents' entries in `.claude/hooks/agent-scopes.json`. A shipped line that still names a never-ship
+  file (a script's basename, `delegator.md`, `delegator.agent.md` or a systemd unit) fails the leak check; the
+  `STANDALONE_TARGETED` rewrites reword those lines.
+- Kept on purpose, as tools a person runs: `stop-run.sh` (rejects a paused run and keeps the reason),
+  `answer-blocked.sh` (answers a run's blocked question) and `cleanup-merged.sh` (deletes a merged branch and its
+  worktree).
+
+## Plan approval and human merge
+
+Both build workflows ship standalone (`scripts/kit-sync-standalone.ts`, applied to `build-feature.yaml` and to the
+generated `build-feature-copilot.yaml`):
+
+- **One human gate.** A `plan-approval` node (`wait: {form: approval}`) after `stop-route` shows the ticket, the plan
+  (`$ARTIFACTS_DIR/plan.md`) and the STOP items the ticket or the plan touches. `implement` runs only on `approve`; on
+  `reject` the `plan-rejected` node (`cancel:`) ends the run before any code is written. Answer it in the Archon
+  console, or with `archon workflow approve <run-id> [text]` / `archon workflow reject <run-id> <why>`; the approval text
+  reaches the agents as reviewer notes. A run in a container cannot pause, so run it in a worktree.
+- **The run ends at `ready`.** The nodes after it (`auto-merge`, `merged`, `main-ci`, `ticket-files`, `finalize`,
+  `close-out`) are cut. Once CI on the head is green the pull request is marked ready for review, and a team member
+  reviews, merges it and closes the Backlog ticket (the run's `map-links` edit is left uncommitted in the backlog
+  checkout for them). A red head or a conflict at `ready` fails the run, so a person sees it. After the merge,
+  `cleanup-merged.sh <branch>` deletes the run's branch and worktree.
+- **Checked.** The cut expects exactly those tail ids after `ready`, `implement` to depend on `stop-route` once, and
+  every text rewrite to match its count; a result that still reads a cut node's output or names a cut script or the
+  delegator fails the sync.
+
+## The project's command additions (`agent-scopes.local.json`)
+
+`.claude/hooks/agent-scopes.json` is the kit's file: `kit add` replaces it on every update. A project that needs an
+agent to run one more command (its own build task, a script of its own) writes `.claude/hooks/agent-scopes.local.json`
+beside it and commits it; the kit never writes, prunes or overwrites it. scope-guard (overlay
+`kit/overlays/core/.claude/hooks/scripts/scope-guard.sh`) reads it as **additions only**:
+
+```json
+{"_comment": "why", "agents": {"<an agent agent-scopes.json fences>": {"commandAllowlist": ["./gradlew lintKotlin", "node tools/check.mjs"]}}}
+```
+
+- Each entry is appended to that agent's `commandAllowlist` (an agent without a list gets one). The kit's entries stay:
+  nothing in the file removes or replaces one, so a kit update that adds an entry still reaches the agent.
+- Refused, as a deny with the reason on every call of a fenced agent until a person fixes the file (fail closed): a file
+  that is not JSON or not an object; a top-level key other than `agents` and `_comment`; an agent `agent-scopes.json`
+  does not fence (adding an agent); any agent key other than `commandAllowlist` (`allowedFilePaths`, `readPaths`,
+  `hubRoot`, a deny list, ...); an entry that is not a string, is empty, holds a shell operator
+  (`; & | \` $ < > ( ) { }` or a newline), starts with a wrapper that runs any command (`env`, `xargs`, `sudo`,
+  `eval`, `exec`, `timeout`, ...) or an option, or is a bare interpreter (`bash`, `sh -c`, `node -e`, `python3 -c`, ...).
+  A call outside any agent, and an agent agent-scopes.json does not fence, are never touched.
+- No agent may write it (the existing `agent-scopes*.json` write guard).
+- A suite that names its policy (`CLAUDE_SCOPE_POLICY`) reads no project additions unless it also names them
+  (`CLAUDE_SCOPE_LOCAL`), so the project's file never changes a suite's verdict.
+- Tested by `.archon/scripts/test/scope-local.test.sh` (kit-only).
+
+Before this, the file replaced `agent-scopes.json` whole, a narrowing hook for wedding-portal's removed `test-ban.sh`;
+the kit drops that meaning (no kit file writes it).

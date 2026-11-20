@@ -18,7 +18,11 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query",
-        "node scripts/contract-mcp/cli.mjs"
+        "node scripts/contract-mcp/cli.mjs",
+        "scripts/scaffold.sh --for",
+        "scripts/scaffold/smoke.sh --render-only",
+        "scripts/test/scaffold.test.sh",
+        "scripts/test/scaffold-wiring.test.sh"
       ]
     },
     "closeout": {
@@ -151,7 +155,11 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query",
-        "node scripts/contract-mcp/cli.mjs"
+        "node scripts/contract-mcp/cli.mjs",
+        "scripts/scaffold/new-context.sh",
+        "scripts/scaffold/smoke.sh",
+        "scripts/test/scaffold.test.sh",
+        "scripts/test/scaffold-wiring.test.sh"
       ]
     },
     "github-agent": {
@@ -188,70 +196,6 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query"
-      ]
-    },
-    "delegator": {
-      "allowedFilePaths": [],
-      "commandAllowlist": [
-        "node .archon/scripts/pick-tickets.js",
-        "bash .archon/scripts/answer-blocked.sh",
-        "bash .archon/scripts/cleanup-merged.sh",
-        "bash .archon/scripts/merge-ready.sh",
-        "bash .archon/scripts/stop-check.sh",
-        "bash .archon/scripts/park-ticket.sh",
-        "node .archon/scripts/stop-scan.js",
-        "bash .archon/scripts/stop-approve.sh draft",
-        "bash .archon/scripts/stop-approve.sh show",
-        "bash .archon/scripts/stop-approve.sh record",
-        "bash .archon/scripts/stop-approve.sh revoke",
-        "bash .archon/scripts/stop-round.sh",
-        "node .archon/scripts/run-watch.js",
-        "node .archon/scripts/run-log.js",
-        "node .archon/scripts/verify-fixes.js",
-        "bash .archon/scripts/recover-run.sh",
-        "bash .archon/scripts/rebase-and-resume.sh",
-        "node .archon/scripts/classify-failure.js",
-        "node .archon/scripts/recovery-state.js show",
-        "node .archon/scripts/recovery-state.js half-open",
-        "bash .archon/scripts/close-out.sh --flush-reports",
-        "bash .archon/scripts/supervisor-ctl.sh status",
-        "bash .archon/scripts/supervisor-ctl.sh pause",
-        "bash .archon/scripts/supervisor-ctl.sh resume",
-        "bash .archon/scripts/notify-owner.sh",
-        "bash .archon/scripts/merge-turn.sh",
-        "bash .archon/scripts/rebase-behind.sh",
-        "bash .archon/scripts/sync-main.sh",
-        "bash .archon/scripts/launch-run.sh",
-        "bash .archon/scripts/stop-run.sh",
-        "bash .archon/scripts/local-ci-status.sh",
-        "bash .claude/scripts/ci-audit.sh",
-        "bash .claude/scripts/ci-local.sh --post",
-        ".github/skills/gh-git-ops/scripts/post-comment.sh",
-        "archon workflow run build-feature",
-        "archon workflow status",
-        "archon workflow runs",
-        "archon workflow get",
-        "archon workflow logs",
-        "archon workflow wait",
-        "archon workflow attention",
-        "archon workflow resume",
-        "backlog task view",
-        "backlog task list",
-        "backlog task edit",
-        "backlog task create",
-        "backlog task archive",
-        "backlog task complete",
-        "backlog task demote",
-        "backlog instructions",
-        "bash .archon/scripts/commit-tickets.sh",
-        "bash .archon/scripts/ready-runs.sh",
-        "gh pr view",
-        "gh pr list",
-        "git status",
-        "git log",
-        "git fetch",
-        "git ls-remote --tags",
-        "git worktree list"
       ]
     },
     "retro": {
@@ -297,7 +241,11 @@
         "codegraph callers",
         "codegraph callees",
         "codegraph impact",
-        "codegraph query"
+        "codegraph query",
+        "scripts/scaffold.sh --for",
+        "scripts/scaffold/smoke.sh --render-only",
+        "scripts/test/scaffold.test.sh",
+        "scripts/test/scaffold-wiring.test.sh"
       ]
     },
     "test-writer": {
@@ -330,7 +278,10 @@
         "codegraph callees",
         "codegraph impact",
         "codegraph query",
-        "node scripts/contract-mcp/cli.mjs"
+        "node scripts/contract-mcp/cli.mjs",
+        "scripts/scaffold/smoke.sh --render-only",
+        "scripts/test/scaffold.test.sh",
+        "scripts/test/scaffold-wiring.test.sh"
       ]
     }
   }

@@ -1,0 +1,49 @@
+{{!
+  Coded enum test: every constant round-trips through its code (@EnumSource); unknown and null codes give errors.
+  Exemplar: consent-domain src/test .../ConsentOperationTest.java
+  Target: <capability>-domain/src/test/java/<pkg>/<Name>Test.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name
+  Left to you: cases for mappings you added.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}Test {
+
+    @ParameterizedTest
+    @EnumSource({{{Name}}}.class)
+    void givenKnownCode_whenFromCode_thenReturnConstant({{{Name}}} constant) {
+        // When
+        var creation = {{{Name}}}.fromCode(constant.getCode());
+
+        // Then
+        assertThat(creation.getNotification().hasErrors()).isFalse();
+        assertThat(creation.getValue()).isEqualTo(constant);
+    }
+
+    @Test
+    void givenUnknownCode_whenFromCode_thenReturnErrors() {
+        // When
+        var creation = {{{Name}}}.fromCode("somethingUnknown");
+
+        // Then
+        assertThat(creation.getValue()).isNull();
+        assertThat(creation.getNotification().errorMessage()).isEqualTo("Unknown value 'somethingUnknown' for {{{Name}}}");
+    }
+
+    @Test
+    void givenNullCode_whenFromCode_thenReturnErrors() {
+        // When
+        var creation = {{{Name}}}.fromCode(null);
+
+        // Then
+        assertThat(creation.getValue()).isNull();
+        assertThat(creation.getNotification().hasErrors()).isTrue();
+    }
+}

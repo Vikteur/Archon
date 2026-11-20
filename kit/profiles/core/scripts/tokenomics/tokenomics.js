@@ -6,7 +6,7 @@
 //       --incremental  only the transcripts written on or after the ledger's latest day (by mtime, local day), with a
 //                      sub-agent's session transcript, and only the daily reports of those days and the ticket reports
 //                      of the tickets with a record on them; agents.md as always; no report is removed. With no ledger
-//                      yet it is a full update. close-out's call (owner decision 2026-10-23); a full update is the
+//                      yet it is a full update (owner decision 2026-10-23); a full update is the
 //                      command without it.
 //       --projects     Claude Code transcripts            (default <home>/.claude/projects, env TOKENOMICS_PROJECTS)
 //       --archon-runs  normalized Archon runs, see below  (env TOKENOMICS_ARCHON_RUNS)

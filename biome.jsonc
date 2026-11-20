@@ -24,6 +24,7 @@
       "!.github",
       "!docs",
       "!kit/profiles",
+      "!kit/overlays/mijn-gezondheid/docs",
       "!kit/manifest.json",
       "!packages/cli/src/bundled-kit.ts",
       "!workspace"

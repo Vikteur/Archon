@@ -8,7 +8,7 @@
 # Testcontainers and the image build share Docker without trouble here (both green on 047a3a8). Should that change, the
 # jobs listed in CI_LOCAL_SERIAL (e.g. "test image") run one after the other instead.
 #   --post   post one GitHub commit status per job on the commit, context local-ci/<job> (pending at the start, then
-#            success or failure): the result by SHA that ci-by-sha.sh and wait-merge.sh read. Needs every job.
+#            success or failure): the result by SHA that ci-by-sha.sh reads. Needs every job.
 #   --force  with --post, run even when the commit has a finished local CI run or a live one (queued behind it, never
 #            attached).
 #   --keep   keep the job worktrees (test reports stay in them); by default they are removed after the run.

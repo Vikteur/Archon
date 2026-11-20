@@ -5,7 +5,9 @@
 # (no such template, a template that does not target the path, bad JSON, a line not in the form), an existing file left
 # alone, a line handled once per run, the report for the agent and the SCAFFOLD record the scaffold-check gate counts,
 # a fenced block in a step, a path outside the repo, and one line that throws without stopping the others.
-# Runs the real scripts/scaffold.sh, templates and code-map Targets in a throwaway repo that links docs/ and scripts/.
+# Runs the real scripts/scaffold.sh and its Target matcher (scripts/ is linked) on fixture templates and a fixture
+# code-map leaf in a throwaway repo, so the repo's own leaves and templates never change the result: a repo may link
+# only its own templates in docs/scaffold-templates/project/, or have changed a kit template.
 # Usage: bash .archon/scripts/test/scaffold-step.test.sh   (exit 0 = all pass)
 set -uo pipefail
 
@@ -29,7 +31,28 @@ report() { cat "$art/scaffold-render/step-$1-$2.md" 2>/dev/null; }
 [ -d "$top/scripts/scaffold/node_modules/mustache" ] || npm ci --prefix "$top/scripts/scaffold" --silent --no-audit --no-fund >&2
 git init -q -b main "$w"
 git -C "$w" config user.name t; git -C "$w" config user.email t@t
-ln -s "$top/docs" "$w/docs"; ln -s "$top/scripts" "$w/scripts"
+ln -s "$top/scripts" "$w/scripts"
+# The fixture: one leaf whose `## Scaffold` table links five templates, each as small as the cases need.
+mkdir -p "$w/docs/code-maps" "$w/docs/scaffold-templates/domain" "$w/docs/scaffold-templates/adapter"
+cat > "$w/docs/code-maps/fixture.md" <<'MD'
+# fixture
+
+## Scaffold
+
+| Template | Target | Variables | Left to you |
+|---|---|---|---|
+| [domain/create-request](../scaffold-templates/domain/create-request.mustache) | `<capability>-domain/src/main/java/<pkg>/domain/Create<Name>Request.java` | `package`, `basePackage`, `Name`, `fields[type, name]` | validation |
+| [domain/id](../scaffold-templates/domain/id.mustache) | `<capability>-domain/src/main/java/<pkg>/domain/<Name>Id.java` | `package`, `Name` | nothing |
+| [domain/record](../scaffold-templates/domain/record.mustache) | `<capability>-domain/src/main/java/<pkg>/domain/<Name>.java` | `package`, `Name`, `fields[type, name, last]` | imports |
+| [domain/mother](../scaffold-templates/domain/mother.mustache) | `<capability>-domain/src/test/java/<pkg>/domain/<Name>Mother.java` | `package`, `Name`, `fixture`, `upsert`, `fields[type, name, example]` | edge cases |
+| [adapter/flyway-migration](../scaffold-templates/adapter/flyway-migration.mustache) | `application/src/main/resources/db/migration/V1.<NNN>__<snake_case_description>.sql` | `purpose`, `statements` | the rollback note |
+MD
+T="$w/docs/scaffold-templates"
+printf 'package {{package}}.domain;\n\nimport {{basePackage}}.shared.Request;\n\npublic record Create{{Name}}Request({{#fields}}{{type}} {{name}}{{/fields}}) implements Request {}\n' > "$T/domain/create-request.mustache"
+printf 'package {{package}}.domain;\n\npublic record {{Name}}Id(java.util.UUID value) {}\n' > "$T/domain/id.mustache"
+printf 'package {{package}}.domain;\n\npublic record {{Name}}({{#fields}}{{type}} {{name}}{{^last}}, {{/last}}{{/fields}}) {}\n' > "$T/domain/record.mustache"
+printf 'package {{package}}.domain;\n\n// {{fixture}}, upsert {{upsert}}\npublic class {{Name}}Mother {\n{{#fields}}  {{type}} {{name}} = {{example}};\n{{/fields}}}\n' > "$T/domain/mother.mustache"
+printf -- '-- {{purpose}}\n{{statements}}\n' > "$T/adapter/flyway-migration.mustache"
 mkdir -p "$w/$D" "$art"
 printf 'package a.b.x.domain;\nrecord Existing() {}\n' > "$w/$D/Existing.java"
 git -C "$w" add -A; git -C "$w" commit -qm init

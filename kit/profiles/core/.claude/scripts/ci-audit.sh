@@ -24,7 +24,7 @@
 # (or, when the tip changes only backlog/, docs/retro/ or docs/tokenomics/, the newest commit under it that changes
 # anything else: ci-skip.sh) is run with no reuse (CI_SCOPE=all ci-local.sh --post --all <tip>), whether or not
 # anything was reused; the stamp is written when it starts, and the ledger gets a "full-run" event. There is no cron
-# here: close-out.sh calls it after every merge, and the delegator at the start of its session; a second call within
+# here: a person calls it, after a merge or at the start of a day; a second call within
 # the 24 h starts nothing.
 # Exit: 0 nothing missed, 1 a miss (the switch is on), 2 usage, 3 cannot audit (GitHub or git did not answer; nothing
 # is decided and no switch is set). Everything goes to stderr but the `last` answer.

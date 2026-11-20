@@ -46,6 +46,17 @@ script then cannot log `gh` in for you.
    It does this only in a repository whose tree was clean before the run, and it never
    pushes.
 9. **A dry run**: runs a dry run of `build-feature-copilot`.
+10. **The web views**: runs `archon kit web` on the backend: the MCP Inspectors (the codegraph server of each repository
+    and the contract server on your contract), the Groma map, the Backlog.md board when it is
+    on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
+    view in the browser only once it answers, and names a view that does not answer within
+    90 seconds. `archon kit web <backend>` does the same later.
+
+When `groma-check` fails on the committed first scan of the Groma map, the closing list says
+so: the pre-push check refuses a push until an agent fixes what it names. A map element
+without a description is only a note while `groma_descriptions` in `.archon/kit.yaml` is
+`optional` (the default), and a map that is still its first scan while `groma_curation` is;
+`required` fails either.
 
 | Option | Effect |
 |--------|--------|
@@ -54,12 +65,71 @@ script then cannot log `gh` in for you.
 | `--archon-dir <path>` | Use another folder for the Archon clone (default `~/archon`). |
 | `--branch <name>` | Use another branch name for the commit. |
 | `--no-commit` | Leave the kit uncommitted. |
-| `--no-web` | Do not start the MCP Inspectors. |
+| `--no-web` | Do not start and open the web views at the end. |
 | `--no-smoke` | Skip the dry run of `build-feature-copilot`. |
 | `--dry-run` | Check the paths and print the plan, without changing anything. |
 
 A rerun is safe: it updates what is already there. The script ends with a list of its
 warnings, and writes its log to `~/.archon/logs/install-copilot-kit-<timestamp>.log`.
+
+## Update a machine with one command
+
+`archon-kit-update` updates a machine that was installed before: Archon, the kit in the
+backend and frontend, and the tools. It needs no options, because it reads the repositories,
+the contract, the profiles and the Backlog.md answer from the last `archon kit setup`
+(`~/.archon/kit-setup.json`). The installer links the command into `~/.local/bin`. On a
+machine installed before the command existed, run it once from the clone, or with curl:
+
+```bash
+bash ~/archon/scripts/update-copilot-kit.sh
+# or
+bash <(curl -fsSL https://raw.githubusercontent.com/Vikteur/Archon/local/console/scripts/update-copilot-kit.sh)
+```
+
+After that first run, `archon-kit-update` is on the `PATH`. `archon-kit-update --dry-run`
+fetches and lists the new Archon commits and the plan, and changes nothing.
+
+`scripts/update-copilot-kit.sh` does these steps in order:
+
+1. **Checks**: the machine, the saved answers, and that no build run is running. A run
+   that waits for its plan approval does not count. `--force` updates anyway.
+2. **Archon**: fast-forwards the clone to the fork's `local/console`. When there is
+   something new, it builds and installs it with `install-local.sh`. It then runs the
+   clone's newest copy of itself for the steps below.
+3. **The repositories**: pulls the contract, backend and frontend when their tree is clean
+   (fast-forward only).
+4. **`archon kit setup`**: runs it again with the saved answers. A kit file you edited is
+   kept. A kit file the kit no longer ships is removed when you never edited it (see
+   [Rerunning and upgrading](#rerunning-and-upgrading)). The step lists every file it
+   removed or kept.
+5. **`archon kit doctor`**: checks the backend.
+6. **The commit**: commits the update on a new branch (`chore/archon-kit-<archon commit>`)
+   in each repository whose tree was clean before the run. It never pushes.
+7. **The server**: restarts a running `archon serve` with the same arguments, so it runs
+   the new build.
+8. **The web views**: runs `archon kit web` on the backend, after the restart: the MCP Inspectors (the codegraph server of each repository
+   and the contract server on your contract), the Groma map, the Backlog.md board when it is
+   on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
+   view in the browser only once it answers, and names a view that does not answer within
+   90 seconds. `archon kit web <backend>` does the same later.
+
+| Option | Effect |
+|--------|--------|
+| `--backend`, `--frontend`, `--contract <path>` | Use other paths than the saved ones (`--frontend ''` for none). |
+| `--archon-dir <path>` | Use another Archon clone (default: the clone the script is in, else `~/archon`). |
+| `--branch <name>` | Use another branch name for the commit. |
+| `--no-pull` | Do not pull the repositories first. |
+| `--no-tools` | Do not update the tools (jq, yq, gh, node, codegraph, copilot, rtk, ...). |
+| `--add-profile <a,b>` | Add profiles to the saved ones, for example `--add-profile mijn-gezondheid` on an install from before that profile. The next update keeps them. |
+| `--no-commit` | Leave the update uncommitted. |
+| `--no-restart` | Leave a running `archon serve` on the old build. |
+| `--no-web` | Do not start and open the web views at the end (`--web`, the old flag, is the default now). |
+| `--rebuild` | Rebuild Archon even when the clone is up to date. |
+| `--force` | Update even while a build run is running. |
+| `--dry-run` | Print what would be updated, change nothing. |
+
+Push the commit branch and merge it like any other change. The log is in
+`~/.archon/logs/update-copilot-kit-<timestamp>.log`.
 
 ## Install with `archon kit setup`
 
@@ -82,19 +152,21 @@ After you confirm the summary, it runs these steps, each with a spinner:
 | Step | What it does |
 |------|--------------|
 | Tools | Runs the kit's tool installer for the backend (`archon kit tools`), with `INSTALL_TOOLS_BACKLOG=0` when Backlog.md is off, so `backlog` is not installed. |
-| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract` unless you pick others. |
+| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract,mijn-gezondheid` unless you pick others. |
 | Contract | Sets `contract.spec_path` in the backend's `.archon/kit.yaml` to the absolute contract path and `backlog` to `true` or `false`, then runs `.archon/scripts/contract-mcp-setup.sh`. |
 | CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
 | Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
 | rtk hooks | Runs `rtk init --copilot` in each repository, when `rtk` is on `PATH`. It never installs the global hooks. |
+| Groma map | When `groma` is on `PATH` and the backend has no `groma/` yet: `groma init --directory groma <backend name>`, the Java scanner when a `java` profile is installed, and a first `groma scan`. With Backlog.md off it removes the `backlog/` board and the Backlog.md block that `groma init` adds; `AGENTS.md` keeps its Groma block. |
 | Servers check | Starts each MCP server of both repositories, as `kit doctor` does. |
-| Web views | Runs `bash scripts/web-uis.sh start --open` in the backend and lists the URLs. |
+| Web views | Runs `bash scripts/web-uis.sh start` in the backend, starts `archon serve` when its health URL does not answer, waits up to 90 seconds for each view, and opens each one that answers in the browser (`wslview`, `explorer.exe`, `xdg-open` or `open`; `WEB_UIS_OPEN` picks another). A view that does not answer fails the step. |
 
 The output of every step goes to a log, `~/.archon/logs/kit-setup-<time>.log`, not to the
 terminal. A step that fails is shown as failed with that log path. The later steps still
 run, and the command exits 1 at the end.
 
-The last screen lists the web view URLs, the command that stops them
+The last screen lists the web view URLs, a note when the Groma map is a first scan (commit
+it, and have an agent curate it), the command that stops them
 (`bash scripts/web-uis.sh stop` in the backend), the log path and the Copilot login: run
 `copilot`, then `/login`, and finish it in a browser signed in as the GitHub account that
 has Copilot. That account may differ from the one `gh` uses.
@@ -111,12 +183,12 @@ archon kit setup --backend ~/code/backend --frontend ~/code/frontend \
 | `--backend <path>` | The backend repository |
 | `--frontend <path>` | The frontend repository; leave it out to skip the frontend |
 | `--contract <file>` | The OpenAPI contract file |
-| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract,mijn-gezondheid`) |
 | `--backlog` | Use Backlog.md for tickets; leave it out for off (`backlog: false` in `kit.yaml`) |
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
 | `--no-rtk` | Skip the rtk hooks |
-| `--no-web` | Do not start the web views |
+| `--no-web` | Do not start or open the web views (`archon kit web` does that alone) |
 
 Without a terminal, `--backend` and `--contract` are required. Without them, the command
 prints its usage and exits 2.
@@ -138,7 +210,7 @@ Without setup they run `archon kit tools` instead, which installs `backlog` as b
 | Instructions | `.github/instructions/`, `.github/copilot-instructions.md`, `AGENTS.md` | Layer rules and project facts that Copilot reads on every run. |
 | MCP servers | `.github/mcp.json` | Two servers: `codegraph` (code navigation) and `contract-api` (the OpenAPI contract, when that profile is on). |
 | Workflows | `build-feature-copilot` and related | Archon workflows that run the build with Copilot nodes. |
-| Scripts | `.archon/scripts/`, `scripts/` | Delegator, STOP policy, merge, CI-by-SHA and tool installer scripts. |
+| Scripts | `.archon/scripts/`, `scripts/` | Run, CI-by-SHA, pull request, retro and tool installer scripts. There is no ticket picker, night run or merge queue: a person starts each run and a team member merges. |
 | Scaffold templates | Mustache templates in the kit (`java` profile and its overlays) | Starter code for new layers, rendered from `.archon/kit.yaml`. |
 
 The kit also writes `.archon/kit.yaml` (the project's settings), `.archon/kit.defaults.yaml`
@@ -161,6 +233,7 @@ A profile is a group of kit files. You choose the profiles when you install.
 | `java-quarkus` | `java` | Quarkus versions of the skills, the scaffold templates, the CI workflow and `run-app`. |
 | `java-spring` | `java` | The same set as `java-quarkus`, rewritten for Spring Boot. |
 | `openapi-contract` | `core` | The `contract-api` MCP server, contract readiness and pin checks, DB parity, and the contract agent. |
+| `mijn-gezondheid` | `java-spring`, `openapi-contract` | A project profile: that project's own scaffold templates, their `## Scaffold` table and `scaffold.json` in `docs/scaffold-templates/project/`. `scripts/scaffold/new-context.sh`, `smoke.sh` and the wiring check run on them as installed. A template you edit is kept on the next update. |
 
 `java-quarkus` and `java-spring` are mutually exclusive. Pick one. Each profile pulls in
 the profiles it requires, so you do not need to list `core` or `java` yourself.
@@ -186,15 +259,12 @@ The defaults below suit a Spring Boot Gradle project.
 
 | Key | Default | What it sets |
 |---|---|---|
-| `profiles` | `[core, java, java-spring, openapi-contract]` | The profiles installed. `kit add --profile` replaces this list. |
+| `profiles` | `[core, java, java-spring, openapi-contract, mijn-gezondheid]` | The profiles installed. `kit add --profile` replaces this list. |
 | `stack` | `spring` | `quarkus` or `spring`. The gates that differ per framework branch on it. |
 | `base_branch` | `main` | The branch that runs target and rebase against. |
-| `owner` | `""` | The name STOP approvals are recorded for (`stop-approve.sh record`). |
-| `timezone` | `UTC` | The time zone of approval ids and parked notes. |
 | `gh_accounts` | `[]` | The `gh` accounts the `gh-switch-account` skill switches between. |
-| `ntfy_topic` | `""` | The ntfy topic `notify-owner.sh` posts to. Empty means no push. |
-| `agent_cli` | `copilot` | `claude` or `copilot`. The delegator and supervisor scripts use it. |
-| `build_workflow` | `build-feature-copilot` | The workflow the delegator starts for each ticket. |
+| `agent_cli` | `copilot` | `claude` or `copilot`. `install-tools.sh` and `kit-config.sh` use it. |
+| `build_workflow` | `build-feature-copilot` | The build workflow you start for a ticket. |
 | `java_version` | `21` | The Java version the build and CI use. |
 | `pin_proofs` | `.archon/pin-proofs.txt` | The file of pin proofs read by `pin-proof-check.sh`. |
 | `build_shape.modules` | `"-"` | The Gradle modules the build-shape check expects, space-separated. `-` turns the check off. |
@@ -222,7 +292,7 @@ Set a value at install time with `--set`:
 
 ```bash
 archon kit add . --profile core,java,java-spring,openapi-contract \
-  --set contract.repo=acme/contract --set owner=alice --trust
+  --set contract.repo=acme/contract --trust
 ```
 
 `kit add` records each `--profile` and `--set` in `kit.yaml`. It keeps the rest of your
@@ -235,6 +305,11 @@ of what the kit wrote. On a rerun, `kit add` compares each file with the lock:
 
 - A file that still holds what the kit wrote is updated to the newer kit.
 - A file the project edited is kept. The command lists it as `kept (differs)`.
+- A file the lock records that the newer kit no longer ships is removed, with the folders
+  that are then empty, when it still holds what the kit wrote. If you edited it, it is kept
+  and listed as `kept (no longer in the kit)` on every run, until you remove it.
+- `.archon/config.yaml` counts as the kit's after `kit add` merges its aliases and file hooks
+  into it, so a newer kit still updates it.
 - A file that differs and has no lock entry (it predates the lock, or the project wrote it) is
   kept too. One line counts them; review them and rerun with `--force` to take the kit's version.
 - Line ends do not count: a CRLF checkout of an unedited file is still the kit's.
@@ -313,6 +388,45 @@ After a manual `kit add`, do these steps:
 Check the first two steps again after any change to the tools, the login or the folder
 trust.
 
+## Running a build
+
+Start one run per Backlog ticket:
+
+```bash
+archon workflow run build-feature-copilot --detach "TASK-12"
+```
+
+The run plans the ticket and then **stops once for a person to approve the plan**. The
+`plan-approval` step shows the ticket, the plan (`plan.md` in the run's artifacts) and the
+STOP items the ticket or the plan touches. Answer it in the Archon console, or:
+
+```bash
+archon workflow attention --watch          # the runs that wait for you
+archon workflow approve <run-id> "notes for the agents"
+archon workflow reject <run-id> "why"      # ends the run; no code is written
+```
+
+The approval text reaches the agents as reviewer notes. After a rejection, fix the ticket
+and start a new run. Run builds in a worktree: a run in a container cannot pause for the
+approval.
+
+After the approval the run builds the parts, opens a draft pull request, checks CI by
+commit SHA, fixes a red run (at most three rounds) and marks the pull request ready for
+review. **The run ends there; it never merges.** A team member then:
+
+1. reviews and merges the pull request;
+2. closes the Backlog ticket and commits the backlog change (the run leaves its ticket
+   edit uncommitted in the backlog checkout);
+3. runs `bash .archon/scripts/cleanup-merged.sh <branch>` to delete the run's branch and
+   worktree. It deletes nothing that is not in the base branch, so it refuses a squash
+   merge; merge with a merge commit or a fast-forward, or delete them by hand.
+
+A red head or a merge conflict at the ready step fails the run, so a person sees it. To
+stop a run that waits, `bash .archon/scripts/stop-run.sh <run-id> "<why>"` rejects it and
+keeps the reason. A run that stops on a `BLOCKED:` question fails and names its plan;
+answer it with `bash .archon/scripts/answer-blocked.sh <plan.md> "<answer>"`, then
+`archon workflow resume <run-id>`.
+
 ## What `archon kit doctor` checks
 
 `archon kit doctor [path]` reports these, one line each:
@@ -337,8 +451,6 @@ profiles and which ones are installed here. The flags and exit codes are in the
   list does not enforce it. If the hook is not wired, the allowlist is not enforced.
 - **Root session.** A plain `copilot` session with no `--agent` selected is not fenced by
   any agent scope. Select an agent for work that should be fenced.
-- **Notifications.** The delegator's push notifications and its agent messaging are
-  Claude-only. On Copilot, `notify-owner.sh` sends through ntfy, so set `ntfy_topic`.
 - **An organization's MCP registry policy.** A Copilot account whose organization sets an
   MCP registry allows only the servers that registry lists. Copilot then says
   `2 MCP servers were blocked by policy: 'codegraph', 'contract-api' (Not found in registry <url>)`.

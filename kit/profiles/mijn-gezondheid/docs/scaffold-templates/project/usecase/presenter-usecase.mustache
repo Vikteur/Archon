@@ -1,0 +1,39 @@
+{{!
+  Presenter query use case: finds one aggregate by its key and hands it to the adapter's Presenter (common-usecase)
+  instead of returning it; the Notification says why nothing was presented.
+  Exemplar: report-usecase .../GetAdmissionDetailUseCase.java
+  Target: <capability>-usecase/src/main/java/<pkg>/Get<Name>UseCase.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, imports[], keyType, keyName, KeyCap
+          (the usecase module needs implementation(project(":common-usecase")) for Presenter)
+  Left to you: scoping to the caller (AuthenticationFacade.getAuthentication(), as GetAdmissionDetailUseCase).
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Notification;
+import be.mijngezondheid.common.usecase.Presenter;
+import {{{domainPackage}}}.{{{Name}}};
+import {{{portPackage}}}.{{{Name}}}Repository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Transactional
+@RequiredArgsConstructor
+public class Get{{{Name}}}UseCase {
+
+    static final String NOT_FOUND = "{{{Name}}} not found";
+
+    private final {{{Name}}}Repository {{{name}}}Repository;
+
+    public Notification execute({{{keyType}}} {{{keyName}}}, Presenter<{{{Name}}}> presenter) {
+        return {{{name}}}Repository.findBy{{{KeyCap}}}({{{keyName}}})
+                .map(found -> {
+                    presenter.present(found);
+                    return Notification.empty();
+                })
+                .orElseGet(() -> Notification.of(NOT_FOUND));
+    }
+}

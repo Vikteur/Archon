@@ -1,0 +1,39 @@
+{{!
+  Repository slice base for the adapter module: @DataJpaTest over the @Repository beans of the repository package,
+  the real Postgres from Testcontainers (Replace.NONE + the jdbc:tc URL in module/test-application-properties) and
+  the module's Flyway migrations. JPA entities must sit in this package (entity scan starts here).
+  Exemplars: authentication-adapter src/test .../repository/AbstractRepositoryTest.java,
+             report-adapter src/test .../repository/AbstractRepositoryTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/repository/AbstractRepositoryTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package
+  Left to you: @MockitoBean fields for the dependencies of other @Repository beans in the package (gateways).
+}}
+package {{{package}}};
+
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.stereotype.Repository;
+import org.springframework.test.context.ContextConfiguration;
+
+@DataJpaTest
+@ComponentScan(
+        basePackages = "{{{package}}}",
+        useDefaultFilters = false,
+        includeFilters = {
+                @ComponentScan.Filter(type = FilterType.ANNOTATION, classes = Repository.class)
+        }
+)
+@EnableAutoConfiguration
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(classes = AbstractRepositoryTest.RepositoryTestConfig.class)
+public abstract class AbstractRepositoryTest {
+
+    @Configuration
+    static class RepositoryTestConfig {
+    }
+}

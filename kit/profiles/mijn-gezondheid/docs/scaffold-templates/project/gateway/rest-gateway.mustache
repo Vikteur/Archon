@@ -1,0 +1,64 @@
+{{!
+  REST gateway: package-private @Repository implementing <Name>Gateway over the qualified RestClient bean, the base
+  URL from properties.endpoint.*; a failed call becomes the module's exception, never a Spring type.
+  Exemplars: e-health-gateway .../gateway/DefaultTherapeuticExclusionGateway.java, captcha-gateway .../CaptchaGateway.java
+  Target: <capability>-gateway/src/main/java/<pkg>/Default<Name>Gateway.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, dtoPackage, restClient (bean name), property (e.g. properties.endpoint.ehealth.gadgets),
+          path (appended to the base URL, e.g. /gadgets), bearer (bool), exceptionClass (fully qualified, with a
+          (String, Throwable) constructor; domain/exception renders one)
+  Left to you: 404-as-empty handling, @CircuitBreaker(fallbackMethod) (resilience4j), request bodies.
+}}
+package {{{package}}};
+
+{{#bearer}}
+import be.mijngezondheid.authentication.domain.AuthenticatedCivilian;
+{{/bearer}}
+import {{{dtoPackage}}}.Gateway{{{Name}}};
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Repository;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+@Slf4j
+@Repository
+class Default{{{Name}}}Gateway implements {{{Name}}}Gateway {
+
+    private final RestClient restClient;
+    private final String url;
+
+    Default{{{Name}}}Gateway(
+            @Qualifier("{{{restClient}}}") final RestClient restClient,
+            {{=<% %>=}}@Value("${<%property%>}")<%={{ }}=%> final String baseUrl
+    ) {
+        this.restClient = restClient;
+        this.url = baseUrl + "{{{path}}}";
+    }
+
+    @Override
+    public List<Gateway{{{Name}}}> get{{{Name}}}s({{#bearer}}final AuthenticatedCivilian auth{{/bearer}}) {
+        log.debug("Getting {{{name}}}s");
+        try {
+            final Gateway{{{Name}}}[] response = restClient.get()
+                    .uri(url)
+{{#bearer}}
+                    .header("Authorization", "Bearer " + auth.getAuthenticationToken())
+{{/bearer}}
+                    .retrieve()
+                    .body(Gateway{{{Name}}}[].class);
+            return Optional.ofNullable(response)
+                    .stream()
+                    .flatMap(Arrays::stream)
+                    .toList();
+        } catch (final RestClientException e) {
+            log.error("Failed to retrieve {{{name}}}s");
+            throw new {{{exceptionClass}}}("Failed to retrieve {{{name}}}s", e);
+        }
+    }
+}

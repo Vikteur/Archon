@@ -49,9 +49,9 @@ ready "green|local CI: every job passed"
 check "1 exit 0" $([ "$rc" -eq 0 ]; echo $?)
 check "1 marked ready" $(grep -qx "gh pr ready 42" <<< "$calls"; echo $?)
 
-# 2. Red: it stays a draft, exit 0 for the GitHub agent, and the message names the failing check.
+# 2. Red: it stays a draft, exit 1 so a person sees it, and the message names the failing check.
 ready "red|local CI: red local-ci/test=failure"
-check "2 exit 0" $([ "$rc" -eq 0 ]; echo $?)
+check "2 exit 1" $([ "$rc" -eq 1 ]; echo $?)
 check "2 not marked ready" $(! grep -q "pr ready" <<< "$calls"; echo $?)
 check "2 names the failing check" $(grep -q "CI is red (local CI: red local-ci/test=failure)" <<< "$err"; echo $?)
 
@@ -66,9 +66,9 @@ ready "conflict|pull request #42 conflicts;green|local CI: every job passed"
 check "4 rebased" $(grep -q "^rebase-main main" <<< "$calls"; echo $?)
 check "4 marked ready after the rebase" $(grep -qx "gh pr ready 42" <<< "$calls"; echo $?)
 
-# 5. A conflict that stays: a draft, exit 0.
+# 5. A conflict that stays: a draft, exit 1.
 ready "conflict|pull request #42 conflicts"
-check "5 still conflicting: exit 0, not ready" $([ "$rc" -eq 0 ] && ! grep -q "pr ready" <<< "$calls" && grep -q "still conflicts" <<< "$err"; echo $?)
+check "5 still conflicting: exit 1, not ready" $([ "$rc" -eq 1 ] && ! grep -q "pr ready" <<< "$calls" && grep -q "still conflicts" <<< "$err"; echo $?)
 
 echo "ready-node tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

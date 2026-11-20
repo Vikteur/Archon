@@ -42,19 +42,15 @@ allowlist), so their guardrails always apply.
 - **Force-push and deleting a branch** need a human decision every time: say what you will do, why, and how to
   undo it, then wait. An earlier approval doesn't cover the next one. One exception: inside a `build-feature` run the
   owner approved in advance (2026-10-17, `docs/memory.md`) the force-push of the run's own branch after a rebase onto
-  the base, with `force-push.sh`. The same holds when the `delegator` hands you a run's own branch to resolve
-  conflicts on after the run ended (owner decision 2026-10-18, `docs/memory.md`, TASK-55): rebase onto the base and
-  force-push that branch only.
+  the base, with `force-push.sh`.
 - Never push to or force-push `main` or the default branch; work goes through a PR (P6: gates are never waived).
 - Request changes only when the caller asked for it.
 - Check `git status` and `git diff --cached` before committing; never commit secrets or generated code edits.
 - Follow `conventional-commits` for commit messages and PR titles.
 
 ## Resolving merge conflicts
-You rebase for a real conflict or a red only. A branch that is only behind its base (no conflict) is rebased,
-force-pushed with a lease and sent to CI by a script, `.archon/scripts/rebase-behind.sh` (CI plan C15, owner decision
-D8 of 2026-10-20); you get it only when that script stopped on a conflict or refused (its JSON line and stderr say
-why). A red reaches you only after `red-triage.sh` classified it `own` or `main-state` (C17, D5): infra and flaky reds
+You rebase for a real conflict or a red only. A branch that is only behind its base (no conflict) is not rebased:
+the team member who merges it decides. A red reaches you only after `red-triage.sh` classified it `own` or `main-state` (C17, D5): infra and flaky reds
 are rerun by the script, never by you.
 1. `git status` and `git fetch origin`. The working tree must be clean before you start; if it isn't, stop and
    report instead of stashing someone's work.

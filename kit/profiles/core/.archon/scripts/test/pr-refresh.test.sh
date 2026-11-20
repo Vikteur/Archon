@@ -97,7 +97,7 @@ fifth=$(cat "$root/body.md"); run 7 main "$root/body.md"
 check "3d idempotent" $([ "$fifth" = "$(cat "$root/body.md")" ]; echo $?)
 rm -f "$art/mcp-use.md"
 
-# 3c. stop-route's stop-items.txt becomes the STOP line stop-check.sh reads, the block's last line; idempotent.
+# 3c. stop-route's stop-items.txt becomes the STOP line, the block's last line; idempotent.
 check "3c no STOP line without the file" $(! grep -q '^STOP items' "$root/body.md"; echo $?)
 printf '\n' > "$art/stop-items.txt"
 run 7 main "$root/body.md"

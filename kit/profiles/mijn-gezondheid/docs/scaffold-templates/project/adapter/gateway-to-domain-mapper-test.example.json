@@ -1,0 +1,9 @@
+{
+  "_target": "zzsmoke-adapter/src/test/java/be/mijngezondheid/zzsmoke/adapter/gateway/GatewayGadgetToDomainMapperTest.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.gateway",
+  "Name": "Gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "dtoPackage": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "gatewayFixture": "gatewayThermometer",
+  "fixture": "thermometer"
+}

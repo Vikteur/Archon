@@ -1,0 +1,36 @@
+{{!
+  Entity behaviour test: every Mother scenario is a valid entity. Grouped with @Nested per behaviour, as the
+  report-domain tests do; add a @Nested class per named mutation.
+  Exemplar: report-domain src/test .../collection/ReportCollectionTest.java
+  Target: <capability>-domain/src/test/java/<pkg>/<Name>Test.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, fixtures[method, Method (capitalised method name)]
+  Left to you: a @Nested class per behaviour (mutation, state transition) with its own given/when/then cases.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}Test {
+
+    @Nested
+    class Validate {
+{{#fixtures}}
+
+        @Test
+        void given{{{Method}}}_whenValidate_thenNoErrors() {
+            // Given
+            var {{{name}}} = {{{Name}}}Mother.{{{method}}}();
+
+            // When
+            var notification = {{{name}}}.validate();
+
+            // Then
+            assertThat(notification.hasErrors()).isFalse();
+        }
+{{/fixtures}}
+    }
+}

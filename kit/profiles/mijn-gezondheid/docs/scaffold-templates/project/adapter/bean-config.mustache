@@ -1,0 +1,53 @@
+{{!
+  Context bean wiring: registers every class whose name ends in "UseCase" or contains "Factory" under the
+  context's usecase and domain packages, so neither layer needs a Spring annotation (P7). One per context.
+  Exemplars: report-adapter .../config/ReportBeanConfig.java, vaccination-adapter .../config/VaccinationBeanConfig.java
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/config/<Ctx>BeanConfig.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Ctx (capitalised context, e.g. Report), ctx (camel-case, e.g. report),
+          usecaseBasePackage, domainBasePackage (e.g. be.mijngezondheid.report.usecase, be.mijngezondheid.report.domain)
+  Left to you: explicit @Bean methods for helpers whose names the filter does not match (resolvers, enrichers).
+}}
+package {{{package}}};
+
+import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.core.type.classreading.MetadataReader;
+import org.springframework.core.type.classreading.MetadataReaderFactory;
+import org.springframework.core.type.filter.TypeFilter;
+
+@Configuration
+@NoArgsConstructor
+public class {{{Ctx}}}BeanConfig {
+
+    @Bean
+    static BeanFactoryPostProcessor {{{ctx}}}BeanFactoryPostProcessor(ApplicationContext beanRegistry) {
+        return _ ->
+                {{{ctx}}}ApplicationContext(
+                        (BeanDefinitionRegistry) ((GenericApplicationContext) beanRegistry)
+                                .getBeanFactory());
+    }
+
+    static void {{{ctx}}}ApplicationContext(BeanDefinitionRegistry beanRegistry) {
+        ClassPathBeanDefinitionScanner beanDefinitionScanner = new ClassPathBeanDefinitionScanner(beanRegistry);
+        beanDefinitionScanner.addIncludeFilter(addServiceFilter());
+        beanDefinitionScanner.scan(
+                "{{{usecaseBasePackage}}}",
+                "{{{domainBasePackage}}}");
+    }
+
+    static TypeFilter addServiceFilter() {
+        return (MetadataReader mr, MetadataReaderFactory _) -> mr.getClassMetadata()
+                .getClassName()
+                .endsWith("UseCase") ||
+                mr.getClassMetadata()
+                        .getClassName()
+                        .contains("Factory");
+    }
+}

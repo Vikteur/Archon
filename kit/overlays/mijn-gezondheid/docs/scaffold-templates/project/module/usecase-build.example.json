@@ -1,0 +1,5 @@
+{
+  "_target": "zzsmoke-usecase/build.gradle.kts",
+  "capability": "zzsmoke",
+  "authentication": false
+}

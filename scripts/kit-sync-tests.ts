@@ -76,10 +76,6 @@ export const SUITE_EXCLUDE: Record<string, string> = {
   'scripts/test/audit-log.test.sh':
     "it compares the hook with a reference commit of the source's history",
   // The Claude agents and their settings, which ship converted to .github/agents.
-  '.archon/scripts/test/delegator-fence.test.sh':
-    "it reads the Claude agent's frontmatter tools list",
-  '.archon/scripts/test/delegator-settings.test.sh':
-    "it reads the Claude delegator's settings file",
   '.archon/scripts/test/contract-agent-fence.test.sh':
     "it reads the Claude agent's frontmatter tools list",
   'scripts/test/scaffold.test.sh':

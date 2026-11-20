@@ -1,0 +1,25 @@
+{
+  "_target": "zzsmoke-gateway/src/main/java/be/mijngezondheid/zzsmoke/gateway/dto/GatewayGadget.java",
+  "package": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "Name": "Gadget",
+  "fields": [
+    {
+      "type": "String",
+      "name": "externalId"
+    },
+    {
+      "type": "String",
+      "name": "description",
+      "json": "label"
+    },
+    {
+      "type": "String",
+      "name": "countryCode"
+    },
+    {
+      "type": "String",
+      "name": "administerDate",
+      "last": true
+    }
+  ]
+}

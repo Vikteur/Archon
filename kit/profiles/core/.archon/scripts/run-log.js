@@ -15,7 +15,7 @@
 // Exit codes: 0 printed; 1 no log for the run (runs before 2026-10-18 16:09 have none); 2 usage, or an ambiguous id.
 // Reads $ARCHON_HOME/workspaces/<owner>/<repo>/logs/<id>.jsonl (ARCHON_HOME defaults to ~/.archon), and asks
 // `archon workflow get <id> --json` for the status (RUN_LOG_OFFLINE=1 skips it).
-// Also a module: run-watch.js and verify-fixes.js require parse, clock, findRun, archonGet and BUCKETS.
+// Also a module: it exports parse, clock, findRun, archonGet and BUCKETS.
 'use strict';
 const fs = require('fs');
 const path = require('path');

@@ -2,7 +2,7 @@
 # The CI verdict of a commit, read from the statuses the local runner posts (.claude/scripts/ci-local.sh --post): one
 # commit status per job of .github/workflows/ci.yml, context local-ci/<job>. Local CI is the verdict for good (owner
 # decisions D14, D21 of 2026-10-20): GitHub Actions runs nothing, so there is no Actions fallback and no date switch.
-# ci-by-sha.sh and wait-merge.sh read the verdict through this script.
+# ci-by-sha.sh reads the verdict through this script.
 #   local-ci-status.sh <owner/repo> <sha>
 # Prints one line "<state> <detail>"; exit 0. State:
 #   none        no local-ci/* status on the commit, and no live local CI run of it in the queue (ci-queue.sh state).

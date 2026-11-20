@@ -1,6 +1,38 @@
 {
+  ".archon/scripts/test/scaffold-step.test.sh": {
+    "derivedFrom": ".archon/scripts/test/scaffold-step.test.sh",
+    "sourceSha256": "db2bf985dfc25bfc36583d7d34a66f7dad63ed4d39c69e3bf221eba335ec0056"
+  },
+  ".archon/scripts/test/scope-local.test.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
   ".claude/CLAUDE.md": {
     "derivedFrom": ".claude/CLAUDE.md",
     "sourceSha256": "d4ba4b1e2304da7634040228f3982beb4f512f09ceefee0c34a28c4503c6fa72"
+  },
+  ".claude/hooks/scripts/scope-guard.sh": {
+    "derivedFrom": ".claude/hooks/scripts/scope-guard.sh",
+    "sourceSha256": "26bd1f73a969a2d626f5c307ddf763b870fb53929a1015f28f7f41886560ff44"
+  },
+  ".claude/scripts/ci-cost.sh": {
+    "derivedFrom": ".claude/scripts/ci-cost.sh",
+    "sourceSha256": "edfe86f9b859585767cf50a6761b4afb7583737f623a1e2ba855301887de4362"
+  },
+  ".claude/scripts/groma-check.sh": {
+    "derivedFrom": ".claude/scripts/groma-check.sh",
+    "sourceSha256": "447fe2ef797a4acce182656b7680cd1bd5d43191151c175e749ad5733c20a7cb"
+  },
+  ".githooks/pre-push": {
+    "derivedFrom": ".githooks/pre-push",
+    "sourceSha256": "f66fdc61340600b0f05449a9fc1eb487de41f08eb15a0b64d2929bc636991e96"
+  },
+  "scripts/test/ci-cost.test.sh": {
+    "derivedFrom": "scripts/test/ci-cost.test.sh",
+    "sourceSha256": "f45fc28e410d89ff7e85af1168438e8e8e2fb8ee554da26d87b5f8b46ac99e4d"
+  },
+  "scripts/test/pre-push.test.sh": {
+    "derivedFrom": "scripts/test/pre-push.test.sh",
+    "sourceSha256": "9a62094a2e5aea2ae72cb74608ac0534fdc57d1fd0f6b5a03dc6db08faa91403"
   }
 }

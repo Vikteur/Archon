@@ -2,7 +2,7 @@
 # Contract tests for the way the repo's scripts and workflows call other scripts and push (ROADMAP R17, T12). Each check
 # pins a defect class that cost a live run, or that the build-feature standing exception depends on:
 #  - W2, no direct call of a script without the execute bit: git checks a 100644 script out without it, so a call that
-#    does not go through bash, sh, source or `.` fails with Permission denied (TASK-74: close-out.sh and
+#    does not go through bash, sh, source or `.` fails with Permission denied (TASK-74: a post-merge script and
 #    retro-commit.sh ran scripts/tokenomics/commit-reports.sh directly and the token reports went uncommitted). A call
 #    is direct when the script's path stands where a command stands: at the start of a line, after ; & | ( $( or `,
 #    after then/do/else/if/while/until/exec/!, or after VAR=value assignments. The scan reads the repo's scripts, the
@@ -159,8 +159,8 @@ mkdir -p "$tmp/.archon/scripts" "$tmp/.archon/workflows" "$tmp/scripts/tokenomic
 printf '#!/usr/bin/env bash\necho reports\n' > "$tmp/scripts/tokenomics/commit-reports.sh"
 printf '#!/usr/bin/env bash\necho ok\n' > "$tmp/.claude/scripts/runs.sh"
 chmod 644 "$tmp/scripts/tokenomics/commit-reports.sh"; chmod 755 "$tmp/.claude/scripts/runs.sh"
-# close-out.sh before TASK-74: the 100644 commit-reports.sh run directly through a variable
-cat > "$tmp/.archon/scripts/close-out.sh" <<'EOF'
+# post-merge.sh, a script before TASK-74: the 100644 commit-reports.sh run directly through a variable
+cat > "$tmp/.archon/scripts/post-merge.sh" <<'EOF'
 #!/usr/bin/env bash
 if find_umbrella 2> /dev/null && [ -f "$umbrella/scripts/tokenomics/commit-reports.sh" ]; then
   "$umbrella/scripts/tokenomics/commit-reports.sh" "$umbrella" >&2 || echo "warning: the token reports were not committed." >&2
@@ -168,9 +168,9 @@ fi
 EOF
 out=$(direct_calls "$tmp")
 check "W2 self-test: TASK-74's direct call of a 100644 script through a variable is found" \
-  $(grep -q '^\.archon/scripts/close-out\.sh:3: ' <<< "$out"; echo $?) "$out"
-check "W2 self-test: a test of the file (-f) is not a call" $(! grep -q 'close-out\.sh:2:' <<< "$out"; echo $?) "$out"
-sed -i 's#^  "\$umbrella/scripts#  bash "$umbrella/scripts#' "$tmp/.archon/scripts/close-out.sh"
+  $(grep -q '^\.archon/scripts/post-merge\.sh:3: ' <<< "$out"; echo $?) "$out"
+check "W2 self-test: a test of the file (-f) is not a call" $(! grep -q 'post-merge\.sh:2:' <<< "$out"; echo $?) "$out"
+sed -i 's#^  "\$umbrella/scripts#  bash "$umbrella/scripts#' "$tmp/.archon/scripts/post-merge.sh"
 out=$(direct_calls "$tmp")
 check "W2 self-test: the same call through bash is not reported" $([ -z "$out" ]; echo $?) "$out"
 cat > "$tmp/.archon/workflows/w.yaml" <<'EOF'

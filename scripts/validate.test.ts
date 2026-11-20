@@ -42,6 +42,8 @@ describe('validate check selection', () => {
       ['bun', 'run', 'check:provider-contract-schema'],
       ['bun', 'run', 'check:chat-contract-schema'],
       ['bun', 'run', 'check:api-types'],
+      ['bun', 'run', 'check:kit'],
+      ['bun', 'run', 'check:bundled-kit'],
     ]);
   });
 

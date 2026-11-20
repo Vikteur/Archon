@@ -1,0 +1,63 @@
+{
+  "_target": "zzsmoke-adapter/src/test/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetAdminControllerTest.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "GadgetAdmin",
+  "beans": [
+    "GadgetRequestDTOToDomainMapper"
+  ],
+  "imports": [
+    "be.mijngezondheid.common.domain.validation.Notification",
+    "be.mijngezondheid.zzsmoke.usecase.gadget.CreateGadgetUseCase",
+    "be.mijngezondheid.zzsmoke.usecase.gadget.DeleteGadgetUseCase",
+    "be.mijngezondheid.zzsmoke.usecase.gadget.GetGadgetsUseCase",
+    "java.util.List",
+    "static be.mijngezondheid.zzsmoke.domain.gadget.GadgetMother.thermometer"
+  ],
+  "useCases": [
+    {
+      "type": "CreateGadgetUseCase",
+      "field": "createGadgetUseCase"
+    },
+    {
+      "type": "DeleteGadgetUseCase",
+      "field": "deleteGadgetUseCase"
+    },
+    {
+      "type": "GetGadgetsUseCase",
+      "field": "getGadgetsUseCase"
+    }
+  ],
+  "cases": [
+    {
+      "test": "givenValidAudience_whenCreateOrUpdate_thenNoContent",
+      "stub": "when(createGadgetUseCase.execute(any())).thenReturn(Notification.empty())",
+      "request": "post(\"/api/admin/blocked-audience\").contentType(MediaType.APPLICATION_JSON).content(\"{\\\"audience\\\":\\\"Smart thermometer\\\",\\\"endpoints\\\":[]}\")",
+      "status": "isNoContent",
+      "jsonPaths": []
+    },
+    {
+      "test": "givenUseCaseErrors_whenCreateOrUpdate_thenBadRequestWithErrors",
+      "stub": "when(createGadgetUseCase.execute(any())).thenReturn(Notification.of(\"invalid\"))",
+      "request": "post(\"/api/admin/blocked-audience\").contentType(MediaType.APPLICATION_JSON).content(\"{\\\"audience\\\":\\\"\\\",\\\"endpoints\\\":[]}\")",
+      "status": "isBadRequest",
+      "jsonPaths": [
+        {
+          "path": "$.errors[0]",
+          "value": "\"invalid\""
+        }
+      ]
+    },
+    {
+      "test": "givenStoredGadgets_whenGetBlockedAudiences_thenReturnThem",
+      "stub": "when(getGadgetsUseCase.execute()).thenReturn(List.of(thermometer()))",
+      "request": "get(\"/api/admin/blocked-audience\")",
+      "status": "isOk",
+      "jsonPaths": [
+        {
+          "path": "$[0].audience",
+          "value": "\"Smart thermometer\""
+        }
+      ]
+    }
+  ]
+}

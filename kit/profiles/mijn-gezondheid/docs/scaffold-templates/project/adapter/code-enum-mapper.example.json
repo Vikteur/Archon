@@ -1,0 +1,20 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/gateway/GadgetKindMapper.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.gateway",
+  "Name": "GadgetKind",
+  "Domain": "GadgetKind",
+  "External": "ExternalGadgetKind",
+  "imports": [
+    "be.mijngezondheid.zzsmoke.domain.gadget.GadgetKind"
+  ],
+  "pairs": [
+    {
+      "domain": "SENSOR",
+      "external": "SENSOR_DEVICE"
+    },
+    {
+      "domain": "ACTUATOR",
+      "external": "ACTUATOR_DEVICE"
+    }
+  ]
+}

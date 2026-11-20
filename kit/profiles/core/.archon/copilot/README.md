@@ -1,7 +1,7 @@
 # Copilot CLI kit
 
 Runs this repo's `build-feature` workflow on the GitHub Copilot CLI as `build-feature-copilot`. Copilot CLI only, never
-VS Code. The workflow is generated from `build-feature.yaml` by `.archon/scripts/copilot-workflow.js`; do not edit it.
+VS Code. The workflow is generated from `build-feature.yaml` by the kit; do not edit it.
 
 ## What Copilot reads (Copilot CLI 1.0.114, `copilot help config`)
 

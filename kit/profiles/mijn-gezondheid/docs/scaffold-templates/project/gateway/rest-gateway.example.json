@@ -1,0 +1,12 @@
+{
+  "_target": "zzsmoke-gateway/src/main/java/be/mijngezondheid/zzsmoke/gateway/DefaultGadgetGateway.java",
+  "package": "be.mijngezondheid.zzsmoke.gateway",
+  "Name": "Gadget",
+  "name": "gadget",
+  "dtoPackage": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "bearer": true,
+  "restClient": "zzsmokeRestClient",
+  "property": "properties.endpoint.zzsmoke.gadgets",
+  "path": "/gadgets",
+  "exceptionClass": "be.mijngezondheid.zzsmoke.gateway.ZzsmokeGatewayException"
+}

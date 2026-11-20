@@ -5,7 +5,7 @@
 
 You read `.github/skills`, `.github/agents`, `.github/instructions` and the hooks in `.claude/settings.json` and
 `.github/hooks/*.json` like any Copilot CLI session. Claude-only mechanics do not exist for you: the Agent tool (do a
-subagent's job yourself, following its file in `.github/agents/`, or run it as `--agent <name>`) and the delegator.
+subagent's job yourself, following its file in `.github/agents/`, or run it as `--agent <name>`).
 The rules they enforce still hold; the gates (`commit-msg` hook, local CI by commit SHA, `tdd-check`) and the run guard
 (`.archon/copilot/hooks/run-guard.sh`) are what catch you.
 
@@ -23,6 +23,12 @@ archon workflow approve <run-id> "<text>"   # or: reject <run-id> "<reason>" / r
 archon workflow resume <run-id>        # a failed or paused run
 ```
 
+Start a run from the ticket text the user gives you (pasted, or read from a ticket tool): write it unchanged to
+a file in a scratch folder outside the repo, then run
+`archon workflow run build-feature-copilot --detach "$(cat <file>)"`, so no quoting or retyping changes it.
+Never approve or reject `plan-approval` yourself: show the user the plan path and the STOP items the run names
+(`archon workflow get <run-id> --json`), and run `approve` or `reject` only on the user's own words.
+
 The run asks its blocked questions through `attention`; answer them from the ticket and `docs/memory.md`, and ask
-the owner when you do not know. Never merge: the run's `wait-merge` node waits for the owner, who merges or calls `merge-ready.sh <pr>`. The delegator and the run tooling follow `BUILD_WORKFLOW` (default `build-feature`), so park the ticket first. Setup of this kit:
+the owner when you do not know. Never merge: the run stops once for a person to approve the plan and ends when its pull request is ready, and a team member reviews and merges it. The run tooling follows `BUILD_WORKFLOW` (default `build-feature`). Setup of this kit:
 `.archon/copilot/README.md`.

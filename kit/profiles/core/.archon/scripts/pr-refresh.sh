@@ -8,7 +8,7 @@
 #     $ARTIFACTS_DIR/plan.md has a "## Owner decisions" section, a copy of that section's body, and, when
 #     $ARTIFACTS_DIR/scaffold-check.md exists, that report without its title (the scaffold gate's; the full list stays folded),
 #     and, when $ARTIFACTS_DIR/mcp-use.md exists (mcp-use-check.js's), that report without its title,
-#     and, when $ARTIFACTS_DIR/stop-items.txt exists (stop-route's), the "STOP items touched:" line stop-check.sh reads,
+#     and, when $ARTIFACTS_DIR/stop-items.txt exists (stop-route's), the "STOP items touched:" line,
 #     as the block's last line; an empty file says the ticket touches no STOP item.
 #     Without a block the new one goes before the final "Generated with" line (or at the end). Idempotent.
 set -euo pipefail

@@ -1,0 +1,26 @@
+{{!
+  Domain creation request: the input of the Factory and of the entity's package-private constructor.
+  Exemplar: therapeutic-relation-domain .../exclusion/CreateTherapeuticExclusionDomainRequest.java
+  Target: <capability>-domain/src/main/java/<pkg>/Create<Name>DomainRequest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[], fields[type, name]
+  Left to you: nothing; it is a plain carrier.
+}}
+package {{{package}}};
+
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Builder
+@Getter
+@EqualsAndHashCode
+public class Create{{{Name}}}DomainRequest {
+
+{{#fields}}
+    private {{{type}}} {{{name}}};
+{{/fields}}
+}

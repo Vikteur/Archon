@@ -1,2 +1,0 @@
-{"head": "1111111111111111111111111111111111111111", "main": "2222222222222222222222222222222222222222", "scripts_tree": "3333333333333333333333333333333333333333",
- "head_ci": "none no local-ci status on 1111111", "main_ci": "green every job of ci.yml passed locally", "pr": "https://github.com/o/r/pull/7", "pr_state": "OPEN", "blocked": false}

@@ -1,0 +1,22 @@
+{
+  "_target": "zzsmoke-usecase/src/main/java/be/mijngezondheid/zzsmoke/usecase/gadget/repository/GadgetSearchFacade.java",
+  "package": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "Name": "GadgetSearch",
+  "imports": [
+    "be.mijngezondheid.common.domain.validation.Notification",
+    "be.mijngezondheid.zzsmoke.domain.gadget.Gadget",
+    "java.util.List"
+  ],
+  "methods": [
+    {
+      "returnType": "Notification",
+      "method": "index",
+      "params": "Gadget gadget"
+    },
+    {
+      "returnType": "List<String>",
+      "method": "autocomplete",
+      "params": "String query, Integer limit"
+    }
+  ]
+}

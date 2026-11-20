@@ -3,6 +3,8 @@
  * kit-sync changes in it. scripts/kit-sync.ts runs them.
  */
 import { mergeRewrites, NOUN_REWRITES, NOUN_TARGETED } from './kit-sync-generic';
+import { STANDALONE_TARGETED } from './kit-sync-standalone-text';
+import { CONSUMER_TARGETED } from './kit-sync-consumer';
 
 export const PROFILES = [
   'core',
@@ -10,6 +12,7 @@ export const PROFILES = [
   'java-quarkus',
   'java-spring',
   'openapi-contract',
+  'mijn-gezondheid',
 ] as const;
 export type Profile = (typeof PROFILES)[number];
 export type Kind =
@@ -24,11 +27,18 @@ export type Kind =
   | 'config'
   | 'doc';
 
-export const PROFILE_META: Record<Profile, { requires: Profile[]; description: string }> = {
+/**
+ * `project: true` marks a profile that carries one repo's own files (kit/SPEC.md, Project profiles): the only profile
+ * whose files may lie in docs/scaffold-templates/project/, the repo's own folder. A generic profile never may.
+ */
+export const PROFILE_META: Record<
+  Profile,
+  { requires: Profile[]; description: string; project?: boolean }
+> = {
   core: {
     requires: [],
     description:
-      'Archon run tooling (delegator, STOP policy, merge, CI by SHA, retro, run observability), hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks and the Copilot instructions.',
+      'Archon run tooling (one build run per ticket with a plan approval, CI by SHA, retro, run observability), hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks and the Copilot instructions.',
   },
   java: {
     requires: ['core'],
@@ -49,6 +59,12 @@ export const PROFILE_META: Record<Profile, { requires: Profile[]; description: s
     requires: ['core'],
     description:
       'The contract-api MCP server, contract-agent-readiness, contract-pin, contract-db-parity and the contract-agent.',
+  },
+  'mijn-gezondheid': {
+    requires: ['java-spring', 'openapi-contract'],
+    project: true,
+    description:
+      "The mijn-gezondheid portal's own scaffold templates and its scaffold.json (docs/scaffold-templates/project/), from the hand-written kit/overlays/mijn-gezondheid: java's new-context.sh, smoke.sh and the wiring check run on them as installed.",
   },
 };
 
@@ -83,14 +99,111 @@ export const SCANNED_ROOTS = [
 // ---------------------------------------------------------------------------------------------------------------
 
 /**
- * The owner's own tools (owner decision 2026-11-19: night-preflight is not part of the kit). They are in no profile,
- * and the leak check fails a shipped file that still names one of their scripts (kit/SPEC.md, What never ships).
+ * Never shipped, in no profile: the source's unattended machinery (owner decision 2026-11-19, kit/SPEC.md, What never
+ * ships). A person starts a run, approves its plan and merges its pull request, so the delegator, the night runs, the
+ * merge queue and the STOP ledger have no job in the kit. The leak check fails a shipped file that still names one of
+ * their scripts.
  */
-export const NEVER_SHIP: string[] = [
-  '.archon/scripts/night-preflight.sh',
-  '.archon/scripts/test/night-preflight.test.sh',
-  'docs/archon/script/night-preflight.md',
-];
+export const NEVER_SHIP_GROUPS: Record<string, string[]> = {
+  'The delegator: ticket picking, parallel runs, the night list and its watchers.': [
+    '.archon/scripts/delegator-session.sh',
+    '.archon/scripts/delegator-start.sh',
+    '.archon/scripts/pick-tickets.js',
+    '.archon/scripts/launch-run.sh',
+    '.archon/scripts/park-ticket.sh',
+    '.archon/scripts/commit-tickets.sh',
+    '.archon/scripts/run-watch.js',
+    '.archon/scripts/verify-fixes.js',
+    '.archon/scripts/test/delegator-fence.test.sh',
+    '.archon/scripts/test/delegator-session.test.sh',
+    '.archon/scripts/test/delegator-settings.test.sh',
+    '.archon/scripts/test/delegator-start.test.sh',
+    '.archon/scripts/test/pick-tickets.test.sh',
+    '.archon/scripts/test/launch-run.test.sh',
+    '.archon/scripts/test/park-ticket.test.sh',
+    '.archon/scripts/test/commit-tickets.test.sh',
+    '.archon/scripts/test/run-watch.test.sh',
+    '.archon/scripts/test/verify-fixes.test.sh',
+    '.claude/agents/delegator.md',
+    '.claude/delegator.settings.json',
+    '.archon/schemas/delegator-decision.json',
+  ],
+  "Night runs: the supervisor, its timers, the owner's pings and the nightly digest, run recovery.":
+    [
+      '.archon/scripts/night-preflight.sh',
+      '.archon/scripts/supervisor-ctl.sh',
+      '.archon/scripts/supervisor-jobs.sh',
+      '.archon/scripts/supervisor-judge.sh',
+      '.archon/scripts/supervisor-tick.sh',
+      '.archon/scripts/notify-owner.sh',
+      '.archon/scripts/retro-digest.sh',
+      '.archon/scripts/recover-run.sh',
+      '.archon/scripts/rebase-and-resume.sh',
+      '.archon/scripts/recovery-state.js',
+      '.archon/scripts/classify-failure.js',
+      '.archon/scripts/classify-failure.signatures.json',
+      '.archon/scripts/test/night-preflight.test.sh',
+      '.archon/scripts/test/supervisor-ctl.test.sh',
+      '.archon/scripts/test/supervisor-fence.test.sh',
+      '.archon/scripts/test/supervisor-judge.test.sh',
+      '.archon/scripts/test/supervisor-tick.test.sh',
+      '.archon/scripts/test/notify-owner.test.sh',
+      '.archon/scripts/test/retro-digest.test.sh',
+      '.archon/scripts/test/recover-run.test.sh',
+      '.archon/scripts/test/rebase-and-resume.test.sh',
+      '.archon/scripts/test/recovery-state.test.sh',
+      '.archon/scripts/test/classify-failure.test.sh',
+      '.archon/systemd/delegator-supervisor.service',
+      '.archon/systemd/delegator-supervisor.timer',
+      '.archon/systemd/notify-digest.service',
+      '.archon/systemd/notify-digest.timer',
+      '.archon/notify/ntfy.env.example',
+      'docs/archon/script/night-preflight.md',
+    ],
+  'The merge queue and the post-merge close-out: a team member merges.': [
+    '.archon/scripts/auto-merge.sh',
+    '.archon/scripts/merge-turn.sh',
+    '.archon/scripts/rebase-behind.sh',
+    '.archon/scripts/wait-merge.sh',
+    '.archon/scripts/ready-runs.sh',
+    '.archon/scripts/merge-ready.sh',
+    '.archon/scripts/merge-ledger.sh',
+    '.archon/scripts/sync-main.sh',
+    '.archon/scripts/main-ci.sh',
+    '.archon/scripts/ticket-files.sh',
+    '.archon/scripts/close-out.sh',
+    '.archon/scripts/test/auto-merge.test.sh',
+    '.archon/scripts/test/merge-turn.test.sh',
+    '.archon/scripts/test/rebase-behind.test.sh',
+    '.archon/scripts/test/wait-merge.test.sh',
+    '.archon/scripts/test/wait-merge-ping.test.sh',
+    '.archon/scripts/test/ready-runs.test.sh',
+    '.archon/scripts/test/merge-ready.test.sh',
+    '.archon/scripts/test/merge-ledger.test.sh',
+    '.archon/scripts/test/merge-path.test.sh',
+    '.archon/scripts/test/sync-main.test.sh',
+    '.archon/scripts/test/main-ci.test.sh',
+    '.archon/scripts/test/ticket-files.test.sh',
+    '.archon/scripts/test/close-out.test.sh',
+  ],
+  'The STOP approval ledger: the plan approval replaces it.': [
+    '.archon/scripts/stop-approve.sh',
+    '.archon/scripts/stop-round.sh',
+    '.archon/scripts/stop-check.sh',
+    '.archon/scripts/stop-lib.js',
+    '.archon/scripts/stop-scan.js',
+    '.archon/scripts/test/stop-approve.test.sh',
+    '.archon/scripts/test/stop-round.test.sh',
+    '.archon/scripts/test/stop-check.test.sh',
+    '.archon/scripts/test/stop-scan.test.sh',
+    '.archon/stop/policy.json',
+    '.archon/stop/approvals/_template.json',
+  ],
+  'The Copilot workflow generator: the kit ships its output, transformed (scripts/kit-sync-standalone.ts).':
+    ['.archon/scripts/copilot-workflow.js', '.archon/scripts/test/copilot-workflow.test.sh'],
+};
+
+export const NEVER_SHIP: string[] = Object.values(NEVER_SHIP_GROUPS).flat();
 
 /** Never shipped (or only shipped converted). Checked after NEVER_SHIP. */
 export const EXCLUDE: string[] = [
@@ -104,7 +217,6 @@ export const AGENT_PROFILES: Record<string, Profile> = {
   analyst: 'java',
   'contract-agent': 'openapi-contract',
   debugger: 'java',
-  delegator: 'core',
   'design-critic': 'core',
   developer: 'java',
   'github-agent': 'core',
@@ -175,19 +287,14 @@ export const FILES: Record<Profile, string[]> = {
     '.archon/config.yaml',
     '.archon/copilot/**',
     '.archon/githooks/*',
-    '.archon/notify/ntfy.env.example',
     '.archon/red-triage/*.tsv',
     '.archon/schemas/*',
     '.archon/scripts/*',
-    '.archon/stop/approvals/_template.json',
-    '.archon/stop/policy.json',
-    '.archon/systemd/*',
     '.archon/workflows/build-feature-copilot.yaml',
     '.archon/workflows/build-feature.yaml',
     '.archon/workflows/portal-metrics.yaml',
     '.archon/workflows/sdlc/.shared/**',
     '.claude/CLAUDE.md',
-    '.claude/delegator.settings.json',
     '.claude/hooks/**',
     '.claude/scripts/archon-suites.sh',
     '.claude/scripts/ci-audit.sh',
@@ -237,6 +344,7 @@ export const FILES: Record<Profile, string[]> = {
     'scripts/contract-db-parity/**',
     'scripts/portal-mcp/**',
   ],
+  'mijn-gezondheid': [],
 };
 
 /** A scaffold template that names one of these is Quarkus-flavoured; every other template is stack-neutral. */
@@ -251,17 +359,7 @@ export type Rewrite = [from: string, to: string, count: number];
 
 const ACCOUNTS_LIST = 'Vikteur, ViktorVS1 and viktor-vansteenweghen_ssgia';
 
-/** The delegator's night-list step 6 names night-preflight.sh, which never ships: drop it and renumber step 7. */
-export const DELEGATOR_NIGHT_STEP: Rewrite = [
-  '6. The owner runs `night-preflight.sh` (it is no delegator tool). Start nothing until the owner says it printed GO;\n' +
-    '   help fix each NO-GO it names.\n' +
-    '7. **Build the list',
-  '6. **Build the list',
-  1,
-];
-
 const BASE_TARGETED: Record<string, Rewrite[]> = {
-  '.claude/agents/delegator.md': [DELEGATOR_NIGHT_STEP],
   '.archon/copilot/README.md': [['in the Vikteur/Archon fork', 'in the Archon fork', 1]],
   '.archon/config.yaml': [['  baseBranch: main\n', '  baseBranch: @@KIT_BASE_BRANCH@@\n', 1]],
   '.archon/workflows/build-feature.yaml': [
@@ -351,8 +449,11 @@ const BASE_TARGETED: Record<string, Rewrite[]> = {
   ],
 };
 
-/** Exact rewrites per source file (the lists above plus kit-sync-generic.ts's NOUN_TARGETED). */
-export const TARGETED: Record<string, Rewrite[]> = mergeRewrites(BASE_TARGETED, NOUN_TARGETED);
+/** Exact rewrites per source file (the lists above, kit-sync-generic.ts's NOUN_TARGETED, kit-sync-standalone-text.ts's and kit-sync-consumer.ts's). */
+export const TARGETED: Record<string, Rewrite[]> = mergeRewrites(
+  mergeRewrites(mergeRewrites(BASE_TARGETED, NOUN_TARGETED), STANDALONE_TARGETED),
+  CONSUMER_TARGETED
+);
 
 /**
  * Applied to every shipped text file after conversion, except the verbatim `.agents/skills/archon-cli/**`; then
@@ -393,25 +494,37 @@ export interface LeakReport {
   warnings: string[];
 }
 
-const NEVER_SHIP_SCRIPTS = NEVER_SHIP.map(p => p.split('/').pop() ?? '').filter(
-  n => /\.(sh|js|mjs|ts)$/.test(n) && !/\.test\./.test(n)
+/**
+ * The names a shipped line must not use: each never-ship script, each never-ship agent (by its file and its Copilot
+ * file), and each never-ship systemd unit by its stem (it also names the unit's /etc folder). A test file's own name is
+ * left out: a suite is named by its script.
+ */
+const NEVER_SHIP_NAMES = NEVER_SHIP.flatMap(p => {
+  const n = p.split('/').pop() ?? '';
+  if (/\.test\./.test(n)) return [];
+  if (/\.(sh|js|mjs|ts)$/.test(n)) return [n];
+  if (p.startsWith('.claude/agents/')) return [n, n.replace(/\.md$/, '.agent.md')];
+  if (/\.(service|timer)$/.test(n)) return [n.replace(/\.(service|timer)$/, '')];
+  return [];
+}).filter((n, i, all) => all.indexOf(n) === i);
+
+const NEVER_SHIP_RES = NEVER_SHIP_NAMES.map(
+  name => [name, new RegExp(`(?<![\\w-])${name.replace(/[.]/g, '\\.')}(?![\\w-])`)] as const
 );
 
-/** A test that only asserts a fence denies the script may name it. */
-const isDenyCase = (path: string, line: string): boolean =>
-  path.endsWith('delegator-fence.test.sh') && /\bdeny\b/.test(line);
+/** The never-ship names a text uses (a hook command, a deny rule, a shipped line). */
+export function neverShipNamesIn(text: string): string[] {
+  return NEVER_SHIP_RES.filter(([, re]) => re.test(text)).map(([name]) => name);
+}
 
 /** Shipped lines that name a never-ship script by path. */
 export function neverShipRefs(f: { profile: string; path: string; content: string }): string[] {
   const out: string[] = [];
   const lines = f.content.split('\n');
-  for (const name of NEVER_SHIP_SCRIPTS) {
-    const re = new RegExp(`(?<![\\w-])${name.replace(/[.]/g, '\\.')}(?![\\w-])`);
-    lines.forEach((line, i) => {
-      if (re.test(line) && !isDenyCase(f.path, line))
-        out.push(`${f.profile}/${f.path}:${i + 1}: names never-ship ${name}`);
-    });
-  }
+  lines.forEach((line, i) => {
+    for (const name of neverShipNamesIn(line))
+      out.push(`${f.profile}/${f.path}:${i + 1}: names never-ship ${name}`);
+  });
   return out;
 }
 

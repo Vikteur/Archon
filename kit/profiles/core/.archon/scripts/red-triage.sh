@@ -22,7 +22,7 @@
 # was used), or off (--no-rerun); jobs "<job>=<class>[:<signature>] …" for the red jobs.
 # Exit 0 when triaged: green (nothing for an agent), own or main-state (an agent works on it), conflict (the GitHub
 # agent rebases). Exit 3: infra, still red after its one rerun, or with the rerun spent or off: not a code problem, so
-# no agent works on it; the owner or the delegator looks at the machine. Exit 1 when it cannot triage (no status on the
+# no agent works on it; a person looks at the machine. Exit 1 when it cannot triage (no status on the
 # commit, a job still pending, GitHub did not answer); exit 2 on bad usage.
 # Every triage is recorded in the CI ledger (event triage); a ledger that cannot be written changes nothing.
 # Overrides: CI_LOCAL_ROOT, CI_LOCAL (the runner), RED_TRIAGE_INFRA, RED_TRIAGE_FLAKY (the signature files),

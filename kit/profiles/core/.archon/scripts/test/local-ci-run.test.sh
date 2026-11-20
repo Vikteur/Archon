@@ -84,7 +84,7 @@ for _ in $(seq 1 50); do [ -s "$RUN_LOG" ] && grep -q "done (exit" "$root/out/no
 check "--no-wait runs the runner on the commit in the background" '[ "$(cat "$RUN_LOG")" = "--post $head" ]'
 check "--no-wait logs to no-wait/<sha7>.log" 'grep -q runner-output "$root/out/no-wait/${head:0:7}.log"'
 check "--no-wait prints nothing on stdout" '[ ! -s "$root/stdout" ]'
-# --no-wait from a run worktree runs the main checkout's copy: close-out deletes the worktree while the run goes on.
+# --no-wait from a run worktree runs the main checkout's copy: the worktree may be deleted while the run goes on.
 mkdir -p "$r/.archon/scripts"
 sed 's/^set -uo pipefail$/set -uo pipefail; echo from-the-main-copy >\&2/' "$script" > "$r/.archon/scripts/local-ci-run.sh"
 wt=$root/wt; git -C "$r" worktree add -q --detach "$wt"

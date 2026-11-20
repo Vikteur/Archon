@@ -35,13 +35,14 @@ const kitSetupFlags: FlagHelp[] = [
   { spec: '--contract <file>', description: 'OpenAPI contract (.yaml, .yml or .json)' },
   {
     spec: '--profile <a,b,c>',
-    description: 'Kit profiles (default: last run, then core,java,java-spring,openapi-contract)',
+    description:
+      'Kit profiles (default: last run, then core,java,java-spring,openapi-contract,mijn-gezondheid)',
   },
   { spec: '--backlog', description: 'Use Backlog.md for tickets (absent: off)' },
   { spec: '--yes', description: 'Skip the confirmation' },
   { spec: '--no-tools', description: 'Skip the tool installer' },
   { spec: '--no-rtk', description: 'Skip the rtk hooks' },
-  { spec: '--no-web', description: 'Do not start the web views' },
+  { spec: '--no-web', description: 'Do not start or open the web views (see kit web)' },
 ];
 
 const kitToolsFlags: FlagHelp[] = [

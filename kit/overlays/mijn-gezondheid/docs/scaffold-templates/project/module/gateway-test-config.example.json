@@ -1,0 +1,6 @@
+{
+  "_target": "zzsmoke-gateway/src/test/java/be/mijngezondheid/zzsmoke/gateway/TestConfig.java",
+  "package": "be.mijngezondheid.zzsmoke.gateway",
+  "gatewayPackage": "be.mijngezondheid.zzsmoke.gateway",
+  "restClient": "zzsmokeRestClient"
+}

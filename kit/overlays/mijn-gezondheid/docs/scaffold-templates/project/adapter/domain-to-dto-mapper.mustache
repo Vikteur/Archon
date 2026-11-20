@@ -1,0 +1,29 @@
+{{!
+  Domain to DTO mapper: a @Component instance mapper onto the OpenAPI-generated DTO's builder; no MapStruct.
+  Exemplar: vaccination-adapter .../controller/VaccinationDomainToDTOMapper.java
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/controller/<Name>DomainToDTOMapper.java
+  Package: "package" is the full package of the file (no suffix is appended); the generated DTOs sit in the same
+          package when openApiConventions.apiPackage is the controller package.
+  Vars:   package, Name, domainPackage, Dto (generated DTO class, e.g. VaccinationDTO), imports[],
+          mappings[dtoField, expr (Java expression over the parameter "domain", e.g. domain.getDescription())]
+  Left to you: nested DTOs and enum-to-string conversions beyond a single expression.
+}}
+package {{{package}}};
+
+import {{{domainPackage}}}.{{{Name}}};
+import org.springframework.stereotype.Component;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Component
+public class {{{Name}}}DomainToDTOMapper {
+
+    {{{Dto}}} map({{{Name}}} domain) {
+        return {{{Dto}}}.builder()
+{{#mappings}}
+                .{{{dtoField}}}({{{expr}}})
+{{/mappings}}
+                .build();
+    }
+}

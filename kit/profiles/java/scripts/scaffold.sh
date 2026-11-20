@@ -21,6 +21,8 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 SCAFFOLD_DIR="$root/docs/scaffold-templates"
 # mustache@4.2.0, pinned with its integrity hash in scripts/scaffold/package-lock.json; npm ci installs it on first use.
+# Rendered without HTML escaping: the output is source code, so `{{x}}` writes "/", quotes and "&" as given (the
+# mustache CLI would write &#x2F;, &quot; and &amp;).
 TOOL_DIR="$root/scripts/scaffold"
 
 test_only=0
@@ -65,7 +67,9 @@ if [[ "$vars" == "{"* ]]; then
 fi
 [[ -f "$vars" ]] || { echo "[scaffold] vars file not found: $vars" >&2; exit 1; }
 
-out="$(node "$renderer" "$vars" "$template")"
+out="$(node -e 'const m = require(process.argv[1]); const fs = require("fs"); m.escape = String;
+  process.stdout.write(m.render(fs.readFileSync(process.argv[3], "utf8"), JSON.parse(fs.readFileSync(process.argv[2], "utf8"))));' \
+  "$TOOL_DIR/node_modules/mustache" "$vars" "$template")"
 
 # The declared package must match the target's directory under src/<set>/java/.
 if [[ "$t" =~ (^|/)src/([^/]+)/java/(.+/)?[^/]+\.java$ ]]; then

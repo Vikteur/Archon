@@ -63,6 +63,11 @@ contains "$out" "frontend   $tmp/fe" "dry run frontend"
 contains "$out" "backlog    off" "backlog default off"
 contains "$out" "branch chore/archon-kit" "default branch"
 contains "$out" "in $HOME/archon," "default archon dir"
+contains "$out" "web views  start and open them once they answer" "web views on by default"
+contains "$out" "Groma map" "the plan names the Groma map"
+out="$(run 0 help-steps --help)"
+contains "$out" "10. starts the web views and opens each" "help names the web step"
+contains "$out" "the Groma map (groma init" "help names the Groma map"
 
 # Relative paths and ~ resolve; a JSON contract and the flags show in the plan.
 # shellcheck disable=SC2088  # a literal ~ on purpose: the script expands it itself

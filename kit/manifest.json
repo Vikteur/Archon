@@ -2,12 +2,12 @@
   "version": 1,
   "source": {
     "name": "wedding-portal",
-    "commit": "7dbc8e2a87f7aefc6286c1fdd0f13ba7d6bbebd8"
+    "commit": "c84f413583bf9db3d5dc096ac925d4a534c9a565"
   },
   "profiles": {
     "core": {
       "requires": [],
-      "description": "Archon run tooling (delegator, STOP policy, merge, CI by SHA, retro, run observability), hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks and the Copilot instructions."
+      "description": "Archon run tooling (one build run per ticket with a plan approval, CI by SHA, retro, run observability), hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks and the Copilot instructions."
     },
     "java": {
       "requires": [
@@ -32,6 +32,14 @@
         "core"
       ],
       "description": "The contract-api MCP server, contract-agent-readiness, contract-pin, contract-db-parity and the contract-agent."
+    },
+    "mijn-gezondheid": {
+      "requires": [
+        "java-spring",
+        "openapi-contract"
+      ],
+      "project": true,
+      "description": "The mijn-gezondheid portal's own scaffold templates and its scaffold.json (docs/scaffold-templates/project/), from the hand-written kit/overlays/mijn-gezondheid: java's new-context.sh, smoke.sh and the wiring check run on them as installed."
     }
   },
   "exclusive": [
@@ -138,7 +146,7 @@
       "template": true,
       "origin": ".archon/config.yaml",
       "kind": "config",
-      "sha256": "ee0db09a0fe8911285fd9bd62ab6da37bf4d9a10419eb8de4511e887c33026ad"
+      "sha256": "b7bd5b11046ce0bfc6c791fd2a65664ab8aa9456df795b08c43612aae28a1546"
     },
     {
       "path": ".archon/copilot/README.md",
@@ -147,7 +155,7 @@
       "template": false,
       "origin": ".archon/copilot/README.md",
       "kind": "doc",
-      "sha256": "ff1d048195bfe4d1338d50bb021ffc679c1c474ddad1723d68faa48a32e9b35a"
+      "sha256": "a6f122b19fab62c0c6f2ae6cdd21ef0a5abdbd943637ec6a64a5ae09952bb2ae"
     },
     {
       "path": ".archon/copilot/deny.json",
@@ -156,7 +164,7 @@
       "template": false,
       "origin": ".claude/settings.json",
       "kind": "config",
-      "sha256": "d9f8734a7fce741e7e55dee1c05f4467bce7ad2092ba38ce933ffe20fcdff9b4"
+      "sha256": "b8e303ee7648e84482e8cc13a9771b022bf3d1a18acde9ea9c5dc473ae48bf15"
     },
     {
       "path": ".archon/copilot/hooks/run-guard.sh",
@@ -165,7 +173,7 @@
       "template": false,
       "origin": ".archon/copilot/hooks/run-guard.sh",
       "kind": "hook",
-      "sha256": "b074fa5a5ccdebbb54c00d7354ea8f288b9f3fb9c9d5d7a751c88eb9ec9dd025"
+      "sha256": "66ff0bdda3bb2304a7db66bd968a2ad54229aa3b8957fb1bbf09c96040af389f"
     },
     {
       "path": ".archon/copilot/tools.json",
@@ -183,7 +191,7 @@
       "template": false,
       "origin": ".archon/githooks/commit-msg",
       "kind": "hook",
-      "sha256": "56ca71f32f763beae03e4be92f7c8c7db88f311ab92f0a354717e2db99716e66"
+      "sha256": "2d73e40ed90b75f7d8f3b0c372899856c2e6ca8d41cad1a0739ba0502298a35f"
     },
     {
       "path": ".archon/githooks/pre-push",
@@ -193,15 +201,6 @@
       "origin": ".archon/githooks/pre-push",
       "kind": "hook",
       "sha256": "58b964bfe45e0e5cdfdece27ef4306674e787488d28aa505d6beeda8ae515036"
-    },
-    {
-      "path": ".archon/notify/ntfy.env.example",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/notify/ntfy.env.example",
-      "kind": "config",
-      "sha256": "1cab039cabed6f466811003d55650195882e92a093a8d6e1eda7c9865bfd93cb"
     },
     {
       "path": ".archon/red-triage/flaky.tsv",
@@ -222,15 +221,6 @@
       "sha256": "1ec1028f1642b65ff31afa2573fb6b4fa3397b31531192135e2c5f32fe42b3bc"
     },
     {
-      "path": ".archon/schemas/delegator-decision.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/schemas/delegator-decision.json",
-      "kind": "config",
-      "sha256": "e2005cc0b4d981c7e5ca5af00c6f3e36efca5ce69d621b21aa17fff530304a9a"
-    },
-    {
       "path": ".archon/scripts/answer-blocked.sh",
       "profile": "core",
       "mode": "0755",
@@ -238,15 +228,6 @@
       "origin": ".archon/scripts/answer-blocked.sh",
       "kind": "script",
       "sha256": "3e1055ee05cfe845c0632a2f286c89cc29f101802fd3013d3722f00d44580bd5"
-    },
-    {
-      "path": ".archon/scripts/auto-merge.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/auto-merge.sh",
-      "kind": "script",
-      "sha256": "09f653500edf172c38501cc9ce2c3b41ffb1403b87cda36dfafc16b966d5bd6e"
     },
     {
       "path": ".archon/scripts/blocked-stop.sh",
@@ -276,40 +257,13 @@
       "sha256": "19d7b7803c882b759dd9b34e7f06c3388e4a65e867d84d7858083ba2aab18c23"
     },
     {
-      "path": ".archon/scripts/classify-failure.js",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/classify-failure.js",
-      "kind": "script",
-      "sha256": "98a867c9aae7787792730200abca56fd96cbd1c9b811c37dfaa043faccc8062f"
-    },
-    {
-      "path": ".archon/scripts/classify-failure.signatures.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/classify-failure.signatures.json",
-      "kind": "config",
-      "sha256": "523b187cfd1dfb2917db418d601637b14b52adaf48323e83d00ae7cbbf77ab1c"
-    },
-    {
       "path": ".archon/scripts/cleanup-merged.sh",
       "profile": "core",
       "mode": "0755",
       "template": false,
       "origin": ".archon/scripts/cleanup-merged.sh",
       "kind": "script",
-      "sha256": "9b575b106a9dc53e47df61738f09e6753b7f79531dcb207377f86d64035f8808"
-    },
-    {
-      "path": ".archon/scripts/close-out.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/close-out.sh",
-      "kind": "script",
-      "sha256": "81139e74ca262ab7d0622f9228dd04dc71add6679004777b31c563534ee48056"
+      "sha256": "f0ff5cb949f947c770c6ee4ea71f480879c2fb3055c9152b0253366637854785"
     },
     {
       "path": ".archon/scripts/codegraph-setup.sh",
@@ -321,15 +275,6 @@
       "sha256": "29d75e3b1a8247fca576e3df54d4cfe45e7fd9df34c371169938c3bdc72a728b"
     },
     {
-      "path": ".archon/scripts/commit-tickets.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/commit-tickets.sh",
-      "kind": "script",
-      "sha256": "e4190f00d3dad694684f152ec05b3503d7c773bee73c30b9506e2818b0551890"
-    },
-    {
       "path": ".archon/scripts/copilot-audit.js",
       "profile": "core",
       "mode": "0644",
@@ -339,40 +284,13 @@
       "sha256": "d1345a87224241fde78e2aa4d38409bbd71f2b02b7b38ccddc6a9888112dc918"
     },
     {
-      "path": ".archon/scripts/copilot-workflow.js",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/scripts/copilot-workflow.js",
-      "kind": "script",
-      "sha256": "86f13a6ac110c3f3768f94e66e3bfe9e31d321ddf0b370b6b9818c00b5107abb"
-    },
-    {
-      "path": ".archon/scripts/delegator-session.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/delegator-session.sh",
-      "kind": "script",
-      "sha256": "11d20284d17d447ab9db68cee1c7f24dfe40c84f7928b81d224b1cca32e8494f"
-    },
-    {
-      "path": ".archon/scripts/delegator-start.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/delegator-start.sh",
-      "kind": "script",
-      "sha256": "80382a3a8fe8e3c213568eae9eee63c44185f9296ce42e849717c6b3c2850d9f"
-    },
-    {
       "path": ".archon/scripts/groma-links.sh",
       "profile": "core",
       "mode": "0755",
       "template": false,
       "origin": ".archon/scripts/groma-links.sh",
       "kind": "script",
-      "sha256": "663dfec68f41e6e09e07d6e570bf83c31197440d014d231a80617135ebcd2928"
+      "sha256": "14f4e43c33b6ee9797f7c9926238576cac80be9f274f70421aacffdfa0010ac7"
     },
     {
       "path": ".archon/scripts/groma-sync.sh",
@@ -402,22 +320,13 @@
       "sha256": "3985de315fcd800d9af8f999128edd1c01222fd334b9edd3153d645b9d7dacd2"
     },
     {
-      "path": ".archon/scripts/launch-run.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/launch-run.sh",
-      "kind": "script",
-      "sha256": "0b105e54f32064d6a9d965e8c5ce8332770d13ce73aa507932f6b99da724bf9e"
-    },
-    {
       "path": ".archon/scripts/local-ci-run.sh",
       "profile": "core",
       "mode": "0755",
       "template": false,
       "origin": ".archon/scripts/local-ci-run.sh",
       "kind": "script",
-      "sha256": "707e102054319df576e16a22e52d9790efd745540488c971ba88d29e9d22ecba"
+      "sha256": "4db0315053fafb5e610ad2a69ef0fad40b0b5fdeab9ac1c950751c5854b90dcc"
     },
     {
       "path": ".archon/scripts/local-ci-status.sh",
@@ -426,16 +335,7 @@
       "template": false,
       "origin": ".archon/scripts/local-ci-status.sh",
       "kind": "script",
-      "sha256": "9b8d008d235a2c940b66878ac54eadd738196910eb1e0e0e8c94131d1f9dc991"
-    },
-    {
-      "path": ".archon/scripts/main-ci.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/main-ci.sh",
-      "kind": "script",
-      "sha256": "568103762243bea1aafa9650813102f038a29e838ecc1c80f5cf82053fbe732e"
+      "sha256": "88ac78803d46976612912d6872494f198973f7ff13e3915f73168e220ee0d1d6"
     },
     {
       "path": ".archon/scripts/mcp-setup.sh",
@@ -456,67 +356,13 @@
       "sha256": "b5bdc33163f1b2901ac930088499312288621a9d6587a6fda4cc10c118c7e33f"
     },
     {
-      "path": ".archon/scripts/merge-ledger.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/merge-ledger.sh",
-      "kind": "script",
-      "sha256": "1118b33e7de2bbbaf155e827b19dec5e9c540fe087a36ca309b15769b7ed0652"
-    },
-    {
-      "path": ".archon/scripts/merge-ready.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/merge-ready.sh",
-      "kind": "script",
-      "sha256": "4b86f6fe2e31045d70b42b1503bb70f06d9669c86c213de98eb965d49467e619"
-    },
-    {
-      "path": ".archon/scripts/merge-turn.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/merge-turn.sh",
-      "kind": "script",
-      "sha256": "5774c8b8ac66617c8554911cd098b841b0cb283929b63c9d62dfe6f15109ec40"
-    },
-    {
-      "path": ".archon/scripts/notify-owner.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/notify-owner.sh",
-      "kind": "script",
-      "sha256": "ab1b7bf82421acec7e960efbb165ece419e814a05dd6c9d364ec1107f0a5afd9"
-    },
-    {
       "path": ".archon/scripts/open-pr.sh",
       "profile": "core",
       "mode": "0644",
       "template": false,
       "origin": ".archon/scripts/open-pr.sh",
       "kind": "script",
-      "sha256": "b4924222f0378a3fb9bbdee35b022cbf464befe39b648caee507a8a8c15a49b3"
-    },
-    {
-      "path": ".archon/scripts/park-ticket.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": true,
-      "origin": ".archon/scripts/park-ticket.sh",
-      "kind": "script",
-      "sha256": "3a785f6910cdde3c7cd3de2902c2b0cb2d73ef502a1dac76f77d047b16b94d39"
-    },
-    {
-      "path": ".archon/scripts/pick-tickets.js",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/pick-tickets.js",
-      "kind": "script",
-      "sha256": "6a9a733f70fb6a8ede3efdbaf22655adf095a75cb963494262926fd2a04f8982"
+      "sha256": "55034f8e2a0d1310b29078592f462c72b943569231d0b94dff96f7c0a133eb8d"
     },
     {
       "path": ".archon/scripts/plan-context.sh",
@@ -552,7 +398,7 @@
       "template": false,
       "origin": ".archon/scripts/pr-refresh.sh",
       "kind": "script",
-      "sha256": "a59e7cb788add341b8c0efc4778e95cbafe42d4f57d7eed2237e9961ea43b1bf"
+      "sha256": "960ec111d3e21cc05bf40b918530b4a8944de55118099ff1dc79f859958c9ff4"
     },
     {
       "path": ".archon/scripts/push-guard.sh",
@@ -561,34 +407,7 @@
       "template": false,
       "origin": ".archon/scripts/push-guard.sh",
       "kind": "script",
-      "sha256": "480647966ae5edbccdfe9440932eca4d40a55c2e3af953fac98baa0468573d34"
-    },
-    {
-      "path": ".archon/scripts/ready-runs.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/ready-runs.sh",
-      "kind": "script",
-      "sha256": "f38335b04ac48198125928e3514fa605e9650aea2617f750bb64071b9bfebfe1"
-    },
-    {
-      "path": ".archon/scripts/rebase-and-resume.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/rebase-and-resume.sh",
-      "kind": "script",
-      "sha256": "5ed45d107281ed6522a302d2c338ac8143e4d415d9aa3ab82b599751b879c92c"
-    },
-    {
-      "path": ".archon/scripts/rebase-behind.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/rebase-behind.sh",
-      "kind": "script",
-      "sha256": "5dad7ad0924d8b8fa9e2aad6d99428a4d22b0f1f02c9088a5f8fe8b725606782"
+      "sha256": "eaebd452253414f97567af7c1e11bde28ccf1a5f9ce996f7732bf9e58f2671c0"
     },
     {
       "path": ".archon/scripts/rebase-main.sh",
@@ -597,25 +416,7 @@
       "template": false,
       "origin": ".archon/scripts/rebase-main.sh",
       "kind": "script",
-      "sha256": "f00273ef4ba08afa0d26a98bf10b2b89cfd05d042b0cb3778e94ecd7c424396d"
-    },
-    {
-      "path": ".archon/scripts/recover-run.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/recover-run.sh",
-      "kind": "script",
-      "sha256": "df56cdae2a0db6ccbd4e617d8c58ee236c5760b1cff2496fa42a0ac9495e0f24"
-    },
-    {
-      "path": ".archon/scripts/recovery-state.js",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/recovery-state.js",
-      "kind": "script",
-      "sha256": "0f310b6724b7a7548f0c6e29f08a084e7f49f0738393bf95c50e9e2ce397d0b3"
+      "sha256": "ccbd1bbda7257bc8383cbc4b8210f2fca7fd8b22df662c3a0a1a992d10b7e7de"
     },
     {
       "path": ".archon/scripts/red-triage.sh",
@@ -624,7 +425,7 @@
       "template": false,
       "origin": ".archon/scripts/red-triage.sh",
       "kind": "script",
-      "sha256": "efb7082107c1617e1ce0b341ad4af086f692f67de9be0b2017ee7e1c4597309a"
+      "sha256": "79ab9dae25a1e277310d1362ea72acb74ddaaa9a16dbb8c7f31e753ba6b9b399"
     },
     {
       "path": ".archon/scripts/retro-commit.sh",
@@ -634,15 +435,6 @@
       "origin": ".archon/scripts/retro-commit.sh",
       "kind": "script",
       "sha256": "98b67927489770454bd8ce5de9766381b171fcc8aacc0bdf649da849c339dc98"
-    },
-    {
-      "path": ".archon/scripts/retro-digest.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/retro-digest.sh",
-      "kind": "script",
-      "sha256": "7d8806915cb6b813a25568e5da3e9053c8ada59717b7fbf6eed4d670627d26db"
     },
     {
       "path": ".archon/scripts/retro-evidence.sh",
@@ -687,7 +479,7 @@
       "template": false,
       "origin": ".archon/scripts/run-buckets.json",
       "kind": "config",
-      "sha256": "1546ed7124e16650926115a7b58931f4f49b531f3441166879d502ea73b25300"
+      "sha256": "de9468f315b764ac9005f37f64b39abd26e1bd35800fddb1c79aa9f59187cc52"
     },
     {
       "path": ".archon/scripts/run-label.js",
@@ -705,7 +497,7 @@
       "template": false,
       "origin": ".archon/scripts/run-log.js",
       "kind": "script",
-      "sha256": "513c80ab3028ae727fab5b5267a135224cfe5ef5d3af19bf2b5a59f0ca154153"
+      "sha256": "f45585f060bc44a545ace292338a8adbac07c97b1f467c4b5681fe943de22e5f"
     },
     {
       "path": ".archon/scripts/run-metrics.js",
@@ -724,15 +516,6 @@
       "origin": ".archon/scripts/run-trace.js",
       "kind": "script",
       "sha256": "7b7ea2bcf79cc1411db235f0f3a7fe7e04f5240d86eca11cb931e252bdc3263c"
-    },
-    {
-      "path": ".archon/scripts/run-watch.js",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/run-watch.js",
-      "kind": "script",
-      "sha256": "a07981817bc1dc6ad54dd26b0078af199941ab57fa430af62199bc0f5ee81017"
     },
     {
       "path": ".archon/scripts/scaffold-check.js",
@@ -771,42 +554,6 @@
       "sha256": "179d8e10c86a157d3094dc52e6f276c8d144050ca69298755829ccebc2b17bcb"
     },
     {
-      "path": ".archon/scripts/stop-approve.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/stop-approve.sh",
-      "kind": "script",
-      "sha256": "a04a841076ac8e1f027b16ae21166cf403d49eaf4a252531ac27fbb4d1aaf10a"
-    },
-    {
-      "path": ".archon/scripts/stop-check.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/stop-check.sh",
-      "kind": "script",
-      "sha256": "7bc11e7dc3c0641028eb31544487ec9e386763ed9cfd846d92725388c76fdbce"
-    },
-    {
-      "path": ".archon/scripts/stop-lib.js",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/stop-lib.js",
-      "kind": "script",
-      "sha256": "7c0bd292a1b4600df6c55f74184c12a086bd3a4ad155dee85d2b63e7827f15eb"
-    },
-    {
-      "path": ".archon/scripts/stop-round.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/stop-round.sh",
-      "kind": "script",
-      "sha256": "64f69306658b0d11cddeabf558cf364fffd9be21b9cba6e72bc9c09a40ff1b92"
-    },
-    {
       "path": ".archon/scripts/stop-run.sh",
       "profile": "core",
       "mode": "0644",
@@ -814,60 +561,6 @@
       "origin": ".archon/scripts/stop-run.sh",
       "kind": "script",
       "sha256": "aafd7bb481ec2d2f28ba4eabcefba1f7f441073758a128d9f13957057dc3ee7b"
-    },
-    {
-      "path": ".archon/scripts/stop-scan.js",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/stop-scan.js",
-      "kind": "script",
-      "sha256": "6051efdd1e9ce071c65f0655e38673051662a5ee243fad7de74c382f230b7cfe"
-    },
-    {
-      "path": ".archon/scripts/supervisor-ctl.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/supervisor-ctl.sh",
-      "kind": "script",
-      "sha256": "48fb510c5e0c3a191b16511bc6b233caaaec68282c07786d7ea0781e9f0127c4"
-    },
-    {
-      "path": ".archon/scripts/supervisor-jobs.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/supervisor-jobs.sh",
-      "kind": "script",
-      "sha256": "4128a5b6a150c9451f20486303c0142a992614533d810f072561b7c40b333a50"
-    },
-    {
-      "path": ".archon/scripts/supervisor-judge.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/supervisor-judge.sh",
-      "kind": "script",
-      "sha256": "7b6768d54a47e6a6d83ac503c2e1cc2f3c43d17edb58abb0d44781250d91c275"
-    },
-    {
-      "path": ".archon/scripts/supervisor-tick.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/supervisor-tick.sh",
-      "kind": "script",
-      "sha256": "af537f5ac5f9e4a91de414902a6fe037ae2e1f289150b3dcf4b3dcf6624b3f08"
-    },
-    {
-      "path": ".archon/scripts/sync-main.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/sync-main.sh",
-      "kind": "script",
-      "sha256": "1025ae16b95dcb97ad3a19f13c8a93a0a87c1a5dfb583b11744686e7108667aa"
     },
     {
       "path": ".archon/scripts/tdd-check.sh",
@@ -906,15 +599,6 @@
       "sha256": "833ad95770b5e28ff3bbed3e6dd88b99f9868e5c47d4780da71906e111169f91"
     },
     {
-      "path": ".archon/scripts/test/auto-merge.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/auto-merge.test.sh",
-      "kind": "script",
-      "sha256": "1ab63312b5f84c4f8378a74293b03d80d85ae524244bf2301796e1857e125623"
-    },
-    {
       "path": ".archon/scripts/test/blocked-stop.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -930,7 +614,7 @@
       "template": false,
       "origin": ".archon/scripts/test/build-feature.test.sh",
       "kind": "script",
-      "sha256": "edbf613bac3050d6b6f5f4519fded7665ea20aa34d44f611c7e13a9bf02f76d4"
+      "sha256": "74e0fb56f7910d763265bbfcc05bda5c0767034355d110bca5efa0af420c2769"
     },
     {
       "path": ".archon/scripts/test/ci-by-sha.test.sh",
@@ -942,15 +626,6 @@
       "sha256": "e95c9b11d7c4e2833f1146be9968d936435d7c8f032dc80f749f3e48a89b91cc"
     },
     {
-      "path": ".archon/scripts/test/classify-failure.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/classify-failure.test.sh",
-      "kind": "script",
-      "sha256": "f3fca752649739ee5e5adcb29a88d06820a2df66f8be2473319e59f855f02f12"
-    },
-    {
       "path": ".archon/scripts/test/cleanup-merged.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -958,15 +633,6 @@
       "origin": ".archon/scripts/test/cleanup-merged.test.sh",
       "kind": "script",
       "sha256": "f98fd77847e7d59e4a352de1f5009abaa96c172254cdd3867e9d1fa16c2725a0"
-    },
-    {
-      "path": ".archon/scripts/test/close-out.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/close-out.test.sh",
-      "kind": "script",
-      "sha256": "fbe3ee7f48bd2dc577aac6cf581fee95cb1c4df31171d69c303117190689ed2f"
     },
     {
       "path": ".archon/scripts/test/codegraph-setup.test.sh",
@@ -984,16 +650,7 @@
       "template": false,
       "origin": ".archon/scripts/test/commit-msg.test.sh",
       "kind": "script",
-      "sha256": "e01189e2bcddf066242ee2dd9922fb3031b4a75b6b4f4ab7e5f7b7bca9c2b4a8"
-    },
-    {
-      "path": ".archon/scripts/test/commit-tickets.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/commit-tickets.test.sh",
-      "kind": "script",
-      "sha256": "8d144188c94d7683ffa20fdaf6024f8f8782d33ee3b13521317dfe10d9d273ea"
+      "sha256": "2b8aea1aafc5e13a67bf9378e18da0522557254e78065d74f30a9a716a90f819"
     },
     {
       "path": ".archon/scripts/test/copilot-audit.test.sh",
@@ -1011,718 +668,7 @@
       "template": false,
       "origin": ".archon/scripts/test/copilot-guard.test.sh",
       "kind": "script",
-      "sha256": "239d84f08babb54649a6ccf486c9efb93ab549028480ea713fdc8fa056d2ec49"
-    },
-    {
-      "path": ".archon/scripts/test/copilot-workflow.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/copilot-workflow.test.sh",
-      "kind": "script",
-      "sha256": "a9cbe3b1db1632affaa68fe7bcb837cae489fcd9c2443bdb9dad68298b8e28b0"
-    },
-    {
-      "path": ".archon/scripts/test/delegator-session.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/delegator-session.test.sh",
-      "kind": "script",
-      "sha256": "1b495e6d39cf3d8e8b2829fad664b5e04a385e9b5d6f3c59cd4510df351416e7"
-    },
-    {
-      "path": ".archon/scripts/test/delegator-start.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/delegator-start.test.sh",
-      "kind": "script",
-      "sha256": "9ab6d89c5a1ea8fae9b7398fc286f6b14faef508858581befe3ef8ca9aeff38e"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/cases.txt",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/cases.txt",
-      "kind": "script",
-      "sha256": "81a1683e9ca11c6709b769226d8d5f0cdab93cccbebfebce13c69ed30efa1c07"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-blocked-stale.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-blocked-stale.json",
-      "kind": "config",
-      "sha256": "d899a47e882873e2ae7c72b252ef3291600fe390b872b640505104d1645f22c3"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-head-green.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-head-green.json",
-      "kind": "config",
-      "sha256": "6b1dd65eff9bab8fab7ff361bd3710ff6ffadea780a97cff2a0920e4027ad0b1"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-head-none.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-head-none.json",
-      "kind": "config",
-      "sha256": "94e37ecb0724005e790c3d8c1f07985df95ad029a000c9bc20d6c5de22c0213e"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-head-pending.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-head-pending.json",
-      "kind": "config",
-      "sha256": "af067f677bd3df71df27619376a6d7bdabb17e1e631ed1943d13096dd11b0798"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-head-pr-closed.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-head-pr-closed.json",
-      "kind": "config",
-      "sha256": "90f56a8554abcfece60970470e70ed5d6e0cce5c024032ae033572cf5c8f1716"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-head-stale.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-head-stale.json",
-      "kind": "config",
-      "sha256": "c928632e8e1b88ebc15df7d6c39c8e499f6213491b52c3da02de7b6ed16ea0cb"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-head-unpushed.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-head-unpushed.json",
-      "kind": "config",
-      "sha256": "4b6b3b42000ccc23cd1f549f79aaa84f2aadc27a6c22046e1800da2c771e6c36"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-main-green-head-red.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-main-green-head-red.json",
-      "kind": "config",
-      "sha256": "486adf26dc4acb31478ea40fc08e03189761eed70fbfde2197afaf24096078a0"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-main-red-other.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-main-red-other.json",
-      "kind": "config",
-      "sha256": "122564eeb22ba3b91a69be8a82e2b231e44f88ff7d5f8f20999e27f0fee52e5c"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-main-red-overlap.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-main-red-overlap.json",
-      "kind": "config",
-      "sha256": "212bc097af113c44e733101f14112bcf8d870d466bf221285b70e3a97445e41b"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-merged-main-red.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-merged-main-red.json",
-      "kind": "config",
-      "sha256": "d3972cb7848035c42b5da32e94171797b6cce1e8590ca4a4e38ec079bf639dba"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-none.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-none.json",
-      "kind": "config",
-      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-pr-closed.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-pr-closed.json",
-      "kind": "config",
-      "sha256": "c766dea1b8e8c654427485ae11efa0ae9ccbf7d4e1c1d95c264ad254cc955d28"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-pr-head-green.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-pr-head-green.json",
-      "kind": "config",
-      "sha256": "bd79c81be22392d4555c2957129c7b8c63179f61dbb98b3af6f4c70d886e85b3"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-pr-head-red.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-pr-head-red.json",
-      "kind": "config",
-      "sha256": "705f9c68b128ac089421d117d635adcde3e9336efbf0b9ee5527d1458867e061"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/facts-pr-merged.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/facts-pr-merged.json",
-      "kind": "config",
-      "sha256": "40433addb9dfd754a4bfbbe0f860208960b3ef0ea9d9aff3f3f788a176d113a0"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-007d0b6e.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-007d0b6e.json",
-      "kind": "config",
-      "sha256": "4904c02227bf94123cad09f56608fc6a8b93bd9215d823d687d6439cc116367d"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-078ca850.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-078ca850.json",
-      "kind": "config",
-      "sha256": "bd45bf1d8d17a474f7bc184ba3c68bb8c940fe406ff1bdfc7ad94fec3032444a"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-0b4d6730.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-0b4d6730.json",
-      "kind": "config",
-      "sha256": "fc6ff8067ff26312ac137a041a1fe8c2dfe99beee0da6036a2d6bc392d9049ed"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-1341a8c0.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-1341a8c0.json",
-      "kind": "config",
-      "sha256": "9c93d1f410930273f9374875fe659a151a208efef67d554accde2ba353121bf6"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-1846c634.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-1846c634.json",
-      "kind": "config",
-      "sha256": "e601da1fb50f729746cea734204ec1f5bd66a9ebacafc13470953f6f2b878116"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-3545989d.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-3545989d.json",
-      "kind": "config",
-      "sha256": "d8e5856d101d61f3a0e4d97bed6a4ec38f1de080588dcee128b77f3f52568b42"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-3a1f0954.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-3a1f0954.json",
-      "kind": "config",
-      "sha256": "9a8600de2cb9bc6a437beddff713051b08f12bc67ae925eda996f6c54584359e"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-4184edee.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-4184edee.json",
-      "kind": "config",
-      "sha256": "8b72f000e908c80248a57fac6fa2c655574894fd6c273152dacce32a6c726e9c"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-4b33311d.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-4b33311d.json",
-      "kind": "config",
-      "sha256": "6309b372f56cbddeb6e305bfac46ffd14b42853d25ab57b18f3fd7aab1df1ad2"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-4c92a55f.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/scripts/test/fixtures/classify/run-4c92a55f.json",
-      "kind": "config",
-      "sha256": "81f86258c0aedc6608a05016cd91b884383e18e2242e6f2538a83ec131cc6c13"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-4f4dc33f.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-4f4dc33f.json",
-      "kind": "config",
-      "sha256": "bb6c853fb837efd27d33d6f5497dc7ab117c3f9ee1b0c6b5bd4031b5f2554ac3"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-50cf7722.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-50cf7722.json",
-      "kind": "config",
-      "sha256": "226a321e0c565fdbaf9b9616b0ad2ddfcc85dd6340ce29e90724563fd2a3594e"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-51cdbaf1.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-51cdbaf1.json",
-      "kind": "config",
-      "sha256": "91b4dc4d6c1738e363c1a1ff9e774f19f35811b6a1541de8821b017954108405"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-560b3d07.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-560b3d07.json",
-      "kind": "config",
-      "sha256": "c14af62119a9772ff25057b42322ce859c39f7fdbd236e5895257990dd72beb3"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-69ebad90.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-69ebad90.json",
-      "kind": "config",
-      "sha256": "f60a32104ce507786da390ec6672d5a8131a5f3a70ee16fc9cbec1227777e696"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-6a31c2a4.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-6a31c2a4.json",
-      "kind": "config",
-      "sha256": "c4a66f28c1f14c64f0d6518c4b101f750323392f225a5425b4f35f090815abcf"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-6b32c5c4.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-6b32c5c4.json",
-      "kind": "config",
-      "sha256": "9a92810b0f63a28b4c7fca4c4ca9f3ba77eae7db35952bf0113baadc6122d894"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-720743c1.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-720743c1.json",
-      "kind": "config",
-      "sha256": "b8b7e20c28a0f6564094180047af8b2ebd646a01eaee20f989b716e3adfad563"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-725f38f6.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-725f38f6.json",
-      "kind": "config",
-      "sha256": "ac3d249b309e290975f9a3148fb7036754eba930245baefd54f7cb85fcaf6ac8"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-7580dcb2.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-7580dcb2.json",
-      "kind": "config",
-      "sha256": "f66912cdb4dd8b0dfb66943f4adaf56a4ee9ca62fe815b4ea456ec7bad4ff734"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-770e822d.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-770e822d.json",
-      "kind": "config",
-      "sha256": "a6295b6676cfc0fefefcd05d9c6792f74e802dfd6a072ec92a26f93795773968"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-7afd7646.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/scripts/test/fixtures/classify/run-7afd7646.json",
-      "kind": "config",
-      "sha256": "92ba4e6d41ccd0bbdc2f83842c9c6e7edc9556036575b8873b7b19403782a823"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-7d98a671.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-7d98a671.json",
-      "kind": "config",
-      "sha256": "155b8ba311b20157e9470e58c4baaac4d4cbf4a94ef0e240d6961c73130a1f9d"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-7f347bf1.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-7f347bf1.json",
-      "kind": "config",
-      "sha256": "cc87c9682eeaaa385d95da606391dce6cc42e44c5e314fe36194561b4e4edee0"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-870a251f.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-870a251f.json",
-      "kind": "config",
-      "sha256": "be0c16e75f5d071f1946041826a0a4fb80a94982324bc4919df2fb15d9dd9c6c"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-9297a329.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-9297a329.json",
-      "kind": "config",
-      "sha256": "62b52793a6fbf752162dec560ae2cb3934c6b48fbebbd9dd244fc9a5e9df860c"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-9b715e60.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-9b715e60.json",
-      "kind": "config",
-      "sha256": "b48ecad98dc01f819c27b8c0c50df61f137a89808a3e52cf9f8da3d6d24befdc"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-aabb23c7.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-aabb23c7.json",
-      "kind": "config",
-      "sha256": "9fb63df423a145613c9650b31d8bf93ed5a3cbb0d80395ecbd150f5110444181"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-ac692960.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-ac692960.json",
-      "kind": "config",
-      "sha256": "f58083bcad130a30f73dd31aef8f5690186458994a1b8034be04a081a312b8ae"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-b80f3c0a.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-b80f3c0a.json",
-      "kind": "config",
-      "sha256": "2436d2fe1bc583dde9102229fc3241f8fcb16acd8a334de47b233cc8883e4644"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-c2bc0ae5.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-c2bc0ae5.json",
-      "kind": "config",
-      "sha256": "59d04d77adee9ec7fffe95da3810ea5b0d31275c9cb40c183bd16653688d2fac"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-c39c920f.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-c39c920f.json",
-      "kind": "config",
-      "sha256": "40f9f1043f618b4d8de75b0ec69f549d455fbc2c513dbd7b0620c7a9587daab2"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-cb246a85.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-cb246a85.json",
-      "kind": "config",
-      "sha256": "562e5cf2767a098bed22dea330c93f852c814fee67e65ac2bb52e78629b95bc3"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-d725590b.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-d725590b.json",
-      "kind": "config",
-      "sha256": "af3dfa25c2bddec204277e26e0082521b34b642c71d0852b4ca38a618cc5dab0"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-d8fe8b36.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-d8fe8b36.json",
-      "kind": "config",
-      "sha256": "d140eef9c860b717f0a6adb5d5c21a90af6f89fe7a67ceb91678262657c0c075"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-db053405.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-db053405.json",
-      "kind": "config",
-      "sha256": "d2a19a1cbfeffb669a9e81fa31251c31c5b6838deb0d286d085dc8b2f8dffc7c"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-f7d97dff.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-f7d97dff.json",
-      "kind": "config",
-      "sha256": "50e5917737652471f99c43c5c851edeb3e1ec16285f544db3223998ef8d606e1"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/run-f8b058eb.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/run-f8b058eb.json",
-      "kind": "config",
-      "sha256": "3573cf157fcde084e897d8d80cc7235ccd31ac240f20dfb06fdd1e92d549cf0e"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-open/breaker.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-open/breaker.json",
-      "kind": "config",
-      "sha256": "315cb4efd86572db8be1cab4ff937092ae543086d13233f21095ee16d2d12014"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s04-once/runs/syn00004.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s04-once/runs/syn00004.json",
-      "kind": "config",
-      "sha256": "306a004ac45f0a2579e1ae43354a30df79a3fbc4fa6d2bb4db78491c89fd3caa"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s04-twice/runs/syn00004.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s04-twice/runs/syn00004.json",
-      "kind": "config",
-      "sha256": "f80e71c1eafee71662abbc56e93488605a96a429a440bc46903459f1161c9a81"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s05-unchanged/runs/1341a8c0e10cac4d33f397bb0b85a049.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s05-unchanged/runs/1341a8c0e10cac4d33f397bb0b85a049.json",
-      "kind": "config",
-      "sha256": "4e89067be1d4c9813d94a533f3b7d7d74825ca392434418e0c744836296db81d"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s07-old-run/breaker.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s07-old-run/breaker.json",
-      "kind": "config",
-      "sha256": "fd346cfd732a160265e1ef9f426ec022ce02295ab921a59eef62dfe035ffadc9"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s07-other-run/breaker.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s07-other-run/breaker.json",
-      "kind": "config",
-      "sha256": "7090888587aeba99ae3d0f2826841d623f37c075eb92899e298733a499dbf14a"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s07-spent/runs/078ca850-804d-4741-8dff-c21886c8b934.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s07-spent/runs/078ca850-804d-4741-8dff-c21886c8b934.json",
-      "kind": "config",
-      "sha256": "d29580f29c7597dd763069227dc5fa27b518a202814a6bacdf955dfad2e2580c"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/state-s13-seen/runs/syn00113.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/state-s13-seen/runs/syn00113.json",
-      "kind": "config",
-      "sha256": "404cb06fcec785af41f85960330856f282fb3c97050396a5d9e64bfdf9220a8b"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s02-launch.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s02-launch.json",
-      "kind": "config",
-      "sha256": "7dc4a157ae327feb84c9fa81e01ca8028b1d177a9eb730e7854bc796a2f36d4e"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s04-overloaded.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s04-overloaded.json",
-      "kind": "config",
-      "sha256": "707b4713a34cbd248403b84d3427019004b43925fa411cd262bde4737fe66fd8"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s08-blocked.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s08-blocked.json",
-      "kind": "config",
-      "sha256": "1dad13224a8c5f2d5fbc6e27597466847ce5e28af0b3dc6ee7a704d1e79e3257"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s12-nonff.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s12-nonff.json",
-      "kind": "config",
-      "sha256": "458dc799d842ce2775e5390f8b59b182470c571510fa67ff6cc10d05c2cd7ae2"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s13-ci-fix-exhausted.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s13-ci-fix-exhausted.json",
-      "kind": "config",
-      "sha256": "26d408110162cb0a0712faf3559fc95221885b9865396b446dc01af2c6467014"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s13-red-from-main.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s13-red-from-main.json",
-      "kind": "config",
-      "sha256": "139e35df0b7831efca8b8b9ef7a8fa5e23c754ceffca95a8da6fc7134c95f82d"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s15-quote.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s15-quote.json",
-      "kind": "config",
-      "sha256": "4a0ae0f5c1a232ad49ca1d99f0e15b8e1b92262ff444281f232955f16864cf57"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s15-script.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s15-script.json",
-      "kind": "config",
-      "sha256": "a124121e2a941c1c8db66a79e9605a7294a3a620ceb296a3f9ad3f35e0b26cde"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s20-unknown.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s20-unknown.json",
-      "kind": "config",
-      "sha256": "2e762da700c8c7e432f266bb4a79a9afa10f14acbafdd7aa2a6189af2ddc44c5"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s21-github-head.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s21-github-head.json",
-      "kind": "config",
-      "sha256": "8eaa2448c2b53c139658a24a2a46e6866811f5b5df9ab4651e67ddf6fb5dbad0"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s22-no-commit.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s22-no-commit.json",
-      "kind": "config",
-      "sha256": "0f7b3d36c03bf2d159369291d55fe889e5dbfe7e775d9d67055744157a257579"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s23-skill-fold.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s23-skill-fold.json",
-      "kind": "config",
-      "sha256": "726230c87dcb290c34e520a9b58eb5b1434f64c20857903dd17a6f63af677e24"
-    },
-    {
-      "path": ".archon/scripts/test/fixtures/classify/syn-s24-main-ci.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/fixtures/classify/syn-s24-main-ci.json",
-      "kind": "config",
-      "sha256": "3d1670617e98e7053828428b9ece020ace8e17f8aefc5237ad94100875cdd02f"
+      "sha256": "154e68f8880b45c82b6dc04e953a70048670b81d8aea493297be093f493db06c"
     },
     {
       "path": ".archon/scripts/test/fixtures/copilot-audit/empty.jsonl",
@@ -1779,22 +725,13 @@
       "sha256": "a7fa2ad55d28e3e0b67b65b6d2b664e26bd691459b987498a929eff441a83eeb"
     },
     {
-      "path": ".archon/scripts/test/launch-run.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/launch-run.test.sh",
-      "kind": "script",
-      "sha256": "b285b13dac344068ef240185f4122140d4af289ecaaa882f413cca7df2bf8e55"
-    },
-    {
       "path": ".archon/scripts/test/local-ci-run.test.sh",
       "profile": "core",
       "mode": "0755",
       "template": false,
       "origin": ".archon/scripts/test/local-ci-run.test.sh",
       "kind": "script",
-      "sha256": "b865cf794a6b2fe8cdf967c45716e304783e7911f3aff1da391f61dc0fef719c"
+      "sha256": "1a0e19331d3263ba843d98b8b64023355954e441ef35245b94df374a70b05e0b"
     },
     {
       "path": ".archon/scripts/test/local-ci-status.test.sh",
@@ -1803,16 +740,7 @@
       "template": false,
       "origin": ".archon/scripts/test/local-ci-status.test.sh",
       "kind": "script",
-      "sha256": "82b6012c6b5094d2f57a4a3fdc78b95c5b31226c3842005535b5ed7c326f16ee"
-    },
-    {
-      "path": ".archon/scripts/test/main-ci.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/main-ci.test.sh",
-      "kind": "script",
-      "sha256": "140f5f634e09a2b3a417af8b426c62adba68c2b41d23a2e305c11139aea42e83"
+      "sha256": "8df7567fa5c59f0afd6361bd92f5946dbb41d76c86ad862f961fc64f2f36a9b8"
     },
     {
       "path": ".archon/scripts/test/mcp-use-check.test.sh",
@@ -1824,51 +752,6 @@
       "sha256": "b5a342a87f177f9f5ea981c5d245c562473c24a6c7c19bc4c8ff364a4c56fbac"
     },
     {
-      "path": ".archon/scripts/test/merge-ledger.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/merge-ledger.test.sh",
-      "kind": "script",
-      "sha256": "bd92579e6c53fa013c5e084b669b0b739d4cb8e4b5c92147695b374ceb403c2e"
-    },
-    {
-      "path": ".archon/scripts/test/merge-path.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/merge-path.test.sh",
-      "kind": "script",
-      "sha256": "d224b7108c0ac3f8cc2a4bb758e888c8e9665a8f1816b6fee71a726915b071e4"
-    },
-    {
-      "path": ".archon/scripts/test/merge-ready.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/merge-ready.test.sh",
-      "kind": "script",
-      "sha256": "3adb8ce745e62b6348f2df2a2a024a9a98313ef2ef1c29f319f2ead5c5567ac9"
-    },
-    {
-      "path": ".archon/scripts/test/merge-turn.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/merge-turn.test.sh",
-      "kind": "script",
-      "sha256": "9a9b83ecf0df9542bc55daa1f3b72d6f36c61f87e0424290722473b91fdf9b3c"
-    },
-    {
-      "path": ".archon/scripts/test/notify-owner.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/notify-owner.test.sh",
-      "kind": "script",
-      "sha256": "23990e42716eb23ef9cea4920af37cb9413804e883f30d98b8a3dfabff2e6db3"
-    },
-    {
       "path": ".archon/scripts/test/open-pr.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -1878,15 +761,6 @@
       "sha256": "a39cfc5accca6b63e76c1b6a63963b4d858332e23c6dff578f3f46522d2031b5"
     },
     {
-      "path": ".archon/scripts/test/park-ticket.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/park-ticket.test.sh",
-      "kind": "script",
-      "sha256": "c487e1a6756b3c04a116e05ea387779c0ed7fd4c658bdd1fd2ad56e71d4bc729"
-    },
-    {
       "path": ".archon/scripts/test/payload.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -1894,15 +768,6 @@
       "origin": ".archon/scripts/test/payload.test.sh",
       "kind": "script",
       "sha256": "76bd656670dd34af5f03f07d52455e894ed940ea0e18bdcf4f923d659ac65bd7"
-    },
-    {
-      "path": ".archon/scripts/test/pick-tickets.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/pick-tickets.test.sh",
-      "kind": "script",
-      "sha256": "53434471a9d8ff4b238859ec1ce7b953df63df603f34c98ad20514302755db7e"
     },
     {
       "path": ".archon/scripts/test/plan-context.test.sh",
@@ -1938,7 +803,7 @@
       "template": true,
       "origin": ".archon/scripts/test/pr-refresh.test.sh",
       "kind": "script",
-      "sha256": "05156eb1fdc8c6241b4bd7979a3e0a4712544c9ae0332810036856d12beedc13"
+      "sha256": "bae1697ae2b0fc7f2d884b2c800ad416bdc8c9e15b236de8a11038c3579f1654"
     },
     {
       "path": ".archon/scripts/test/push-guard.test.sh",
@@ -1947,7 +812,7 @@
       "template": false,
       "origin": ".archon/scripts/test/push-guard.test.sh",
       "kind": "script",
-      "sha256": "ee620da1c2106316e97389f6da76c35711656c27fd77396e58005c95cba47bcf"
+      "sha256": "bf55c82068157403379b4e22a5a524a6ffd7df93af315db2700f2a8c8f8725d4"
     },
     {
       "path": ".archon/scripts/test/ready-node.test.sh",
@@ -1956,34 +821,7 @@
       "template": false,
       "origin": ".archon/scripts/test/ready-node.test.sh",
       "kind": "script",
-      "sha256": "62e8ccc46603b67da86ae57bc0cd36c69b98fbcf1b88ca528ceea09e28e02dd8"
-    },
-    {
-      "path": ".archon/scripts/test/ready-runs.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/ready-runs.test.sh",
-      "kind": "script",
-      "sha256": "7f39067b3934b52a105da117343f5aa87ac41df8989852bd59399d5d0a62120d"
-    },
-    {
-      "path": ".archon/scripts/test/rebase-and-resume.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/rebase-and-resume.test.sh",
-      "kind": "script",
-      "sha256": "12e9765251313afbc243819ecb9c36c8932b3b7b80eaf442281ebe14b826128b"
-    },
-    {
-      "path": ".archon/scripts/test/rebase-behind.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/rebase-behind.test.sh",
-      "kind": "script",
-      "sha256": "8a48c9e7b2ae980957a0be8874e285edb97e013f81f2f0774c03a2cc813bde4d"
+      "sha256": "35e44efa64d623c99855a4b29c1854fe0ca38c6cae7dc10238609964c49d952a"
     },
     {
       "path": ".archon/scripts/test/rebase-main.test.sh",
@@ -1992,25 +830,7 @@
       "template": false,
       "origin": ".archon/scripts/test/rebase-main.test.sh",
       "kind": "script",
-      "sha256": "ec4e84219bda35d56332f5038ec6cf6b67e5049795f601056f1b954ad834c99d"
-    },
-    {
-      "path": ".archon/scripts/test/recover-run.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/recover-run.test.sh",
-      "kind": "script",
-      "sha256": "8bc35f513b33f2544dea1b033276c56ce8f57673bfaf119cb86bb427c1deb590"
-    },
-    {
-      "path": ".archon/scripts/test/recovery-state.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/recovery-state.test.sh",
-      "kind": "script",
-      "sha256": "91950c47628648273933d9e2d6aa411cb193fcacbf549d8b1ecdb0fb0a72299a"
+      "sha256": "67edc5a0c15225157dbfb278788cce3beb8d1a34fcfc4e832c190d70f466ed23"
     },
     {
       "path": ".archon/scripts/test/red-triage.test.sh",
@@ -2020,15 +840,6 @@
       "origin": ".archon/scripts/test/red-triage.test.sh",
       "kind": "script",
       "sha256": "56b95f5777a4c7188943d8b29ec9e8a718b9c5c77b6c4e6d71b919405e12087d"
-    },
-    {
-      "path": ".archon/scripts/test/retro-digest.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/retro-digest.test.sh",
-      "kind": "script",
-      "sha256": "44533a53298c924fd2ea3ab33339b789c2c0d400f86c4a6d9a9cc20ae5be22ae"
     },
     {
       "path": ".archon/scripts/test/retro-fence.test.sh",
@@ -2085,22 +896,22 @@
       "sha256": "cfabacfb627449910b5f94e1bb962aba76cb05f1859f18aa542176c7900406a6"
     },
     {
-      "path": ".archon/scripts/test/run-watch.test.sh",
+      "path": ".archon/scripts/test/scaffold-step.test.sh",
       "profile": "core",
       "mode": "0755",
       "template": false,
-      "origin": ".archon/scripts/test/run-watch.test.sh",
+      "origin": ".archon/scripts/test/scaffold-step.test.sh",
       "kind": "script",
-      "sha256": "7c3882ce635c5b1508298437d4908f6f81774c3d68ce33576c12b1dac326e3e3"
+      "sha256": "bb4ab7c9758ed65600b7b491ef56722b4518072597f268a4df68dcc2fb53e57f"
     },
     {
-      "path": ".archon/scripts/test/scaffold-step.test.sh",
+      "path": ".archon/scripts/test/scope-local.test.sh",
       "profile": "core",
       "mode": "0644",
       "template": false,
-      "origin": ".archon/scripts/test/scaffold-step.test.sh",
+      "origin": null,
       "kind": "script",
-      "sha256": "db2bf985dfc25bfc36583d7d34a66f7dad63ed4d39c69e3bf221eba335ec0056"
+      "sha256": "9827341e2d31240cab23e4b934d332cf2d9f4fda102fb7778b53df5f3133282e"
     },
     {
       "path": ".archon/scripts/test/script-calls.test.sh",
@@ -2109,7 +920,7 @@
       "template": false,
       "origin": ".archon/scripts/test/script-calls.test.sh",
       "kind": "script",
-      "sha256": "e377b0d99454fe598c85dc4d796e0e118f2e000ace05ede85bc6f77726c81612"
+      "sha256": "02f362b14be1f33c65d629eb98b02327eaef55be7fa76454769f2769b6ae3671"
     },
     {
       "path": ".archon/scripts/test/skill-check.test.sh",
@@ -2130,87 +941,6 @@
       "sha256": "23b2f720bd6677e00fe1ad4c86db2fc1cc7d5a25d77943a07ff04ecd238242b3"
     },
     {
-      "path": ".archon/scripts/test/stop-approve.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/stop-approve.test.sh",
-      "kind": "script",
-      "sha256": "c3d3220f72a17153c2639abca3cebd2acee31435042a6cca0668fd45fbdc189e"
-    },
-    {
-      "path": ".archon/scripts/test/stop-check.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/stop-check.test.sh",
-      "kind": "script",
-      "sha256": "2dbf2d1009f7a30fda4eda9f846542eea0fa3b2f90ee75895a5b61aa7b806afa"
-    },
-    {
-      "path": ".archon/scripts/test/stop-round.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/stop-round.test.sh",
-      "kind": "script",
-      "sha256": "60252d1701500fdd5761f30dc2dee4fef88bbf4e79497829d3dd22568c13efc2"
-    },
-    {
-      "path": ".archon/scripts/test/stop-scan.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/stop-scan.test.sh",
-      "kind": "script",
-      "sha256": "4db8e8195f36b7b8ad79cd6526951770be9cad24614753d15fb88a4a374bf021"
-    },
-    {
-      "path": ".archon/scripts/test/supervisor-ctl.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/supervisor-ctl.test.sh",
-      "kind": "script",
-      "sha256": "3480310b52e47bcb901cd75d152f5addb7e4eebd0a55c832d00caa04ab275f18"
-    },
-    {
-      "path": ".archon/scripts/test/supervisor-fence.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/supervisor-fence.test.sh",
-      "kind": "script",
-      "sha256": "cab5743f0e2ad80528af3a345a1cd00dfa332d2540b788cf35cca3380ef808aa"
-    },
-    {
-      "path": ".archon/scripts/test/supervisor-judge.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/supervisor-judge.test.sh",
-      "kind": "script",
-      "sha256": "e3ce6aba77e6bb08f1029690e64c149e5c45e020fed39e69e0133286e37c0efe"
-    },
-    {
-      "path": ".archon/scripts/test/supervisor-tick.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/supervisor-tick.test.sh",
-      "kind": "script",
-      "sha256": "2f1fb5af7f43e68a5f9767086cfbc39c9fe2d8f418095f7a0963f2240e29e91d"
-    },
-    {
-      "path": ".archon/scripts/test/sync-main.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/sync-main.test.sh",
-      "kind": "script",
-      "sha256": "c762a653ea0a962cd4540fddaedb16908f4d989c87fdfe124c10602a6821062a"
-    },
-    {
       "path": ".archon/scripts/test/tdd-check.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -2218,15 +948,6 @@
       "origin": ".archon/scripts/test/tdd-check.test.sh",
       "kind": "script",
       "sha256": "b3b98cddebd69632ae10bfc970ba3a3c53fa835d8439aefee52e79dd2dd853a5"
-    },
-    {
-      "path": ".archon/scripts/test/ticket-files.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/ticket-files.test.sh",
-      "kind": "script",
-      "sha256": "20c53f0d823cbec551442d3ec7e0a80579c7a441c551b579496c49993ae564f3"
     },
     {
       "path": ".archon/scripts/test/tool-advice.test.sh",
@@ -2238,49 +959,13 @@
       "sha256": "b8c532d17918eaf97bf1c314ab363a4da642a5e5e209dfa079f5d9b0600bde0c"
     },
     {
-      "path": ".archon/scripts/test/verify-fixes.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/verify-fixes.test.sh",
-      "kind": "script",
-      "sha256": "5fcdd83f5a3ee0aca0c77b3307a689afc5fff745946efaeec9ff75ed908c22d6"
-    },
-    {
-      "path": ".archon/scripts/test/wait-merge-ping.test.sh",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/test/wait-merge-ping.test.sh",
-      "kind": "script",
-      "sha256": "27b8ec6063870687e7db8e96fa13765d1eedbc56a9e3a0df143ea80c9acde226"
-    },
-    {
-      "path": ".archon/scripts/test/wait-merge.test.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/test/wait-merge.test.sh",
-      "kind": "script",
-      "sha256": "e4c10959681d73d3e18f912e07ca9e1472f1d25a9826dfa521628c7c53fdce31"
-    },
-    {
       "path": ".archon/scripts/test/workflow-contracts.test.sh",
       "profile": "core",
       "mode": "0644",
       "template": false,
       "origin": ".archon/scripts/test/workflow-contracts.test.sh",
       "kind": "script",
-      "sha256": "2dca3c69061acef3cf7b1fafeeb0ff1e0332e18053aeb45d69a423f39272abe1"
-    },
-    {
-      "path": ".archon/scripts/ticket-files.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/ticket-files.sh",
-      "kind": "script",
-      "sha256": "d47fc04071beff11aed02eb22c3e203860494ded59460b537b0eda0fa341da78"
+      "sha256": "b0d0ca97a8dc5d11037d6ece7d3f6038d605ddaf471324499c944380778c9cae"
     },
     {
       "path": ".archon/scripts/ticket.sh",
@@ -2289,79 +974,7 @@
       "template": false,
       "origin": ".archon/scripts/ticket.sh",
       "kind": "script",
-      "sha256": "95d79decbc6ff43e7a3206baa83f4b9a3383a317ebc1b387483dc15633e137e8"
-    },
-    {
-      "path": ".archon/scripts/verify-fixes.js",
-      "profile": "core",
-      "mode": "0755",
-      "template": false,
-      "origin": ".archon/scripts/verify-fixes.js",
-      "kind": "script",
-      "sha256": "c58c0072816d172962f719baeaa3fcf9a6ff84ce91b82100292289c00fd8809c"
-    },
-    {
-      "path": ".archon/scripts/wait-merge.sh",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/scripts/wait-merge.sh",
-      "kind": "script",
-      "sha256": "0424c63a5cfc9c5c386795be202bfe26ce8395252c4253d3f4b5f6d654270936"
-    },
-    {
-      "path": ".archon/stop/approvals/_template.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/stop/approvals/_template.json",
-      "kind": "config",
-      "sha256": "196773f3ab06e5bd1b8f7ee92f83b74f8e1ec75f0c43ce83451a5c4f1eca20ab"
-    },
-    {
-      "path": ".archon/stop/policy.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/stop/policy.json",
-      "kind": "config",
-      "sha256": "93bc06afcace7dba58fee49f0210071ddd6bbe78336759e458d34d387d4bd8f9"
-    },
-    {
-      "path": ".archon/systemd/delegator-supervisor.service",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/systemd/delegator-supervisor.service",
-      "kind": "config",
-      "sha256": "7d7a0e11ff90be96a4001ba9e50cd5a018acd1e265a8c975ec9acce93ab8d027"
-    },
-    {
-      "path": ".archon/systemd/delegator-supervisor.timer",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/systemd/delegator-supervisor.timer",
-      "kind": "config",
-      "sha256": "8e33b596ac22e121fbeb7e08a9846c1398c4bcf588abf12a5a8fc61365b31dfb"
-    },
-    {
-      "path": ".archon/systemd/notify-digest.service",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/systemd/notify-digest.service",
-      "kind": "config",
-      "sha256": "b64e05fad976c60b42113634972a24e5717f368abaea03eea8f3e0903b1d06e7"
-    },
-    {
-      "path": ".archon/systemd/notify-digest.timer",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".archon/systemd/notify-digest.timer",
-      "kind": "config",
-      "sha256": "92e26170fb019ffe52afdfea94c46826f86f2d14eb8ecd1c1e40ea065138a07b"
+      "sha256": "434cfe72a6a719ad77e5158b47d62267a9bf905a26d67e5a13b510ea565bfe4c"
     },
     {
       "path": ".archon/workflows/build-feature-copilot.yaml",
@@ -2370,7 +983,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "6dbe3b537ff7c8864a2dd3815a6a913eb65ce016e2a79c376a3c5dc04aebf323"
+      "sha256": "f5b569771ab3955c30c6b3306c61fdc7f127d14a6cdf08f25977091b48cb6060"
     },
     {
       "path": ".archon/workflows/build-feature.yaml",
@@ -2379,7 +992,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature.yaml",
       "kind": "workflow",
-      "sha256": "39cc7d48ac2065d65a6976e9cdf31f72f0a314781706b174e78866794f2fbdbe"
+      "sha256": "a684f0c10a6a62f8bd74ae6e25cf9d523ccaa3133405f556a5bb9fdafd02f3b1"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -2406,16 +1019,7 @@
       "template": true,
       "origin": ".claude/CLAUDE.md",
       "kind": "instructions",
-      "sha256": "7e011158101268d4c68023f1efe6d847080109d119bf1e9c1910530784fe3bb8"
-    },
-    {
-      "path": ".claude/delegator.settings.json",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/delegator.settings.json",
-      "kind": "config",
-      "sha256": "d0445fb568a99cf90aa401bc06ef8bfc49215301ffa9c4fd99db862476810fee"
+      "sha256": "785fe827411aa7b789712268b9fb5647e61a2e2a5b8dd3ef58634a370f37d7a5"
     },
     {
       "path": ".claude/hooks/.gitattributes",
@@ -2442,7 +1046,7 @@
       "template": false,
       "origin": ".claude/hooks/agent-scopes.json",
       "kind": "hook",
-      "sha256": "978fde70f649506c061008dff8ea59e5232f1a4715df85bf8f800b1f20ea3e68"
+      "sha256": "0522a2cbc6101adb93c98e8fb3686b45e305318535361381288769294de70e43"
     },
     {
       "path": ".claude/hooks/guard-generated.globs",
@@ -2523,7 +1127,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "26bd1f73a969a2d626f5c307ddf763b870fb53929a1015f28f7f41886560ff44"
+      "sha256": "92912e4dff5ea9e9d34f03b2682d3c04ed81bf7dc420cf9ecfb8bbb4fe348d6b"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
@@ -2559,7 +1163,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-audit.sh",
       "kind": "script",
-      "sha256": "1778d9a6e494ad8d8d8978da9db7aae1ecd0c76742de57e218f959b58654adb2"
+      "sha256": "5009fa2840ab61cbc561cfcc9077cde2aae1cfa9de6a8be63a1fd466c05a2157"
     },
     {
       "path": ".claude/scripts/ci-cost.sh",
@@ -2568,7 +1172,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-cost.sh",
       "kind": "script",
-      "sha256": "edfe86f9b859585767cf50a6761b4afb7583737f623a1e2ba855301887de4362"
+      "sha256": "c21d2b49b5175fa9a45ea2eceb33639438f93a09d742feef6b30f4b2cb23aa8e"
     },
     {
       "path": ".claude/scripts/ci-ledger.sh",
@@ -2586,7 +1190,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-local.sh",
       "kind": "script",
-      "sha256": "71c86827503eb8f23ab14d678bbf391718a78775879912ad04bc7016937c44be"
+      "sha256": "7ab2c2c1751ce6f16080fc88273a2fbecdebafa8ed453ee5fe2df540953bd220"
     },
     {
       "path": ".claude/scripts/ci-plan.sh",
@@ -2622,7 +1226,7 @@
       "template": false,
       "origin": ".claude/scripts/gate-change-check.sh",
       "kind": "script",
-      "sha256": "aff40301a933b47a1c5fd4e019250a8ce7dc138a8e64ff630e600e300ec579db"
+      "sha256": "2687e34d653ef7f98381ab39fdcecebf1fc9466e088aba421b47494c899a7c26"
     },
     {
       "path": ".claude/scripts/groma-check.sh",
@@ -2631,7 +1235,7 @@
       "template": false,
       "origin": ".claude/scripts/groma-check.sh",
       "kind": "script",
-      "sha256": "86de280924524e2da96dd68bb8968fe71a1a61ee6ab5b77f3aaed9bf30b53f72"
+      "sha256": "1b466e8d5cfb7569179433cc7eab506d07f8080e12cf98b3b0d1463540586639"
     },
     {
       "path": ".claude/scripts/groma-delta.sh",
@@ -2667,16 +1271,7 @@
       "template": false,
       "origin": ".githooks/pre-push",
       "kind": "hook",
-      "sha256": "f66fdc61340600b0f05449a9fc1eb487de41f08eb15a0b64d2929bc636991e96"
-    },
-    {
-      "path": ".github/agents/delegator.agent.md",
-      "profile": "core",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/agents/delegator.md",
-      "kind": "agent",
-      "sha256": "d0ffc9152290bd5ccbae7848923932e306d3aa4012900b06f3f48bd9b924d49a"
+      "sha256": "bf84ce8b6e00587288a1a8cb6e39d3f3fcf604c6bc426334c4d478cbd765ab8c"
     },
     {
       "path": ".github/agents/design-critic.agent.md",
@@ -2694,7 +1289,7 @@
       "template": false,
       "origin": ".claude/agents/github-agent.md",
       "kind": "agent",
-      "sha256": "979ee7cb9a3cfba1eb933f258ce8bfd303189b773321cd18df2d8692eff33da1"
+      "sha256": "b0ee3f8e6ff28b436114ce9ff4bb060e4a74c08bf56ff68b7473362d83670e58"
     },
     {
       "path": ".github/agents/retro.agent.md",
@@ -2712,7 +1307,7 @@
       "template": false,
       "origin": ".claude/agents/reviewer.md",
       "kind": "agent",
-      "sha256": "f3fe885fc8b5082f49852ecdb03e458e32898fc868cf48beb964e7d25718205f"
+      "sha256": "a1ba179285700fb5a115f1f51ca3ce6cb617ba7ba5fbc255fb514fcc45fda113"
     },
     {
       "path": ".github/copilot-instructions.md",
@@ -2721,7 +1316,7 @@
       "template": false,
       "origin": ".github/copilot-instructions.md",
       "kind": "instructions",
-      "sha256": "901483dfa9ac36b146333ac28f2348ff7f424a54483db07ae59a7bc9b8e3ee9a"
+      "sha256": "8dbaaaa8c8f859bc24ea925ef93306fd9e43d29bc89c655399e3b0817b80f757"
     },
     {
       "path": ".github/hooks/archon-run-guard.json",
@@ -2748,7 +1343,7 @@
       "template": false,
       "origin": ".claude/settings.json",
       "kind": "hook",
-      "sha256": "e6a7c5798e8fe4fe566795046900ea3156fdee437b95ffbc70bddcd0a78db5d9"
+      "sha256": "adba4884c8bfda356397d768198e6683e8ecfff4eed35982020e9c446ab9ce4c"
     },
     {
       "path": ".github/instructions/general.instructions.md",
@@ -2757,7 +1352,7 @@
       "template": false,
       "origin": ".claude/rules/general.md",
       "kind": "instructions",
-      "sha256": "cc3e2463a83642dbe01b5062d8cb8c927dfb0c994cfe50f272b4456e2c8f310a"
+      "sha256": "5e6b83a192e6ca5ce15cb626a1a6fcc29b4c55abfbb15bf747e929f3d4813f23"
     },
     {
       "path": ".github/mcp.json",
@@ -3018,7 +1613,7 @@
       "template": false,
       "origin": "docs/code-maps/README.md",
       "kind": "doc",
-      "sha256": "dd54fd02c3ed8c5e794434b9596550b010285b15bc01222df70f4b153f847af7"
+      "sha256": "b418dcd1c00b7ebc969af2928100beccad2fd7cca40b1c3bf470ab77e07da544"
     },
     {
       "path": "docs/code-maps/clean-architecture.md",
@@ -3108,7 +1703,7 @@
       "template": false,
       "origin": "scripts/test/ci-cost.test.sh",
       "kind": "script",
-      "sha256": "f45fc28e410d89ff7e85af1168438e8e8e2fb8ee554da26d87b5f8b46ac99e4d"
+      "sha256": "9bf6d32425c3b8deef2c75fda79d52da25caad2fb9e628c7a12403b92bc0ac99"
     },
     {
       "path": "scripts/test/ci-ledger.test.sh",
@@ -3126,7 +1721,7 @@
       "template": false,
       "origin": "scripts/test/ci-local.test.sh",
       "kind": "script",
-      "sha256": "c8446474fd68c1794536955f4c8900017979b58491fad520a42aedc4bc108092"
+      "sha256": "b16a517cf8aae64333a71a5a017ffd47fce8740cd185688500ad6676271e9cbf"
     },
     {
       "path": "scripts/test/ci-plan.test.sh",
@@ -3162,7 +1757,7 @@
       "template": false,
       "origin": "scripts/test/gate-change-check.test.sh",
       "kind": "script",
-      "sha256": "6322c12793d3d98161b796c140ec8abcab18fec474cb5dc2b1170c71d0109770"
+      "sha256": "0a845ded2069df40a82e0b56ee8df50f34d815eea6902b50ddcd871aa3e749d8"
     },
     {
       "path": "scripts/test/groma-delta.test.sh",
@@ -3189,7 +1784,7 @@
       "template": false,
       "origin": "scripts/test/pre-push.test.sh",
       "kind": "script",
-      "sha256": "9a62094a2e5aea2ae72cb74608ac0534fdc57d1fd0f6b5a03dc6db08faa91403"
+      "sha256": "0fff9e449bf673e20ed4f3df6465b92868fdbaa89fee341e709693abcf032699"
     },
     {
       "path": "scripts/test/run-suites.test.sh",
@@ -3216,7 +1811,7 @@
       "template": false,
       "origin": "scripts/tokenomics/commit-reports.sh",
       "kind": "script",
-      "sha256": "d5f141666e7087ab84209fa24663eecb308581486516d34fce86026c8b5f8d8d"
+      "sha256": "cf0201ee3de434107dcbb56a8ae16d8038295b8b3ceee57bc3c6bc3161a856db"
     },
     {
       "path": "scripts/tokenomics/tokenomics.js",
@@ -3225,7 +1820,7 @@
       "template": true,
       "origin": "scripts/tokenomics/tokenomics.js",
       "kind": "script",
-      "sha256": "44fe236b7ffcf9d4d5e19caa74f1adb574c2c333168291b783ad78b92ca4c84e"
+      "sha256": "fcc52f8fe13fbeeb6cffaf636508d68af325bb31ca07e8da322b06f2b82d7eeb"
     },
     {
       "path": "scripts/tools.conf",
@@ -3270,7 +1865,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-workflow-check.sh",
       "kind": "script",
-      "sha256": "c2fe2af5aacbe1fe6e3b16e8efc153006abe4db07b9e1670d3e737052c4d8b42"
+      "sha256": "087570bfe12a233071a7040b17e199126b13c5f1e798c6548b9482930b8f10f2"
     },
     {
       "path": ".claude/scripts/class-version-check.sh",
@@ -3333,7 +1928,7 @@
       "template": true,
       "origin": ".claude/agents/analyst.md",
       "kind": "agent",
-      "sha256": "33f5ede7274ca8d5514bad63e74601255171838e900783a5ab5464a89464bdcd"
+      "sha256": "b5d0976f6baa622a3452420aac6e45c4562ca25d4a5b55fb517c7404cc6bc33c"
     },
     {
       "path": ".github/agents/debugger.agent.md",
@@ -3351,7 +1946,7 @@
       "template": true,
       "origin": ".claude/agents/developer.md",
       "kind": "agent",
-      "sha256": "8c73da7b5a3c464c1e35cb7c6b569a2e6c41a2deb8dc5e78693ae727491f9173"
+      "sha256": "828dd3566ad2324c66efa945130cafc91eb0a49f6d56c2133c83682376e16e04"
     },
     {
       "path": ".github/agents/test-writer.agent.md",
@@ -3360,7 +1955,7 @@
       "template": true,
       "origin": ".claude/agents/test-writer.md",
       "kind": "agent",
-      "sha256": "663b00d8fb581f6418e1a7f0c24f42a2b59a9223420cc06b5d3b8efec3b24c68"
+      "sha256": "48fb14295b35474544d856fd9247dea338e6640940216712c494abf3fe9e51b2"
     },
     {
       "path": ".github/instructions/adapter.instructions.md",
@@ -4045,7 +2640,7 @@
       "template": false,
       "origin": "scripts/scaffold.sh",
       "kind": "script",
-      "sha256": "85db59cfbc101132915dc0100ee3967ff84c5446f0ebb18d3b65f9f3517cc5a0"
+      "sha256": "f0d105fb7eff09c3d4f035709b7655f99962b09aef7c8cff467598de3f1943bc"
     },
     {
       "path": "scripts/scaffold/for.js",
@@ -4055,6 +2650,24 @@
       "origin": "scripts/scaffold/for.js",
       "kind": "script",
       "sha256": "22bbf55b9196fff5b4a38aa07c23938b09899cff9e31d9b4d08763db1cc669a4"
+    },
+    {
+      "path": "scripts/scaffold/new-context.js",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "6af457c74d090ba9be267ff9c6e10013c2c6c99c79c35c66236538919d78218f"
+    },
+    {
+      "path": "scripts/scaffold/new-context.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "97e21c485821f46b585f1e14cec2bab81f3bd7af54575583a9be5d2e5006c025"
     },
     {
       "path": "scripts/scaffold/package-lock.json",
@@ -4075,13 +2688,22 @@
       "sha256": "2aff3a50caf10e17774c64ee79026bbfb5b4aa0d0f5a6e8a5683c05a8feb9403"
     },
     {
+      "path": "scripts/scaffold/smoke.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "59bec663a2ad0c0a462126c2eebb48fbfe994fcf275f80151a500e0396762eff"
+    },
+    {
       "path": "scripts/scaffold/targets.js",
       "profile": "java",
       "mode": "0644",
       "template": false,
       "origin": "scripts/scaffold/targets.js",
       "kind": "script",
-      "sha256": "5d81ff45a4401408db3789c642ea518aa542e98a5028140b57ce95a6d8137fad"
+      "sha256": "726b8eca43900904fee1e33d2ed188806f28848db2733850281f0dd63de645e8"
     },
     {
       "path": "scripts/test/affected-check.test.sh",
@@ -4091,6 +2713,15 @@
       "origin": "scripts/test/affected-check.test.sh",
       "kind": "script",
       "sha256": "2060f4d6a6adc3ad5c3bae403c206a174fd35fc82ba1df7c04025fc3b1f68766"
+    },
+    {
+      "path": "scripts/test/ci-workflow-scope.test.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "6a4693364c7a6890699935e36443c80763b8f5a9d4da4b70a17cd97aa7ae431d"
     },
     {
       "path": "scripts/test/fixtures/mutation-gate/killed.xml",
@@ -4127,6 +2758,33 @@
       "origin": "scripts/test/pin-proof-check.test.sh",
       "kind": "script",
       "sha256": "d03fa842707b4a05fe25941a7956d7365d3fd1b93c8d6a8651ced3aeacf3a783"
+    },
+    {
+      "path": "scripts/test/scaffold-project.test.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "607ad13be4ee727c67f6958bb5f5dd6408ccfe5ac702335344470194eae335e7"
+    },
+    {
+      "path": "scripts/test/scaffold-wiring.test.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "7478d37ee3eaf6c09e80959c61bf986e72c61c012455b2ecbf585abb46be73c8"
+    },
+    {
+      "path": "scripts/test/scaffold.test.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "f0c6049c17c754fa20cdd2268fdb773061a4b59e7a216128e00904d6e3fc12c3"
     },
     {
       "path": ".github/ci-inputs.yml",
@@ -4828,7 +3486,7 @@
       "template": false,
       "origin": ".claude/agents/contract-agent.md",
       "kind": "agent",
-      "sha256": "27c6db691bda45b5576a41d0f43d09b60d64455ae59852cb98a7d6163189de99"
+      "sha256": "230ba0f478e8286daa412a9b37976fe7f68765fca24422ca853c2527fa9bec6c"
     },
     {
       "path": ".github/mcp.json",
@@ -5198,6 +3856,1122 @@
       "origin": "scripts/test/fixtures/portal-mcp/schemas.yaml",
       "kind": "config",
       "sha256": "f50a5e078385f11bd561cf8c5c77e0d9bbd86ee7bd5d694d24b628f28c8c0799"
+    },
+    {
+      "path": "docs/scaffold-templates/project/README.md",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6b29081998d8e3c3eff113c2edc79f72baab5ee00994b21b1fb9114373c51289"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "bf446b1a9497838527d5bd36dc53268fed32b1302ceae1428165b314230bfa1e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "c46b3cdb67a947e1d2780fa9d794be9ff16f947b4a6d0c19470953ee5c83ff01"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8752995d18d025c021cc28d444fd9d57539509a27b25b0c3fc4b24a9b1fa6158"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/attribute-converter.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d0b7ff0249641a1eedb2df082993b82a4ac5481076e6a91900bd633066e839bb"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/bean-config.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6dc979fc07f0e1ae345907f10b9b3713b6c641a20c21d1383c5f304f94700906"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/bean-config.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "afe8d509b4ed4303955458e39373741117f290dbc1b1b9bf34ef829e7f3285c1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "b3b89d250e0d1ace2772403b20f34345df6fae4309032af014e5a20264997510"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e559ad2d3ea6195d39efb357a8593287bcba2f046d93a75fffd137913808b4b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ed22168ba3664867bbddab547cf6387f63cb06c7357088680d596cad15316023"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/cache-refresh.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "87771bc6d90ad1a4d2fd8f469e3d60267edcf34803518f4466e101b5e0c1693f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "73025397a44386468da207047f7386fb77d62802a4911c3a1f91f17a253dac15"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "264f4571d55c7cf4e50dfca6f5d63e022d04d23ff69ef1c1edeea113c17e236d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f3eb9ab9c966f012bdef4b30c5b68f724f8bb310d6349da7547a7f8c84c5bc7b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/code-enum-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "06adbe75cfbf08ff0a0c3ec182b42800320c27fe9c710b9ad3fad9b890c9fd40"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller-test.admin.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0fe931ba746cf44b797fa3d979df97bc8261df0d0166633351a0243c30ac7416"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cb6d68ef33c312cdeb2ddede5d8bafe0e576a0ba15ddb0c8b329dc0ea3b8fc95"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a549eadf77c54f405e1b4904bd479395210e65b8addf15eb4cbbfa7b4219626e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller.admin.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3e967743395165d59456bfc4a1c2afba753c5457da4f9df4362982254ccce9b3"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a674a215d496737d6d1f84e0f55a89b22f2260f3f67ee964609deaf9a861411d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/controller.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "eccebaaedeba93b945a955994a6e177409ebc6a665ac9d47b480c6fd897a7842"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0b98477cbff77bf850e922679aec549f1d2f44a772ae39d07e1a538a1cd8713f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d023ba823018f3164e1ed20ed65ded8dd4f4e2f3a46ebb49a3084984496d920a"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "24770c8b47bcf217c43ba8ec38a71ef9c050a19bdeb0822570205db87d89d56b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/default-repository.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "29092853f71a7665107b1a5c49e44ba73d50ab92859b0c0c0dcb5a01d37d078f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f264adb29ca1a4705f1c92bed7f5b36853b31727c54dac84b5718dac8ae58554"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "93f94b4e04a8776b39874fc35d8bccade8c13746c4172716b39cd839884e091e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d42a73a3fb9510f48bbb63847a1307a2374ccfdbc22398f8bb5516b135c1cac5"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/domain-to-dto-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "972a0bc1e0600caeab05207781a55c516efa6a684ee5b12d2029f6dd8183e7b0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/flyway-migration.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "850f0e0d4fef77fdbef821ff10a0b7cd8f8b9e00abd31d1c8594e55b171944e7"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/flyway-migration.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "46f343ad4b3b7d77ab7c33b19a22b8de7c2b2d53124680f1d3577a53e0554a2f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "031fda3db4adb206f4e8545b89bbe361a34a13f8abf10837f73a291d11eac183"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "39354cd8927c03c477fc48af8f043c4b7bccaf521883f9eb082a0a54c16caccc"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "867e934dcbd57fb2ae485982e6ca83b295fcef4f99c373c6e07e6f960eae1a97"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "25fe01f49c0d5b1515c2e98f3ef8bee98f30239b363283f5357a815a72cb1837"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-entity.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "aeb8d799282ee4bc74df500f7a701c4df711b4551822d8b18f84fdc9bf7627c4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-entity.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "05c04840a55f8ed2be74c0e1b4d7dfdc65df1eac09f1f1e726b07b2899bc80c8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-repository.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "13a604190db14aefa1d354980afc5addcb5825d366370a2d1b3b2b2ba5fde25f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/jpa-repository.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "95d665db6c2c2426ae4e499cbd2946032d326e12b67358bd8da3365f0b38dfb3"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "039a654b153bc2fb9d7bf6daf5ef8dc9c7cb69cfe14c002a4deb818b590d64e4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3d2c858611b3218048a9191a3447c507732a3a1984906f3c1bdbf6f0b26e332e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "7dbfdf2c7ca1d5934b1bf491163b0ab5363bbb82fdcf114450bf0e7aae004cdc"
+    },
+    {
+      "path": "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "73bd405bd195db5e13d0fc4ced159672783bfbc19773d82d51b546cb5050eebe"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "aa208c378ce92368b8378ada4e3445479a9288ca4fdb2e2d8e1be3a3d7dd4572"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "c94cc6fbe6f7a0cba9aa9b670b2946758d2c7a389d08e271b9066f7e956fad97"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8ff249ed9fe1cd2587d57e23718b9e2276801d3806acd9410354e843caed97d0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum.external.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "300c8acc2940c38728a1b12cbc5446850697c49cf67f93da308b9ae6974b4efe"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/coded-enum.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "515d9fabf283bf74f6fb746a0ddfd58d4cdff75cc5d3462e2cc6c642064aa8db"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/create-request.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "9338c6d9be17333d75b2a310467c351d771e7b9105e3bfe114d936ac8cba6425"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/create-request.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "fac61cbfc76ca805b652512f1ebcbb0df19571866e7c81ce68063f3828ac7de2"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "09db567c57fdbb5247e3f9135e055e6832805b41acfc3cc63b8305e366f65df9"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "2a9e159aaa42fe70ca46b330695d800b65834d549fb67eaf86b78a38ac8115ef"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "d91890333d6a310d2a9d4852bf152b6a5ca546854bfd5ab4b8f99fa080823026"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/entity.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8a713f33cae2ad258db0c1757467ce8080c7ecccb1c0725cc85a54e6d6b8f2a8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/exception.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e54a255510aa0b3ceb46a6ba5e654961c8303d273f404cdc42dd40ad7d6761fe"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/exception.gateway.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "84e6e16d4bb364d0c72fc85fce438f66c8d9a7b7191019a8cb55564c5dd31b9f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/exception.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f78074faa39a6011613341b9c5af22b897ebcf1392d69ba31ade8085ab35979e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e5a4a5ec1e1ab189ae3fd6eec2ea9e7dc65f73384934f0edf68529aac3066d01"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "89a71f75dd02ff983827d443578d470b07c3dcf045e2f953d03a836ab79ed0a7"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "5c2479ac8839fcdf03be5082cc9ef3cb65e9cd8eee6be0cb0fbd59de138d22c1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/factory.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "1550d0ba7fef8fa5617a2c610160127df998fae3ee113877534181c0c2c02462"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/fixed-mother.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e0ca697726d64efcf5477ce13c2fc70cc3bdcf0ba0e51f5eb439cc282e6d8f36"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/fixed-mother.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3bde3416a8d7cad0fad51be6c19a037e06a8c0403f56762a0300aec99bebbccb"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/id.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "64feafd269c48c8ee3977f5fd2b72bdf2686cd9d7c9d077a8f4a5c8fee826ec2"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/id.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "549de45c6b8c8dc2ee6a85b52f6a8d9aa31915a599e2273996b3008c59c1a7e8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/mother.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8ec8505cb66340ae57b511e294fb260690c706b3b728391e99f60e6ea7477ff5"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/mother.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a3c3079662301ad06ee05d0ac0813eb53e5476a257faa38642e70fa25b40eb1f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "5496ad67ffc2eaae3af9d4aaf177c1679fe53dadebd584b290a95c6be967ef5c"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "74331e6dd13e4976bddb0c8c32e0b8fcfbc2e714402b1b5b5097b233278385ce"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "20c7a2517dea36b20abfc1fd390c09f971b5cfb2af0d1a98c0dff355ae9aedf9"
+    },
+    {
+      "path": "docs/scaffold-templates/project/domain/value-object.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "21ffcea53846f28d9913ce1256e6ed717f5cb9aa96b8a3f99b7d09b0a938697b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto-mother.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "36c3fd80cdd7fa5716a0e5801783b4aa28e44791b7429cfb77dd149ec6261585"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto-mother.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0ffd92f5c37b3b7de55cb3a3a9f92b130c940bd721744805b90c35355d160207"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "592d5394158f76e16159392c090ea3dc7bf178f93d0669dc88a1f4a63dc2fc31"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-dto.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "7f56b899aaaf58f619e8bab563f7cf85daf663b5ba5ec8147f16e0c7ec9792c0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f09d2f84f3cb40a1b4135ed65953964419a720ad0da234c29ac4783963a02c2d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/gateway-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "575211efbf3f7c2a2fb540f503a98006c26870838c1dbd13e513c09c0d589f87"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "453ddf8374f52140303cb1f73938a8f3320d8cfcee13cd089103f685501c37db"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "695eaf244a173ed02eb53d3a9cf13ead296046ba265eafb752a808f0b6e22cf4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ea1bb11886165044c84d98b9439b8c60900c8ba4c832b1abe7c9bb45c4d9623f"
+    },
+    {
+      "path": "docs/scaffold-templates/project/gateway/rest-gateway.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cfd79c247055ef66a550dd8d2d110cad148961af3fdb1df7c4e850702b51b904"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/abstract-repository-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ff145207dcce136d73656773b77b58ddbb5a2a9a604e770a85776a4ee35918fa"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/abstract-repository-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a3708425af8ddf11c0275e6328c80f6ed4e9638aebcd20588fcf048793b63830"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/adapter-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "561c8c6d3e9fd2342e66eddd3d5b656e2fcd28008e07dc13815092c312a98b39"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/adapter-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ccc459daa98fd6c7905a6a097affacffd17057fa23c613f8c5c2c684a331c1b1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/domain-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "2e4b658584e36a0e6a04e272476ab50a983a1ade30521f9c148939678d2a5727"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/domain-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "752ce6d76f8ccdd94007f7ce4963d23bac69c839f18f8b5a8e0c448c70ce6c70"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "df55acac8c5ad048dbcb1af3bb0c4179337b277d11581ab049d8d3da97a2b757"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "657d0c53535f34411e1da53e4035bb96a763838cea109160e4f1046d4d2c58f1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-test-config.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "5b00de30ae7575f89a0c4c8d2d10e16286470faf4db87b274fe5b333d145d487"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/gateway-test-config.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "41fb15502ff4e56ba8b5aee1a1f39f502b305084c5a2f8499552c56772958405"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/test-application-properties.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "56861c241656efbe9f2d7d44cb01d6c3f8a76ebdf70da92aa7d0d1e56f6b0e27"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/test-application-properties.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cead78c5a27ca107f1a834d3ff9ad7b72eb71b1d2ec1bc6854b0975a7e2ca1b4"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/usecase-build.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8ba4ddec6fba38c68dc60a3c8db81c1cd999d31282ab43840b6273ba0322949b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/module/usecase-build.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a110843f32cd5b1a8e1cb5278bdaf5c9cffcf2961ef1fab336586852d2073d40"
+    },
+    {
+      "path": "docs/scaffold-templates/project/scaffold.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "ad0be8c9d162b4f18baf4c3629a60097f02c51a7b0c673ee3b7c79921074bc3d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "defd5ead218eb8bbed51b9de859dbc3c63d70e885f20e6d33bca36da9df3da17"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a32940cc21048157a6971340acc4474d974ffec2fe20de95e5d9bc2967a07ca9"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "985d4b9f7c3a7f06a01e2c32c91f4b103feb84e3c69748122a2487ae32aa8402"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/create-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "e827370d6ee5e03fcb39a370c0b12e97b1910c1331d10aa7fe722f8f40be5403"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6ceafa2ecc2c0cf1337df56cdfc6cd4e1a23b7a7408ba448daf5b3246758cd6c"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8709f658cfdba5a9df70684f6a2d7642d6e36b18ca1079ef9c8881c5b16eb7e0"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "b24b42edc81d8383c28dc5549dbc9e17342fddf6a524d5f866fbb4fd273daecb"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/delete-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e49227e2cb9501514032eabb8d8f85ce9bb95d9d699a7940152188321dc62ef"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/domain-event.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0f5bfb1877e8cb9a665e6fa526038baf8fa9348b6509ac74872968576f5df525"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/domain-event.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "68ef9a0dd9bd50e86ac785f0814132d861ec5eef115d01db22b14c8705626886"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/facade-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e7af52e995682602eec08e9fadcde3654058b201e5d1c1332fa0f318fa68ad1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/facade-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3fd06d69af0af5cd508d3b94d97f6c57d770cf67afb63d5cd6e34791e4e4b442"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "0a09cc75694ad2c9a6119b3e52f8b253d6554ddf8204d5e4b36fec102a7cdd4e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "f651c18707dd4676eb666c0a9825606c6466f32096be0d1b7d437dc0b650f32d"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "af6d55d31f54e8390c774ab46e709d1680caa99e17dcc7d7efc39f33c076935e"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/presenter-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "c97be0838af1390b42e2545587bc9111d3259208d588a8608036cf4c06af4f99"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/projection.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "76af859312df6f1fec5af9cf9b5958c5eee0e6b5c51ddce5d4dced623db432b1"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/projection.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "196d8ca433c3707a72dbdcfda268c84160e7dad803951e7a44d2d81896939645"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-repository-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8203f32972cee33230a4e8a51c940c936eaec6254fd4d7c8291f5b1cddb7b289"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-repository-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "cc71f99a0cc340501a2a040f1e6f925041490eb31a340f764b07b41bfc9465f8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase-test.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "237ae46e975a2415eb3ed3d5c9d47dee8e1cba21c6f1bcd727a534d737083666"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase-test.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "6212c0cae7336f892a324a222628be2ba44bfce094937b5142c3435c537668f3"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "83a0a22fa9c3770aeb1a8cbfaa9e748036cad7b9722eaf521386660138a2a233"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/query-usecase.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a0c72e8145b9428e3b9c130b80c9c93e165cf9cbdee9e82375b87ec7116186c8"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/repository-port.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "a99eb8bda7a742bfe8b71020f03c2050690c314fd4bbdbc9acf6bbe37c1e3fd5"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/repository-port.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "443b6a51d8a9153e1d309cc1d40c224ce12f694ca9f5d8bceb3b5138803aaf09"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/request.example.json",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "3f694f6da9b70acf88db0c535459171b4e5cd1c3992af8c23cca325194a2a90b"
+    },
+    {
+      "path": "docs/scaffold-templates/project/usecase/request.mustache",
+      "profile": "mijn-gezondheid",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "template",
+      "sha256": "8e503d865b09ea4fd7348f73da8024bee8132ca228b161dc074529dd2780f26f"
     }
   ],
   "aliases": {
