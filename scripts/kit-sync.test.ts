@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { trackTempRoots } from '@archon/paths/test-utils';
@@ -1058,20 +1065,31 @@ describe('standalone build workflow', () => {
     expect(standaloneWorkflow('.archon/workflows/other.yaml', wf)).toBe(wf);
   });
 
-  test('the shipped workflows stop for the plan approval, end at ready and keep the same nodes', () => {
-    const idsOf = (p: string): string[] =>
-      [
-        ...readFileSync(join(import.meta.dir, '..', 'kit', 'profiles', 'core', p), 'utf8').matchAll(
-          /^ {2}- id: ([\w-]+)$/gm
-        ),
-      ].map(m => m[1] ?? '');
-    const claude = idsOf(BUILD_WORKFLOW);
-    const copilot = idsOf(COPILOT_WORKFLOW);
-    expect(copilot).toEqual(claude);
-    expect(claude.at(-1)).toBe('ready');
-    for (const id of TAIL_IDS) expect(claude).not.toContain(id);
-    expect(claude.indexOf('plan-approval')).toBe(claude.indexOf('stop-route') + 1);
-    expect(claude.indexOf('implement')).toBeGreaterThan(claude.indexOf('plan-rejected'));
+  test('the shipped build workflow stops for the plan approval and ends at ready', () => {
+    const ids = [
+      ...readFileSync(
+        join(import.meta.dir, '..', 'kit', 'profiles', 'core', COPILOT_WORKFLOW),
+        'utf8'
+      ).matchAll(/^ {2}- id: ([\w-]+)$/gm),
+    ].map(m => m[1] ?? '');
+    expect(ids.at(-1)).toBe('ready');
+    for (const id of TAIL_IDS) expect(ids).not.toContain(id);
+    expect(ids.indexOf('plan-approval')).toBe(ids.indexOf('stop-route') + 1);
+    expect(ids.indexOf('implement')).toBeGreaterThan(ids.indexOf('plan-rejected'));
+  });
+
+  test('the kit ships only the Copilot build workflow, not the Claude one', () => {
+    const manifest = JSON.parse(
+      readFileSync(join(import.meta.dir, '..', 'kit', 'manifest.json'), 'utf8')
+    ) as {
+      files: { path: string }[];
+    };
+    const paths = manifest.files.map(f => f.path);
+    expect(paths).toContain(COPILOT_WORKFLOW);
+    expect(paths).not.toContain(BUILD_WORKFLOW);
+    expect(existsSync(join(import.meta.dir, '..', 'kit', 'profiles', 'core', BUILD_WORKFLOW))).toBe(
+      false
+    );
   });
 });
 
