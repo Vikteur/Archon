@@ -128,7 +128,7 @@ node "$script" "$art" > /dev/null 2>&1; check "7 usage error exits 2" $([ $? -eq
 wf="$here/../workflows/build-feature-copilot.yaml"
 check "8 mcp-use node after plan" $(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf" | grep -qF 'depends_on: [plan]'; echo $?)
 check "8 report only" $(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf" | grep -qF 'mcp-use-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" explore plan || true'; echo $?)
-check "8 stop-route waits for it" $(grep -A1 '^  - id: stop-route$' "$wf" | grep -qF 'depends_on: [plan-check, mcp-use]'; echo $?)
+check "8 stop-route does not wait for it (report only)" $(grep -A1 '^  - id: stop-route$' "$wf" | grep -qxF '    depends_on: [plan-check]'; echo $?)
 
 echo "mcp-use-check: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
