@@ -1,0 +1,47 @@
+{{!
+  Use-case input: what the adapter hands the use case (from the request DTO, the path, the caller).
+  validate() covers presence only; business rules live in the domain.
+  Exemplars: therapeutic-relation-usecase .../exclusion/usecase/CreateTherapeuticExclusionRequest.java,
+             .../DeleteTherapeuticExclusionRequest.java (validate())
+  Target: <capability>-usecase/src/main/java/<pkg>/<Request>Request.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Request (class name without "Request", e.g. CreateGadget), imports[],
+          fields[type, name, notBlank, primitive]
+  Left to you: nothing for a plain input; drop validate() when the domain validates everything.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Notification;
+import be.mijngezondheid.common.domain.validation.ObjectValidator;
+import be.mijngezondheid.common.domain.validation.StringValidator;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Builder
+@Getter
+@EqualsAndHashCode
+public class {{{Request}}}Request {
+
+{{#fields}}
+    private {{{type}}} {{{name}}};
+{{/fields}}
+
+    public Notification validate() {
+        var notification = Notification.empty();
+{{#fields}}
+{{#notBlank}}
+        StringValidator.notBlank("{{{name}}}", {{{name}}}, notification);
+{{/notBlank}}
+{{^notBlank}}
+{{^primitive}}
+        ObjectValidator.notNull("{{{name}}}", {{{name}}}, notification);
+{{/primitive}}
+{{/notBlank}}
+{{/fields}}
+        return notification;
+    }
+}

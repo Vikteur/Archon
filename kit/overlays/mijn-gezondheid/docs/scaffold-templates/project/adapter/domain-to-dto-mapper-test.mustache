@@ -1,0 +1,35 @@
+{{!
+  Domain to DTO mapper test: maps a Mother scenario and checks each DTO field.
+  The base case checks every field against its own mapping expression; replace with literal expectations where the
+  mapping converts (enums, dates, nested DTOs), so the test fails when the conversion is wrong.
+  Exemplar: vaccination-adapter src/test .../controller/VaccinationDomainToDTOMapperTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/controller/<Name>DomainToDTOMapperTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, domainPackage, fixture (Mother scenario), mappings[DtoCap (capitalised dtoField), expr]
+  Left to you: literal expected values for converted fields.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}DomainToDTOMapperTest {
+
+    private final {{{Name}}}DomainToDTOMapper mapper = new {{{Name}}}DomainToDTOMapper();
+
+    @Test
+    void given{{{Name}}}_whenMap_thenReturnDTO() {
+        // Given
+        var domain = {{{fixture}}}();
+
+        // When
+        var dto = mapper.map(domain);
+
+        // Then
+{{#mappings}}
+        assertThat(dto.get{{{DtoCap}}}()).isEqualTo({{{expr}}});
+{{/mappings}}
+    }
+}

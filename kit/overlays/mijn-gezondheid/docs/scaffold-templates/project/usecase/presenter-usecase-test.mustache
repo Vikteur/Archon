@@ -1,0 +1,70 @@
+{{!
+  Presenter query use case test: the port and the Presenter mocked; found presents, missing returns the error and
+  presents nothing.
+  Exemplar: report-usecase src/test .../GetAdmissionDetailUseCaseTest.java
+  Target: <capability>-usecase/src/test/java/<pkg>/Get<Name>UseCaseTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, usecasePackage, fixture, imports[], KeyCap, keyExample
+  Left to you: caller-scoping cases if you added them.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.usecase.Presenter;
+import {{{domainPackage}}}.{{{Name}}};
+import {{{portPackage}}}.{{{Name}}}Repository;
+import {{{usecasePackage}}}.Get{{{Name}}}UseCase;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import java.util.Optional;
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class Get{{{Name}}}UseCaseTest {
+
+    @Mock
+    private {{{Name}}}Repository {{{name}}}Repository;
+
+    @Mock
+    private Presenter<{{{Name}}}> presenter;
+
+    @InjectMocks
+    private Get{{{Name}}}UseCase useCase;
+
+    @Test
+    void givenExisting{{{Name}}}_whenExecute_thenPresentIt() {
+        // Given
+        when({{{name}}}Repository.findBy{{{KeyCap}}}({{{keyExample}}})).thenReturn(Optional.of({{{fixture}}}()));
+
+        // When
+        var result = useCase.execute({{{keyExample}}}, presenter);
+
+        // Then
+        assertThat(result.hasErrors()).isFalse();
+        verify(presenter).present({{{fixture}}}());
+    }
+
+    @Test
+    void givenNo{{{Name}}}_whenExecute_thenReturnNotFoundAndPresentNothing() {
+        // Given
+        when({{{name}}}Repository.findBy{{{KeyCap}}}({{{keyExample}}})).thenReturn(Optional.empty());
+
+        // When
+        var result = useCase.execute({{{keyExample}}}, presenter);
+
+        // Then
+        assertThat(result.getErrors()).containsExactly("{{{Name}}} not found");
+        verifyNoInteractions(presenter);
+    }
+}

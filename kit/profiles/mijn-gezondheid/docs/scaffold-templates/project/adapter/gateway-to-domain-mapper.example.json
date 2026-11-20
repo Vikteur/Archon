@@ -1,0 +1,29 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/gateway/GatewayGadgetToDomainMapper.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.gateway",
+  "Name": "Gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "dtoPackage": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "imports": [
+    "java.time.LocalDate",
+    "java.util.UUID"
+  ],
+  "mappings": [
+    {
+      "name": "externalId",
+      "expr": "UUID.fromString(dto.externalId())"
+    },
+    {
+      "name": "description",
+      "expr": "dto.description()"
+    },
+    {
+      "name": "countryCode",
+      "expr": "dto.countryCode()"
+    },
+    {
+      "name": "administerDate",
+      "expr": "LocalDate.parse(dto.administerDate())"
+    }
+  ]
+}

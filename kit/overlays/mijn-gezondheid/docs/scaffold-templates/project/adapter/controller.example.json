@@ -1,0 +1,27 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetController.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "Gadget",
+  "Api": "VaccinationApi",
+  "imports": [
+    "be.mijngezondheid.zzsmoke.usecase.gadget.GetGadgetsUseCase",
+    "java.util.List"
+  ],
+  "useCases": [
+    {
+      "type": "GetGadgetsUseCase",
+      "field": "getGadgetsUseCase"
+    }
+  ],
+  "operations": [
+    {
+      "method": "getVaccinations",
+      "returnType": "List<VaccinationDTO>",
+      "params": "ContextEnumDTO xContext, String xAcceptLanguage, Boolean sinceLastVisit, Boolean legacy",
+      "logAction": "Retrieving gadgets",
+      "preAuthorize": "@verifyMandateForTopicAccessUseCase.execute('VACCINATIONS')",
+      "body": "getGadgetsUseCase.execute().stream().map(domainToDTOMapper::map).toList()"
+    }
+  ],
+  "mapper": true
+}

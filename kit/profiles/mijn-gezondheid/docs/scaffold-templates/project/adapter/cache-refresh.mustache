@@ -1,0 +1,46 @@
+{{!
+  Scheduled cache refresh: rebuilds a named cache from the repository port on a fixed delay. Fetch first, then
+  clear, so a failing read keeps the old cache. Every @Scheduled method carries @BatchJob
+  (BatchJobLoggingConventionTest, application/src/test/.../architecture).
+  Exemplar: profile-adapter .../config/GeographicRegionCacheConfig.java
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/config/<Name>CacheConfig.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, cache (cache name), key (Java expression over "item",
+          e.g. item.getExternalId()), delay (number), unit (TimeUnit constant, e.g. DAYS), jobName (@BatchJob name)
+  Left to you: the cache declaration in the application's cache config, @Cacheable readers.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.logging.BatchJob;
+import {{{portPackage}}}.{{{Name}}}Repository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.Scheduled;
+
+import java.util.concurrent.TimeUnit;
+
+@Configuration
+@RequiredArgsConstructor
+@Slf4j
+public class {{{Name}}}CacheConfig {
+
+    static final String CACHE = "{{{cache}}}";
+
+    private final {{{Name}}}Repository {{{name}}}Repository;
+    private final CacheManager cacheManager;
+
+    @BatchJob(name = "{{{jobName}}}")
+    @Scheduled(fixedDelay = {{{delay}}}, timeUnit = TimeUnit.{{{unit}}})
+    public void revokeAndRebuildAllCache() {
+        var cache = cacheManager.getCache(CACHE);
+        if (cache == null) {
+            return;
+        }
+        var items = {{{name}}}Repository.findAll();
+        cache.clear();
+        items.forEach(item -> cache.put({{{key}}}, item));
+        log.info("Repopulated {} cache with {} entries", CACHE, items.size());
+    }
+}

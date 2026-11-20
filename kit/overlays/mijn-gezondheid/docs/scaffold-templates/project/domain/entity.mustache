@@ -1,0 +1,58 @@
+{{!
+  Domain entity: built from its domain request through a package-private constructor (only the Factory and the
+  Mother call it), validated into a Notification, reconstituted by adapters through the package-private builder.
+  Exemplars: therapeutic-relation-domain .../exclusion/TherapeuticExclusion.java,
+             authentication-domain .../BlockedAudience.java (builder for reconstitution).
+  Target: <capability>-domain/src/main/java/<pkg>/<Name>.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[] (extra imports, e.g. "java.time.LocalDate"),
+          fields[type, name, notBlank (bool: StringValidator.notBlank instead of ObjectValidator.notNull)]
+  Left to you: behaviour (named mutations returning validate(), as BlockedAudience.changeEndpoints), extra rules.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Notification;
+import be.mijngezondheid.common.domain.validation.ObjectValidator;
+import be.mijngezondheid.common.domain.validation.StringValidator;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Getter
+@Builder
+@EqualsAndHashCode
+@ToString
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
+public class {{{Name}}} {
+
+{{#fields}}
+    private final {{{type}}} {{{name}}};
+{{/fields}}
+
+    {{{Name}}}(Create{{{Name}}}DomainRequest request) {
+{{#fields}}
+        this.{{{name}}} = request.get{{{Cap}}}();
+{{/fields}}
+    }
+
+    public Notification validate() {
+        var notification = Notification.empty();
+{{#fields}}
+{{#notBlank}}
+        StringValidator.notBlank("{{{Name}}}.{{{name}}}", {{{name}}}, notification);
+{{/notBlank}}
+{{^notBlank}}
+{{^primitive}}
+        ObjectValidator.notNull("{{{Name}}}.{{{name}}}", {{{name}}}, notification);
+{{/primitive}}
+{{/notBlank}}
+{{/fields}}
+        return notification;
+    }
+}

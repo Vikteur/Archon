@@ -1,0 +1,17 @@
+{
+  "_target": "zzsmoke-usecase/src/main/java/be/mijngezondheid/zzsmoke/usecase/gadget/DeleteGadgetUseCase.java",
+  "package": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer",
+  "keyType": "UUID",
+  "keyName": "externalId",
+  "KeyCap": "ExternalId",
+  "keyNotBlank": false,
+  "imports": [
+    "java.util.UUID"
+  ]
+}

@@ -1,0 +1,41 @@
+{{!
+  AttributeConverter test: round trip, null and empty both ways.
+  Exemplar: dashboard-adapter src/test .../repository/featureflag/StringListConverterTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/<Name>ConverterTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, separator
+  Left to you: nothing.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}ConverterTest {
+
+    private final {{{Name}}}Converter converter = new {{{Name}}}Converter();
+
+    @Test
+    void givenValues_whenConvertToDatabaseColumn_thenJoinThem() {
+        assertThat(converter.convertToDatabaseColumn(List.of("a", "b"))).isEqualTo("a{{{separator}}}b");
+    }
+
+    @Test
+    void givenColumn_whenConvertToEntityAttribute_thenSplitIt() {
+        assertThat(converter.convertToEntityAttribute("a{{{separator}}}b")).containsExactly("a", "b");
+    }
+
+    @Test
+    void givenNull_whenConvert_thenReturnEmpty() {
+        assertThat(converter.convertToDatabaseColumn(null)).isEmpty();
+        assertThat(converter.convertToEntityAttribute(null)).isEmpty();
+    }
+
+    @Test
+    void givenEmptyColumn_whenConvertToEntityAttribute_thenReturnEmptyList() {
+        assertThat(converter.convertToEntityAttribute("")).isEmpty();
+    }
+}

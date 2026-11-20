@@ -1,0 +1,498 @@
+{
+  "docs/scaffold-templates/project/README.md": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/attribute-converter-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/attribute-converter-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/attribute-converter.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/attribute-converter.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/bean-config.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/bean-config.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/cache-refresh-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/cache-refresh-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/cache-refresh.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/cache-refresh.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/code-enum-mapper-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/code-enum-mapper-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/code-enum-mapper.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/code-enum-mapper.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/controller-test.admin.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/controller-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/controller-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/controller.admin.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/controller.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/controller.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/default-repository-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/default-repository-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/default-repository.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/default-repository.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/domain-to-dto-mapper-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/domain-to-dto-mapper-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/domain-to-dto-mapper.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/domain-to-dto-mapper.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/flyway-migration.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/flyway-migration.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/gateway-to-domain-mapper.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/jpa-entity.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/jpa-entity.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/jpa-repository.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/jpa-repository.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/adapter/request-dto-to-domain-mapper.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/coded-enum-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/coded-enum-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/coded-enum.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/coded-enum.external.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/coded-enum.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/create-request.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/create-request.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/entity-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/entity-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/entity.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/entity.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/exception.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/exception.gateway.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/exception.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/factory-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/factory-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/factory.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/factory.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/fixed-mother.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/fixed-mother.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/id.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/id.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/mother.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/mother.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/value-object-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/value-object-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/value-object.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/domain/value-object.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/gateway-dto-mother.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/gateway-dto-mother.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/gateway-dto.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/gateway-dto.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/gateway-port.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/gateway-port.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/rest-gateway-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/rest-gateway-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/rest-gateway.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/gateway/rest-gateway.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/abstract-repository-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/abstract-repository-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/adapter-build.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/adapter-build.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/domain-build.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/domain-build.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/gateway-build.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/gateway-build.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/gateway-test-config.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/gateway-test-config.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/test-application-properties.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/test-application-properties.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/usecase-build.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/module/usecase-build.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/scaffold.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/create-usecase-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/create-usecase-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/create-usecase.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/create-usecase.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/delete-usecase-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/delete-usecase-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/delete-usecase.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/delete-usecase.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/domain-event.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/domain-event.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/facade-port.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/facade-port.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/presenter-usecase-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/presenter-usecase-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/presenter-usecase.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/presenter-usecase.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/projection.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/projection.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/query-repository-port.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/query-repository-port.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/query-usecase-test.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/query-usecase-test.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/query-usecase.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/query-usecase.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/repository-port.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/repository-port.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/request.example.json": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "docs/scaffold-templates/project/usecase/request.mustache": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  }
+}

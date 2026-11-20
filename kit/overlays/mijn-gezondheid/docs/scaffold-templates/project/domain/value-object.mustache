@@ -1,0 +1,50 @@
+{{!
+  Self-validating value object: a record whose only public way in is create(), returning a Creation with the
+  validation result (null value on errors).
+  Exemplar: report-domain .../collection/CollectionName.java
+  Target: <capability>-domain/src/main/java/<pkg>/<Name>.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, type (e.g. String), imports[], notBlank (bool: String value), maxLength (number, String only;
+          omit for no limit)
+  Left to you: format rules (regex, ranges) beyond presence and length.
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Creation;
+import be.mijngezondheid.common.domain.validation.Notification;
+import be.mijngezondheid.common.domain.validation.ObjectValidator;
+import be.mijngezondheid.common.domain.validation.StringValidator;
+{{#maxLength}}
+import be.mijngezondheid.common.domain.validation.IntRangeValidator;
+{{/maxLength}}
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+public record {{{Name}}}({{{type}}} value) {
+
+    private static final String FIELD_NAME = "{{{Name}}}.value";
+{{#maxLength}}
+    private static final int MAX_LENGTH = {{{maxLength}}};
+{{/maxLength}}
+
+    public static Creation<{{{Name}}}> create(final {{{type}}} value) {
+        final var notification = Notification.empty();
+{{#notBlank}}
+        StringValidator.notBlank(FIELD_NAME, value, notification);
+{{/notBlank}}
+{{^notBlank}}
+        ObjectValidator.notNull(FIELD_NAME, value, notification);
+{{/notBlank}}
+{{#maxLength}}
+        if (value != null) {
+            IntRangeValidator.inRange(FIELD_NAME, value.length(), 0, MAX_LENGTH, notification);
+        }
+{{/maxLength}}
+
+        if (notification.hasErrors()) {
+            return Creation.empty(notification);
+        }
+        return Creation.of(new {{{Name}}}(value));
+    }
+}

@@ -1,0 +1,97 @@
+{
+  "_target": "zzsmoke-domain/src/test/java/be/mijngezondheid/zzsmoke/domain/gadget/GadgetMother.java",
+  "package": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer",
+  "imports": [
+    "java.time.LocalDate",
+    "java.util.UUID"
+  ],
+  "fields": [
+    {
+      "type": "UUID",
+      "name": "externalId",
+      "Cap": "ExternalId",
+      "example": "UUID.fromString(\"5f1c1f6e-2f0a-4c8e-9a51-3b7c2d1e0f00\")",
+      "column": "external_id",
+      "sqlType": "UUID",
+      "unique": true
+    },
+    {
+      "type": "String",
+      "name": "description",
+      "Cap": "Description",
+      "example": "\"Smart thermometer\"",
+      "notBlank": true,
+      "column": "description",
+      "sqlType": "VARCHAR(255)"
+    },
+    {
+      "type": "String",
+      "name": "countryCode",
+      "Cap": "CountryCode",
+      "example": "\"BE\"",
+      "notBlank": true,
+      "column": "country_code",
+      "sqlType": "VARCHAR(2)"
+    },
+    {
+      "type": "LocalDate",
+      "name": "administerDate",
+      "Cap": "AdministerDate",
+      "example": "LocalDate.of(2024, 3, 1)",
+      "column": "administer_date",
+      "sqlType": "DATE"
+    }
+  ],
+  "fixtures": [
+    {
+      "method": "thermometer",
+      "Method": "Thermometer",
+      "values": [
+        {
+          "name": "externalId",
+          "example": "UUID.fromString(\"5f1c1f6e-2f0a-4c8e-9a51-3b7c2d1e0f00\")"
+        },
+        {
+          "name": "description",
+          "example": "\"Smart thermometer\""
+        },
+        {
+          "name": "countryCode",
+          "example": "\"BE\""
+        },
+        {
+          "name": "administerDate",
+          "example": "LocalDate.of(2024, 3, 1)"
+        }
+      ]
+    },
+    {
+      "method": "scale",
+      "Method": "Scale",
+      "values": [
+        {
+          "name": "externalId",
+          "example": "UUID.fromString(\"0b6e2a44-7d1f-4f7e-8a3b-9c2d4e5f6a70\")"
+        },
+        {
+          "name": "description",
+          "example": "\"Bathroom scale\""
+        },
+        {
+          "name": "countryCode",
+          "example": "\"NL\""
+        },
+        {
+          "name": "administerDate",
+          "example": "LocalDate.of(2023, 11, 20)"
+        }
+      ]
+    }
+  ]
+}

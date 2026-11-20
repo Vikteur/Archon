@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import { removeTempTree } from '@archon/paths/test-utils';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { CliRouteContext } from './context';
@@ -61,3 +61,18 @@ test.skipIf(process.stdin.isTTY === true && process.stdout.isTTY === true)(
     expect(await runKit(ctx)).toBe(2);
   }
 );
+
+test('archon kit web reaches the web command: a project without scripts/web-uis.sh exits 1', async () => {
+  const project = mkdtempSync(join(tmpdir(), 'archon-kit-route-'));
+  roots.push(project);
+  const saved = process.env.ARCHON_HOME;
+  process.env.ARCHON_HOME = join(project, 'archon-home');
+  try {
+    expect(await runKit(context('web', project))).toBe(1);
+    const logs = join(project, 'archon-home', 'logs');
+    expect(readdirSync(logs).some(name => name.startsWith('kit-web-'))).toBe(true);
+  } finally {
+    if (saved === undefined) delete process.env.ARCHON_HOME;
+    else process.env.ARCHON_HOME = saved;
+  }
+});

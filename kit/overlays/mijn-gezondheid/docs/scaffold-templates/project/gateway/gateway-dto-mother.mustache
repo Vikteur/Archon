@@ -1,0 +1,27 @@
+{{!
+  Gateway DTO Mother: named payloads for gateway and adapter tests (WireMock bodies, mapper input); shared with the
+  adapter through test-jar-producer: testImplementation(project(":<capability>-gateway", "testArtifacts")).
+  Exemplar: e-health-gateway src/test .../dto/GatewayTherapeuticExclusionMother.java
+  Target: <capability>-gateway/src/test/java/<pkg>/Gateway<Name>Mother.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[], fixtures[method, values[name, example (Java expression)]]
+  Left to you: nothing.
+}}
+package {{{package}}};
+{{#imports}}
+
+import {{{.}}};
+{{/imports}}
+
+public class Gateway{{{Name}}}Mother {
+{{#fixtures}}
+
+    public static Gateway{{{Name}}} {{{method}}}() {
+        return Gateway{{{Name}}}.builder()
+{{#values}}
+                .{{{name}}}({{{example}}})
+{{/values}}
+                .build();
+    }
+{{/fixtures}}
+}

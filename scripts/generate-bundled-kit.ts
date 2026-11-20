@@ -59,7 +59,7 @@ export function renderBundledKit(kitDir: string): string {
     'export interface KitManifest {',
     '  version: 1;',
     '  source: { name: string; commit: string };',
-    '  profiles: Record<string, { requires: string[]; description: string }>;',
+    '  profiles: Record<string, { requires: string[]; description: string; project?: boolean }>;',
     '  exclusive: string[][];',
     '  files: KitManifestFile[];',
     '  aliases: Record<string, { provider: string; model: string }>;',

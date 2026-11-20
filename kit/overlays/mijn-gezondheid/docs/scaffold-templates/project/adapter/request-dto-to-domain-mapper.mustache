@@ -1,0 +1,28 @@
+{{!
+  Request DTO to use-case request mapper: a @Component the controller calls to turn the generated request DTO
+  into the use case's *Request; no validation (the use case and the domain do that).
+  Exemplar: allergy-intolerance-adapter .../controller/AllergyIntoleranceRequestDTOToDomainMapper.java
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/controller/<Name>RequestDTOToDomainMapper.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, Dto (generated request DTO), Request (use-case request class), imports[] (the Request),
+          mappings[name (request builder field), expr (Java expression over the parameter "dto")]
+  Left to you: values from elsewhere (path variables, the caller) passed as extra parameters.
+}}
+package {{{package}}};
+
+import org.springframework.stereotype.Component;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@Component
+public class {{{Name}}}RequestDTOToDomainMapper {
+
+    public {{{Request}}} map(final {{{Dto}}} dto) {
+        return {{{Request}}}.builder()
+{{#mappings}}
+                .{{{name}}}({{{expr}}})
+{{/mappings}}
+                .build();
+    }
+}

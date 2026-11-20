@@ -17,10 +17,17 @@
 #      marker and no condition on the commit message;
 #   N7 the job set equals the last "CI job set" recorded in <memory-file>, so the job set changes only together with a
 #      decision entry there (append a new bullet that names the new set; the last one counts).
+# Scope: the rules hold on the workflows the kit owns, the ones .archon/kit.lock.json tracks (all of them where there
+# is no lock, as in the kit's source). A workflow the project wrote itself is checked by the same per-file rules, but a
+# finding there is a BASELINE line that never fails: the project owns that file and its history (an action pinned by
+# tag, its own use of the contract token), and only the kit's own workflow is the job definition ci-local.sh reads.
+# The Java toolchain is the first JavaLanguageVersion.of(N) in the build file, else in a Gradle file under buildSrc/,
+# else under build-logic/ (a convention plugin), the order kit add and class-version-check.sh read it in.
 # The rules hold on either stack (kit key `stack`): nothing here reads it. The contract repo is kit key contract.repo
 # (default @@KIT_CONTRACT_REPO@@); its checkout step is named "Check out <repo name>", or kit key contract.checkout_step.
 # Usage: bash .claude/scripts/ci-workflow-check.sh [<workflow-dir>] [<build-file>] [<memory-file>]
-# Prints every FAIL line and exits 1, or prints "ci-workflow: ok" and exits 0. Needs yq (mikefarah v4).
+# Prints every FAIL line and exits 1, or prints "ci-workflow: ok" and exits 0 (BASELINE lines never fail). Needs yq
+# (mikefarah v4).
 set -uo pipefail
 
 dir="${1:-.github/workflows}"
@@ -37,6 +44,9 @@ readonly_run="bash .claude/scripts/contract-read-only-check.sh contract"
 token_expr='${{ secrets.CONTRACT_TOKEN }}'
 fail=0
 bad() { echo "FAIL: $1"; fail=1; }
+baselines=0
+baseline() { echo "BASELINE: $1 (a workflow the kit does not own: reported, not failed)"; baselines=$((baselines + 1)); }
+report=bad   # what a per-file rule calls: bad on a kit-owned workflow, baseline on the project's own
 
 command -v yq >/dev/null 2>&1 || { echo "FAIL: yq is required"; exit 1; }
 
@@ -51,8 +61,15 @@ events() {
   esac
 }
 
-version="$(grep -oE 'JavaLanguageVersion\.of\(([0-9]+)\)' "$build_file" 2>/dev/null | head -n 1 | grep -oE '[0-9]+')" || true
-[ -n "$version" ] || bad "$build_file names no Java toolchain"
+toolchain_of() { grep -oE 'JavaLanguageVersion\.of\( *[0-9]+ *\)' "$1" 2>/dev/null | head -n 1 | grep -oE '[0-9]+'; }
+version="$(toolchain_of "$build_file")" || true
+for place in buildSrc build-logic; do
+  [ -z "$version" ] && [ -d "$place" ] || continue
+  while IFS= read -r gf; do
+    version="$(toolchain_of "$gf")" && [ -n "$version" ] && break
+  done < <(find "$place" \( -name build -o -name .gradle \) -prune -o -type f \( -name '*.gradle.kts' -o -name '*.gradle' -o -name '*.kt' \) -print | LC_ALL=C sort)
+done
+[ -n "$version" ] || bad "$build_file names no Java toolchain (nor does a Gradle file under buildSrc/ or build-logic/)"
 
 shopt -s nullglob
 all_files=("$dir"/*.yml "$dir"/*.yaml)
@@ -62,32 +79,40 @@ if [ "${#all_files[@]}" -eq 0 ]; then
   exit 1
 fi
 
+# The workflows the kit owns: the lock's paths. No lock: every workflow is the kit's.
+lock=.archon/kit.lock.json
+owned=""
+[ -f "$lock" ] && owned="$(yq -p json '.files | keys | .[]' "$lock" 2>/dev/null | tr -d '\r')"
+owns() { [ ! -f "$lock" ] || grep -qxF -- "${1#./}" <<< "$owned"; }
+
 files=()
 for f in "${all_files[@]}"; do
+  owns "$f" && report=bad || report=baseline
   if yq '.' "$f" >/dev/null 2>&1; then
     files+=("$f")
   else
-    bad "$f is not valid YAML"
+    "$report" "$f is not valid YAML"
   fi
 done
 
 pin_re='^[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+@[0-9a-f]{40}$'
 gradle_files=()
 for f in "${files[@]}"; do
+  owns "$f" && report=bad || report=baseline
   # every uses: (step and job level) is pinned, except local ones
   while IFS= read -r use; do
     [ -n "$use" ] || continue
     case "$use" in ./*) continue ;; esac
-    [[ "$use" =~ $pin_re ]] || bad "$f: $use is not pinned by a 40-character commit SHA"
+    [[ "$use" =~ $pin_re ]] || "$report" "$f: $use is not pinned by a 40-character commit SHA"
   done < <(q '.. | select(tag == "!!map" and has("uses")) | .uses' "$f")
 
-  ! events "$f" | grep -qxF pull_request_target || bad "$f: pull_request_target is never used"
+  ! events "$f" | grep -qxF pull_request_target || "$report" "$f: pull_request_target is never used"
   if grep -qE 'github\.token|secrets\.GITHUB_TOKEN' "$f"; then
-    bad "$f: the workflow's own token is never used (github.token, secrets.GITHUB_TOKEN)"
+    "$report" "$f: the workflow's own token is never used (github.token, secrets.GITHUB_TOKEN)"
   fi
   # toJSON(secrets) and the like hand out every secret, CONTRACT_TOKEN included, without naming it.
   if grep -oE '\$\{\{[^}]*\}\}' "$f" | grep -qE '(^|[^A-Za-z0-9_.])secrets([^A-Za-z0-9_.[]|$)'; then
-    bad "$f: secrets are named one by one, never as a whole"
+    "$report" "$f: secrets are named one by one, never as a whole"
   fi
 
   # Every contract checkout, in any job of any workflow, uses the CI secret; the secret appears nowhere else.
@@ -97,19 +122,20 @@ for f in "${files[@]}"; do
     if [ "$t" = "$token_expr" ]; then
       good_checkouts=$((good_checkouts + 1))
     else
-      bad "$f: the $contract_name checkout must use token $token_expr and nothing else"
+      "$report" "$f: the $contract_name checkout must use token $token_expr and nothing else"
     fi
   done < <(q '.. | select(tag == "!!map" and has("uses")) | select(.uses | test("^actions/checkout@")) | select(.with.repository == "'"$contract_repo"'") | (.with.token | tostring)' "$f")
   [ "$(grep -o 'CONTRACT_TOKEN' "$f" | wc -l | tr -d ' ')" -eq "$good_checkouts" ] \
-    || bad "$f: CONTRACT_TOKEN may appear only as the token of the $contract_name checkout"
+    || "$report" "$f: CONTRACT_TOKEN may appear only as the token of the $contract_name checkout"
 
-  if q '.jobs[].steps[].run' "$f" | grep -qF "$gradle_line"; then
+  # Only a kit-owned workflow can be the job definition ci-local.sh reads.
+  if [ "$report" = bad ] && q '.jobs[].steps[].run' "$f" | grep -qF "$gradle_line"; then
     gradle_files+=("$f")
   fi
 done
 
 case "${#gradle_files[@]}" in
-  0) bad "no workflow runs $gradle_line"; [ "$fail" -eq 0 ] && echo "ci-workflow: ok"; exit "$fail" ;;
+  0) bad "no workflow runs $gradle_line$([ -f "$lock" ] && echo ' (of the workflows the kit owns)')"; exit 1 ;;
   1) ci="${gradle_files[0]}" ;;
   *) bad "more than one workflow runs $gradle_line: ${gradle_files[*]}"; exit 1 ;;
 esac
@@ -256,5 +282,6 @@ for j in $(q '.jobs | keys | .[]' "$ci"); do
   fi
 done
 
+[ "$baselines" -eq 0 ] || echo "ci-workflow: $baselines baseline finding(s) in workflows the kit does not own, not failed"
 [ "$fail" -eq 0 ] && echo "ci-workflow: ok"
 exit "$fail"

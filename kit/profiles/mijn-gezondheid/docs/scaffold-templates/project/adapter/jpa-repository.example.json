@@ -1,0 +1,16 @@
+{
+  "_target": "zzsmoke-adapter/src/main/java/be/mijngezondheid/zzsmoke/adapter/repository/GadgetJpaRepository.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.repository",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "usecasePackage": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "fixture": "thermometer",
+  "keyType": "UUID",
+  "keyName": "externalId",
+  "KeyCap": "ExternalId",
+  "imports": [
+    "java.util.UUID"
+  ]
+}

@@ -1,0 +1,57 @@
+{{!
+  Query use case test: the port mocked, the Mother as the stored value.
+  Exemplar: authentication-usecase src/test .../GetBlockedAudiencesUseCaseTest.java
+  Target: <capability>-usecase/src/test/java/<pkg>/Get<Name>sUseCaseTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, usecasePackage, fixture (Mother scenario)
+  Left to you: cases for filtering or sorting you added.
+}}
+package {{{package}}};
+
+import {{{portPackage}}}.{{{Name}}}Repository;
+import {{{usecasePackage}}}.Get{{{Name}}}sUseCase;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+
+import static {{{domainPackage}}}.{{{Name}}}Mother.{{{fixture}}};
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class Get{{{Name}}}sUseCaseTest {
+
+    @Mock
+    private {{{Name}}}Repository {{{name}}}Repository;
+
+    @InjectMocks
+    private Get{{{Name}}}sUseCase useCase;
+
+    @Test
+    void givenStored{{{Name}}}s_whenExecute_thenReturnThem() {
+        // Given
+        when({{{name}}}Repository.findAll()).thenReturn(List.of({{{fixture}}}()));
+
+        // When
+        var result = useCase.execute();
+
+        // Then
+        assertThat(result).containsExactly({{{fixture}}}());
+    }
+
+    @Test
+    void givenNoStored{{{Name}}}s_whenExecute_thenReturnEmptyList() {
+        // Given
+        when({{{name}}}Repository.findAll()).thenReturn(List.of());
+
+        // When
+        var result = useCase.execute();
+
+        // Then
+        assertThat(result).isEmpty();
+    }
+}

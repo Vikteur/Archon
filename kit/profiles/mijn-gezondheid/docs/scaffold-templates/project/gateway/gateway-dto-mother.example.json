@@ -1,0 +1,28 @@
+{
+  "_target": "zzsmoke-gateway/src/test/java/be/mijngezondheid/zzsmoke/gateway/dto/GatewayGadgetMother.java",
+  "package": "be.mijngezondheid.zzsmoke.gateway.dto",
+  "Name": "Gadget",
+  "fixtures": [
+    {
+      "method": "gatewayThermometer",
+      "values": [
+        {
+          "name": "externalId",
+          "example": "\"5f1c1f6e-2f0a-4c8e-9a51-3b7c2d1e0f00\""
+        },
+        {
+          "name": "description",
+          "example": "\"Smart thermometer\""
+        },
+        {
+          "name": "countryCode",
+          "example": "\"BE\""
+        },
+        {
+          "name": "administerDate",
+          "example": "\"2024-03-01\""
+        }
+      ]
+    }
+  ]
+}

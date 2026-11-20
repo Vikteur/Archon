@@ -9,7 +9,8 @@
 #   local-ci-status the accept rules of .archon/scripts/local-ci-status.sh, its functions parse, verify and accept,
 #                   and the grammar's reader ci_status_parse in .claude/scripts/ci-status-grammar.sh (comment and blank
 #                   lines do not count)
-# A decision entry: the change adds to docs/memory.md a dated heading `## <yyyy-mm-dd> — …`, and the lines it adds there
+# A decision entry: the change adds to docs/memory.md a dated heading `## <yyyy-mm-dd> — …` (or `### <yyyy-mm-dd> — …`,
+# the entry level of a memory.md that groups its entries under `## Decisions`), and the lines it adds there
 # name every gate it changes by the name in the first column above (ci-status-grammar counts for local-ci-status).
 #   gate-change-check.sh [<base> [<head>]]
 # compares <head> (a commit; default: the work tree, committed or not) with its merge-base with <base> (default
@@ -105,9 +106,9 @@ else added="$(git diff -U0 "$base" -- "$memory")"
 fi
 added="$(printf '%s\n' "$added" | grep -E '^\+' | grep -vE '^\+\+\+ ' | sed 's/^+//' | tr -d '\r')"
 fail=0
-if ! grep -qE '^## [0-9]{4}-[0-9]{2}-[0-9]{2} ' <<< "$added"; then
+if ! grep -qE '^###? [0-9]{4}-[0-9]{2}-[0-9]{2} ' <<< "$added"; then
   for g in "${gates[@]}"; do
-    echo "FAIL: $g changed, but the change adds no decision entry (a dated '## <yyyy-mm-dd> — …' heading) to $memory"
+    echo "FAIL: $g changed, but the change adds no decision entry (a dated '## <yyyy-mm-dd> — …' or '### <yyyy-mm-dd> — …' heading) to $memory"
   done
   exit 1
 fi

@@ -56,6 +56,8 @@ run() {
 
 out="$(run 0 help --help)"
 contains "$out" "--no-pull" "help"
+contains "$out" "--no-web" "help names --no-web"
+contains "$out" "8. starts the web views and opens each" "help names the web step"
 contains "$out" "raw.githubusercontent.com/Vikteur/Archon/local/console/scripts/update-copilot-kit.sh" "help curl line"
 out="$(set +e; bash <(cat "$script") --help </dev/null 2>&1)"
 contains "$out" "kit-setup.json" "help through a pipe"
@@ -76,6 +78,7 @@ contains "$out" "archon     up to date" "up to date"
 contains "$out" "branch chore/archon-kit-<archon commit>" "default branch"
 contains "$out" "no build run is running" "no runs"
 contains "$out" "restart archon serve when it runs" "restart default"
+contains "$out" "web views  start and open them once they answer" "web views on by default"
 
 # The default clone is the one the script sits in.
 set +e; out="$(bash "$HOME/archon/scripts/update-copilot-kit.sh" --dry-run </dev/null 2>&1)"; code=$?; set -e
@@ -86,14 +89,17 @@ echo >> "$count"
 # A new commit on the fork shows in the plan, and the dry run does not take it.
 echo two > "$tmp/seed/two.txt"; g -C "$tmp/seed" add -A; g -C "$tmp/seed" commit -q -m "second change"
 g -C "$tmp/seed" push -q origin local/console
-out="$(run 0 pending --archon-dir "$HOME/archon" --dry-run --no-pull --no-tools --no-commit --no-restart --web --branch kit/x)"
+out="$(run 0 pending --archon-dir "$HOME/archon" --dry-run --no-pull --no-tools --no-commit --no-restart --no-web --branch kit/x)"
 contains "$out" "1 new commit(s) on local/console" "pending count"
 contains "$out" "second change" "pending subject"
 contains "$out" "pull       off" "no pull"
-contains "$out" "tools off, web views on" "no tools, web"
+contains "$out" "tools off" "no tools"
+contains "$out" "web views  off" "no web (--no-web)"
 contains "$out" "commit     off" "no commit"
 contains "$out" "server     left as it is" "no restart"
 [ "$(git -C "$HOME/archon" rev-parse HEAD)" = "$head_before" ] || fail "a dry run moved the clone"
+out="$(run 0 old-web-flag --archon-dir "$HOME/archon" --dry-run --web)"
+contains "$out" "web views  start and open them" "--web is still accepted"
 
 # Options override the saved answers; --frontend '' means none.
 out="$(run 0 override --archon-dir "$HOME/archon" --frontend '' --backend "$tmp/fe" --dry-run)"
@@ -103,6 +109,16 @@ save "" false
 out="$(run 0 saved-no-frontend --archon-dir "$HOME/archon" --dry-run)"
 contains "$out" "frontend (none)" "saved no frontend"
 contains "$out" "backlog off" "saved backlog off"
+
+# --add-profile adds to the saved profiles, once each, in the order given.
+out="$(run 0 add-profile --archon-dir "$HOME/archon" --add-profile mijn-gezondheid --add-profile java,x --dry-run)"
+contains "$out" "profiles core,java,mijn-gezondheid,x," "added profiles"
+out="$(run 1 add-profile-no-name --add-profile)"
+contains "$out" "--add-profile needs a profile name" "add-profile without a name"
+printf '{"backend": "%s", "contract": "%s"}\n' "$tmp/be" "$tmp/api/openapi.yaml" > "$HOME/.archon/kit-setup.json"
+out="$(run 1 add-profile-unsaved --archon-dir "$HOME/archon" --add-profile mijn-gezondheid --dry-run)"
+contains "$out" "no saved profiles" "add-profile without saved profiles"
+save "" false
 
 # The checks.
 out="$(run 1 backend-not-git --archon-dir "$HOME/archon" --backend "$tmp/plain" --dry-run)"

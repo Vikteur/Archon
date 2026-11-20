@@ -1,0 +1,33 @@
+{{!
+  Gateway DTO to domain mapper: a static, final, stateless class in the adapter's gateway package that rebuilds the
+  domain object from the gateway payload through the domain's builder. Used by the Default<Name>Repository that
+  delegates to the gateway.
+  Exemplars: allergy-intolerance-adapter .../gateway/AllergyIntoleranceFhirGateway.java (calls the mappers),
+             allergy-intolerance-adapter .../gateway/AllergyIntoleranceCriticalityMapper.java (static final shape)
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/gateway/Gateway<Name>ToDomainMapper.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, domainPackage, dtoPackage, imports[], mappings[name (domain builder field), expr (Java
+          expression over the parameter "dto", e.g. dto.description())]
+  Left to you: code lookups (adapter/code-enum-mapper), dropping incomplete payloads.
+}}
+package {{{package}}};
+
+import {{{domainPackage}}}.{{{Name}}};
+import {{{dtoPackage}}}.Gateway{{{Name}}};
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+public final class Gateway{{{Name}}}ToDomainMapper {
+
+    public static {{{Name}}} toDomain(final Gateway{{{Name}}} dto) {
+        return {{{Name}}}.builder()
+{{#mappings}}
+                .{{{name}}}({{{expr}}})
+{{/mappings}}
+                .build();
+    }
+}

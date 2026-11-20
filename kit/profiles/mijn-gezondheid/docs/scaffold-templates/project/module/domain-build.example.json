@@ -1,0 +1,4 @@
+{
+  "_target": "zzsmoke-domain/build.gradle.kts",
+  "capability": "zzsmoke"
+}

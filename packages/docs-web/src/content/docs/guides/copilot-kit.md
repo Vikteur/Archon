@@ -46,6 +46,17 @@ script then cannot log `gh` in for you.
    It does this only in a repository whose tree was clean before the run, and it never
    pushes.
 9. **A dry run**: runs a dry run of `build-feature-copilot`.
+10. **The web views**: runs `archon kit web` on the backend: the MCP Inspectors (the codegraph server of each repository
+    and the contract server on your contract), the Groma map, the Backlog.md board when it is
+    on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
+    view in the browser only once it answers, and names a view that does not answer within
+    90 seconds. `archon kit web <backend>` does the same later.
+
+When `groma-check` fails on the committed first scan of the Groma map, the closing list says
+so: the pre-push check refuses a push until an agent fixes what it names. A map element
+without a description is only a note while `groma_descriptions` in `.archon/kit.yaml` is
+`optional` (the default), and a map that is still its first scan while `groma_curation` is;
+`required` fails either.
 
 | Option | Effect |
 |--------|--------|
@@ -54,7 +65,7 @@ script then cannot log `gh` in for you.
 | `--archon-dir <path>` | Use another folder for the Archon clone (default `~/archon`). |
 | `--branch <name>` | Use another branch name for the commit. |
 | `--no-commit` | Leave the kit uncommitted. |
-| `--no-web` | Do not start the MCP Inspectors. |
+| `--no-web` | Do not start and open the web views at the end. |
 | `--no-smoke` | Skip the dry run of `build-feature-copilot`. |
 | `--dry-run` | Check the paths and print the plan, without changing anything. |
 
@@ -96,6 +107,11 @@ fetches and lists the new Archon commits and the plan, and changes nothing.
    in each repository whose tree was clean before the run. It never pushes.
 7. **The server**: restarts a running `archon serve` with the same arguments, so it runs
    the new build.
+8. **The web views**: runs `archon kit web` on the backend, after the restart: the MCP Inspectors (the codegraph server of each repository
+   and the contract server on your contract), the Groma map, the Backlog.md board when it is
+   on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
+   view in the browser only once it answers, and names a view that does not answer within
+   90 seconds. `archon kit web <backend>` does the same later.
 
 | Option | Effect |
 |--------|--------|
@@ -104,9 +120,10 @@ fetches and lists the new Archon commits and the plan, and changes nothing.
 | `--branch <name>` | Use another branch name for the commit. |
 | `--no-pull` | Do not pull the repositories first. |
 | `--no-tools` | Do not update the tools (jq, yq, gh, node, codegraph, copilot, rtk, ...). |
+| `--add-profile <a,b>` | Add profiles to the saved ones, for example `--add-profile mijn-gezondheid` on an install from before that profile. The next update keeps them. |
 | `--no-commit` | Leave the update uncommitted. |
 | `--no-restart` | Leave a running `archon serve` on the old build. |
-| `--web` | Start the MCP Inspectors at the end. |
+| `--no-web` | Do not start and open the web views at the end (`--web`, the old flag, is the default now). |
 | `--rebuild` | Rebuild Archon even when the clone is up to date. |
 | `--force` | Update even while a build run is running. |
 | `--dry-run` | Print what would be updated, change nothing. |
@@ -135,19 +152,21 @@ After you confirm the summary, it runs these steps, each with a spinner:
 | Step | What it does |
 |------|--------------|
 | Tools | Runs the kit's tool installer for the backend (`archon kit tools`), with `INSTALL_TOOLS_BACKLOG=0` when Backlog.md is off, so `backlog` is not installed. |
-| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract` unless you pick others. |
+| Kit | Installs the kit into the backend, like `archon kit add --trust`, with the profiles `core,java,java-spring,openapi-contract,mijn-gezondheid` unless you pick others. |
 | Contract | Sets `contract.spec_path` in the backend's `.archon/kit.yaml` to the absolute contract path and `backlog` to `true` or `false`, then runs `.archon/scripts/contract-mcp-setup.sh`. |
 | CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
 | Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
 | rtk hooks | Runs `rtk init --copilot` in each repository, when `rtk` is on `PATH`. It never installs the global hooks. |
+| Groma map | When `groma` is on `PATH` and the backend has no `groma/` yet: `groma init --directory groma <backend name>`, the Java scanner when a `java` profile is installed, and a first `groma scan`. With Backlog.md off it removes the `backlog/` board and the Backlog.md block that `groma init` adds; `AGENTS.md` keeps its Groma block. |
 | Servers check | Starts each MCP server of both repositories, as `kit doctor` does. |
-| Web views | Runs `bash scripts/web-uis.sh start --open` in the backend and lists the URLs. |
+| Web views | Runs `bash scripts/web-uis.sh start` in the backend, starts `archon serve` when its health URL does not answer, waits up to 90 seconds for each view, and opens each one that answers in the browser (`wslview`, `explorer.exe`, `xdg-open` or `open`; `WEB_UIS_OPEN` picks another). A view that does not answer fails the step. |
 
 The output of every step goes to a log, `~/.archon/logs/kit-setup-<time>.log`, not to the
 terminal. A step that fails is shown as failed with that log path. The later steps still
 run, and the command exits 1 at the end.
 
-The last screen lists the web view URLs, the command that stops them
+The last screen lists the web view URLs, a note when the Groma map is a first scan (commit
+it, and have an agent curate it), the command that stops them
 (`bash scripts/web-uis.sh stop` in the backend), the log path and the Copilot login: run
 `copilot`, then `/login`, and finish it in a browser signed in as the GitHub account that
 has Copilot. That account may differ from the one `gh` uses.
@@ -164,12 +183,12 @@ archon kit setup --backend ~/code/backend --frontend ~/code/frontend \
 | `--backend <path>` | The backend repository |
 | `--frontend <path>` | The frontend repository; leave it out to skip the frontend |
 | `--contract <file>` | The OpenAPI contract file |
-| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract`) |
+| `--profile a,b,c` | The kit profiles (default: the last run's, then `core,java,java-spring,openapi-contract,mijn-gezondheid`) |
 | `--backlog` | Use Backlog.md for tickets; leave it out for off (`backlog: false` in `kit.yaml`) |
 | `--yes` | Skip the confirmation |
 | `--no-tools` | Skip the tool installer |
 | `--no-rtk` | Skip the rtk hooks |
-| `--no-web` | Do not start the web views |
+| `--no-web` | Do not start or open the web views (`archon kit web` does that alone) |
 
 Without a terminal, `--backend` and `--contract` are required. Without them, the command
 prints its usage and exits 2.
@@ -214,6 +233,7 @@ A profile is a group of kit files. You choose the profiles when you install.
 | `java-quarkus` | `java` | Quarkus versions of the skills, the scaffold templates, the CI workflow and `run-app`. |
 | `java-spring` | `java` | The same set as `java-quarkus`, rewritten for Spring Boot. |
 | `openapi-contract` | `core` | The `contract-api` MCP server, contract readiness and pin checks, DB parity, and the contract agent. |
+| `mijn-gezondheid` | `java-spring`, `openapi-contract` | A project profile: that project's own scaffold templates, their `## Scaffold` table and `scaffold.json` in `docs/scaffold-templates/project/`. `scripts/scaffold/new-context.sh`, `smoke.sh` and the wiring check run on them as installed. A template you edit is kept on the next update. |
 
 `java-quarkus` and `java-spring` are mutually exclusive. Pick one. Each profile pulls in
 the profiles it requires, so you do not need to list `core` or `java` yourself.
@@ -239,7 +259,7 @@ The defaults below suit a Spring Boot Gradle project.
 
 | Key | Default | What it sets |
 |---|---|---|
-| `profiles` | `[core, java, java-spring, openapi-contract]` | The profiles installed. `kit add --profile` replaces this list. |
+| `profiles` | `[core, java, java-spring, openapi-contract, mijn-gezondheid]` | The profiles installed. `kit add --profile` replaces this list. |
 | `stack` | `spring` | `quarkus` or `spring`. The gates that differ per framework branch on it. |
 | `base_branch` | `main` | The branch that runs target and rebase against. |
 | `gh_accounts` | `[]` | The `gh` accounts the `gh-switch-account` skill switches between. |

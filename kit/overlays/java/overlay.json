@@ -1,7 +1,43 @@
 {
+  ".claude/scripts/ci-workflow-check.sh": {
+    "derivedFrom": ".claude/scripts/ci-workflow-check.sh",
+    "sourceSha256": "9625fabfb9d6d2d808df55bc48f066dd7680c8639e29f5679c41168b23463a01"
+  },
   "docs/memory.md": {
     "derivedFrom": null,
     "sourceSha256": null,
     "createOnly": true
+  },
+  "scripts/scaffold/new-context.js": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "scripts/scaffold/new-context.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "scripts/scaffold/smoke.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "scripts/scaffold/targets.js": {
+    "derivedFrom": "scripts/scaffold/targets.js",
+    "sourceSha256": "5d81ff45a4401408db3789c642ea518aa542e98a5028140b57ce95a6d8137fad"
+  },
+  "scripts/test/ci-workflow-scope.test.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "scripts/test/scaffold-project.test.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "scripts/test/scaffold-wiring.test.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
+  },
+  "scripts/test/scaffold.test.sh": {
+    "derivedFrom": null,
+    "sourceSha256": null
   }
 }

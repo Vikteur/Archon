@@ -1,0 +1,57 @@
+{{!
+  Repository adapter: implements the use-case port on top of Spring Data; maps through the JPA entity.
+  No business logic here (P7).
+  Exemplars: authentication-adapter .../repository/DefaultBlockedAudienceRepository.java,
+             report-adapter .../repository/DefaultReportCollectionRepository.java
+  Target: <capability>-adapter/src/main/java/<pkg>/adapter/repository/Default<Name>Repository.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, portPackage, keyType, keyName, KeyCap (omit the key trio for no key)
+          imports[] (e.g. java.util.UUID for the key type)
+  Left to you: update-in-place on save (find by key, keep the id), caching (@Cacheable/@CacheEvict).
+}}
+package {{{package}}};
+
+import {{{domainPackage}}}.{{{Name}}};
+import {{{portPackage}}}.{{{Name}}}Repository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import java.util.List;
+{{#keyName}}
+import java.util.Optional;
+{{/keyName}}
+
+@Repository
+@RequiredArgsConstructor
+public class Default{{{Name}}}Repository implements {{{Name}}}Repository {
+
+    private final {{{Name}}}JpaRepository jpaRepository;
+
+    @Override
+    public {{{Name}}} save({{{Name}}} {{{name}}}) {
+        return jpaRepository.save(new {{{Name}}}JpaEntity({{{name}}})).toDomain();
+    }
+
+    @Override
+    public List<{{{Name}}}> findAll() {
+        return jpaRepository.findAll().stream()
+                .map({{{Name}}}JpaEntity::toDomain)
+                .toList();
+    }
+{{#keyName}}
+
+    @Override
+    public Optional<{{{Name}}}> findBy{{{KeyCap}}}({{{keyType}}} {{{keyName}}}) {
+        return jpaRepository.findBy{{{KeyCap}}}({{{keyName}}})
+                .map({{{Name}}}JpaEntity::toDomain);
+    }
+
+    @Override
+    public void deleteBy{{{KeyCap}}}({{{keyType}}} {{{keyName}}}) {
+        jpaRepository.deleteBy{{{KeyCap}}}({{{keyName}}});
+    }
+{{/keyName}}
+}

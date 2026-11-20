@@ -35,6 +35,7 @@ import {
   fencedAgents,
   KIT_MODULES,
   mcpFallbackCommands,
+  scaffoldCommands,
   mcpJson,
   parseYaml,
   splitFrontmatter,
@@ -247,6 +248,9 @@ function classifyByList(path: string): Assignment {
   );
 }
 
+/** A repo's own scaffold templates: only a project profile ships into this folder (kit.ts PROJECT_OWNED_DIRS). */
+export const PROJECT_TEMPLATES = 'docs/scaffold-templates/project/';
+
 export function classify(
   path: string,
   text: string,
@@ -262,6 +266,9 @@ export function classify(
   if (EXCLUDE.some(p => matches(p, path))) return { exclude: true, why: 'excluded' };
   const claude = classifyClaude(path);
   if (claude) return claude;
+  // The source repo's own templates are its own, as a consumer's are (kit add refuses a kit file there).
+  if (path.startsWith(PROJECT_TEMPLATES))
+    return { exclude: true, why: "the repo's own scaffold templates" };
   if (path.startsWith('docs/scaffold-templates/'))
     return { profile: QUARKUS_TEMPLATE.test(text) ? 'java-quarkus' : 'java', convert: 'copy' };
   if (path.startsWith('docs/code-maps/') && path !== 'docs/code-maps/README.md')
@@ -372,7 +379,7 @@ interface AgentContext {
   fallbacks: ReadonlyMap<string, readonly string[]>;
 }
 
-/** Each shipped source agent's MCP fallback commands, by its frontmatter name; an agent with none is left out. */
+/** Each shipped source agent's MCP fallback and kit scaffold commands, by its frontmatter name; an agent with none is left out. */
 function agentFallbacks(src: Source, tracked: ReadonlySet<string>): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const f of src.files.values()) {
@@ -380,8 +387,9 @@ function agentFallbacks(src: Source, tracked: ReadonlySet<string>): Map<string, 
     const text = textOf(f);
     if (classify(f.path, text, tracked).exclude) continue;
     const fm = frontmatterOf(text);
-    const commands = mcpFallbackCommands(fm.tools);
-    if (commands.length && fm.name) out.set(String(fm.name), commands);
+    const name = String(fm.name ?? '');
+    const commands = [...mcpFallbackCommands(fm.tools), ...scaffoldCommands(name, fm.tools)];
+    if (commands.length && name) out.set(name, commands);
   }
   return out;
 }
@@ -697,6 +705,13 @@ export function verifyKit(out: string): string[] {
       prev = { rank, path: f.path };
     }
     listed.add(key);
+    if (
+      f.path.startsWith(PROJECT_TEMPLATES) &&
+      PROFILE_META[f.profile as Profile]?.project !== true
+    )
+      problems.push(
+        `manifest: ${key} lies in ${PROJECT_TEMPLATES}, the repo's own folder (kit add refuses it but from a project profile)`
+      );
     const content = verifyEntry(out, f, problems);
     if (content !== null) files.push({ profile: f.profile, path: f.path, content });
   }

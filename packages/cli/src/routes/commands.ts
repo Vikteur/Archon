@@ -544,13 +544,15 @@ export async function runKit({
     subcommand !== 'doctor' &&
     subcommand !== 'list' &&
     subcommand !== 'setup' &&
-    subcommand !== 'tools'
+    subcommand !== 'tools' &&
+    subcommand !== 'web'
   ) {
     const problem =
       subcommand === undefined ? 'Missing kit subcommand' : `Unknown kit subcommand: ${subcommand}`;
-    return await fail(json, `${problem}\nAvailable: add, doctor, list, setup, tools`);
+    return await fail(json, `${problem}\nAvailable: add, doctor, list, setup, tools, web`);
   }
   if (subcommand === 'setup') return await runKitSetup(positionals, values, cwd, json);
+  if (subcommand === 'web') return await runKitWeb(positionals, cwd, json);
   if (positionals.length > 3) return await fail(json, `Usage: archon kit ${subcommand} [path]`);
   const { kitCommand } = await loadRoute(() => import('../commands/kit'), { providers: false });
   const profile = typeof values.profile === 'string' ? values.profile : '';
@@ -569,6 +571,19 @@ export async function runKit({
     userHooks: values['user-hooks'] === true,
     set: Array.isArray(values.set) ? (values.set as string[]) : [],
   });
+}
+
+async function runKitWeb(
+  positionals: string[],
+  cwd: string,
+  json: boolean | undefined
+): Promise<number> {
+  const { KIT_WEB_USAGE, defaultSetupDeps, kitWebCommand } = await loadRoute(
+    () => import('../commands/kit-setup'),
+    { providers: false }
+  );
+  if (positionals.length > 3) return await fail(json, KIT_WEB_USAGE);
+  return await kitWebCommand(positionals[2] ?? '.', defaultSetupDeps(cwd));
 }
 
 async function runKitSetup(

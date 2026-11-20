@@ -1,0 +1,16 @@
+{
+  "_target": "zzsmoke-usecase/src/main/java/be/mijngezondheid/zzsmoke/usecase/gadget/repository/GadgetQueryRepository.java",
+  "package": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "Name": "Gadget",
+  "imports": [
+    "be.mijngezondheid.zzsmoke.usecase.gadget.GadgetSummaryProjection",
+    "java.util.List"
+  ],
+  "queries": [
+    {
+      "returnType": "List<GadgetSummaryProjection>",
+      "method": "findSummariesByCountryCode",
+      "params": "String countryCode"
+    }
+  ]
+}

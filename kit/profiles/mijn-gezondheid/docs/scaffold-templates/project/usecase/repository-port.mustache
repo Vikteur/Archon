@@ -1,0 +1,35 @@
+{{!
+  Repository port: the outbound persistence interface the use cases depend on; implemented by the adapter's
+  Default<Name>Repository. No framework types.
+  Exemplars: therapeutic-relation-usecase .../exclusion/repository/TherapeuticExclusionRepository.java,
+             authentication-usecase .../repository/BlockedAudienceRepository.java
+  Target: <capability>-usecase/src/main/java/<pkg>/repository/<Name>Repository.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, name, domainPackage, keyType, keyName, KeyCap (keyName capitalised; omit all three for no key)
+          imports[] (e.g. java.util.UUID for the key type)
+  Left to you: query methods beyond findAll / findBy<Key> / deleteBy<Key>.
+}}
+package {{{package}}};
+
+import {{{domainPackage}}}.{{{Name}}};
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import java.util.List;
+{{#keyName}}
+import java.util.Optional;
+{{/keyName}}
+
+public interface {{{Name}}}Repository {
+
+    {{{Name}}} save({{{Name}}} {{{name}}});
+
+    List<{{{Name}}}> findAll();
+{{#keyName}}
+
+    Optional<{{{Name}}}> findBy{{{KeyCap}}}({{{keyType}}} {{{keyName}}});
+
+    void deleteBy{{{KeyCap}}}({{{keyType}}} {{{keyName}}});
+{{/keyName}}
+}

@@ -4,16 +4,28 @@
  * A terminal dialog asks for the backend repository, the frontend repository (optional), the API contract file and
  * whether to use Backlog.md (default no),
  * then installs the tools, puts the kit into the backend, points it at the contract, indexes both repositories for
- * CodeGraph, gives the frontend the codegraph MCP server, adds the rtk hooks, checks every MCP server and starts the
- * web views. Flags answer the dialog for a run without a terminal. Each step's output goes to a log file under the
+ * CodeGraph, sets up the backend's Groma map (groma init and a first scan), gives the frontend the codegraph MCP
+ * server, adds the rtk hooks, checks every MCP server, then starts the web views (the MCP Inspectors, the Groma map,
+ * the Backlog.md board, the Archon web UI) and opens each in the browser once it answers. `archon kit web` is that
+ * last step alone. Flags answer the dialog for a run without a terminal. Each step's output goes to a log file under the
  * Archon home, never to the terminal; a failed step is reported with that log and the later steps still run.
  *
  * Every external effect goes through `KitSetupDeps`, so the tests stub the runner, the tool installer and the
  * MCP probe and never spawn a real tool.
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
+import { spawn } from 'child_process';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'fs';
 import { homedir } from 'os';
-import { extname, join, resolve } from 'path';
+import { basename, dirname, extname, join, resolve } from 'path';
 import { format } from 'util';
 import { getArchonHome } from '@archon/paths';
 import { parse as parseYaml, parseDocument } from 'yaml';
@@ -43,7 +55,13 @@ export {
   type SetupUi,
 } from './kit-setup-ui';
 
-export const DEFAULT_SETUP_PROFILES = ['core', 'java', 'java-spring', 'openapi-contract'];
+export const DEFAULT_SETUP_PROFILES = [
+  'core',
+  'java',
+  'java-spring',
+  'openapi-contract',
+  'mijn-gezondheid',
+];
 const CONTRACT_EXTENSIONS = new Set(['.yaml', '.yml', '.json']);
 const MCP_JSON = join('.github', 'mcp.json');
 const CODEGRAPH_SETUP = '.archon/scripts/codegraph-setup.sh';
@@ -53,12 +71,23 @@ const CONTRACT_SETUP_SCRIPTS = [
   '.archon/scripts/portal-mcp-setup.sh',
 ];
 const WEB_UIS = 'scripts/web-uis.sh';
+const GROMA_DIR = 'groma';
+const AGENTS_MD = 'AGENTS.md';
+/** The Backlog.md block `groma init` writes into AGENTS.md, whether the project uses Backlog.md or not. */
+const BACKLOG_BLOCK =
+  /\n*<!-- BACKLOG\.MD GUIDELINES START -->[\s\S]*?<!-- BACKLOG\.MD GUIDELINES END -->\n?/;
+/** The line the kit's groma-check.sh wants in AGENTS.md while Backlog.md is on. */
+export const BACKLOG_LINE = "This repo's tickets live in its own Backlog.md backlog (`backlog/`).";
+/** How long the web views get to answer before they are reported as not opened. */
+const WEB_READY_MS = 90_000;
+const OPENERS = ['wslview', 'explorer.exe', 'xdg-open', 'open'];
 
 export const KIT_SETUP_USAGE = `Usage: archon kit setup [--backend <path> --contract <file>] [options]
 
 Asks for the backend repository, the frontend repository, the API contract file and whether to use
 Backlog.md, then installs the tools, the kit, the contract MCP server, the CodeGraph indexes, the rtk
-hooks and the web views. Without a terminal, --backend and --contract are required.
+hooks, the Groma map and the web views (each opened in the browser once it answers). Without a
+terminal, --backend and --contract are required.
 
 Options:
   --backend <path>     Backend git repository (gets the kit)
@@ -69,7 +98,7 @@ Options:
   --yes                Skip the confirmation
   --no-tools           Skip the tool installer
   --no-rtk             Skip the rtk hooks
-  --no-web             Do not start the web views
+  --no-web             Do not start or open the web views (archon kit web does that alone)
 
 Exit codes: 0 done (or cancelled), 1 a step failed, 2 a usage error.`;
 
@@ -297,6 +326,12 @@ export interface KitSetupDeps {
   kitAdd: typeof kitAddCommand;
   checkMcp: (dir: string) => Promise<DoctorCheck[]>;
   which: (command: string) => boolean;
+  /** The URL answers (any HTTP status below 500) within `timeoutMs`. */
+  ready: (url: string, timeoutMs: number) => Promise<boolean>;
+  /** Open the URL in the browser; false when there is no opener. */
+  open: (url: string) => boolean;
+  /** Start `archon serve` detached, its output into `logPath`. */
+  startServe: (logPath: string) => void;
   now: () => Date;
   /** Usage and argument errors (stderr). */
   stderr: (text: string) => void;
@@ -316,9 +351,49 @@ export function defaultSetupDeps(cwd: string, env: NodeJS.ProcessEnv = process.e
     kitAdd: kitAddCommand,
     checkMcp: dir => checkMcpServers(dir),
     which: command => onPath(command, env),
+    ready: (url, timeoutMs) => waitForUrl(url, timeoutMs),
+    open: url => openInBrowser(url, env),
+    startServe: logPath => startServeDetached(logPath, env),
     now: () => new Date(),
     stderr: text => console.error(text),
   };
+}
+
+/** Poll the URL until it answers below 500 or the time is up. */
+export async function waitForUrl(url: string, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(2000), redirect: 'manual' });
+      if (res.status < 500) return true;
+    } catch {
+      // not listening yet
+    }
+    if (Date.now() >= deadline) return false;
+    await new Promise(done => setTimeout(done, 500));
+  }
+}
+
+/** The opener web-uis.sh uses: WEB_UIS_OPEN, else the first of wslview, explorer.exe, xdg-open, open. */
+function openInBrowser(url: string, env: NodeJS.ProcessEnv): boolean {
+  const opener = env.WEB_UIS_OPEN || OPENERS.find(command => onPath(command, env));
+  if (!opener) return false;
+  const child = spawn(opener, [url], { detached: true, stdio: 'ignore', env });
+  child.on('error', () => undefined);
+  child.unref();
+  return true;
+}
+
+function startServeDetached(logPath: string, env: NodeJS.ProcessEnv): void {
+  const fd = openSync(logPath, 'a');
+  const child = spawn('archon', ['serve'], {
+    cwd: env.HOME ?? homedir(),
+    detached: true,
+    stdio: ['ignore', fd, fd],
+    env,
+  });
+  child.on('error', () => undefined);
+  child.unref();
 }
 
 function stamp(date: Date): string {
@@ -497,6 +572,7 @@ function summary(options: KitSetupOptions, answers: Answers, profiles: string[])
     'kit',
     'contract',
     'codegraph',
+    'groma map',
     `frontend MCP${skipped(answers.frontend === null, 'no frontend')}`,
     `rtk hooks${skipped(options.noRtk, '--no-rtk')}`,
     'servers check',
@@ -537,6 +613,8 @@ interface SetupRun extends Answers {
   logPath: string;
   log: OutputSink;
   failed: string[];
+  /** The Groma step made a new map: a first scan, still to be curated. */
+  gromaFirstScan: boolean;
 }
 
 function startRun(options: KitSetupOptions, deps: KitSetupDeps, prepared: Prepared): SetupRun {
@@ -550,7 +628,18 @@ function startRun(options: KitSetupOptions, deps: KitSetupDeps, prepared: Prepar
   );
   const repos: [string, string][] = [['backend', answers.backend]];
   if (answers.frontend !== null) repos.push(['frontend', answers.frontend]);
-  return { ...answers, options, deps, kit, profiles, repos, logPath, log, failed: [] };
+  return {
+    ...answers,
+    options,
+    deps,
+    kit,
+    profiles,
+    repos,
+    logPath,
+    log,
+    failed: [],
+    gromaFirstScan: false,
+  };
 }
 
 /** One step under a spinner: its body returns the detail line, a throw marks it failed. */
@@ -668,6 +757,56 @@ async function codegraphStep(run: SetupRun): Promise<void> {
   });
 }
 
+/**
+ * AGENTS.md after `groma init`: without Backlog.md, the Backlog.md block init wrote goes (a block that was there
+ * before stays); with it, the line that says where the tickets live is added when missing. Null: no AGENTS.md.
+ */
+export function agentsAfterGromaInit(
+  text: string | null,
+  before: string | null,
+  backlog: boolean
+): string | null {
+  if (text === null) return before;
+  let out = text;
+  if (!backlog && !(before ?? '').includes('BACKLOG.MD GUIDELINES START')) {
+    out = `${out.replace(BACKLOG_BLOCK, '\n').trimEnd()}\n`;
+  }
+  if (backlog && !out.includes('Backlog.md backlog')) out = `${out.trimEnd()}\n\n${BACKLOG_LINE}\n`;
+  if (before === null && out.trim() === '') return null;
+  return out;
+}
+
+/** The backend's Groma map: groma init, the java scanner with the java profile, and a first scan. */
+async function gromaStep(run: SetupRun): Promise<void> {
+  if (!run.deps.which('groma')) return skip(run, 'Groma map', 'groma is not on PATH');
+  const { backend } = run;
+  if (existsSync(join(backend, GROMA_DIR)))
+    return skip(run, 'Groma map', 'groma/ is already there');
+  await step(run, 'Groma map', async () => {
+    const agents = join(backend, AGENTS_MD);
+    const read = (): string | null => (existsSync(agents) ? readFileSync(agents, 'utf-8') : null);
+    const before = read();
+    const hadBacklog = existsSync(join(backend, 'backlog'));
+    const java = resolveProfiles(run.kit, run.profiles).includes('java');
+    try {
+      await runIn(run, backend, 'groma', ['init', '--directory', GROMA_DIR, basename(backend)]);
+      if (java) await runIn(run, backend, 'groma', ['scanner', 'add', '@groma/scanner-java']);
+      await runIn(run, backend, 'groma', ['scan']);
+    } finally {
+      // groma init also writes a Backlog.md board and its AGENTS.md block: the project's answer decides.
+      if (!run.backlog && !hadBacklog && existsSync(join(backend, 'backlog'))) {
+        rmSync(join(backend, 'backlog'), { recursive: true, force: true });
+        run.log('removed the backlog/ groma init wrote (Backlog.md is off)\n');
+      }
+      const after = agentsAfterGromaInit(read(), before, run.backlog);
+      if (after === null) rmSync(agents, { force: true });
+      else if (after !== read()) writeFileSync(agents, after);
+    }
+    run.gromaFirstScan = true;
+    return `groma init${java ? ', java scanner' : ''}, first scan (curate it before the first push)`;
+  });
+}
+
 /** The frontend's codegraph MCP server, its folder trust and the backend's extra project. */
 async function frontendStep(run: SetupRun): Promise<void> {
   const { frontend } = run;
@@ -714,29 +853,95 @@ async function serversStep(run: SetupRun): Promise<void> {
   });
 }
 
-/** Start the web views; resolves the lines of their output that name a URL. */
+/** What `startWebViews` did: one line per view, and the views that never answered. */
+export interface WebViews {
+  lines: string[];
+  notReady: string[];
+}
+
+const URL_IN_LINE = /https?:\/\/\S+/;
+
+/**
+ * Start the web views of `backend` (scripts/web-uis.sh, then `archon serve` when the Archon web UI does not answer),
+ * wait until each answers, and open each one that does in the browser. Throws when the backend has no web-uis.sh or
+ * it fails; a view that never answers is in `notReady`, not opened.
+ */
+export async function startWebViews(
+  backend: string,
+  deps: Pick<KitSetupDeps, 'run' | 'env' | 'ready' | 'open' | 'startServe' | 'now'>,
+  log: OutputSink,
+  logDir: string
+): Promise<WebViews> {
+  if (!existsSync(join(backend, WEB_UIS))) throw new Error(`the backend has no ${WEB_UIS}`);
+  const found: string[] = [];
+  let pending = '';
+  const collect = (text: string): void => {
+    const parts = (pending + text).split('\n');
+    pending = parts.pop() ?? '';
+    found.push(...parts.filter(line => URL_IN_LINE.test(line)).map(line => line.trim()));
+  };
+  log(`$ bash ${WEB_UIS} start   (in ${backend})\n`);
+  const code = await deps.run('bash', [WEB_UIS, 'start'], {
+    cwd: backend,
+    env: deps.env,
+    output: text => {
+      log(text);
+      collect(text);
+    },
+  });
+  if (URL_IN_LINE.test(pending)) found.push(pending.trim());
+  if (code !== 0) throw new Error(`bash ${WEB_UIS} start exited with ${code}`);
+
+  // The Archon web UI: the running server, else one started here.
+  const archon = `http://localhost:${deps.env.PORT || '3090'}`;
+  const health = `${archon}/api/health`;
+  const views: { line: string; url: string; probe: string }[] = found.map(line => {
+    const url = (URL_IN_LINE.exec(line) as RegExpExecArray)[0];
+    return { line, url, probe: url };
+  });
+  if (!views.some(view => view.url.startsWith(archon))) {
+    let line = `archon: ${archon}`;
+    if (!(await deps.ready(health, 1000))) {
+      const serveLog = join(logDir, `serve-${stamp(deps.now())}.log`);
+      deps.startServe(serveLog);
+      log(`started archon serve, log ${serveLog}\n`);
+      line = `archon: ${archon} (started, log ${serveLog})`;
+    }
+    views.push({ line, url: archon, probe: health });
+  }
+
+  const answered = await Promise.all(views.map(view => deps.ready(view.probe, WEB_READY_MS)));
+  const lines: string[] = [];
+  const notReady: string[] = [];
+  views.forEach((view, i) => {
+    if (!answered[i]) {
+      notReady.push(view.url);
+      lines.push(`${view.line}   (not opened: no answer in ${WEB_READY_MS / 1000} s)`);
+      return;
+    }
+    const opened = deps.open(view.url);
+    lines.push(opened ? view.line : `${view.line}   (no browser opener found)`);
+  });
+  for (const line of lines) log(`${line}\n`);
+  return { lines, notReady };
+}
+
+/** Start the web views and open them; resolves their lines for the closing screen. */
 async function webStep(run: SetupRun): Promise<string[]> {
-  const urls: string[] = [];
   if (run.options.noWeb) {
     skip(run, 'Web views', '--no-web');
-    return urls;
+    return [];
   }
+  let lines: string[] = [];
   await step(run, 'Web views', async () => {
-    if (!existsSync(join(run.backend, WEB_UIS))) throw new Error(`the backend has no ${WEB_UIS}`);
-    let pending = '';
-    const collect: OutputSink = text => {
-      const lines = (pending + text).split('\n');
-      pending = lines.pop() ?? '';
-      urls.push(...lines.filter(line => line.includes('http://')).map(line => line.trim()));
-    };
-    try {
-      await runIn(run, run.backend, 'bash', [WEB_UIS, 'start', '--open'], collect);
-    } finally {
-      if (pending.includes('http://')) urls.push(pending.trim());
+    const views = await startWebViews(run.backend, run.deps, run.log, dirname(run.logPath));
+    lines = views.lines;
+    if (views.notReady.length > 0) {
+      throw new Error(`no answer from ${views.notReady.join(', ')}`);
     }
-    return `${urls.length} started`;
+    return `${lines.length} opened`;
   });
-  return urls;
+  return lines;
 }
 
 /** The closing screen; resolves the exit code. */
@@ -751,8 +956,15 @@ function finish(run: SetupRun, urls: string[]): number {
           `Stop them: cd ${run.backend} && bash ${WEB_UIS} stop`,
         ]
       : ['Web views: none started'];
+  const groma = !run.gromaFirstScan
+    ? []
+    : [
+        'Groma map: groma/ holds a first scan. Commit it, and have an agent curate it (it runs',
+        '`groma agent-instructions`); descriptions are optional (groma_descriptions in .archon/kit.yaml).',
+      ];
   const next = [
     ...web,
+    ...groma,
     `Log: ${run.logPath}`,
     '',
     'Copilot login: run `copilot`, then `/login`, and finish it in a browser signed in as the GitHub',
@@ -789,9 +1001,44 @@ export async function kitSetupCommand(
   await kitStep(run);
   await contractStep(run);
   await codegraphStep(run);
+  await gromaStep(run);
   await frontendStep(run);
   await rtkStep(run);
   await serversStep(run);
   const urls = await webStep(run);
   return finish(run, urls);
+}
+
+export const KIT_WEB_USAGE = `Usage: archon kit web [path]
+
+Starts the web views of the project at path (default: the current folder): the MCP Inspectors, the
+Groma map and the Backlog.md board (scripts/web-uis.sh), and the Archon web UI (archon serve, started
+when it does not answer). Each opens in the browser once it answers.
+Stop them: bash scripts/web-uis.sh stop
+
+Exit codes: 0 all opened, 1 a view did not answer or web-uis.sh failed.`;
+
+/** `archon kit web [path]`: the web step of setup alone, for the install and update scripts' last step. */
+export async function kitWebCommand(target: string, deps: KitSetupDeps): Promise<number> {
+  const backend = resolve(deps.cwd, target);
+  const logDir = join(getArchonHome(deps.env), 'logs');
+  mkdirSync(logDir, { recursive: true });
+  const logPath = join(logDir, `kit-web-${stamp(deps.now())}.log`);
+  const log: OutputSink = text => appendFileSync(logPath, text);
+  log(`archon kit web ${backend}\n`);
+  try {
+    const { lines, notReady } = await startWebViews(backend, deps, log, logDir);
+    deps.ui.note(
+      [...lines, `Stop them: cd ${backend} && bash ${WEB_UIS} stop`, `Log: ${logPath}`].join('\n'),
+      'Web views'
+    );
+    if (notReady.length > 0) {
+      deps.ui.warn(`No answer from ${notReady.join(', ')}; see ${logPath}`);
+      return 1;
+    }
+    return 0;
+  } catch (err) {
+    deps.ui.warn(`Web views failed: ${(err as Error).message}; see ${logPath}`);
+    return 1;
+  }
 }

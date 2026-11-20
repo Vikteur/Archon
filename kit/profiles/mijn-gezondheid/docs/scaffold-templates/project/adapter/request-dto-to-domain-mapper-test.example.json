@@ -1,0 +1,22 @@
+{
+  "_target": "zzsmoke-adapter/src/test/java/be/mijngezondheid/zzsmoke/adapter/controller/GadgetRequestDTOToDomainMapperTest.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.controller",
+  "Name": "Gadget",
+  "Dto": "BlockedAudienceDTO",
+  "dtoValues": [
+    {
+      "name": "audience",
+      "example": "\"Smart thermometer\""
+    }
+  ],
+  "checks": [
+    {
+      "getter": "getDescription",
+      "expected": "\"Smart thermometer\""
+    },
+    {
+      "getter": "getCountryCode",
+      "expected": "\"BE\""
+    }
+  ]
+}

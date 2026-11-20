@@ -1,0 +1,40 @@
+{{!
+  Request DTO mapper test: a built DTO in, each request field checked.
+  Exemplar: allergy-intolerance-adapter src/test .../controller/AllergyIntoleranceRequestDTOToDomainMapperTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/controller/<Name>RequestDTOToDomainMapperTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, Dto, imports[], dtoValues[name (DTO builder field), example],
+          checks[getter (request getter, e.g. getDescription), expected (Java expression)]
+  Left to you: null-field cases.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}RequestDTOToDomainMapperTest {
+
+    private final {{{Name}}}RequestDTOToDomainMapper mapper = new {{{Name}}}RequestDTOToDomainMapper();
+
+    @Test
+    void given{{{Dto}}}_whenMap_thenReturnRequest() {
+        // Given
+        var dto = {{{Dto}}}.builder()
+{{#dtoValues}}
+                .{{{name}}}({{{example}}})
+{{/dtoValues}}
+                .build();
+
+        // When
+        var request = mapper.map(dto);
+
+        // Then
+{{#checks}}
+        assertThat(request.{{{getter}}}()).isEqualTo({{{expected}}});
+{{/checks}}
+    }
+}

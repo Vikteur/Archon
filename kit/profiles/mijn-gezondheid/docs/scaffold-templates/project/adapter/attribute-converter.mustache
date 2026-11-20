@@ -1,0 +1,33 @@
+{{!
+  JPA AttributeConverter for a List<String> stored as one delimited column (no JSON columns in this repo).
+  Exemplar: dashboard-adapter .../repository/featureflag/StringListConverter.java
+  Target: <capability>-adapter/src/main/java/<pkg>/<Name>Converter.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name (e.g. StringList), separator (e.g. ,)
+  Left to you: other element types (map each element in both directions).
+}}
+package {{{package}}};
+
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Converter
+public class {{{Name}}}Converter implements AttributeConverter<List<String>, String> {
+
+    private static final String SEPARATOR = "{{{separator}}}";
+
+    @Override
+    public String convertToDatabaseColumn(final List<String> values) {
+        return values != null ? String.join(SEPARATOR, values) : "";
+    }
+
+    @Override
+    public List<String> convertToEntityAttribute(final String column) {
+        return column == null || column.isEmpty()
+                ? List.of()
+                : Arrays.stream(column.split(SEPARATOR)).map(String::trim).toList();
+    }
+}

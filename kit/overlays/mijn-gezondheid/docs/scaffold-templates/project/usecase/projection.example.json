@@ -1,0 +1,15 @@
+{
+  "_target": "zzsmoke-usecase/src/main/java/be/mijngezondheid/zzsmoke/usecase/gadget/GadgetSummaryProjection.java",
+  "package": "be.mijngezondheid.zzsmoke.usecase.gadget",
+  "Name": "GadgetSummary",
+  "fields": [
+    {
+      "type": "String",
+      "name": "description"
+    },
+    {
+      "type": "String",
+      "name": "countryCode"
+    }
+  ]
+}

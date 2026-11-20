@@ -1,0 +1,101 @@
+{{!
+  REST gateway test: the real gateway bean over a real RestClient against WireMock on a dynamic port; the base URL
+  property points at WireMock through @DynamicPropertySource.
+  Exemplars: captcha-gateway src/test .../gateway/CaptchaGatewayTest.java,
+             e-health-gateway src/test .../gateway/DefaultTherapeuticExclusionGatewayTest.java
+  Target: <capability>-gateway/src/test/java/<pkg>/Default<Name>GatewayTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, configPackage (package of TestConfig), property, path, bearer (bool), exceptionClass,
+          responseBody (JSON array the stub returns, as a Java string literal's content, quotes escaped),
+          firstField (accessor checked on the first element, e.g. description), firstValue (Java expression)
+  Left to you: 404 and timeout cases, request-body matching (withRequestBody(equalToJson(...))).
+}}
+package {{{package}}};
+
+{{#bearer}}
+import be.mijngezondheid.authentication.domain.AuthenticatedCivilian;
+{{/bearer}}
+import {{{configPackage}}}.TestConfig;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.restclient.autoconfigure.RestClientAutoConfiguration;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.ok;
+import static com.github.tomakehurst.wiremock.client.WireMock.serverError;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+{{#bearer}}
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+{{/bearer}}
+
+@SpringBootTest
+@ContextConfiguration(classes = {TestConfig.class, RestClientAutoConfiguration.class})
+class Default{{{Name}}}GatewayTest {
+
+    @RegisterExtension
+    static WireMockExtension wiremock = WireMockExtension.newInstance()
+            .options(wireMockConfig().dynamicPort())
+            .build();
+{{#bearer}}
+
+    private static final String AUTHENTICATION_TOKEN = "authentication_token";
+{{/bearer}}
+
+    @Autowired
+    private {{{Name}}}Gateway gateway;
+
+    @DynamicPropertySource
+    static void registerBaseUrl(DynamicPropertyRegistry registry) {
+        registry.add("{{{property}}}", () -> wiremock.getRuntimeInfo().getHttpBaseUrl());
+    }
+
+    @Test
+    void givenServiceReturns{{{Name}}}s_whenGet{{{Name}}}s_thenReturnThem() {
+        // Given
+        wiremock.stubFor(get(urlEqualTo("{{{path}}}"))
+{{#bearer}}
+                .withHeader(HttpHeaders.AUTHORIZATION, equalTo("Bearer " + AUTHENTICATION_TOKEN))
+{{/bearer}}
+                .willReturn(ok()
+                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                        .withBody("{{{responseBody}}}")));
+
+        // When
+        var result = gateway.get{{{Name}}}s({{#bearer}}authenticatedCivilian(){{/bearer}});
+
+        // Then
+        assertThat(result).isNotEmpty();
+        assertThat(result.getFirst().{{{firstField}}}()).isEqualTo({{{firstValue}}});
+    }
+
+    @Test
+    void givenServiceFails_whenGet{{{Name}}}s_thenThrow() {
+        // Given
+        wiremock.stubFor(get(urlEqualTo("{{{path}}}")).willReturn(serverError()));
+
+        // When / Then
+        assertThatThrownBy(() -> gateway.get{{{Name}}}s({{#bearer}}authenticatedCivilian(){{/bearer}}))
+                .isInstanceOf({{{exceptionClass}}}.class);
+    }
+{{#bearer}}
+
+    private static AuthenticatedCivilian authenticatedCivilian() {
+        var auth = mock(AuthenticatedCivilian.class);
+        when(auth.getAuthenticationToken()).thenReturn(AUTHENTICATION_TOKEN);
+        return auth;
+    }
+{{/bearer}}
+}

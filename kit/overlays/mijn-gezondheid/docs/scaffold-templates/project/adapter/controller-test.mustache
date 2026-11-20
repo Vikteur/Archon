@@ -1,0 +1,72 @@
+{{!
+  Controller slice test: @WebMvcTest on the one controller (Spring Boot 4 package
+  org.springframework.boot.webmvc.test.autoconfigure) with the
+  context limited to the controller and the beans it needs (its mappers), use cases as @MockitoBean, Mothers as
+  use-case results. Listing the classes, rather than scanning the controller package, keeps one controller test
+  independent of the other controllers in the module.
+  Exemplars: vaccination-adapter src/test .../controller/VaccinationControllerTest.java,
+             authentication-adapter src/test .../controller/OAuthAdminControllerTest.java
+  Target: <capability>-adapter/src/test/java/<pkg>/adapter/controller/<Name>ControllerTest.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, beans[] (simple names of the other real beans, e.g. GadgetDomainToDTOMapper),
+          imports[] (use cases, Mothers),
+          useCases[type, field],
+          cases[test (method name, givenX_whenY_thenZ), stub (Mockito statement; omit for none),
+                request (MockMvc request builder, e.g. get("/api/vaccination").header("X-context", "PAGE")),
+                status (MockMvc status matcher: isOk, isNoContent, isBadRequest, ...),
+                jsonPaths[path, value (Java expression)]]
+  Left to you: a JSON response fixture (getResourceAsStream) when the body is large.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(controllers = {{{Name}}}Controller.class)
+@ContextConfiguration(classes = { {{{Name}}}Controller.class{{#beans}}, {{{.}}}.class{{/beans}} })
+class {{{Name}}}ControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+{{#useCases}}
+    @MockitoBean
+    private {{{type}}} {{{field}}};
+
+{{/useCases}}
+{{#cases}}
+    @Test
+    void {{{test}}}() throws Exception {
+{{#stub}}
+        // Given
+        {{{stub}}};
+
+{{/stub}}
+        // When / Then
+        mockMvc.perform({{{request}}})
+                .andExpect(status().{{{status}}}())
+{{#jsonPaths}}
+                .andExpect(jsonPath("{{{path}}}").value({{{value}}}))
+{{/jsonPaths}}
+                ;
+    }
+
+{{/cases}}
+}

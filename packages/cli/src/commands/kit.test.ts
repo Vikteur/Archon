@@ -21,6 +21,7 @@ import { dirname, join, resolve } from 'path';
 import { removeTempTree } from '@archon/paths/test-utils';
 import {
   backlogSwitchedOff,
+  buildToolchain,
   checkTools,
   kitCommand,
   kitToolsCommand,
@@ -416,6 +417,81 @@ describe('kit', () => {
     });
   });
 
+  describe('java_version follows the build toolchain', () => {
+    /** A kit whose defaults say java_version 21 and whose ci.yml renders it. */
+    const javaKit = (): Kit => {
+      const kit = makeKit();
+      kit.defaults = `${kit.defaults}java_version: 21\n`;
+      addFile(kit, 'core', 'ci.yml', "java-version: '@@KIT_JAVA_VERSION@@'\n");
+      const entry = kit.manifest.files.find(f => f.path === 'ci.yml');
+      if (entry) entry.template = true;
+      return kit;
+    };
+    const toolchain = (rel: string, n: number): void => {
+      mkdirSync(dirname(join(project, rel)), { recursive: true });
+      writeFileSync(
+        join(project, rel),
+        `java {\n  toolchain {\n    languageVersion.set(JavaLanguageVersion.of(${n}))\n  }\n}\n`
+      );
+    };
+    const kitYaml = (): Record<string, unknown> =>
+      Bun.YAML.parse(readFileSync(join(project, '.archon/kit.yaml'), 'utf-8')) as Record<
+        string,
+        unknown
+      >;
+    const ci = (): string => readFileSync(join(project, 'ci.yml'), 'utf-8');
+
+    it('a new kit.yaml takes the toolchain of build.gradle.kts, not the defaults', async () => {
+      toolchain('build.gradle.kts', 17);
+      expect(await add({}, javaKit())).toBe(0);
+      expect(kitYaml().java_version).toBe(17);
+      expect(ci()).toBe("java-version: '17'\n");
+    });
+    it('a convention plugin under buildSrc/ names the toolchain too', async () => {
+      writeFileSync(join(project, 'build.gradle.kts'), 'plugins { java }\n');
+      toolchain('buildSrc/src/main/kotlin/java-conventions.gradle.kts', 25);
+      toolchain('buildSrc/build/generated/old.gradle.kts', 11);
+      expect(buildToolchain(project)).toEqual({
+        version: '25',
+        file: 'buildSrc/src/main/kotlin/java-conventions.gradle.kts',
+      });
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '25'\n");
+    });
+    it('a kit.yaml without the key renders the toolchain and is not given the key', async () => {
+      toolchain('build.gradle.kts', 17);
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\n');
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '17'\n");
+      expect(Object.hasOwn(kitYaml(), 'java_version')).toBe(false);
+    });
+    it('refuses a kit.yaml java_version that is not the toolchain, and writes nothing', async () => {
+      toolchain('build.gradle.kts', 17);
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\njava_version: 21\n');
+      expect(await add({ force: true }, javaKit())).toBe(1);
+      expect(logs.join('\n')).toContain(
+        "kit.yaml java_version 21 does not match the build's toolchain, JavaLanguageVersion.of(17) in build.gradle.kts"
+      );
+      expect(existsSync(join(project, 'ci.yml'))).toBe(false);
+      writeFileSync(join(project, '.archon/kit.yaml'), 'profiles: [core]\njava_version: 17\n');
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '17'\n");
+    });
+    it('refuses a --set java_version that is not the toolchain', async () => {
+      toolchain('build.gradle.kts', 17);
+      expect(await add({ set: ['java_version=21'] }, javaKit())).toBe(1);
+      expect(existsSync(join(project, 'ci.yml'))).toBe(false);
+      expect(await add({ set: ['java_version=17'] }, javaKit())).toBe(0);
+    });
+    it('a build that names no toolchain keeps the kit.yaml value', async () => {
+      expect(buildToolchain(project)).toBeNull();
+      expect(await add({}, javaKit())).toBe(0);
+      expect(ci()).toBe("java-version: '21'\n");
+    });
+  });
+
   describe('project config', () => {
     it('kit add turns the Copilot file hooks on in .archon/config.yaml, keeping the rest', async () => {
       mkdirSync(join(project, '.archon'), { recursive: true });
@@ -544,6 +620,78 @@ describe('kit', () => {
       expect(await add({}, withConfig('# kit config v2\n'))).toBe(0);
       expect(readFileSync(path, 'utf-8')).toContain('# mine');
       expect(logs.join('\n')).toContain('kept (differs)  .archon/config.yaml');
+    });
+  });
+
+  describe("the repo's own files", () => {
+    const own = 'docs/scaffold-templates/project/domain/id.mustache';
+    it('refuses a kit that ships into docs/scaffold-templates/project/ and writes nothing', async () => {
+      const kit = makeKit();
+      addFile(kit, 'core', own, 'kit text\n');
+      expect(unsafeManifestPath(own)).not.toBeNull();
+      expect(unsafeManifestPath('./docs/scaffold-templates/project/x')).not.toBeNull();
+      expect(unsafeManifestPath('docs/scaffold-templates/domain/id.mustache')).toBeNull();
+      expect(await add({ force: true }, kit)).toBe(1);
+      expect(existsSync(join(project, own))).toBe(false);
+      expect(existsSync(join(project, 'README.md'))).toBe(false);
+      expect(logs.join('\n')).toContain("the repo's own scaffold templates");
+    });
+    it('never removes a file there, not even one the lock lists unedited and with --force', async () => {
+      expect(await add()).toBe(0);
+      mkdirSync(join(project, dirname(own)), { recursive: true });
+      writeFileSync(join(project, own), 'mine\n');
+      const lockPath = join(project, '.archon/kit.lock.json');
+      const lock = JSON.parse(readFileSync(lockPath, 'utf-8')) as { files: Record<string, string> };
+      lock.files[own] = sha('mine\n');
+      writeFileSync(lockPath, JSON.stringify(lock));
+      expect(await add({ force: true })).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('mine\n');
+    });
+    it('never touches a file the manifest does not ship, edited or not, with or without --force', async () => {
+      mkdirSync(join(project, 'docs/scaffold-templates/project/domain'), { recursive: true });
+      writeFileSync(join(project, own), 'mine\n');
+      writeFileSync(join(project, 'notes.md'), 'notes\n');
+      for (const force of [false, true]) {
+        expect(await add({ profiles: ['java'], force })).toBe(0);
+        expect(readFileSync(join(project, own), 'utf-8')).toBe('mine\n');
+        expect(readFileSync(join(project, 'notes.md'), 'utf-8')).toBe('notes\n');
+        expect(Object.keys(readKitLock(project))).not.toContain('notes.md');
+      }
+      expect(await add({ profiles: ['core'] })).toBe(0);
+      expect(readFileSync(join(project, 'notes.md'), 'utf-8')).toBe('notes\n');
+    });
+
+    // A project profile (manifest `project: true`) carries one repo's own templates: it alone may write there.
+    const withProject = (text: string): Kit => {
+      const kit = makeKit();
+      kit.manifest.profiles.repo = { requires: ['java'], description: 'one repo', project: true };
+      addFile(kit, 'repo', own, text);
+      return kit;
+    };
+    it('a project profile writes there, replaces an unedited file and keeps an edited one', async () => {
+      expect(unsafeManifestPath(own, true)).toBeNull();
+      expect(unsafeManifestPath('../x', true)).not.toBeNull();
+      expect(await add({ profiles: ['repo'] }, withProject('v1\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('v1\n');
+      expect(readKitLock(project)[own]).toBe(sha('v1\n'));
+      expect(await add({ profiles: ['repo'] }, withProject('v2\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('v2\n');
+      writeFileSync(join(project, own), 'mine\n');
+      logs.length = 0;
+      expect(await add({ profiles: ['repo'] }, withProject('v3\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('mine\n');
+      expect(logs.join('\n')).toContain(`kept (differs)  ${own}`);
+    });
+    it('the same path from a profile that is no project profile is still refused', async () => {
+      const kit = withProject('v1\n');
+      kit.manifest.profiles.repo.project = false;
+      expect(await add({ profiles: ['repo'], force: true }, kit)).toBe(1);
+      expect(existsSync(join(project, own))).toBe(false);
+    });
+    it('leaving the project profile out removes none of its files, unedited ones included', async () => {
+      expect(await add({ profiles: ['repo'] }, withProject('v1\n'))).toBe(0);
+      expect(await add({ profiles: ['java'], force: true }, withProject('v1\n'))).toBe(0);
+      expect(readFileSync(join(project, own), 'utf-8')).toBe('v1\n');
     });
   });
 

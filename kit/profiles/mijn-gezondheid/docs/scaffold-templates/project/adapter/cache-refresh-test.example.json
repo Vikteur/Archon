@@ -1,0 +1,11 @@
+{
+  "_target": "zzsmoke-adapter/src/test/java/be/mijngezondheid/zzsmoke/adapter/config/GadgetCacheConfigTest.java",
+  "package": "be.mijngezondheid.zzsmoke.adapter.config",
+  "Name": "Gadget",
+  "name": "gadget",
+  "domainPackage": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "portPackage": "be.mijngezondheid.zzsmoke.usecase.gadget.repository",
+  "cache": "gadgets",
+  "key": "item.getExternalId()",
+  "fixture": "thermometer"
+}

@@ -1,0 +1,58 @@
+{{!
+  Object Mother: named scenario methods that hold the fixture values, plus a fluent builder that goes through the
+  real constructor (so the domain's construction path is exercised). Lives in the domain's src/test and reaches the
+  usecase and adapter tests through the test-jar-producer plugin: testImplementation(project(":<ctx>-domain",
+  "testArtifacts")).
+  Exemplars: therapeutic-relation-domain src/test .../exclusion/TherapeuticExclusionMother.java,
+             authentication-domain src/test .../BlockedAudienceMother.java
+  Target: <capability>-domain/src/test/java/<pkg>/<Name>Mother.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[], fields[type, name],
+          fixtures[method (scenario name, e.g. houseDoctorExclusion), values[name, example (Java expression)]]
+  Left to you: scenarios that compose other Mothers (static-import them and use them as an example).
+}}
+package {{{package}}};
+
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.experimental.Accessors;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+public class {{{Name}}}Mother {
+{{#fixtures}}
+
+    public static {{{Name}}} {{{method}}}() {
+        return {{{Name}}}Builder.builder()
+{{#values}}
+                .{{{name}}}({{{example}}})
+{{/values}}
+                .build();
+    }
+{{/fixtures}}
+
+    @Accessors(fluent = true)
+    @Setter
+    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    public static class {{{Name}}}Builder {
+
+{{#fields}}
+        private {{{type}}} {{{name}}};
+{{/fields}}
+
+        public static {{{Name}}}Builder builder() {
+            return new {{{Name}}}Builder();
+        }
+
+        public {{{Name}}} build() {
+            var request = Create{{{Name}}}DomainRequest.builder()
+{{#fields}}
+                    .{{{name}}}({{{name}}})
+{{/fields}}
+                    .build();
+            return new {{{Name}}}(request);
+        }
+    }
+}

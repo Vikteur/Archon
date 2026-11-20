@@ -1,0 +1,39 @@
+{{!
+  Enum with an external code (eHealth value, contract value) and a lookup that returns a Creation instead of
+  throwing, so an unknown code becomes a Notification.
+  Exemplars: consent-domain .../ConsentStatusByType.java (code), .../ConsentOperation.java (Creation lookup)
+  Target: <capability>-domain/src/main/java/<pkg>/<Name>.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, constants[constant (e.g. ACTIVE), code (e.g. active)]
+  Left to you: mappings to other enums (a switch, as ConsentStatusByType.toLegacyStatus).
+}}
+package {{{package}}};
+
+import be.mijngezondheid.common.domain.validation.Creation;
+import be.mijngezondheid.common.domain.validation.Notification;
+import lombok.Getter;
+
+import java.util.Arrays;
+
+@Getter
+public enum {{{Name}}} {
+
+{{#constants}}
+    {{{constant}}}("{{{code}}}"),
+{{/constants}}
+    ;
+
+    private final String code;
+
+    {{{Name}}}(String code) {
+        this.code = code;
+    }
+
+    public static Creation<{{{Name}}}> fromCode(String code) {
+        return Arrays.stream(values())
+                .filter(value -> value.code.equals(code))
+                .findFirst()
+                .map(Creation::of)
+                .orElseGet(() -> Creation.empty(Notification.of("Unknown value '%s' for {{{Name}}}".formatted(code))));
+    }
+}

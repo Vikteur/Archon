@@ -25,6 +25,9 @@ import {
   mcpFallbackCommands,
   NEVER_SHIP,
   NEVER_SHIP_GROUPS,
+  PROJECT_TEMPLATES,
+  SCAFFOLD_COMMANDS,
+  scaffoldCommands,
   neverShipNamesIn,
   parseHookCommand,
   type Rewrite,
@@ -236,6 +239,108 @@ describe('agent conversion', () => {
   });
 });
 
+describe('scaffold scripts (the kit only)', () => {
+  const tools = ['Read', 'Bash(git add *)'];
+  const as = (name: string, text = AGENT): string =>
+    text.replace('name: developer', `name: ${name}`);
+
+  test('each agent that writes, plans or checks new files gets its scaffold commands, only with a shell', () => {
+    const wiring = ['scripts/test/scaffold.test.sh', 'scripts/test/scaffold-wiring.test.sh'];
+    expect(SCAFFOLD_COMMANDS).toEqual({
+      developer: ['scripts/scaffold/new-context.sh', 'scripts/scaffold/smoke.sh', ...wiring],
+      'test-writer': ['scripts/scaffold/smoke.sh --render-only', ...wiring],
+      analyst: ['scripts/scaffold.sh --for', 'scripts/scaffold/smoke.sh --render-only', ...wiring],
+      reviewer: ['scripts/scaffold.sh --for', 'scripts/scaffold/smoke.sh --render-only', ...wiring],
+    });
+    expect(scaffoldCommands('developer', tools)).toEqual([...SCAFFOLD_COMMANDS.developer]);
+    expect(scaffoldCommands('reviewer', 'Read, Bash')).toEqual([...SCAFFOLD_COMMANDS.reviewer]);
+    expect(scaffoldCommands('developer', ['Read', 'Edit'])).toEqual([]);
+    expect(scaffoldCommands('retro', tools)).toEqual([]);
+  });
+
+  test('the shell note names them and a Scaffold scripts note says when to run them, once', () => {
+    const dev = convertAgent(AGENT, 'developer.md');
+    expect(dev).toContain(
+      "The kit's scaffold scripts add: `scripts/scaffold/new-context.sh *`, `scripts/scaffold/smoke.sh *`, `scripts/test/scaffold.test.sh *`, `scripts/test/scaffold-wiring.test.sh *`."
+    );
+    expect(dev.split('Scaffold scripts:')).toHaveLength(2);
+    expect(dev).toContain('docs/scaffold-templates/project/');
+    expect(dev).toContain('its `scaffold.json` there tells');
+    expect(dev).toContain('`bash scripts/test/scaffold-wiring.test.sh` checks the wiring');
+    expect(dev).not.toContain('A script the repo does not have');
+    expect(dev).toContain('run `scripts/scaffold/new-context.sh`');
+    const rev = convertAgent(as('reviewer'), 'reviewer.md');
+    expect(rev).toContain(
+      "The kit's scaffold scripts add: `scripts/scaffold.sh --for *`, `scripts/scaffold/smoke.sh --render-only *`, `scripts/test/scaffold.test.sh *`, `scripts/test/scaffold-wiring.test.sh *`."
+    );
+    expect(rev).not.toContain('run `scripts/scaffold/new-context.sh`');
+    expect(convertAgent(as('retro'), 'retro.md')).not.toContain('Scaffold scripts:');
+    const noShell = AGENT.replace('  - Bash(git add *)\n', '');
+    expect(convertAgent(noShell, 'developer.md')).not.toContain('Scaffold scripts:');
+  });
+
+  test.skipIf(!Bun.which('jq'))(
+    "the kit's scope-guard lets each agent run its scaffold commands and no other form",
+    () => {
+      const root = track(mkdtempSync(join(tmpdir(), 'kit-sync-scaffold-')));
+      const hooks = join(import.meta.dir, '../kit/profiles/core/.claude/hooks/scripts');
+      for (const f of ['scope-guard.sh', 'payload.sh'])
+        write(root, `.claude/hooks/scripts/${f}`, readFileSync(join(hooks, f), 'utf8'), true);
+      const policy = withMcpFallbackScopes(
+        '{"agents":{"developer":{"commandAllowlist":["git add"]},"analyst":{"commandAllowlist":["npm test"]},' +
+          '"reviewer":{"commandAllowlist":["git diff"]},"test-writer":{"commandAllowlist":["scripts/scaffold.sh --test"]}}}\n',
+        new Map(Object.entries(SCAFFOLD_COMMANDS))
+      );
+      write(root, '.claude/hooks/agent-scopes.json', policy);
+      const decision = (agent: string, command: string): string => {
+        const payload = JSON.stringify({
+          agent_type: agent,
+          tool_name: 'Bash',
+          tool_input: { command },
+          cwd: root,
+        });
+        const r = Bun.spawnSync(['bash', '.claude/hooks/scripts/scope-guard.sh'], {
+          cwd: root,
+          stdin: Buffer.from(payload),
+          env: { ...process.env, CLAUDE_PROJECT_DIR: root, KIT_AGENT: '' },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        });
+        expect(r.exitCode).toBe(0);
+        return r.stdout.toString().includes('"deny"') ? 'deny' : 'allow';
+      };
+      const cases: [string, string, string][] = [
+        [
+          'developer',
+          'bash scripts/scaffold/new-context.sh --gateway orders Orders com.acme.orders A b',
+          'allow',
+        ],
+        ['developer', 'scripts/scaffold/smoke.sh --keep', 'allow'],
+        ['developer', 'scripts/scaffold/smoke.shx', 'deny'],
+        ['test-writer', 'bash scripts/scaffold/smoke.sh --render-only', 'allow'],
+        ['test-writer', 'scripts/scaffold/smoke.sh', 'deny'],
+        ['test-writer', 'scripts/scaffold/new-context.sh x X a.b A b', 'deny'],
+        ['analyst', 'bash scripts/scaffold.sh --for src/main/java/a/B.java', 'allow'],
+        ['analyst', 'scripts/scaffold.sh domain/id {} src/a.java', 'deny'],
+        ['analyst', 'scripts/scaffold/smoke.sh --render-only', 'allow'],
+        ['reviewer', 'scripts/scaffold.sh --for src/a.java', 'allow'],
+        ['reviewer', 'scripts/scaffold/smoke.sh', 'deny'],
+        ['reviewer', 'scripts/scaffold.sh --for a; rm -rf x', 'deny'],
+        ['reviewer', 'bash scripts/test/scaffold.test.sh', 'allow'],
+        ['test-writer', 'scripts/test/scaffold.test.sh', 'allow'],
+        ['analyst', 'bash scripts/test/scaffold-wiring.test.sh', 'allow'],
+        ['developer', 'scripts/test/scaffold-wiring.test.sh', 'allow'],
+        ['reviewer', 'bash scripts/test/scaffold-wiring.test.shx', 'deny'],
+        ['reviewer', 'bash scripts/test/other.test.sh', 'deny'],
+      ];
+      for (const [agent, command, want] of cases)
+        expect(`${agent}: ${command} -> ${decision(agent, command)}`).toBe(
+          `${agent}: ${command} -> ${want}`
+        );
+    }
+  );
+});
+
 describe('MCP fallback (the kit only)', () => {
   const ALL = [...CODEGRAPH_CLI, CONTRACT_CLI];
   const noMcp = AGENT.replace('  - mcp__codegraph__*\n  - mcp__portal-api__search\n', '');
@@ -412,7 +517,7 @@ describe('MCP fallback (the kit only)', () => {
     );
     const r = judgeDeps(lines.filter(l => l.includes('cli.mjs')));
     expect(r.failures.length).toBeGreaterThan(0);
-    expect(r.failures.every(l => l.includes(',openapi-contract:'))).toBe(true);
+    expect(r.failures.every(l => /(^|,)openapi-contract[,:]/.test(l))).toBe(true);
     expect(r.known.some(l => l.startsWith('core,java: ') && l.includes('cli.mjs'))).toBe(true);
   });
 });
@@ -612,9 +717,12 @@ describe('project nouns and Copilot paths', () => {
 describe('dependency check', () => {
   test('enumerates the installable sets', () => {
     const sets = installableSets().map(s => s.join(','));
-    expect(sets).toHaveLength(8);
+    expect(sets).toHaveLength(9);
     expect(sets).toContain('core');
     expect(sets).toContain('core,java,java-spring,openapi-contract');
+    // the project profile only on top of what it requires
+    expect(sets).toContain('core,java,java-spring,openapi-contract,mijn-gezondheid');
+    expect(sets.filter(s => s.includes('mijn-gezondheid'))).toHaveLength(1);
     expect(sets.some(s => s.includes('java-quarkus') && s.includes('java-spring'))).toBe(false);
     expect(sets.some(s => s.includes('java-quarkus') && !s.includes(',java,'))).toBe(false);
   });
@@ -993,7 +1101,9 @@ describe('sync on a fixture repo', () => {
       'git add',
       ...CODEGRAPH_CLI,
       CONTRACT_CLI,
+      ...(SCAFFOLD_COMMANDS.developer ?? []),
     ]);
+    expect(agent).toContain('Scaffold scripts:');
     expect(scopes.agents.retro?.commandAllowlist).toEqual(['git log']);
     expect(agent).toContain(
       'command: "env KIT_AGENT=developer bash .github/hooks/dispatch.sh PreToolUse'
@@ -1008,6 +1118,30 @@ describe('sync on a fixture repo', () => {
     expect(bundled).toContain(
       '"java-quarkus/.github/skills/run-app/scripts/smoke.sh": "#!/usr/bin/env bash\\necho ok\\n",'
     );
+  });
+
+  test("the source's own project/ templates never ship, and verify refuses a manifest entry there", () => {
+    const src = fixture();
+    write(src, `${PROJECT_TEMPLATES}a/own.mustache`, 'class {{Name}} {}\n');
+    git(src, 'add', '-A');
+    git(src, 'commit', '-q', '-m', 'own template');
+    expect(classify(`${PROJECT_TEMPLATES}a/own.mustache`, '')).toMatchObject({ exclude: true });
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-own-')));
+    const r = sync(src, out, false, NO_REWRITES);
+    expect(r.kit.failures).toEqual([]);
+    const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8')) as {
+      files: { path: string; profile: string }[];
+    };
+    expect(manifest.files.some(f => f.path.startsWith(PROJECT_TEMPLATES))).toBe(false);
+    expect(verifyKit(out)).toEqual([]);
+    const first = manifest.files[0];
+    if (first) first.path = `${PROJECT_TEMPLATES}x.mustache`;
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
+    expect(verifyKit(out).join('\n')).toContain(`lies in ${PROJECT_TEMPLATES}`);
+    // only a project profile may ship there
+    if (first) first.profile = 'mijn-gezondheid';
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
+    expect(verifyKit(out).join('\n')).not.toContain(`lies in ${PROJECT_TEMPLATES}`);
   });
 
   test('is deterministic', () => {
@@ -1157,5 +1291,89 @@ describe('sync on a fixture repo', () => {
     expect(files.find(x => x.path === 'docs/memory.md')?.createOnly).toBe(true);
     expect(files.find(x => x.path === 'docs/other.md')).not.toHaveProperty('createOnly');
     expect(verifyKit(out)).toEqual([]);
+  });
+});
+
+describe('the committed kit', () => {
+  const kit = join(dirname(import.meta.path), '..', 'kit');
+  const manifest = JSON.parse(readFileSync(join(kit, 'manifest.json'), 'utf8')) as {
+    files: { path: string; profile: string }[];
+    profiles: Record<string, { requires: string[]; project?: boolean }>;
+  };
+  test("the project profile ships the repo's templates and scaffold.json; no generic profile ships any", () => {
+    const project = manifest.files.filter(f => f.path.startsWith(PROJECT_TEMPLATES));
+    expect(project.length).toBeGreaterThan(100);
+    expect(new Set(project.map(f => f.profile))).toEqual(new Set(['mijn-gezondheid']));
+    expect(manifest.profiles['mijn-gezondheid']).toMatchObject({
+      requires: ['java-spring', 'openapi-contract'],
+      project: true,
+    });
+    for (const name of ['scaffold.json', 'README.md', 'domain/entity.mustache']) {
+      expect(project.some(f => f.path === `${PROJECT_TEMPLATES}${name}`)).toBe(true);
+    }
+    const config = JSON.parse(
+      readFileSync(join(kit, `profiles/mijn-gezondheid/${PROJECT_TEMPLATES}scaffold.json`), 'utf8')
+    ) as { context?: { modules?: string[] } };
+    expect(config.context?.modules?.length).toBeGreaterThan(0);
+    for (const [name, meta] of Object.entries(manifest.profiles)) {
+      if (name !== 'mijn-gezondheid') expect(meta.project).toBeUndefined();
+    }
+    // the portal's own nouns stay in its profile
+    for (const f of manifest.files.filter(x => x.profile !== 'mijn-gezondheid')) {
+      expect(readFileSync(join(kit, 'profiles', f.profile, f.path), 'utf8')).not.toContain(
+        'be.mijngezondheid'
+      );
+    }
+  });
+  test('Copilot starts a run from ticket text kept in a file and never answers the plan approval itself', () => {
+    const text = readFileSync(join(kit, 'profiles/core/.github/copilot-instructions.md'), 'utf8');
+    expect(text).toContain('archon workflow run build-feature-copilot --detach "$(cat <file>)"');
+    expect(text).toContain('pasted, or read from a ticket tool');
+    expect(text).toContain('Never approve or reject `plan-approval` yourself');
+    expect(text).toContain("only on the user's own words");
+  });
+  test('git ignores no file the manifest lists', () => {
+    const paths = manifest.files.map(f => `profiles/${f.profile}/${f.path}`);
+    const r = Bun.spawnSync(['git', '-C', kit, 'check-ignore', '--no-index', '--stdin'], {
+      stdin: Buffer.from(paths.join('\n')),
+      stdout: 'pipe',
+    });
+    expect(r.stdout.toString().trim().split('\n').filter(Boolean)).toEqual([]);
+  });
+  test("the scaffold suites bring their own leaf and templates, never the repo's docs/", () => {
+    for (const suite of [
+      'profiles/core/.archon/scripts/test/scaffold-step.test.sh',
+      'profiles/java/scripts/test/scaffold.test.sh',
+    ]) {
+      const text = readFileSync(join(kit, suite), 'utf8');
+      expect(text).not.toMatch(/ln -s "\$top\/docs"/);
+      expect(text).toContain('## Scaffold');
+    }
+  });
+  test('ci-cost aligns its table without column(1); ci-workflow-check fails only kit-owned workflows', () => {
+    const cost = readFileSync(join(kit, 'profiles/core/.claude/scripts/ci-cost.sh'), 'utf8');
+    expect(cost).not.toContain('else cat; fi');
+    expect(cost).toContain("awk -F '\\t'");
+    const rules = readFileSync(
+      join(kit, 'profiles/java/.claude/scripts/ci-workflow-check.sh'),
+      'utf8'
+    );
+    expect(rules).toContain('lock=.archon/kit.lock.json');
+    expect(rules).toContain('for place in buildSrc build-logic; do');
+    const scope = readFileSync(
+      join(kit, 'profiles/java/scripts/test/ci-workflow-scope.test.sh'),
+      'utf8'
+    );
+    expect(scope).toContain('BASELINE: .github/workflows/release.yml');
+  });
+  test("the agents that scaffold are told --for offers the repo's own templates", () => {
+    for (const agent of ['developer', 'test-writer']) {
+      const text = readFileSync(
+        join(kit, `profiles/java/.github/agents/${agent}.agent.md`),
+        'utf8'
+      );
+      expect(text).toContain('--for <target>');
+      expect(text).toContain("the repo's own under docs/scaffold-templates/project/ included, and");
+    }
   });
 });

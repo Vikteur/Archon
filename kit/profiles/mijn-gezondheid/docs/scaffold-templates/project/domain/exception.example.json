@@ -1,0 +1,5 @@
+{
+  "_target": "zzsmoke-domain/src/main/java/be/mijngezondheid/zzsmoke/domain/gadget/GadgetNotFoundException.java",
+  "package": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "Name": "GadgetNotFound"
+}

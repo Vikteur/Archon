@@ -1,0 +1,15 @@
+{
+  "_target": "zzsmoke-domain/src/main/java/be/mijngezondheid/zzsmoke/domain/gadget/GadgetKind.java",
+  "package": "be.mijngezondheid.zzsmoke.domain.gadget",
+  "Name": "GadgetKind",
+  "constants": [
+    {
+      "constant": "SENSOR",
+      "code": "sensor"
+    },
+    {
+      "constant": "ACTUATOR",
+      "code": "actuator"
+    }
+  ]
+}

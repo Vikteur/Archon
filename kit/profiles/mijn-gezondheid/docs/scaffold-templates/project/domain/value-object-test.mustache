@@ -1,0 +1,57 @@
+{{!
+  Value object test: a valid value, a missing one and (with maxLength) one past the limit.
+  Exemplar: report-domain src/test .../collection/CollectionNameTest.java
+  Target: <capability>-domain/src/test/java/<pkg>/<Name>Test.java
+  Package: "package" is the full package of the file (no suffix is appended).
+  Vars:   package, Name, imports[], example (valid value, Java expression), notBlank, maxLength
+  Left to you: cases for format rules you added.
+}}
+package {{{package}}};
+
+import org.junit.jupiter.api.Test;
+{{#imports}}
+import {{{.}}};
+{{/imports}}
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class {{{Name}}}Test {
+
+    @Test
+    void givenValidValue_whenCreate_thenReturnValueWithoutErrors() {
+        // When
+        var creation = {{{Name}}}.create({{{example}}});
+
+        // Then
+        assertThat(creation.getNotification().hasErrors()).isFalse();
+        assertThat(creation.getValue().value()).isEqualTo({{{example}}});
+    }
+
+    @Test
+    void givenNullValue_whenCreate_thenReturnErrors() {
+        // When
+        var creation = {{{Name}}}.create(null);
+
+        // Then
+        assertThat(creation.getValue()).isNull();
+{{#notBlank}}
+        assertThat(creation.getNotification().getErrors()).containsExactly("Field '{{{Name}}}.value' should not be blank");
+{{/notBlank}}
+{{^notBlank}}
+        assertThat(creation.getNotification().getErrors()).containsExactly("Field '{{{Name}}}.value' should not be null");
+{{/notBlank}}
+    }
+{{#maxLength}}
+
+    @Test
+    void givenValueLongerThanMaximum_whenCreate_thenReturnErrors() {
+        // When
+        var creation = {{{Name}}}.create("x".repeat({{{maxLength}}} + 1));
+
+        // Then
+        assertThat(creation.getValue()).isNull();
+        assertThat(creation.getNotification().getErrors())
+                .containsExactly("Field '{{{Name}}}.value' must be between 0 and {{{maxLength}}}.");
+    }
+{{/maxLength}}
+}

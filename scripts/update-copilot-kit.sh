@@ -24,11 +24,13 @@ Options:
   --contract <file>     the OpenAPI contract file (default: the last setup's)
   --archon-dir <path>   the Archon clone (default: the clone this script is in, else ~/archon)
   --branch <name>       branch for the update commit (default: chore/archon-kit-<archon commit>)
+  --add-profile <a,b>   also install these kit profiles, beside the saved ones (kept for the next update),
+                        e.g. --add-profile mijn-gezondheid for that repo's own scaffold templates
   --no-pull             do not pull the backend, frontend and contract repositories first
   --no-tools            do not update the tools (jq, yq, gh, node, codegraph, copilot, rtk, ...)
   --no-commit           leave the updated kit files uncommitted
   --no-restart          leave a running `archon serve` on the old build
-  --web                 start the MCP Inspectors at the end
+  --no-web              do not start and open the web views at the end
   --rebuild             rebuild and reinstall Archon even when the clone is already up to date
   --force               update even while a build run is running on this machine
   --dry-run             fetch and print what would be updated, change nothing
@@ -39,11 +41,15 @@ What it does, in order (a rerun is safe):
   2. updates the Archon clone (fast-forward only), builds and installs it, when there is something new
   3. pulls the contract, backend and frontend repositories when their tree is clean (fast-forward only)
   4. runs `archon kit setup` again with the saved answers: the kit files, the tools, the contract MCP
-     server, both CodeGraph indexes, the rtk hooks. A kit file you edited is kept; one the kit no
-     longer ships is removed when you never edited it
+     server, both CodeGraph indexes, the Groma map (groma init and a first scan, when the backend has
+     no groma/ yet), the rtk hooks. A kit file you edited is kept; one the kit no longer ships is
+     removed when you never edited it
   5. runs `archon kit doctor` on the backend
   6. commits the update on a new branch in each repo whose tree was clean before (it never pushes)
   7. restarts `archon serve` when it was running, so it runs the new build
+  8. starts the web views and opens each in the browser once it answers (`archon kit web`): the MCP
+     Inspectors (codegraph of each repo, the contract server on your contract), the Groma map, the
+     Backlog.md board when it is on, and the Archon web UI (`archon serve`, started when it is not running)
 It never writes a token anywhere. Log: ~/.archon/logs/update-copilot-kit-<timestamp>.log
 USAGE
 }
@@ -55,8 +61,8 @@ main() {
   [ $# -eq 0 ] || orig_args=("$@")
   local BACKEND="" FRONTEND="" CONTRACT="" ARCHON_DIR="" BRANCH=""
   local HAVE_BACKEND=0 HAVE_FRONTEND=0 HAVE_CONTRACT=0
-  local PULL=1 TOOLS=1 COMMIT=1 RESTART=1 WEB=0 REBUILD=0 FORCE=0 DRY_RUN=0
-  local ARCHON_DONE=0 LOG=""
+  local PULL=1 TOOLS=1 COMMIT=1 RESTART=1 WEB=1 REBUILD=0 FORCE=0 DRY_RUN=0
+  local ARCHON_DONE=0 LOG="" ADD_PROFILES=""
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -66,11 +72,13 @@ main() {
       --contract)   CONTRACT="${2:?--contract needs a file}"; HAVE_CONTRACT=1; shift 2 ;;
       --archon-dir) ARCHON_DIR="${2:?--archon-dir needs a path}"; shift 2 ;;
       --branch)     BRANCH="${2:?--branch needs a name}"; shift 2 ;;
+      --add-profile) ADD_PROFILES="${ADD_PROFILES:+$ADD_PROFILES,}${2:?--add-profile needs a profile name}"; shift 2 ;;
       --no-pull)    PULL=0; shift ;;
       --no-tools)   TOOLS=0; shift ;;
       --no-commit)  COMMIT=0; shift ;;
       --no-restart) RESTART=0; shift ;;
-      --web)        WEB=1; shift ;;
+      --web)        WEB=1; shift ;;   # the default since the web views open at the end; kept for old scripts
+      --no-web)     WEB=0; shift ;;
       --rebuild)    REBUILD=1; shift ;;
       --force)      FORCE=1; shift ;;
       --dry-run)    DRY_RUN=1; shift ;;
@@ -106,6 +114,13 @@ main() {
   fi
   [ -n "$BACKEND" ] || die "no saved setup in $saved: pass --backend and --contract, or run install-copilot-kit.sh first"
   [ -n "$CONTRACT" ] || die "no contract in $saved: pass --contract"
+  if [ -n "$ADD_PROFILES" ]; then
+    [ -n "$PROFILES" ] || die "no saved profiles in $saved to add $ADD_PROFILES to: run archon kit setup --profile <a,b,c> once"
+    local p
+    for p in ${ADD_PROFILES//,/ }; do
+      case ",$PROFILES," in *",$p,"*) ;; *) PROFILES="$PROFILES,$p" ;; esac
+    done
+  fi
   BACKEND="$(abspath "$BACKEND")"
   CONTRACT="$(abspath "$CONTRACT")"
   [ -z "$FRONTEND" ] || FRONTEND="$(abspath "$FRONTEND")"
@@ -121,7 +136,7 @@ main() {
 
   # ---------------------------------------------------------------- 1. checks
   if [ "$ARCHON_DONE" = 0 ]; then
-    step "1/7 Checking the machine and the saved answers"
+    step "1/8 Checking the machine and the saved answers"
     for cmd in git curl; do command -v "$cmd" >/dev/null || die "$cmd is missing"; done
     command -v archon >/dev/null || die "archon is not on PATH; run install-copilot-kit.sh first"
   fi
@@ -154,7 +169,7 @@ main() {
   local before after
   before="$(git -C "$ARCHON_DIR" rev-parse HEAD)"
   if [ "$ARCHON_DONE" = 0 ]; then
-    step "2/7 Archon (fork $FORK_BRANCH) in $ARCHON_DIR"
+    step "2/8 Archon (fork $FORK_BRANCH) in $ARCHON_DIR"
     git -C "$ARCHON_DIR" fetch -q origin "$FORK_BRANCH"
     local pending
     pending="$(git -C "$ARCHON_DIR" log --oneline "HEAD..origin/$FORK_BRANCH" | wc -l | tr -d ' ')"
@@ -190,7 +205,7 @@ main() {
   [ -n "$BRANCH" ] || BRANCH="chore/archon-kit-$(short "$after")"
 
   # ---------------------------------------------------------------- 3. pull
-  step "3/7 Pull the repositories"
+  step "3/8 Pull the repositories"
   local BACKEND_CLEAN=0 FRONTEND_CLEAN=0
   tree_clean "$BACKEND" && BACKEND_CLEAN=1
   [ -z "$FRONTEND" ] || { tree_clean "$FRONTEND" && FRONTEND_CLEAN=1; } || true
@@ -207,13 +222,13 @@ main() {
   fi
 
   # ---------------------------------------------------------------- 4. kit setup
-  step "4/7 archon kit setup (the saved answers)"
+  step "4/8 archon kit setup (the saved answers)"
   local setup_args=(--backend "$BACKEND" --contract "$CONTRACT" --yes)
   [ -z "$FRONTEND" ] || setup_args+=(--frontend "$FRONTEND")
   [ -z "$PROFILES" ] || setup_args+=(--profile "$PROFILES")
   [ "$BACKLOG" = 1 ] && setup_args+=(--backlog)
   [ "$TOOLS" = 1 ] || setup_args+=(--no-tools)
-  [ "$WEB" = 1 ] || setup_args+=(--no-web)
+  setup_args+=(--no-web)   # step 8 opens them, after the server restart
   local SETUP_OK=1 setup_out
   setup_out="$(mktemp)"
   archon kit setup "${setup_args[@]}" | tee "$setup_out" || { SETUP_OK=0; warn "kit setup reported a failed step; its log is in ~/.archon/logs/kit-setup-*.log"; }
@@ -222,20 +237,28 @@ main() {
   rm -f "$setup_out"
 
   # ---------------------------------------------------------------- 5. doctor
-  step "5/7 archon kit doctor"
+  step "5/8 archon kit doctor"
   local DOCTOR_OK=1
   (cd "$BACKEND" && archon kit doctor .) || { DOCTOR_OK=0; warn "kit doctor is not all green; see above"; }
 
   # ---------------------------------------------------------------- 6. commit
-  step "6/7 Commit the update (local only, never pushed)"
+  step "6/8 Commit the update (local only, never pushed)"
   local kit_commit
   kit_commit="$(kit_source "$BACKEND")"
   commit_repo "$BACKEND" "$BACKEND_CLEAN" "chore: update the Archon Copilot kit${kit_commit:+ to $kit_commit}" "$SETUP_OK"
   [ -z "$FRONTEND" ] || commit_repo "$FRONTEND" "$FRONTEND_CLEAN" "chore: update codegraph MCP and rtk for Copilot" "$SETUP_OK"
 
   # ---------------------------------------------------------------- 7. server
-  step "7/7 archon serve"
+  step "7/8 archon serve"
   restart_server
+
+  # ---------------------------------------------------------------- 8. web views
+  step "8/8 Web views"
+  if [ "$WEB" = 1 ]; then
+    archon kit web "$BACKEND" || warn "not every web view answered; see the lines above (archon kit web $BACKEND retries)"
+  else
+    ok "skipped (--no-web); open them later with: archon kit web $BACKEND"
+  fi
 
   # ---------------------------------------------------------------- summary
   echo
@@ -305,9 +328,10 @@ print_plan() {
     git -C "$ARCHON_DIR" log --oneline "HEAD..origin/$FORK_BRANCH" | head -10 | sed 's/^/               /'
   fi
   echo "  pull       $(onoff "$PULL" "backend, frontend and contract repos when clean" off)"
-  echo "  kit setup  backend $BACKEND, frontend ${FRONTEND:-(none)}, profiles ${PROFILES:-(from kit.yaml)}, backlog $(onoff "$BACKLOG" on off), tools $(onoff "$TOOLS" on off), web views $(onoff "$WEB" on off)"
+  echo "  kit setup  backend $BACKEND, frontend ${FRONTEND:-(none)}, profiles ${PROFILES:-(from kit.yaml)}, backlog $(onoff "$BACKLOG" on off), tools $(onoff "$TOOLS" on off)"
   echo "  commit     $(onoff "$COMMIT" "on, branch ${BRANCH:-chore/archon-kit-<archon commit>}, only in repos clean before the run" off)"
   echo "  server     $(onoff "$RESTART" "restart archon serve when it runs" "left as it is")"
+  echo "  web views  $(onoff "$WEB" "start and open them once they answer (archon kit web)" off)"
 }
 
 pull_repo() {
