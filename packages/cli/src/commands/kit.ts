@@ -961,13 +961,16 @@ export async function kitAddCommand(
     }
   }
 
-  // 10. Validate workflows.
+  // 10. Validate the project's workflows. Archon's bundled ones are not part of the install (with several providers
+  // and no defaultAssistant their tier models fail); `archon validate workflows` still checks them.
   if (!options.skipValidate && !dry && existsSync(join(project, '.archon', 'workflows'))) {
-    console.log('\nValidating workflows');
+    console.log("\nValidating the project's workflows");
     try {
       const { loadRoute } = await import('../routes/route-loader');
       const { validateWorkflowsCommand } = await loadRoute(() => import('./validate'));
-      const code = await validateWorkflowsCommand(project);
+      const code = await validateWorkflowsCommand(project, undefined, false, {
+        sources: ['project'],
+      });
       if (code !== 0) console.warn('Warning: workflow validation reported problems');
     } catch (err) {
       console.warn(`Warning: could not validate workflows: ${(err as Error).message}`);

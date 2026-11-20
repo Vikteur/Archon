@@ -129,6 +129,53 @@ describe('validateWorkflowsCommand', () => {
     );
   });
 
+  test('a sources scope validates only those workflows and still reports their missing skill', async () => {
+    // No default provider (several providers, no defaultAssistant): a bundled workflow without a
+    // provider is an error. A project-scoped run, as kit add does, must not report it.
+    mockLoadConfig.mockResolvedValue({
+      assistant: undefined as unknown as string,
+      aliases: {},
+      tiers: {},
+      assistants: { claude: {} },
+      envVars: undefined,
+    });
+    const bundled = makeTestWorkflowWithSource(
+      { name: 'bundled-default', nodes: [{ id: 'step1', prompt: 'hello', model: 'large' }] },
+      'bundled'
+    );
+    const project = (skills: string[]) =>
+      makeTestWorkflowWithSource(
+        {
+          name: 'project-flow',
+          provider: 'claude',
+          nodes: [{ id: 'step1', prompt: 'hi', skills }],
+        },
+        'project'
+      );
+    const projectOnly = { sources: ['project'] as const };
+
+    mockDiscoverWorkflowsWithConfig.mockResolvedValue({
+      workflows: [bundled, project([])],
+      errors: [],
+    });
+    expect(await validateWorkflowsCommand(validationCwd)).toBe(1);
+    mockConsoleLog.mockClear();
+    expect(await validateWorkflowsCommand(validationCwd, undefined, false, projectOnly)).toBe(0);
+    const scoped = JSON.stringify(mockConsoleLog.mock.calls);
+    expect(scoped).not.toContain('bundled-default');
+    expect(scoped).toContain('1 valid, 0 with errors');
+
+    mockDiscoverWorkflowsWithConfig.mockResolvedValue({
+      workflows: [bundled, project(['no-such-skill'])],
+      errors: [],
+    });
+    mockConsoleLog.mockClear();
+    await validateWorkflowsCommand(validationCwd, undefined, false, projectOnly);
+    const missing = JSON.stringify(mockConsoleLog.mock.calls);
+    expect(missing).toContain("Skill 'no-such-skill' not found");
+    expect(missing).toContain('1 with warnings');
+  });
+
   test('loose output schema warns and exits successfully', async () => {
     mockDiscoverWorkflowsWithConfig.mockResolvedValueOnce({
       workflows: [

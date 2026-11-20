@@ -45,6 +45,8 @@ import {
   type DoctorCheck,
   type Kit,
 } from './kit';
+import * as validateRoute from './validate';
+import * as routeLoader from '../routes/route-loader';
 
 const sha = (t: string): string => createHash('sha256').update(t).digest('hex');
 
@@ -510,6 +512,25 @@ describe('kit', () => {
         model: 'gpt-5',
         fileHooks: true,
       });
+    });
+    it("kit add validates only the project's workflows, never Archon's bundled ones", async () => {
+      const kit = makeKit();
+      addFile(kit, 'core', '.archon/workflows/w.yaml', 'name: w\n');
+      const loader = spyOn(routeLoader, 'loadRoute').mockImplementation(load => load());
+      const validate = spyOn(validateRoute, 'validateWorkflowsCommand').mockResolvedValue(0);
+      try {
+        expect(await add({ skipValidate: false }, kit)).toBe(0);
+        expect(validate).toHaveBeenCalledTimes(1);
+        expect(validate.mock.calls[0]).toEqual([
+          project,
+          undefined,
+          false,
+          { sources: ['project'] },
+        ]);
+      } finally {
+        loader.mockRestore();
+        validate.mockRestore();
+      }
     });
     it('a fileHooks the project set itself is kept', () => {
       expect(enableFileHooks('assistants:\n  copilot:\n    fileHooks: false\n')).toMatchObject({
