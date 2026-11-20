@@ -454,7 +454,7 @@ export interface OutputLine {
   number: number;
   text: string;
   tone: LineTone | null;
-  /** A leading tag such as `[scaffold]` or `mutation-gate:`, split off `text`'s start. */
+  /** A leading tag such as `[scaffold]` or `affected-check:`, split off `text`'s start. */
   tag: string | null;
 }
 

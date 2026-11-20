@@ -210,7 +210,7 @@ describe('output lines', () => {
 
   test('analyzeOutput numbers lines, splits tags, counts problems and drops ANSI', () => {
     const out = analyzeOutput(
-      '[scaffold] src/Hash.java\n\u001b[31merror: boom\u001b[0m\nWARN careful\nmutation-gate: ok\n'
+      '[scaffold] src/Hash.java\n\u001b[31merror: boom\u001b[0m\nWARN careful\naffected-check: ok\n'
     );
     expect(out.errors).toBe(1);
     expect(out.warnings).toBe(1);
@@ -218,7 +218,7 @@ describe('output lines', () => {
       [1, '[scaffold]', ' src/Hash.java', null],
       [2, null, 'error: boom', 'error'],
       [3, null, 'WARN careful', 'warning'],
-      [4, 'mutation-gate:', ' ok', 'success'],
+      [4, 'affected-check:', ' ok', 'success'],
     ]);
     expect(analyzeOutput('\n\n').lines).toEqual([]);
   });
