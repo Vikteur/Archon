@@ -1,7 +1,7 @@
 // Token and cost reports (TASK-41, P2): reads the Claude Code transcripts and the Archon run history, keeps one ledger
 // record per agent and local day, and renders the daily, per-ticket and per-agent reports from the whole ledger.
 //   node tokenomics.js update [--projects <dir>] [--archon-runs <file.json> | --archon-db <path>] [--out <dir>]
-//                             [--home <dir>] [--repo <dir>] [--pricing <file>] [--incremental]
+//                             [--home <dir>] [--repo <dir>] [--pricing <file>] [--copilot <dir>] [--incremental]
 //     scans the transcripts, merges them into <out>/ledger and rewrites every report; prints one JSON line.
 //       --incremental  only the transcripts written on or after the ledger's latest day (by mtime, local day), with a
 //                      sub-agent's session transcript, and only the daily reports of those days and the ticket reports
@@ -18,6 +18,12 @@
 //       --pricing      rates in USD per million tokens    (default <out>/pricing.json)
 //       --artifacts    Archon's workspaces, for each run's mcp-status.txt
 //                                       (default <home>/.archon/workspaces, env TOKENOMICS_ARCHON_ARTIFACTS)
+//       --copilot      the Copilot CLI's session folders, for the Archon nodes it ran
+//                      (default <home>/.copilot/session-state, env TOKENOMICS_COPILOT)
+// An Archon node that ran in the Copilot CLI has no Claude Code transcript: its tokens come from the usage records of its
+// Copilot session (the folder its sessionPreview starts, .archon/scripts/copilot-usage.js reads only those records). Its
+// models are listed as copilot/<model id>, which pricing.json does not price: the tokens are counted, the cost is never
+// guessed in money. archon.copilotCostUnits holds the CLI's own cost, in Copilot cost units.
 // The normalized Archon runs are {runs:[{id, workflowName, userMessage, workingPath, branch?, startedAt,
 // nodes:[{nodeId, sessionPreview, model, sessionOrigin, status, costUsd, numTurns, durationMs}]}]}; the database
 // loader produces the same shape. <out>/attribution.json holds overrides {"<agent|run|session id>": "TASK-x"}.
@@ -34,6 +40,8 @@ const SERVER = (() => {
   try { return require('../../.archon/scripts/kit-config.js').kitGet('contract.server_name', '@@KIT_CONTRACT_SERVER_NAME@@'); } catch { return '@@KIT_CONTRACT_SERVER_NAME@@'; }
 })();
 const { StringDecoder } = require('string_decoder');
+// The Copilot session reader; without it the Copilot nodes are skipped as before
+const COPILOT = (() => { try { return require('../../.archon/scripts/copilot-usage.js'); } catch { return null; } })();
 
 const SCHEMA = 1;
 const COORD = 'coordination';
@@ -481,6 +489,7 @@ function loadConfig(opts) {
     archonRuns: opts['archon-runs'] || process.env.TOKENOMICS_ARCHON_RUNS || '',
     archonDb: opts['archon-db'] || process.env.TOKENOMICS_ARCHON_DB || '',
     artifacts: path.resolve(opts.artifacts || process.env.TOKENOMICS_ARCHON_ARTIFACTS || path.join(home, '.archon', 'workspaces')),
+    copilot: path.resolve(opts.copilot || process.env.TOKENOMICS_COPILOT || path.join(home, '.copilot', 'session-state')),
     explicitHome: !!homeArg,
     dayOf: makeDayFn(pricing.timeZone || 'Europe/Amsterdam'),
   };
@@ -701,10 +710,50 @@ function matchArchon(runs, files) {
       const c = tops.filter(f => f.key.startsWith(n.sessionPreview) && key(f.cwd) === key(run.workingPath));
       if (c.length !== 1) { unmatched++; continue; }
       matched++;
+      n.matched = true;
       (c[0].archonNodes = c[0].archonNodes || []).push({ run, node: n });
     }
   }
   return { matched, unmatched };
+}
+
+// An Archon node no transcript matched, run in the Copilot CLI: one record per Copilot session, on the run's start day,
+// from the session's usage records only (counts, durations, model ids). Its models are copilot/<id>, unpriced on purpose.
+function copilotRecords(runs, cfg, san) {
+  const records = [];
+  let read = 0;
+  if (!COPILOT) return { records, read };
+  for (const run of runs) {
+    const t0 = Date.parse(run.startedAt);
+    if (!Number.isFinite(t0)) continue;
+    for (const n of run.nodes) {
+      if (n.matched || n.sessionPreview.length < 8) continue;
+      const s = COPILOT.findSession(cfg.copilot, n.sessionPreview);
+      if (s.error || !/^[A-Za-z0-9_-]{1,80}$/.test(s.id)) continue;
+      const u = COPILOT.readUsage(s.file, s.id);
+      if (!u || !u.total.calls) continue;
+      read++;
+      n.matched = true;
+      const models = {};
+      for (const [m, x] of u.models) {
+        models[`copilot/${m}`] = { cacheRead: x.cacheRead, cacheWrite1h: 0, cacheWrite5m: x.cacheWrite, calls: x.calls, input: x.input, output: x.output, webSearch: 0 };
+      }
+      const f = { key: s.id, sessionId: s.id, kind: 'top', runId: run.id, archonNodes: [{ run, node: n }] };
+      const attr = attribute(f, null, cfg);
+      const ms = n.durationMs || u.total.apiMs;
+      records.push({
+        activity: { filesEdited: {}, filesRead: {}, instructions: [], programs: {}, skills: {}, subagents: {}, tools: {}, workflows: 0 },
+        archon: {
+          copilotCostUnits: Math.round(u.total.costUnits * 100) / 100, costUsd: 0, durationMs: ms, node: san.text(n.nodeId, 120), runId: san.id(run.id),
+          sessionOrigin: san.text(n.sessionOrigin, 30), turns: n.numTurns, workflow: san.text(run.workflowName, 80),
+        },
+        branch: run.branch ? san.text(run.branch, 100) : null, day: cfg.dayOf(t0), durationMs: ms, first: new Date(t0).toISOString(),
+        key: s.id, kind: 'archon-node', label: san.text(`${run.workflowName}/${n.nodeId}`, 160), last: new Date(t0 + ms).toISOString(), models,
+        phase: null, repo: san.repoName(run.workingPath), rule: attr.rule, runId: san.id(run.id), sessionId: s.id, ticket: attr.ticket, type: null,
+      });
+    }
+  }
+  return { records, read };
 }
 
 // ---------- ownership of messages that sit in several files ----------
@@ -1103,6 +1152,9 @@ function activityLines(act) {
   return L;
 }
 
+// Archon's own cost of an agent; a Copilot node's is the CLI's own unit, never shown as money
+const archonCell = x => (!x ? '' : typeof x.copilotCostUnits === 'number' ? `${x.copilotCostUnits} Copilot cost units` : money(x.costUsd));
+
 function renderTicket(cx, ticket, recs) {
   const title = cx.titles.get(ticket);
   const total = newAgg();
@@ -1118,7 +1170,7 @@ function renderTicket(cx, ticket, recs) {
     })), '');
   const agents = agentsOfTicket(cx, recs);
   L.push('## Agents', '', ...table(['Kind', 'Agent', 'Type or phase', 'Model', 'Calls', 'Tokens', 'USD', 'Duration', 'Archon USD'], ['l', 'l', 'l', 'l', 'r', 'r', 'r', 'r', 'r'],
-    agents.map(a => [a.kind, a.label, a.type, a.models.join(', '), int(a.agg.calls), int(tokensOf(a.agg)), usdCell(a.agg), duration(a.ms), a.archon ? money(a.archon.costUsd) : ''])), '');
+    agents.map(a => [a.kind, a.label, a.type, a.models.join(', '), int(a.agg.calls), int(tokensOf(a.agg)), usdCell(a.agg), duration(a.ms), archonCell(a.archon)])), '');
   const runs = new Map();
   for (const a of agents) if (a.archon && a.archon.mcp) runs.set(a.archon.runId, a.archon.mcp);
   if (runs.size) {
@@ -1271,16 +1323,18 @@ function update(opts) {
 
   const runs = loadArchon(cfg);
   const arch = matchArchon(runs, live);
-  if (arch.unmatched) warn(`${arch.unmatched} Archon node(s) have no transcript here and are ignored`);
 
   const journals = loadJournals(live);
   const san = makeSanitizer(cfg, [...live.map(f => f.cwd), ...runs.map(r => r.workingPath)]);
   describeFiles(live, journals, cfg, san);
+  const copilot = copilotRecords(runs, cfg, san);
+  arch.unmatched -= copilot.read;
+  if (arch.unmatched) warn(`${arch.unmatched} Archon node(s) have no transcript or Copilot session here and are ignored`);
 
   const sharedFile = path.join(cfg.out, 'ledger', 'shared-messages.json');
   const prevShared = (readJson(sharedFile) || {}).owners || {};
   const owners = assignOwners(live, prevShared);
-  const records = buildRecords(live, cfg, san);
+  const records = [...buildRecords(live, cfg, san), ...copilot.records];
 
   const merged = mergeLedger(ledger, records);
   settleLedger(ledger, cfg);
@@ -1320,14 +1374,14 @@ function update(opts) {
   process.stdout.write(JSON.stringify({
     latestDay: days.length ? days[days.length - 1] : null, days: days.length, agents: new Set(cx.recs.map(r => r.key)).size, records: cx.recs.length,
     calls: cx.recs.reduce((s, r) => s + recCalls(r), 0), tickets: cx.tickets.length, transcripts: live.length, projectsSkipped, recordsAdded: merged.added, recordsReplaced: merged.replaced,
-    archonNodesMatched: arch.matched, archonNodesIgnored: arch.unmatched, unpricedModels: [...unpricedModels].sort(), filesChanged: stats.changed, since,
+    archonNodesMatched: arch.matched, archonNodesCopilot: copilot.read, archonNodesIgnored: arch.unmatched, unpricedModels: [...unpricedModels].sort(), filesChanged: stats.changed, since,
   }) + '\n');
 }
 
 function main(argv) {
   const [cmd, ...rest] = argv;
   if (cmd === 'update') return update(parseArgs(rest));
-  process.stderr.write('usage: tokenomics.js update [--projects <dir>] [--archon-runs <file> | --archon-db <path>] [--out <dir>] [--home <dir>] [--repo <dir>] [--pricing <file>] [--incremental]\n');
+  process.stderr.write('usage: tokenomics.js update [--projects <dir>] [--archon-runs <file> | --archon-db <path>] [--out <dir>] [--home <dir>] [--repo <dir>] [--pricing <file>] [--copilot <dir>] [--incremental]\n');
   process.exit(2);
 }
 

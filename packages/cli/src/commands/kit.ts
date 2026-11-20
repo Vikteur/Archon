@@ -1515,6 +1515,35 @@ export function checkHooks(projectPath: string): DoctorCheck {
     : { status: 'fail', name: 'hooks', detail: `missing scripts: ${absent.join(', ')}` };
 }
 
+/**
+ * The Copilot file-hooks switch in the project's .archon/config.yaml. Off (the provider's default), Archon's Copilot
+ * sessions never load .github/hooks, so no kit hook or guard runs in a workflow run.
+ */
+export function checkFileHooks(projectPath: string): DoctorCheck {
+  const name = 'fileHooks';
+  const file = join(projectPath, PROJECT_CONFIG);
+  if (!existsSync(file))
+    return { status: 'warn', name, detail: `${PROJECT_CONFIG} not found; run archon kit add` };
+  const doc = parseDocument(readFileSync(file, 'utf-8'), { uniqueKeys: false });
+  if (doc.errors.length > 0)
+    return { status: 'warn', name, detail: `${PROJECT_CONFIG} does not parse` };
+  const value: unknown = doc.getIn(['assistants', 'copilot', 'fileHooks']);
+  if (value === true)
+    return {
+      status: 'ok',
+      name,
+      detail: `assistants.copilot.fileHooks: true in ${PROJECT_CONFIG} (Copilot runs load .github/hooks)`,
+    };
+  return {
+    status: 'warn',
+    name,
+    detail:
+      value === undefined || value === null
+        ? `assistants.copilot.fileHooks is not set in ${PROJECT_CONFIG}: Copilot runs skip .github/hooks; run archon kit add`
+        : `assistants.copilot.fileHooks is ${String(value)} in ${PROJECT_CONFIG}: Copilot runs skip .github/hooks`,
+  };
+}
+
 export async function kitDoctorCommand(
   targetPath: string,
   kit: Kit,
@@ -1529,6 +1558,7 @@ export async function kitDoctorCommand(
   ];
   checks.push(...(await checkMcpServers(project, options.mcpTimeoutMs ?? 20000)));
   checks.push(checkHooks(project));
+  checks.push(checkFileHooks(project));
 
   const config = readKitYaml(project);
   if (config === null) {

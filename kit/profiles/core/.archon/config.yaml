@@ -14,7 +14,9 @@ aliases:
     model: claude-haiku-5-5
   # GitHub Copilot CLI variants, used only by build-feature-copilot.
   # THIS is the one place to edit the Copilot model ids: check what your plan offers with `copilot`, then `/model`.
-  # No effort is set. Login: `copilot` then `/login`, or COPILOT_GITHUB_TOKEN in ~/.archon/.env (never in the repo).
+  # No effort is set here: build-feature-copilot sets one per agent node (`effort:` low, medium or high), which Copilot
+  # passes as reasoningEffort; check with `/model` that the models you pick take it.
+  # Login: `copilot` then `/login`, or COPILOT_GITHUB_TOKEN in ~/.archon/.env (never in the repo).
   "@scout-copilot":
     provider: copilot
     model: claude-haiku-5.5
