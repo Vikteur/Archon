@@ -78,18 +78,19 @@ is tracked. (The `capability-drift` gate independently enforces this at CI.)
   bundles carry pre-resolved per-layer skill lists instead)
 
 ## Which tool answers which question
-Ask the tool before you open files; read a file only for what its answer leaves out. A tool missing from your
-tool list did not start: fall back to `Read` and `Grep`, and say so in your summary.
+Ask the CLI before you open files, from the repo root; read a file only for what its answer leaves out. The MCP
+tool of the same name (`codegraph_callers`, `search`, ...) answers the same when it is in your tool list. When neither
+answers, fall back to `Read` and `Grep`, and say so in your summary.
 
 | Question | Tool |
 |---|---|
-| Which operation does X? | `search`, then `read` |
-| Where is operation X built, is it built yet, which tests cover it? | `where` |
-| Which operations are still stubs? | `where` with `status: stub` |
-| Which fields does schema X have? | `schema` |
-| What carries this schema or field, request or response? | `usedBy` |
-| Who calls this Java symbol, and what breaks if it changes? | `codegraph_callers`, `codegraph_impact` |
-| How does this area work? | `codegraph_explore`, `codegraph_node` for one symbol |
+| Which operation does X? | `node scripts/contract-mcp/cli.mjs search <words>`, then `read <operationId>` |
+| Where is operation X built, is it built yet, which tests cover it? | `node scripts/contract-mcp/cli.mjs where <operationId>` |
+| Which operations are still stubs? | `node scripts/contract-mcp/cli.mjs where --status stub` |
+| Which fields does schema X have? | `node scripts/contract-mcp/cli.mjs schema <name>` |
+| What carries this schema or field, request or response? | `node scripts/contract-mcp/cli.mjs usedBy <schema or schema.field>` |
+| Who calls this Java symbol, and what breaks if it changes? | `codegraph callers <symbol>`, `codegraph impact <symbol>` |
+| How does this area work? | `codegraph explore "<names or a question>"`, `codegraph node <symbol>` for one symbol |
 | Text, config, logs, a string in a test | `Grep` |
 
 ## Ground Rules

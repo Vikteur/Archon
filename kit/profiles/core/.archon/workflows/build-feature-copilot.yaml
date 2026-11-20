@@ -12,7 +12,7 @@ description: |
   docs/retro/README.md).
   NOT for: contract (spec) changes in the hub repo, or work spanning several tickets.
 
-# Model policy (UD-21.a, amended by UD-21.f): @analyse (Claude Opus 5.5) plans, reviews and diagnoses; @build (Claude
+# Model policy: @analyse (Claude Opus 5.5) plans, reviews and diagnoses; @build (Claude
 # Sonnet 5.5) writes code, tests and the pull request text. The review node may commit test-first fixes for its own
 # findings. Every commit trailer names the model that wrote the commit. Both aliases are defined in .archon/config.yaml.
 # Deterministic steps are scripts in .archon/scripts (P2): reading the ticket, listing the STOP items, the push, CI by
@@ -20,11 +20,11 @@ description: |
 # One human gate: a person approves the plan (plan-approval) before any code is written; a rejection ends the run. The
 # run never merges its own pull request: it ends once the pull request is ready, and a team member reviews and merges.
 # Skills: `skills:` on a node is the exact allow-list for that node (without it the node gets no skill at all). The plan
-# writes a `Test skills:` and a `Build skills:` line per step from the table in the plan prompt, each from that agent's
-# own allow-list; the test agent loads its line and the build agent its own with the skill tool, plus code-generation;
-# the skill-check node fails the run when one was never loaded.
-# The plan itself always loads clean-architecture, and contract-slice, contract-db-parity and design-review only when
-# the request needs them.
+# writes a `Test skills:` and a `Build skills:` line per step from the table in docs/step-skills.md, each from that
+# agent's own allow-list; the test agent loads its line and the build agent its own with the skill tool, plus
+# code-generation; the skill-check node fails the run when one was never loaded.
+# The plan itself always loads clean-architecture, and design-review and the contract skills (openapi-contract profile)
+# only when the request needs them.
 # Scaffolding (P2): before writing a new file, the test and build agents run `scripts/scaffold.sh --for <path>`, which
 # names each scaffold template whose `## Scaffold` Target in docs/code-maps matches the path and prints the command that
 # renders it, and render its base case with that command. It is mandatory (owner decisions 2026-10-18 and 2026-10-23):
@@ -40,7 +40,7 @@ nodes:
       # The @@KIT_CONTRACT_SERVER_NAME@@ and CodeGraph MCP servers need git-ignored things in this worktree (node_modules, the contract,
       # the readiness report; the .codegraph/ index). mcp-setup.sh readies both and writes .archon/mcp/build-tools.json
       # with only the servers that are ready: the nodes below declare it as an optional `mcp:`, and a server in it
-      # that cannot start would fail them (docs/mcp/plan.md, A3). A failure only costs the nodes those tools.
+      # that cannot start would fail them. A failure only costs the nodes those tools.
       bash .archon/scripts/mcp-setup.sh --status "$ARTIFACTS_DIR/mcp-status.txt" >&2 \
         || echo "mcp-setup.sh failed; the nodes run without the MCP tools" >&2
       # The plan's context pack (P2): the facts every plan looked up on its own, after mcp-setup.sh so that its section of
@@ -70,14 +70,15 @@ nodes:
       Backlog ticket: $ticket.output.task (full text in $ARTIFACTS_DIR/ticket.md when it is set).
       Read $ARTIFACTS_DIR/ticket.md and $ARTIFACTS_DIR/plan-context.md first; read a file only for what they do not say,
       and each file once.
-      If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
-      readied them), use them before Read and Grep:
-      - `where` (operationId, tag or status) for where an operation is built, whether it is a stub, and its tests;
-      - `codegraph_explore` for how an area works; `codegraph_callers` and `codegraph_impact` for who calls a symbol and
-        what a change to it reaches (every place that writes the state the request changes);
-      - `search` and `read` for an operation of the contract, never a Read of contract/.
-      Grep stays the tool for text, config, logs and strings; without the tools, read as before.
-      On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
+      Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
+      the same when it is in your tool list:
+      - `codegraph explore "<names or a question>"` for an area, its source and the calls between; `codegraph node`,
+        `callers`, `callees` or `impact <symbol>` for one symbol (mcp__codegraph__codegraph_<name>);
+      - `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` for the contract, never a Read of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        contract/ (mcp__@@KIT_CONTRACT_SERVER_NAME@@__<name>);@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - here: `codegraph callers` and `codegraph impact` for every place that writes the state the request changes;
+      - here: `where <operationId>` for where an operation is built, whether it is a stub, and its tests.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
       Map the code this request touches; change nothing. Write $ARTIFACTS_DIR/explore.md once, at the end, at most 120
       lines:
       - the files and symbols involved, each with its layer (domain, usecase, adapter, gateway, platform; see
@@ -95,7 +96,12 @@ nodes:
   - id: plan
     depends_on: [explore]
     model: "@analyse-copilot"
-    skills: [clean-architecture, contract-slice, contract-db-parity, design-review]
+    # A node names only skills of installed profiles: the contract skills come with the openapi-contract profile.
+    skills:
+      - clean-architecture
+      - design-review
+      - contract-slice # profile openapi-contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - contract-db-parity # profile openapi-contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
     mcp: { path: .archon/mcp/build-tools.json, optional: true }
     # No Gradle and no test suite in the plan (owner decision 2026-10-18): the wrapper, every script that runs Gradle and
     # every test-suite run are denied. The one exception is .archon/scripts/plan-spike.sh, which matches none of these.
@@ -111,13 +117,16 @@ nodes:
       every script's header and test) and $ARTIFACTS_DIR/explore.md (the code the request touches). Read a file only for
       what they do not say, and read each file once, a script too, with the Read tool: note what you need the first
       time.
-      If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
-      readied them), use them before Read and Grep:
-      - `usedBy` (a schema or schema.field) for every operation a contract or pin change reaches, request or response;
-      - `schema` for a schema's fields; `where` for an operation's controller, stub status and tests;
-      - `codegraph_impact` for what a change to a Java symbol reaches.
-      Grep stays the tool for text, config, logs and strings; without the tools, read as before.
-      On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
+      Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
+      the same when it is in your tool list:
+      - `codegraph explore "<names or a question>"` for an area, its source and the calls between; `codegraph node`,
+        `callers`, `callees` or `impact <symbol>` for one symbol (mcp__codegraph__codegraph_<name>);
+      - `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` for the contract, never a Read of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        contract/ (mcp__@@KIT_CONTRACT_SERVER_NAME@@__<name>);@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - here: `codegraph impact` for what a change to a Java symbol reaches;
+      - here: `usedBy <schema or schema.field>` for every operation a contract or pin change reaches, request or@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        response; `schema` for a schema's fields; `where` for an operation's controller, stub status and tests.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
       Write an implementation plan for exactly this request to $ARTIFACTS_DIR/plan.md, once, when the plan is complete:
       do not write a draft and rewrite it.
       Run no Gradle and no test suite. The one exception: for a design question the plan states and the code cannot
@@ -126,10 +135,10 @@ nodes:
       into the step. Any other experiment is a step of the plan, for the build agent.
       Load clean-architecture with the skill tool first, always (skill-check fails the run when the plan never loaded
       it), and place every step in its layer by it and the docs/code-maps leaves of the skills it touches. Load the others with the skill tool only when the request needs them:
-      - contract-slice when a step touches a REST endpoint, a controller or the contract: read only the operations of
-        the tags the step touches, never the whole spec;
-      - contract-db-parity when a step changes the database schema: run its script as its docs/code-maps leaf says and
-        write the findings that touch the step into it;
+      - contract-slice when a step touches a REST endpoint, a controller or the contract: read only the operations of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        the tags the step touches, never the whole spec;@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - contract-db-parity when a step changes the database schema: run its script as its docs/code-maps leaf says and@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        write the findings that touch the step into it;@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
       - design-review when the plan has a one-way door (a database migration, the contract, authentication or
         authorization, a new module): add a short `## Design` section with the chosen option, at least one alternative
         with its trade-off, and the one-way doors. No `## Design` section otherwise.
@@ -138,7 +147,7 @@ nodes:
       Trace every path that writes what a step changes (each caller, each node, each script), not only the first one.
       When a step relies on a tool's default (a flag, an exit code, a format), find what it actually does (its source,
       its --help, or a run that is not Gradle and not a test suite) and write that into the step.
-      Name only workflow nodes that exist in .archon/workflows/build-feature.yaml.
+      Name only workflow nodes that exist in .archon/workflows/build-feature-copilot.yaml.
       When the ticket names a guard or a gate, list up front everything it must refuse, each with the test that
       proves the refusal.
       Add a `## Decisions → tests` table: every owner decision, STOP option and acceptance criterion in the ticket,
@@ -171,21 +180,8 @@ nodes:
       fails a plan that names a port's `Default<Name>` adapter only in a later step.
       Under every step, add two lines, one per agent, each with only the skills from that agent's column that fit
       what the step touches (the skill names, not the paths): `Test skills: <names>` for the test agent and
-      `Build skills: <names>` for the build agent. A step touches several rows when it changes several things.
-        | What the step touches             | Test skills                              | Build skills                                                     |
-        | any code or test                  | tdd-loop, jvm-testing                    | java, clean-code                                                 |
-        | domain type                       | object-mother-builders                   | domain-modeling, validation-notification-result                  |
-        | domain event                      |                                          | domain-events                                                    |
-        | use case                          | usecase-bdd-spec, object-mother-builders | usecase-orchestration, validation-notification-result            |
-        | controller, error mapping         |                                          | api-first-controller, exception-to-http                          |
-        | mapper (domain ↔ DTO)             | domain-to-dto-mapper-tests               | domain-dto-mapper                                                |
-        | repository, entity                | testcontainers                           | persistence-repository, jpa-entity-mapping                       |
-        | database schema                   | testcontainers                           | flyway-migrations                                                |
-        | gateway, remote call              |                                          | resilience4j, domain-dto-mapper                                  |
-        | DI wiring, config, profiles       |                                          | bean-config-di                                                   |
-        | generated code, codegen in build  |                                          | code-generation                                                  |
-        | test against a real service       | testcontainers                           |                                                                  |
-        | architecture rule                 | archunit-fitness                         |                                                                  |
+      `Build skills: <names>` for the build agent, from the table in docs/step-skills.md (read it once). A
+      step touches several rows when it changes several things.
       `none` on a line only when that agent writes nothing for the step (scripts, workflows, docs; a pin-only or
       verify-only step has `Build skills: none`).
       The templates the `## Scaffold` tables of those skills' docs/code-maps leaves link, and those leaves, are the
@@ -231,7 +227,7 @@ nodes:
       if (steps === 0) fail("plan.md has no '- [ ]' step");
       // A skill line may be a list item under its step (`  - Test skills: ...`), as skill-check.js reads it too; one
       // inside a code fence (three or more backticks or tildes, closed by the same character) is a sample that
-      // skill-check.js does not read, so it is not counted either (TASK-77).
+      // skill-check.js does not read, so it is not counted either.
       let fence = '';
       const open = lines.filter((l) => {
         const mark = (/^\s*(`{3,}|~{3,})/.exec(l) || [])[1];
@@ -245,8 +241,8 @@ nodes:
       console.log(`plan-check: ${steps} steps`);
 
   # Did explore and plan ask the MCP servers, or search the code and the contract by hand? Counts each node's tool calls
-  # from the run's log into $ARTIFACTS_DIR/mcp-use.md, which pr-refresh.sh copies into the pull request
-  # (docs/mcp/plan.md, C8). Report only: it never holds the run.
+  # from the run's log into $ARTIFACTS_DIR/mcp-use.md, which pr-refresh.sh copies into the pull request.
+  # Report only: it never holds the run.
   - id: mcp-use
     depends_on: [plan]
     bash: |
@@ -311,7 +307,7 @@ nodes:
   # The build agent's green check is affected-check.sh, never the full suite (owner decision 2026-10-17,
   # docs/memory.md): CI on the pull request runs the full suite, and a full local run per step cost 3 to 5 minutes.
   # AFFECTED_NO_SYNC=1 because this workflow rebases onto the base in rebase-main and never merges it in.
-  # Per-step base (R13, roadmap T9): step-base keeps the HEAD from before a step's first test commit, per step, and the
+  # Per-step base: step-base keeps the HEAD from before a step's first test commit, per step, and the
   # build agent's affected-check diffs against it (AFFECTED_BASE), so a step runs the tests of its own change, not of
   # every step before it. The same step going round again (a red build, a skills or scaffold miss) keeps its first base.
   # Renders first (P2; docs/memory.md, 2026-10-24): scaffold-tests renders the step's `Scaffold:` plan lines for test
@@ -336,6 +332,8 @@ nodes:
             [ -s "$keep" ] || git rev-parse HEAD > "$keep" || exit 1
             cp "$keep" "$ARTIFACTS_DIR/step-base.sha" || exit 1
             echo "step-base: step ${n} diffs against $(cut -c1-12 "$keep")"
+            node .archon/scripts/step-cut.js "$ARTIFACTS_DIR" \
+              || echo "step-cut.js failed; the agents read the step from plan.md" >&2
         - id: scaffold-tests
           depends_on: [step-base]
           bash: |
@@ -344,8 +342,8 @@ nodes:
         - id: write-tests
           depends_on: [scaffold-tests]
           model: "@build-copilot"
-          # Commits go through the commit-shape hook (D12): no agent of a run skips it, and no background command or
-          # Monitor stands in for a foreground run (R13).
+          # Commits go through the commit-shape hook: no agent of a run skips it, and no background command or
+          # Monitor stands in for a foreground run.
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Monitor"]
           skills: [tdd-loop, jvm-testing, object-mother-builders, usecase-bdd-spec, testcontainers,
                     archunit-fitness, domain-to-dto-mapper-tests, code-generation]
@@ -353,15 +351,20 @@ nodes:
           prompt: |
             Request: $ARGUMENTS
             You are the test agent: you write tests, never production code.
-            If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
-            readied them), use them before Read and Grep:
-            - `schema` for the fields a mother, fixture or request body needs;
-            - `where` for an operation's existing HTTP tests and unit tests, to extend them instead of writing a second one;
-            - `codegraph_callers` for the existing tests of a class.
-            Grep stays the tool for text, config, logs and strings; without the tools, read as before.
-            On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
-            Read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its position among the
-            plan's checkbox lines (the first checkbox is 1).
+            Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
+            the same when it is in your tool list:
+            - `codegraph explore "<names or a question>"` for an area, its source and the calls between; `codegraph node`,
+              `callers`, `callees` or `impact <symbol>` for one symbol (mcp__codegraph__codegraph_<name>);
+            - `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` for the contract, never a Read of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+              contract/ (mcp__@@KIT_CONTRACT_SERVER_NAME@@__<name>);@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+            - here: `codegraph callers <class>` for the existing tests of a class;
+            - here: `schema` for the fields a mother, fixture or request body needs; `where` for an operation's existing@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+              HTTP tests and unit tests, to extend them instead of writing a second one.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+            Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
+            Read $ARTIFACTS_DIR/step.md: the step to work on, cut from plan.md (its n, its lines, the steps folded into it,
+            the owner decisions and the plan's answers). Read plan.md only for what step.md leaves out, and mark the step
+            in plan.md. No step.md: read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its
+            position among the plan's checkbox lines (the first checkbox is 1).
             If $ARTIFACTS_DIR/skills-missing.md exists, read it first: an agent of this step never loaded the skills
             it names. When it names `Test skills:`, load each with the skill tool, check this step's tests against
             them, fix what they change, run the tests again into $ARTIFACTS_DIR/red/step-<n>.log and commit any change
@@ -432,6 +435,9 @@ nodes:
           bash: |
             node .archon/scripts/scaffold-step.js "$ARTIFACTS_DIR" build \
               || echo "scaffold-step.js failed; the build agent renders the step's files itself" >&2
+            # The step again: the test agent may have marked a step or added a line since step-base cut it.
+            node .archon/scripts/step-cut.js "$ARTIFACTS_DIR" \
+              || echo "step-cut.js failed; the build agent reads the step from plan.md" >&2
         - id: build-step
           depends_on: [tests-check, scaffold-build]
           when: "$tests-check.output.ok == 'true'"
@@ -444,15 +450,20 @@ nodes:
           mcp: { path: .archon/mcp/build-tools.json, optional: true }
           prompt: |
             Request: $ARGUMENTS
-            Read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its position among the
-            plan's checkbox lines (the first checkbox is 1).
-            If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
-            readied them), use them before Read and Grep:
-            - `where` for the controller line and the generated interface method of an operation;
-            - `schema` for the fields a mapper or DTO needs;
-            - `codegraph_callers` before you change a shared symbol.
-            Grep stays the tool for text, config, logs and strings; without the tools, read as before.
-            On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
+            Read $ARTIFACTS_DIR/step.md: the step to work on, cut from plan.md (its n, its lines, the steps folded into it,
+            the owner decisions and the plan's answers). Read plan.md only for what step.md leaves out, and mark the step
+            in plan.md. No step.md: read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its
+            position among the plan's checkbox lines (the first checkbox is 1).
+            Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
+            the same when it is in your tool list:
+            - `codegraph explore "<names or a question>"` for an area, its source and the calls between; `codegraph node`,
+              `callers`, `callees` or `impact <symbol>` for one symbol (mcp__codegraph__codegraph_<name>);
+            - `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` for the contract, never a Read of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+              contract/ (mcp__@@KIT_CONTRACT_SERVER_NAME@@__<name>);@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+            - here: `codegraph callers <symbol>` before you change a shared symbol;
+            - here: `where` for the controller line and the generated interface method of an operation; `schema` for the@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+              fields a mapper or DTO needs.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+            Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
             If $ARTIFACTS_DIR/skills-missing.md names `Build skills:`, this step was built without them: load each
             with the skill tool first, check the step's code against them and fix what they change, then go on as
             below (when nothing changed, mark the step and commit nothing).
@@ -533,7 +544,7 @@ nodes:
     bash: |
       node .archon/scripts/scaffold-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" "$BASE_BRANCH" --follow-ups
 
-  # The commit review starts from (R13): its fixes are re-checked against this base, not the whole branch again.
+  # The commit review starts from: its fixes are re-checked against this base, not the whole branch again.
   - id: review-base
     depends_on: [scaffold-check]
     bash: |
@@ -545,8 +556,12 @@ nodes:
     depends_on: [review-base]
     timeout: 3600000
     bash: |
-      AFFECTED_NO_SYNC=1 bash .claude/scripts/affected-check.sh > "$ARTIFACTS_DIR/review-tests.log" 2>&1
-      echo "review-tests: affected-check exit $?, its output in review-tests.log"
+      AFFECTED_NO_SYNC=1 bash .claude/scripts/affected-check.sh > "$ARTIFACTS_DIR/review-tests-full.log" 2>&1
+      rc=$?
+      # The review reads the failure lines and the last 200 lines, not the whole run (log-cap.sh).
+      bash .archon/scripts/log-cap.sh "$ARTIFACTS_DIR/review-tests-full.log" "$ARTIFACTS_DIR/review-tests.log" \
+        || cp "$ARTIFACTS_DIR/review-tests-full.log" "$ARTIFACTS_DIR/review-tests.log"
+      echo "review-tests: affected-check exit $rc, its output in review-tests.log (the whole run in review-tests-full.log)"
   - id: review
     depends_on: [scaffold-check, review-base, review-tests]
     model: "@analyse-copilot"
@@ -555,16 +570,20 @@ nodes:
     prompt: |
       Request: $ARGUMENTS
       Review all changes on this branch against $ARTIFACTS_DIR/plan.md, including that every behaviour has a test.
-      If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
-      readied them), use them before Read and Grep:
-      - `codegraph_impact` on each changed symbol, for a caller the branch missed;
-      - `usedBy` on a changed schema field, for an operation the branch missed;
-      - `where` on each operation the branch built, for its status and its tests.
-      Grep stays the tool for text, config, logs and strings; without the tools, read as before.
-      On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
+      Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
+      the same when it is in your tool list:
+      - `codegraph explore "<names or a question>"` for an area, its source and the calls between; `codegraph node`,
+        `callers`, `callees` or `impact <symbol>` for one symbol (mcp__codegraph__codegraph_<name>);
+      - `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` for the contract, never a Read of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        contract/ (mcp__@@KIT_CONTRACT_SERVER_NAME@@__<name>);@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      - here: `codegraph impact` on each changed symbol, for a caller the branch missed;
+      - here: `usedBy` on a changed schema field, for an operation the branch missed; `where` on each operation the@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+        branch built, for its status and its tests.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+      Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
       Read $ARTIFACTS_DIR/review-tests.log: the review-tests node ran `AFFECTED_NO_SYNC=1 bash
       .claude/scripts/affected-check.sh` over the branch once, so do not run it again before you fix anything.
-      A failing test in it is an issue.
+      A long run is cut to its failure lines and its last 200 lines; grep $ARTIFACTS_DIR/review-tests-full.log for
+      more. A failing test in it is an issue.
       A green suite is not the verdict; check each of these and treat a miss as an issue:
       - Mutations: hand-mutate what the branch adds: remove each guard line it adds once, flip each new condition,
         shift each boundary by one. Batch the mutations of one Gradle module into one run of its tests
@@ -586,7 +605,7 @@ nodes:
         issue; when you fix one, delete in the same fix the follow-up the gate wrote for it (its `source.ref` names the
         template or shape) unless another file still bears it out. Name in the review what the template would have given, never re-render a file that exists.
       - Checks: every line under `## Checks for review` in the plan holds in that run's output.
-      Fix every issue tests first: commit the test that shows the issue alone, then the fix (UD-21.f); a test file
+      Fix every issue tests first: commit the test that shows the issue alone, then the fix; a test file
       changed in a fix commit needs a `Test fix: <why>` line in its message. End each commit message with the trailer
       `Co-Authored-By: GitHub Copilot <noreply@github.com>`. When the commit-msg hook refuses a commit, split or
       reword it; you may rewrite a commit not pushed yet for this, a pushed one never. Never skip the hook.
@@ -603,7 +622,7 @@ nodes:
       bash .archon/scripts/tdd-check.sh "$ARTIFACTS_DIR" "$BASE_BRANCH"
       git rev-parse HEAD > "$ARTIFACTS_DIR/tdd-checked.sha"
 
-  # Rebase the branch onto the base before the pull request opens (TASK-45): parallel tickets append to the same files,
+  # Rebase the branch onto the base before the pull request opens: parallel tickets append to the same files,
   # and a conflicting pull request gets no CI. docs/memory.md combines as a union. Always a rebase, never a merge of the
   # base (owner decision 2026-10-17): a pushed branch is force-pushed with a lease. A conflict does not fail the run: the
   # rebase is aborted, the pull request opens as a draft, and the ready node fails the run on it. A
@@ -632,19 +651,10 @@ nodes:
     model: "@build-copilot"
     prompt: |
       Request: $ARGUMENTS
-      Write the pull request description for the changes on this branch to $ARTIFACTS_DIR/pr-body.md: what changed
-      and why, the tests, and the Backlog ticket ($ticket.output.task) when there is one. When the plan has a
-      `## Owner decisions` section, copy it into a section `## Decisions` word for word, each with who decided it
-      (the owner, or the coordinator acting for the owner); never credit a decision to someone the record does not
-      name. Leave a line `<!-- pr-refresh:start -->`, then `<!-- pr-refresh:end -->`, before `## Merge`: a
-      script fills that block from the branch after every CI round. Then add a section
-      `## Merge` saying that a team member reviews and merges this pull request, never the build-feature workflow
-      itself, once CI on its head commit is green. A reviewer holds the merge by requesting
-      changes. Do not write a line that starts with "STOP items": pr-refresh.sh writes that line into the block. End
-      it with:
-
-      🤖 Generated with GitHub Copilot through Archon (build-feature-copilot)
-      Do not push and do not open the pull request; return only the title.
+      Write the summary of the pull request for the changes on this branch to $ARTIFACTS_DIR/pr-summary.md: two to
+      four sentences on what changed and why, plain text, no headings, and no line that starts with "STOP items".
+      pr-body.sh builds the rest of the description from the branch and the plan (the ticket, the test commits, the
+      owner decisions, the merge section). Do not push and do not open the pull request; return only the title.
     output_format:
       type: object
       properties:
@@ -655,7 +665,11 @@ nodes:
     depends_on: [pr-text]
     bash: |
       title=$pr-text.output.title
-      bash .archon/scripts/open-pr.sh "$BASE_BRANCH" "$title" "$ARTIFACTS_DIR/pr-body.md"
+      task=$ticket.output.task
+      # The description is a template (pr-body.sh); the model wrote only the summary in pr-summary.md.
+      bash .archon/scripts/pr-body.sh "$BASE_BRANCH" "$task" "$ARTIFACTS_DIR/pr-summary.md" \
+        "$ARTIFACTS_DIR/pr-body.md" \
+        && bash .archon/scripts/open-pr.sh "$BASE_BRANCH" "$title" "$ARTIFACTS_DIR/pr-body.md"
     output_format:
       type: object
       properties:
@@ -663,10 +677,10 @@ nodes:
         sha: { type: string }
       required: [pr, sha]
 
-  # Local CI is the verdict for good (owner decisions D14, D21 of 2026-10-20): GitHub Actions runs nothing, so each CI
+  # Local CI is the verdict: GitHub Actions runs nothing, so each CI
   # question is preceded by local-ci-run.sh, which runs CI here and posts its result on the commit.
-  # A pull request is named with --head, the commit just pushed: seconds after a push GitHub still reports the old head
-  # (TASK-59), and ci-by-sha.sh asks about the local HEAD, so both look at the same commit.
+  # A pull request is named with --head, the commit just pushed: seconds after a push GitHub still reports the old head,
+  # and ci-by-sha.sh asks about the local HEAD, so both look at the same commit.
   - id: ci
     depends_on: [open-pr]
     timeout: 3600000
@@ -682,7 +696,7 @@ nodes:
         detail: { type: string }
       required: [state, sha, detail]
 
-  # A red run is triaged by a script before an agent works on it (CI plan C17, owner decision D5 of 2026-10-20):
+  # A red run is triaged by a script before an agent works on it:
   # red-triage.sh classifies each red job conflict, infra, flaky, main-state or own (unknown is own) and reruns a run
   # that is only infra or flaky once, its red jobs only. Only own and main-state reds go to ci-fix. Green after the
   # rerun goes on to ready; a conflict goes to ready, which rebases. Infra still red after its one rerun fails the run:
@@ -722,7 +736,7 @@ nodes:
     loop_group:
       max_iterations: 3
       until_bash: bash .archon/scripts/ci-by-sha.sh --check
-      # Failure recovery (D13, R11, plans/failure-recovery.md C4): red-head stops the round when main is red on a job
+      # Failure recovery: red-head stops the round when main is red on a job
       # that is red on the head too (RED_FROM_MAIN: rebase once main is green, not a fix here); fix-made fails the
       # round when the fix agent made no commit (CI_FIX_NO_COMMIT). No node
       # of ci-fix may push to main or write to the main checkout (denied_tools).
@@ -745,12 +759,16 @@ nodes:
           mcp: { path: .archon/mcp/build-tools.json, optional: true }
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Bash(*commit-tickets*)", "Bash(*backlog task*)", "Bash(*sync-main*)", "Bash(*git push*@@KIT_BASE_BRANCH@@*)", "Bash(*git push*HEAD:@@KIT_BASE_BRANCH@@*)", "Bash(cd @@KIT_PROJECT_DIR@@ &&*)", "Bash(cd @@KIT_PROJECT_DIR@@;*)", "Bash(git -C @@KIT_PROJECT_DIR@@ *)"]
           prompt: |
-            If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
-            readied them), use them before Read and Grep:
-            - `codegraph_callers` and `codegraph_callees` to walk from the failing test to its cause;
-            - `codegraph_impact` to bound the suspects; `where` when the failing test is an HTTP test of an operation.
-            Grep stays the tool for text, config, logs and strings; without the tools, read as before.
-            On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
+            Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
+            the same when it is in your tool list:
+            - `codegraph explore "<names or a question>"` for an area, its source and the calls between; `codegraph node`,
+              `callers`, `callees` or `impact <symbol>` for one symbol (mcp__codegraph__codegraph_<name>);
+            - `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` for the contract, never a Read of@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+              contract/ (mcp__@@KIT_CONTRACT_SERVER_NAME@@__<name>);@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+            - here: `codegraph callers` and `codegraph callees` to walk from the failing test to its cause, `codegraph impact`
+              to bound the suspects;
+            - here: `where` when the failing test is an HTTP test of an operation.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+            Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
             CI is red for the HEAD commit of this branch. It ran locally: `bash .archon/scripts/local-ci-run.sh --logs`
             prints the folder with summary.txt and one <job>.log per job; read the failing job's log there.
             red-triage.sh classified the red jobs in $ARTIFACTS_DIR/red-triage.json (`jobs`: <job>=<class>). Infra

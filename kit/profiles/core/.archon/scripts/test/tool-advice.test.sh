@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tests for .claude/hooks/scripts/tool-advice.sh: the contract and symbol advice per agent and in a run worktree (nodes),
-# on Read, Grep, Glob and Bash, report and refuse modes, and silence everywhere else. Usage: bash .archon/scripts/test/tool-advice.test.sh   (exit 0 = all pass)
+# Tests for .claude/hooks/scripts/tool-advice.sh: the contract and symbol advice per agent and in a run worktree (nodes,
+# for a ready CLI or a listed server), on Read, Grep, Glob and Bash, report and refuse modes, and silence everywhere else. Usage: bash .archon/scripts/test/tool-advice.test.sh   (exit 0 = all pass)
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 hook="${TOOL_ADVICE:-$root/.claude/hooks/scripts/tool-advice.sh}"
@@ -115,6 +115,30 @@ printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | contains("mc
 rm "$run/.archon/mcp/build-tools.json"
 case_ "no build-tools.json (both down): silent" none "$(node "" Grep '{"pattern":"SignInUseCase"}' | kind)"
 case_ "the four agents keep their advice outside a run" advice "$(call developer Grep '{"pattern":"SignInUseCase"}' | kind)"
+
+# The CLIs answer without a server (an organization's MCP registry can block the servers): a ready CLI keeps its advice
+# in a run with no build-tools.json, and the advice names the CLI first.
+mkdir -p "$tmp/bin"; printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/bin/codegraph"; chmod +x "$tmp/bin/codegraph"
+mkdir -p "$run/.codegraph"
+out="$(PATH="$tmp/bin:$PATH" node "" Grep '{"pattern":"SignInUseCase"}')"
+case_ "codegraph CLI ready, no server: symbol advice" advice "$(printf '%s' "$out" | kind)"
+printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | contains("`codegraph callers <name>`") and contains("`codegraph node <name>`")' >/dev/null \
+  && ok "the symbol advice names the codegraph CLI" || bad "the symbol advice names the codegraph CLI" "$out"
+if PATH=/usr/bin:/bin command -v codegraph >/dev/null 2>&1; then ok "a .codegraph index without the codegraph command (skipped: codegraph is in /usr/bin)"
+else case_ "a .codegraph index without the codegraph command: no symbol advice" none \
+  "$(PATH=/usr/bin:/bin node "" Grep '{"pattern":"SignInUseCase"}' | kind)"; fi
+rm -rf "$run/.codegraph"
+case_ "the codegraph command without an index: no symbol advice" none "$(PATH="$tmp/bin:$PATH" node "" Grep '{"pattern":"SignInUseCase"}' | kind)"
+mkdir -p "$run/scripts/contract-mcp"; : > "$run/scripts/contract-mcp/cli.mjs"
+case_ "the contract CLI without its node_modules: no contract advice" none "$(node "" Read "{\"file_path\":\"$run/contract/x.yaml\"}" | kind)"
+mkdir -p "$run/scripts/contract-mcp/node_modules"
+out="$(node "" Read "{\"file_path\":\"$run/contract/x.yaml\"}")"
+case_ "contract CLI ready, no server: contract advice" advice "$(printf '%s' "$out" | kind)"
+printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | contains("`node scripts/contract-mcp/cli.mjs search <words>`") and contains("`node scripts/contract-mcp/cli.mjs read <operationId>`")' >/dev/null \
+  && ok "the contract advice names the contract CLI" || bad "the contract advice names the contract CLI" "$out"
+printf '%s' "$out" | jq -e '.hookSpecificOutput.additionalContext | (index("cli.mjs search") < index("mcp__"))' >/dev/null \
+  && ok "the contract advice names the CLI before the MCP tool" || bad "the CLI before the MCP tool" "$out"
+rm -rf "$run/scripts"
 
 case_ "an unparseable payload is silent" none "$(printf 'not json' | bash "$hook" PreToolUse | kind)"
 printf '{}' | bash "$hook" PreToolUse >/dev/null; case_ "it exits 0" 0 "$?"
