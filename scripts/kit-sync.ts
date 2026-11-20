@@ -359,10 +359,18 @@ const NEVER_SHIP_AGENTS = NEVER_SHIP.filter(p => /^\.claude\/agents\/[^/]+\.md$/
   basename(p, '.md')
 );
 
+/**
+ * Code maps are seeded, then owned by the project: a worked-example leaf gets its `## This repo` facts filled in, and
+ * a project that harvests its own maps replaces the leaf whole. Either is the project's text, never kit drift, and
+ * `kit add --force` must not overwrite it with the pseudonymized example.
+ */
+export const CODE_MAPS = 'docs/code-maps/';
+
 const kitFile = (f: NewFile): KitFile => ({
   ...f,
   kind: f.kind ?? kindOf(f.path),
   template: f.content.includes('@@KIT_'),
+  ...(f.createOnly || f.path.startsWith(CODE_MAPS) ? { createOnly: true } : {}),
 });
 
 function checkRewriteTargets(src: Source, rewrites: Record<string, Rewrite[]>): void {

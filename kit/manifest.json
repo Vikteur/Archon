@@ -1613,7 +1613,8 @@
       "template": false,
       "origin": "docs/code-maps/README.md",
       "kind": "doc",
-      "sha256": "b418dcd1c00b7ebc969af2928100beccad2fd7cca40b1c3bf470ab77e07da544"
+      "sha256": "b418dcd1c00b7ebc969af2928100beccad2fd7cca40b1c3bf470ab77e07da544",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/clean-architecture.md",
@@ -1622,7 +1623,8 @@
       "template": false,
       "origin": "docs/code-maps/clean-architecture.md",
       "kind": "doc",
-      "sha256": "f600391ec08e1727278d26d3f964dba8cee3e37a0d927fbde4044e804f559ac6"
+      "sha256": "f600391ec08e1727278d26d3f964dba8cee3e37a0d927fbde4044e804f559ac6",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/clean-code.md",
@@ -1631,7 +1633,8 @@
       "template": false,
       "origin": "docs/code-maps/clean-code.md",
       "kind": "doc",
-      "sha256": "a67d98df256789f8fe86308e3560892aa137f3db2d5de77b07a83202c7af1286"
+      "sha256": "a67d98df256789f8fe86308e3560892aa137f3db2d5de77b07a83202c7af1286",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/code-generation.md",
@@ -1640,7 +1643,8 @@
       "template": false,
       "origin": "docs/code-maps/code-generation.md",
       "kind": "doc",
-      "sha256": "7a3efd81ca70fd145e2cd85b21ee4cfc824f54a209572fb4d67d32a24d245edf"
+      "sha256": "7a3efd81ca70fd145e2cd85b21ee4cfc824f54a209572fb4d67d32a24d245edf",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/design-review.md",
@@ -1649,7 +1653,8 @@
       "template": false,
       "origin": "docs/code-maps/design-review.md",
       "kind": "doc",
-      "sha256": "7fb35c9660bedde5015e3c08ba123bd8bd985d04366063d4f68f81646c6f6740"
+      "sha256": "7fb35c9660bedde5015e3c08ba123bd8bd985d04366063d4f68f81646c6f6740",
+      "createOnly": true
     },
     {
       "path": "scripts/install-hooks.sh",
@@ -1766,7 +1771,7 @@
       "template": false,
       "origin": "scripts/test/groma-delta.test.sh",
       "kind": "script",
-      "sha256": "c4f532ce55a3fea959c2e3168b9035f788bc831943bb56825d3b720f91d4c49a"
+      "sha256": "b65b666a5c120ffed31df2897d418ccf0f53af369107b6757db8f0264e61ac62"
     },
     {
       "path": "scripts/test/install-tools.test.sh",
@@ -2135,7 +2140,8 @@
       "template": false,
       "origin": "docs/code-maps/archunit-fitness.md",
       "kind": "doc",
-      "sha256": "133f39f371512da1841078e3d4fb1d9fe643af3a005edb24ee3ca1a24cfbe91b"
+      "sha256": "133f39f371512da1841078e3d4fb1d9fe643af3a005edb24ee3ca1a24cfbe91b",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/domain-dto-mapper.md",
@@ -2144,7 +2150,8 @@
       "template": false,
       "origin": "docs/code-maps/domain-dto-mapper.md",
       "kind": "doc",
-      "sha256": "ea42bfcdb29b02945dcd86e6045d3614c8d97f0975d127ef8b8e1758a06fde52"
+      "sha256": "ea42bfcdb29b02945dcd86e6045d3614c8d97f0975d127ef8b8e1758a06fde52",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/domain-events.md",
@@ -2153,7 +2160,8 @@
       "template": false,
       "origin": "docs/code-maps/domain-events.md",
       "kind": "doc",
-      "sha256": "68cecf7732f8373747c2ab39dc028ba142baf1da4a57a99120036b03a05d5c7e"
+      "sha256": "68cecf7732f8373747c2ab39dc028ba142baf1da4a57a99120036b03a05d5c7e",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/domain-modeling.md",
@@ -2162,7 +2170,8 @@
       "template": false,
       "origin": "docs/code-maps/domain-modeling.md",
       "kind": "doc",
-      "sha256": "27be0277fa5b57fcf176515e37b2dbfc542c4fa53cc451e84525ff8ca913d622"
+      "sha256": "27be0277fa5b57fcf176515e37b2dbfc542c4fa53cc451e84525ff8ca913d622",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/domain-to-dto-mapper-tests.md",
@@ -2171,7 +2180,8 @@
       "template": false,
       "origin": "docs/code-maps/domain-to-dto-mapper-tests.md",
       "kind": "doc",
-      "sha256": "4e59bbe4a43c24c17fc93321a147c5afc68b68dba21e5885e376d3dea8813bc6"
+      "sha256": "4e59bbe4a43c24c17fc93321a147c5afc68b68dba21e5885e376d3dea8813bc6",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/create-or-update-static-page-usecase.md",
@@ -2180,7 +2190,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/create-or-update-static-page-usecase.md",
       "kind": "doc",
-      "sha256": "4a4b86b5c139cb6e3034a0ef6b536188e6778e24b1165a0f44d84007367ef0fd"
+      "sha256": "4a4b86b5c139cb6e3034a0ef6b536188e6778e24b1165a0f44d84007367ef0fd",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/get-invoices-usecase-test.md",
@@ -2189,7 +2200,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/get-invoices-usecase-test.md",
       "kind": "doc",
-      "sha256": "ea6a3f5f617c0402c86cdd7d6441bf1d28c82191c610d0619f1acd80e8041e09"
+      "sha256": "ea6a3f5f617c0402c86cdd7d6441bf1d28c82191c610d0619f1acd80e8041e09",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/get-invoices-usecase.md",
@@ -2198,7 +2210,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/get-invoices-usecase.md",
       "kind": "doc",
-      "sha256": "507aa86988eb9f8b842491cd7ab5e030c5a87b79ef1139153ce676eec723d9e9"
+      "sha256": "507aa86988eb9f8b842491cd7ab5e030c5a87b79ef1139153ce676eec723d9e9",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/index-page-event-listener.md",
@@ -2207,7 +2220,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/index-page-event-listener.md",
       "kind": "doc",
-      "sha256": "732c12f1358f3129bb372eea5de7800e813be239a4d20860ad5cf85dbaea6c3f"
+      "sha256": "732c12f1358f3129bb372eea5de7800e813be239a4d20860ad5cf85dbaea6c3f",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/java-conventions-plugin.md",
@@ -2216,7 +2230,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/java-conventions-plugin.md",
       "kind": "doc",
-      "sha256": "c725064084540d77582f5b09d2b31e2227b6370057f202e0c19ffbb7abd979d2"
+      "sha256": "c725064084540d77582f5b09d2b31e2227b6370057f202e0c19ffbb7abd979d2",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/notification.md",
@@ -2225,7 +2240,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/notification.md",
       "kind": "doc",
-      "sha256": "1eead87c406b6ac674db9348c4b00040ae62e11ecc239260ac58652c63e8d8ef"
+      "sha256": "1eead87c406b6ac674db9348c4b00040ae62e11ecc239260ac58652c63e8d8ef",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/order-code.md",
@@ -2234,7 +2250,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/order-code.md",
       "kind": "doc",
-      "sha256": "5b54cbcb4ee7218b2c3e99314d74d1953a35ebf3512154964fdb221b6d9f404e"
+      "sha256": "5b54cbcb4ee7218b2c3e99314d74d1953a35ebf3512154964fdb221b6d9f404e",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/order-mother.md",
@@ -2243,7 +2260,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/order-mother.md",
       "kind": "doc",
-      "sha256": "a78b14e12e3ab4fd897b8c3f4e201943786998e441121d5e5819ad18c69c449c"
+      "sha256": "a78b14e12e3ab4fd897b8c3f4e201943786998e441121d5e5819ad18c69c449c",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/registry-mapper-test.md",
@@ -2252,7 +2270,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/registry-mapper-test.md",
       "kind": "doc",
-      "sha256": "748cb1a75b554874131a151d0fcc2d4a1ecea64c9875f1ae99dd4db1bc4accf9"
+      "sha256": "748cb1a75b554874131a151d0fcc2d4a1ecea64c9875f1ae99dd4db1bc4accf9",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/registry-mapper.md",
@@ -2261,7 +2280,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/registry-mapper.md",
       "kind": "doc",
-      "sha256": "3ebfa3c68dba6c031529978f44125f11dc6b768c6f3eb8805a19dd6bb5f8c0a6"
+      "sha256": "3ebfa3c68dba6c031529978f44125f11dc6b768c6f3eb8805a19dd6bb5f8c0a6",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/sales-region-entity.md",
@@ -2270,7 +2290,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/sales-region-entity.md",
       "kind": "doc",
-      "sha256": "859714feaa6d9fe3ee0d40f11336c2ed8295136a3fda3008e9c07bee91bcb18d"
+      "sha256": "859714feaa6d9fe3ee0d40f11336c2ed8295136a3fda3008e9c07bee91bcb18d",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/tolgee-gateway-client.md",
@@ -2279,7 +2300,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/tolgee-gateway-client.md",
       "kind": "doc",
-      "sha256": "5c53a666cb66ccafd69c9164a79f33535344d5bd61a50d8ee0a6a690aa910171"
+      "sha256": "5c53a666cb66ccafd69c9164a79f33535344d5bd61a50d8ee0a6a690aa910171",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/topics-delegation-migration.md",
@@ -2288,7 +2310,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/topics-delegation-migration.md",
       "kind": "doc",
-      "sha256": "581345cd19e1dff6c2290fc3e717aa6088284ae0e166e06128bff26f4b010108"
+      "sha256": "581345cd19e1dff6c2290fc3e717aa6088284ae0e166e06128bff26f4b010108",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/transactional-convention-test.md",
@@ -2297,7 +2320,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/transactional-convention-test.md",
       "kind": "doc",
-      "sha256": "549f58e44f5863e2a1c58de33112d33232a63bce9263725f813d3d7600e9092b"
+      "sha256": "549f58e44f5863e2a1c58de33112d33232a63bce9263725f813d3d7600e9092b",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/flyway-migrations.md",
@@ -2306,7 +2330,8 @@
       "template": false,
       "origin": "docs/code-maps/flyway-migrations.md",
       "kind": "doc",
-      "sha256": "4493ff9f9a9639d252a63f1129923baf3d7c12b9a0e6dbe8312077627865f30b"
+      "sha256": "4493ff9f9a9639d252a63f1129923baf3d7c12b9a0e6dbe8312077627865f30b",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/java.md",
@@ -2315,7 +2340,8 @@
       "template": false,
       "origin": "docs/code-maps/java.md",
       "kind": "doc",
-      "sha256": "499abdcbb380ac4b59be5405d49b350464879fa38aa51a2dc004cd6d6d9f369d"
+      "sha256": "499abdcbb380ac4b59be5405d49b350464879fa38aa51a2dc004cd6d6d9f369d",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/jpa-entity-mapping.md",
@@ -2324,7 +2350,8 @@
       "template": false,
       "origin": "docs/code-maps/jpa-entity-mapping.md",
       "kind": "doc",
-      "sha256": "c5557891390c8340e4bf5d4c7c2aad49c6202d9b01bec0cb10bf291fde7ee4f1"
+      "sha256": "c5557891390c8340e4bf5d4c7c2aad49c6202d9b01bec0cb10bf291fde7ee4f1",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/junit-tests.md",
@@ -2333,7 +2360,8 @@
       "template": false,
       "origin": "docs/code-maps/junit-tests.md",
       "kind": "doc",
-      "sha256": "41ed6171ea8173bd93b1cb2382c6e12b0b7e96b3d418dbedadcfb2251e716b2d"
+      "sha256": "41ed6171ea8173bd93b1cb2382c6e12b0b7e96b3d418dbedadcfb2251e716b2d",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/jvm-testing.worked-example.md",
@@ -2342,7 +2370,8 @@
       "template": false,
       "origin": "docs/code-maps/jvm-testing.worked-example.md",
       "kind": "doc",
-      "sha256": "f77bb71e32da77bd663a072ea1b5fe00a0fdaec3dd9d78c99d68473d9f1c1653"
+      "sha256": "f77bb71e32da77bd663a072ea1b5fe00a0fdaec3dd9d78c99d68473d9f1c1653",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/object-mother-builders.md",
@@ -2351,7 +2380,8 @@
       "template": false,
       "origin": "docs/code-maps/object-mother-builders.md",
       "kind": "doc",
-      "sha256": "28160f0c51b43702d6a45773d9704f3c415ee7a89fa5de9683672f5bf798334a"
+      "sha256": "28160f0c51b43702d6a45773d9704f3c415ee7a89fa5de9683672f5bf798334a",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/openapi-rest-client-codegen.md",
@@ -2360,7 +2390,8 @@
       "template": false,
       "origin": "docs/code-maps/openapi-rest-client-codegen.md",
       "kind": "doc",
-      "sha256": "810fd2d15c562a1ae630c0f9612cb90cd38cae30d456870af55edaba04d50601"
+      "sha256": "810fd2d15c562a1ae630c0f9612cb90cd38cae30d456870af55edaba04d50601",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/usecase-bdd-spec.md",
@@ -2369,7 +2400,8 @@
       "template": false,
       "origin": "docs/code-maps/usecase-bdd-spec.md",
       "kind": "doc",
-      "sha256": "5c666fabb650873e6e0e0f9f1c31251008724233de9700eb26ab641ca8c67c09"
+      "sha256": "5c666fabb650873e6e0e0f9f1c31251008724233de9700eb26ab641ca8c67c09",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/usecase-orchestration.md",
@@ -2378,7 +2410,8 @@
       "template": false,
       "origin": "docs/code-maps/usecase-orchestration.md",
       "kind": "doc",
-      "sha256": "b125455988cd78a2aa98b5f3a198b37d87e746382525936989fbd6ed8f02fc5e"
+      "sha256": "b125455988cd78a2aa98b5f3a198b37d87e746382525936989fbd6ed8f02fc5e",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/validation-notification-result.md",
@@ -2387,7 +2420,8 @@
       "template": false,
       "origin": "docs/code-maps/validation-notification-result.md",
       "kind": "doc",
-      "sha256": "0a2c972c1813785a9731e8bf2d6c255433c87952eb4dad934ad401c918faecd8"
+      "sha256": "0a2c972c1813785a9731e8bf2d6c255433c87952eb4dad934ad401c918faecd8",
+      "createOnly": true
     },
     {
       "path": "docs/memory.md",
@@ -2883,7 +2917,8 @@
       "template": false,
       "origin": "docs/code-maps/api-first-controller.md",
       "kind": "doc",
-      "sha256": "5284802412769246ec6e3e27c10c1a7d60510dda3ffcc9d33008cd270a6c0a9a"
+      "sha256": "5284802412769246ec6e3e27c10c1a7d60510dda3ffcc9d33008cd270a6c0a9a",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/bean-config-di.md",
@@ -2892,7 +2927,8 @@
       "template": false,
       "origin": "docs/code-maps/bean-config-di.md",
       "kind": "doc",
-      "sha256": "7a4c01c74eee595f486f293be47189c3a9c45e114873544ffa838da94b9bfe9c"
+      "sha256": "7a4c01c74eee595f486f293be47189c3a9c45e114873544ffa838da94b9bfe9c",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exception-to-http.md",
@@ -2901,7 +2937,8 @@
       "template": false,
       "origin": "docs/code-maps/exception-to-http.md",
       "kind": "doc",
-      "sha256": "dda19ab873f6cff29342d7e81f4b837889fa80b84498a3456222e2d6dd33a9dd"
+      "sha256": "dda19ab873f6cff29342d7e81f4b837889fa80b84498a3456222e2d6dd33a9dd",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/customer-controller.md",
@@ -2910,7 +2947,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/customer-controller.md",
       "kind": "doc",
-      "sha256": "da39324580562a3c259c6483ced2b411253ce8482b4cfdad07b0048bec337c03"
+      "sha256": "da39324580562a3c259c6483ced2b411253ce8482b4cfdad07b0048bec337c03",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/default-registry-gateway.md",
@@ -2919,7 +2957,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/default-registry-gateway.md",
       "kind": "doc",
-      "sha256": "a9d792ffe26bd1c630ea3f1ae45b7c9ac46f2323ec60e532f829ef778023150b"
+      "sha256": "a9d792ffe26bd1c630ea3f1ae45b7c9ac46f2323ec60e532f829ef778023150b",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/rest-exception-handler.md",
@@ -2928,7 +2967,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/rest-exception-handler.md",
       "kind": "doc",
-      "sha256": "50c55eb6f06dd6433f400d68941b578534c6c48bca9ce91071c8251df324c95c"
+      "sha256": "50c55eb6f06dd6433f400d68941b578534c6c48bca9ce91071c8251df324c95c",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
@@ -2937,7 +2977,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
       "kind": "doc",
-      "sha256": "c90833311910df432d1b793b7d6a3b9680e4fef7bec33f7a778da729ccd1343a"
+      "sha256": "c90833311910df432d1b793b7d6a3b9680e4fef7bec33f7a778da729ccd1343a",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/web-service-config.md",
@@ -2946,7 +2987,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/web-service-config.md",
       "kind": "doc",
-      "sha256": "95f4360dad935558a6bcb7cf37d6bc7707322a6fb9ef8871fef7b03f554bd868"
+      "sha256": "95f4360dad935558a6bcb7cf37d6bc7707322a6fb9ef8871fef7b03f554bd868",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/persistence-repository.md",
@@ -2955,7 +2997,8 @@
       "template": false,
       "origin": "docs/code-maps/persistence-repository.md",
       "kind": "doc",
-      "sha256": "62efa1f19ea13ed6f11789b76a305ef62b65683ac1bcb228750d150479b104ef"
+      "sha256": "62efa1f19ea13ed6f11789b76a305ef62b65683ac1bcb228750d150479b104ef",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/resilience4j.md",
@@ -2964,7 +3007,8 @@
       "template": false,
       "origin": "docs/code-maps/resilience4j.md",
       "kind": "doc",
-      "sha256": "c57ecdaad002e02b3cf18733335e5b04412b318317ffa7e366df03c4ba2171a8"
+      "sha256": "c57ecdaad002e02b3cf18733335e5b04412b318317ffa7e366df03c4ba2171a8",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/testcontainers.md",
@@ -2973,7 +3017,8 @@
       "template": false,
       "origin": "docs/code-maps/testcontainers.md",
       "kind": "doc",
-      "sha256": "d77aa6f7a2ad009ede6d20f8ec3400e4900158f0a42dd539a7d9b1217269c586"
+      "sha256": "d77aa6f7a2ad009ede6d20f8ec3400e4900158f0a42dd539a7d9b1217269c586",
+      "createOnly": true
     },
     {
       "path": "docs/scaffold-templates/adapter/controller-command-test.mustache",
@@ -3207,7 +3252,8 @@
       "template": false,
       "origin": "docs/code-maps/api-first-controller.md",
       "kind": "doc",
-      "sha256": "3a9a4f428f45c5eb275adf9bb14513ae105c0d8f7c018298cbd1577bb5d3310e"
+      "sha256": "3a9a4f428f45c5eb275adf9bb14513ae105c0d8f7c018298cbd1577bb5d3310e",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/bean-config-di.md",
@@ -3216,7 +3262,8 @@
       "template": false,
       "origin": "docs/code-maps/bean-config-di.md",
       "kind": "doc",
-      "sha256": "6178c4f095f8ae58a6971e9ad9186b38f7be49f50ca3ba947955539adf1cd45d"
+      "sha256": "6178c4f095f8ae58a6971e9ad9186b38f7be49f50ca3ba947955539adf1cd45d",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exception-to-http.md",
@@ -3225,7 +3272,8 @@
       "template": false,
       "origin": "docs/code-maps/exception-to-http.md",
       "kind": "doc",
-      "sha256": "dc0a2441eff0dd37c173193bf4e0473005884e027021bb698974d410ff578305"
+      "sha256": "dc0a2441eff0dd37c173193bf4e0473005884e027021bb698974d410ff578305",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/customer-controller.md",
@@ -3234,7 +3282,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/customer-controller.md",
       "kind": "doc",
-      "sha256": "42e5cd1323768a899cfedab417480bd9902abe5079bce0b03a1e8abb040fbc19"
+      "sha256": "42e5cd1323768a899cfedab417480bd9902abe5079bce0b03a1e8abb040fbc19",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/default-registry-gateway.md",
@@ -3243,7 +3292,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/default-registry-gateway.md",
       "kind": "doc",
-      "sha256": "e7b58e49fa4b86ddd3a0157c95f358e0a41521fa859d03ae38cdb53631d325bd"
+      "sha256": "e7b58e49fa4b86ddd3a0157c95f358e0a41521fa859d03ae38cdb53631d325bd",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/rest-exception-handler.md",
@@ -3252,7 +3302,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/rest-exception-handler.md",
       "kind": "doc",
-      "sha256": "2562cdbb66542e820ff4df589402ab25d6c20bcfc24193611a6ab8ad572fac06"
+      "sha256": "2562cdbb66542e820ff4df589402ab25d6c20bcfc24193611a6ab8ad572fac06",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
@@ -3261,7 +3312,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/sales-region-jpa-repository.md",
       "kind": "doc",
-      "sha256": "3ffb1dccada99f099e03b8a63b71546b61e584e8d93ec90e8a3d7f7f36f71c6b"
+      "sha256": "3ffb1dccada99f099e03b8a63b71546b61e584e8d93ec90e8a3d7f7f36f71c6b",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/exemplars/web-service-config.md",
@@ -3270,7 +3322,8 @@
       "template": false,
       "origin": "docs/code-maps/exemplars/web-service-config.md",
       "kind": "doc",
-      "sha256": "aaa88b99c4a4ea9b1936f97c9141fc418b9d44b1333f8faacf82dd850fd9535b"
+      "sha256": "aaa88b99c4a4ea9b1936f97c9141fc418b9d44b1333f8faacf82dd850fd9535b",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/persistence-repository.md",
@@ -3279,7 +3332,8 @@
       "template": false,
       "origin": "docs/code-maps/persistence-repository.md",
       "kind": "doc",
-      "sha256": "2f244fea68cca129b3dfe78e85c6b1390bb1f2a1a3d5c32dacc9565f90ae6a74"
+      "sha256": "2f244fea68cca129b3dfe78e85c6b1390bb1f2a1a3d5c32dacc9565f90ae6a74",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/resilience4j.md",
@@ -3288,7 +3342,8 @@
       "template": false,
       "origin": "docs/code-maps/resilience4j.md",
       "kind": "doc",
-      "sha256": "e1966e84f601d553130cc5ea2d65854682a651befe0cfe466485f0539f86888f"
+      "sha256": "e1966e84f601d553130cc5ea2d65854682a651befe0cfe466485f0539f86888f",
+      "createOnly": true
     },
     {
       "path": "docs/code-maps/testcontainers.md",
@@ -3297,7 +3352,8 @@
       "template": false,
       "origin": "docs/code-maps/testcontainers.md",
       "kind": "doc",
-      "sha256": "6b6cacc9deb3967e7deb1c94e1bc03be15a8b75ab636e88af68adfd1dd976cd7"
+      "sha256": "6b6cacc9deb3967e7deb1c94e1bc03be15a8b75ab636e88af68adfd1dd976cd7",
+      "createOnly": true
     },
     {
       "path": "docs/scaffold-templates/adapter/controller-command-test.mustache",
