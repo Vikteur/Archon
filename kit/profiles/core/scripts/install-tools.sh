@@ -21,6 +21,11 @@
 #                             that one is installed or checked; INSTALL_TOOLS_ALL=1 takes both.
 #   INSTALL_TOOLS_BACKLOG     0 | 1: Backlog.md (the backlog tool) off or on (default: backlog: false|true in
 #                             .archon/kit.yaml, else in .archon/kit.defaults.yaml, else on)
+#   INSTALL_TOOLS_JAVA_VERSION  the JDK major (default: java_version in .archon/kit.yaml, else in
+#                             .archon/kit.defaults.yaml, else tools.conf's): the java row's version, winget id and cask
+# --check also reads whether the tools are ready, not only installed: Docker's daemon answers (Testcontainers and local
+# CI's jobs need it) and gh is logged in to github.com (the run's pull requests, local CI's statuses). Of gh auth status
+# only the exit status is read; its output is never printed.
 # Plain bash 3.2 on purpose: a fresh Mac has no newer one. Exit 1 when an install failed (including one that left the
 # tool at a version that does not fit), when a package manager is missing, or when the OS is not supported.
 set -o pipefail
@@ -152,6 +157,19 @@ if [ "${#keep[@]}" -ne "${#names[@]}" ]; then
   names=("${n2[@]}"); specs=("${s2[@]}"); kinds=("${k2[@]}"); wins=("${w2[@]}"); macs=("${m2[@]}"); checks=("${c2[@]}")
 fi
 
+# The JDK is the project's toolchain (kit key java_version), not tools.conf's default: the java row's version, and the
+# major in its winget id (EclipseAdoptium.Temurin.<n>.JDK) and cask (temurin@<n>). Read with sed, as agent_cli is.
+java_version=${INSTALL_TOOLS_JAVA_VERSION:-}
+for f in "$project/.archon/kit.yaml" "$project/.archon/kit.defaults.yaml"; do
+  [ -z "$java_version" ] || break
+  [ -f "$f" ] && java_version=$(sed -n 's/^java_version:[[:space:]]*["'"'"']\{0,1\}\([0-9]*\).*/\1/p' "$f" | head -n 1)
+done
+for i in "${!names[@]}"; do
+  [ "${names[i]}" = java ] && [ -n "$java_version" ] && [ "${specs[i]}" != "$java_version" ] || continue
+  old=${specs[i]}; specs[i]=$java_version
+  wins[i]=${wins[i]/Temurin.$old./Temurin.$java_version.}; macs[i]=${macs[i]/temurin@$old/temurin@$java_version}
+done
+
 installed=(); skipped=(); failed=(); notes=()
 todo=()
 refresh_path
@@ -167,11 +185,25 @@ for i in "${!names[@]}"; do
 done
 
 if [ "$check_only" -eq 1 ]; then
+  # Ready, not only installed: only for a listed tool that is in place.
+  not_ready=()
+  quick() { if command -v timeout > /dev/null 2>&1; then timeout 30 "$@"; else "$@"; fi; }
+  for t in ${skipped[@]+"${skipped[@]}"}; do
+    case "$t" in
+      docker)
+        if quick docker info > /dev/null 2>&1 < /dev/null; then echo "  ready    docker: the daemon answers"
+        else echo "  not ready docker: the daemon does not answer (start Docker Desktop, or the docker service)"; not_ready+=(docker); fi ;;
+      gh)
+        if quick gh auth status --hostname github.com > /dev/null 2>&1 < /dev/null; then echo "  ready    gh: logged in to github.com"
+        else echo "  not ready gh: not logged in to github.com (gh auth login)"; not_ready+=(gh); fi ;;
+    esac
+  done
   echo
-  if [ "${#todo[@]}" -eq 0 ]; then echo "Check: every tool is in place."; exit 0; fi
+  if [ "${#todo[@]}" -eq 0 ] && [ "${#not_ready[@]}" -eq 0 ]; then echo "Check: every tool is in place."; exit 0; fi
   missing=()
-  for i in "${todo[@]}"; do missing+=("${names[i]}"); done
-  echo "Check: missing or wrong version: ${missing[*]}"
+  for i in ${todo[@]+"${todo[@]}"}; do missing+=("${names[i]}"); done
+  [ "${#missing[@]}" -eq 0 ] || echo "Check: missing or wrong version: ${missing[*]}"
+  [ "${#not_ready[@]}" -eq 0 ] || echo "Check: installed but not ready: ${not_ready[*]}"
   exit 1
 fi
 

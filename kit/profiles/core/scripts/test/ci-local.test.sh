@@ -37,6 +37,14 @@ case "$1 $2" in
 esac
 STUB
 chmod +x "$root/bin/gh"
+# A java on PATH of major 97, installed outside the folders the runner knows (setup-java's last resort).
+cat > "$root/bin/java" <<'STUB'
+#!/usr/bin/env bash
+echo 'openjdk version "97.0.1" 2031-01-01' >&2
+[ "$1" = -XshowSettings:properties ] && echo '    java.home = /opt/stub-jdk-97' >&2
+exit 0
+STUB
+chmod +x "$root/bin/java"
 
 git init -q --bare -b main "$root/origin.git"
 git clone -q "$root/origin.git" "$root/repo" 2>/dev/null
@@ -78,6 +86,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: some/unknown-action@0000000000000000000000000000000000000000
+  jdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@0000000000000000000000000000000000000000
+        with:
+          java-version: '97'
+      - name: Shows JAVA_HOME
+        run: echo "jdk at $JAVA_HOME"
+  nojdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@0000000000000000000000000000000000000000
+        with:
+          java-version: '98'
+  oldimage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: reproducible-containers/buildkit-cache-dance@0000000000000000000000000000000000000000
   secret:
     runs-on: ubuntu-latest
     steps:
@@ -121,6 +147,10 @@ check "1 bad fails" $(grep -qE '^bad +failure' "$out_dir/summary.txt"; echo $?)
 check "1 a step after a failure is skipped" $(line skipped "After the failure"; echo $?)
 check "1 if: failure() runs after a failure" $(line success "Only on failure" && grep -q cleanup-ran "$out_dir/bad.log"; echo $?)
 check "1 an unknown action fails" $(grep -qE '^odd +failure' "$out_dir/summary.txt" && grep -q "action not reproduced locally" "$out_dir/odd.log"; echo $?)
+check "1 buildkit-cache-dance (an image job's, which the kit has none of) is unknown: it fails" $(grep -qE '^oldimage +failure' "$out_dir/summary.txt" && grep -q "action not reproduced locally" "$out_dir/oldimage.log"; echo $?)
+check "1 setup-java takes the java on PATH when its major is the version" $(grep -qE '^jdk +success' "$out_dir/summary.txt" \
+  && grep -q "jdk at /opt/stub-jdk-97" "$out_dir/jdk.log"; echo $?)
+check "1 setup-java with no local JDK of the version fails" $(grep -qE '^nojdk +failure' "$out_dir/summary.txt" && grep -q "no local JDK 98" "$out_dir/nojdk.log"; echo $?)
 check "1 an unknown expression fails" $(grep -qE '^secret +failure' "$out_dir/summary.txt" && grep -q "expression not reproduced locally" "$out_dir/secret.log"; echo $?)
 check "1 the .archon suites run when the change cannot be computed" $(line success "Every .archon test suite passes" && grep -q archon-ran "$out_dir/good.log"; echo $?)
 check "1 nothing posted without --post" $([ ! -s "$root/gh.log" ]; echo $?)
@@ -136,8 +166,8 @@ check "2 worktrees removed" $([ ! -e "$out_dir/wt-good" ] && ! git -C "$root/rep
 # commit, in the grammar of ci-status-grammar.sh.
 run --post "$sha"
 check "3 posts on the commit" $(grep -q "^gh api -X POST repos/.*/statuses/$sha" "$root/gh.log"; echo $?)
-check "3 queued, then running, for every job" $([ "$(grep -c 'state=pending -f context=local-ci/[a-z]* -f description=queued #[0-9]* pos 1 since [0-9:]*, pid [0-9]*@' "$root/gh.log")" -eq 4 ] \
-  && [ "$(grep -c 'state=pending -f context=local-ci/[a-z]* -f description=running since [0-9:]*, pid [0-9]*@' "$root/gh.log")" -eq 4 ] \
+check "3 queued, then running, for every job" $([ "$(grep -c 'state=pending -f context=local-ci/[a-z]* -f description=queued #[0-9]* pos 1 since [0-9:]*, pid [0-9]*@' "$root/gh.log")" -eq 7 ] \
+  && [ "$(grep -c 'state=pending -f context=local-ci/[a-z]* -f description=running since [0-9:]*, pid [0-9]*@' "$root/gh.log")" -eq 7 ] \
   && grep -n 'context=local-ci/good' "$root/gh.log" | sed -n 1p | grep -q 'description=queued'; echo $?)
 check "3 good success" $(grep -q 'state=success -f context=local-ci/good' "$root/gh.log"; echo $?)
 check "3 bad failure" $(grep -q 'state=failure -f context=local-ci/bad' "$root/gh.log"; echo $?)
@@ -238,6 +268,21 @@ check "6 an unusable distro falls back to Git Bash" $([ "$rc" -eq 0 ] && grep -q
   && grep -q "^    runs in Git Bash: WSL Ubuntu: There is no distribution" "$out_dir/summary.txt"; echo $?)
 run --jobs good "$sha"
 check "6 a job not listed never calls wsl.exe" $([ "$rc" -eq 0 ] && ! grep -q "runs in" "$out_dir/summary.txt"; echo $?)
+nowsl_run() { # nowsl_run <bin dir first on PATH> <args...>: CI_LOCAL_WSL=good, no wsl.exe on PATH
+  local b=$1; shift
+  out=$( (cd "$root/repo" && PATH="$b:$root/bin:$PATH" GH_LOG="$root/gh.log" CI_LOCAL_WSL=good CI_LOCAL_ROOT="$root/out" \
+    bash "$script" "$@") 2>&1 ); rc=$?
+}
+mkdir -p "$root/linuxbin" "$root/winbin"
+printf '#!/usr/bin/env bash\necho Linux\n' > "$root/linuxbin/uname"
+printf '#!/usr/bin/env bash\necho MINGW64_NT-10.0-26100\n' > "$root/winbin/uname"
+chmod +x "$root/linuxbin/uname" "$root/winbin/uname"
+nowsl_run "$root/linuxbin" --jobs good "$sha"
+check "6 a Linux host without wsl.exe runs the WSL job here, with no Git Bash line" $([ "$rc" -eq 0 ] \
+  && grep -qE '^good +success' "$out_dir/summary.txt" && ! grep -q "runs in" "$out_dir/summary.txt"; echo $?)
+nowsl_run "$root/winbin" --jobs good "$sha"
+check "6 Git Bash on Windows without wsl.exe says so" $([ "$rc" -eq 0 ] \
+  && grep -q "^    runs in Git Bash: no wsl.exe$" "$out_dir/summary.txt"; echo $?)
 
 # 7. One local CI at a time (CI_LOCAL_SLOTS=1, through section 11; section 18 covers two slots): a second run waits while
 # the lock is held, goes once it is released, and takes over a lock whose process is gone; the lock goes with the run,
