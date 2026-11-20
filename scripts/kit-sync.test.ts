@@ -1292,6 +1292,26 @@ describe('sync on a fixture repo', () => {
     expect(files.find(x => x.path === 'docs/other.md')).not.toHaveProperty('createOnly');
     expect(verifyKit(out)).toEqual([]);
   });
+
+  test('every code-map file ships createOnly: a project fills in or harvests its own maps', () => {
+    const src = fixture();
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-code-maps-')));
+    sync(src, out, false, NO_REWRITES);
+    const files = (
+      JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8')) as {
+        files: { path: string; createOnly?: boolean }[];
+      }
+    ).files;
+    const maps = files.filter(x => x.path.startsWith('docs/code-maps/'));
+    expect(maps.map(x => x.path).sort()).toEqual([
+      'docs/code-maps/README.md',
+      'docs/code-maps/exemplars/x.md',
+      'docs/code-maps/java.md',
+    ]);
+    for (const m of maps) expect(m.createOnly).toBe(true);
+    expect(files.filter(x => !x.path.startsWith('docs/code-maps/') && x.createOnly)).toEqual([]);
+    expect(verifyKit(out)).toEqual([]);
+  });
 });
 
 describe('the committed kit', () => {

@@ -238,6 +238,25 @@ export function flattenKitConfig(config: unknown): Record<string, string> {
   return out;
 }
 
+/**
+ * The `@@KIT_<NAME>@@` values kit add renders templates with, and kit doctor checks them against. The kit defaults
+ * sit under the project's values, so a key the kit added after this kit.yaml was written still renders (an existing
+ * kit.yaml is never rewritten with the new keys).
+ */
+export function templateVars(
+  projectPath: string,
+  kit: Kit,
+  kitYamlText: string,
+  javaVersion: string | null
+): Record<string, string> {
+  return {
+    ...flattenKitConfig(parseYaml(kit.defaults) as unknown),
+    ...flattenKitConfig(parseYaml(kitYamlText) as unknown),
+    ...(javaVersion !== null ? { JAVA_VERSION: javaVersion } : {}),
+    PROJECT_DIR: realpathSync(projectPath),
+  };
+}
+
 /** Replace `@@KIT_<NAME>@@`; a missing key renders empty and is recorded once in `missing`. */
 export function renderTemplate(
   content: string,
@@ -710,15 +729,7 @@ export async function kitAddCommand(
     return 1;
   }
   kitYamlText = java.text;
-  const config = parseYaml(kitYamlText) as unknown;
-  // The kit defaults sit under the project's values, so a key the kit added after this kit.yaml
-  // was written still renders (an existing kit.yaml is never rewritten with the new keys).
-  const vars = {
-    ...flattenKitConfig(parseYaml(kit.defaults) as unknown),
-    ...flattenKitConfig(config),
-    ...(java.version !== null ? { JAVA_VERSION: java.version } : {}),
-    PROJECT_DIR: realpathSync(project),
-  };
+  const vars = templateVars(project, kit, kitYamlText, java.version);
 
   const unsafe = kit.manifest.files
     .map(file => ({
@@ -1095,17 +1106,39 @@ export interface DriftReport {
   checked: number;
 }
 
-/** sha256 of each installed non-template file against the manifest; a create-only file is the project's own. */
-export function computeDrift(projectPath: string, kit: Kit, profiles: string[]): DriftReport {
+/**
+ * sha256 of each installed file against the manifest; a create-only file is the project's own. A template is checked
+ * as kit add would render it with `vars` (templateVars), and skipped when no vars are given or its content is absent.
+ */
+export function computeDrift(
+  projectPath: string,
+  kit: Kit,
+  profiles: string[],
+  vars?: Record<string, string>
+): DriftReport {
   const report: DriftReport = { modified: [], missing: [], checked: 0 };
   for (const file of winningFiles(kit, profiles).values()) {
-    if (file.template || file.createOnly) continue;
+    if (file.createOnly) continue;
+    const source = kit.files[`${file.profile}/${file.path}`];
+    if (file.template && (vars === undefined || source === undefined)) continue;
     report.checked++;
     const dest = join(projectPath, file.path);
-    const source = kit.files[`${file.profile}/${file.path}`];
-    const expected = source === undefined ? file.sha256 : contentHash(source);
+    const text =
+      source === undefined
+        ? null
+        : file.template
+          ? renderTemplate(source, vars ?? {}, new Set())
+          : source;
+    // kit add merges the kit's aliases and file hooks into config.yaml after writing it: either text is the kit's.
+    const expected =
+      text === null
+        ? [file.sha256]
+        : file.path === PROJECT_CONFIG
+          ? [contentHash(text), contentHash(mergedConfigText(text, kit))]
+          : [contentHash(text)];
     if (!existsSync(dest)) report.missing.push(file.path);
-    else if (contentHash(readFileSync(dest, 'utf-8')) !== expected) report.modified.push(file.path);
+    else if (!expected.includes(contentHash(readFileSync(dest, 'utf-8'))))
+      report.modified.push(file.path);
   }
   if (!winningFiles(kit, profiles).has(KIT_DEFAULTS)) {
     report.checked++;
@@ -1438,7 +1471,15 @@ export async function kitDoctorCommand(
         kit,
         recorded.length > 0 ? recorded : stringList(defaults?.profiles)
       );
-      const drift = computeDrift(project, kit, profiles);
+      // Templates render with the values kit add would use; a java_version kit add would refuse falls back to the
+      // recorded one, so drift still reports instead of failing.
+      const kitYamlText = readFileSync(join(project, KIT_YAML), 'utf-8');
+      const java = javaVersionFor(project, kitYamlText, Object.hasOwn(config, 'java_version'));
+      const vars =
+        'error' in java
+          ? templateVars(project, kit, kitYamlText, null)
+          : templateVars(project, kit, java.text, java.version);
+      const drift = computeDrift(project, kit, profiles, vars);
       const bad = [
         ...drift.missing.map(p => `missing ${p}`),
         ...drift.modified.map(p => `modified ${p}`),

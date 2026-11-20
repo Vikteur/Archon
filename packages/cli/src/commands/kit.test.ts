@@ -40,6 +40,7 @@ import {
   mergeAliases,
   renderTemplate,
   resolveProfiles,
+  templateVars,
   trustFolder,
   type DoctorCheck,
   type Kit,
@@ -589,6 +590,23 @@ describe('kit', () => {
       addFile(kit, 'core', '.archon/config.yaml', text);
       return kit;
     };
+    it('is no drift after the alias merge; an edit to it is', async () => {
+      const kit = withConfig('# kit config v1 @@KIT_BASE_BRANCH@@\n');
+      kit.manifest.files[kit.manifest.files.length - 1].template = true;
+      expect(await add({}, kit)).toBe(0);
+      const cfg = join(project, '.archon/config.yaml');
+      expect(readFileSync(cfg, 'utf-8')).toContain('@scout');
+      const vars = templateVars(
+        project,
+        kit,
+        readFileSync(join(project, '.archon/kit.yaml'), 'utf-8'),
+        null
+      );
+      const profiles = resolveProfiles(kit, ['core']);
+      expect(computeDrift(project, kit, profiles, vars).modified).toEqual([]);
+      writeFileSync(cfg, `${readFileSync(cfg, 'utf-8')}# edited\n`);
+      expect(computeDrift(project, kit, profiles, vars).modified).toEqual(['.archon/config.yaml']);
+    });
     it('stays the kit own after the alias merge, so a newer kit updates it', async () => {
       expect(await add({}, withConfig('# kit config v1\n'))).toBe(0);
       expect(readFileSync(join(project, '.archon/config.yaml'), 'utf-8')).toContain('@scout');
@@ -903,6 +921,24 @@ describe('kit', () => {
       expect(drift.modified).toEqual(['README.md']);
       expect(drift.missing).toEqual(['src.txt']);
       expect(drift.checked).toBe(4);
+    });
+    it('checks a template as kit add rendered it, and skips templates without vars', async () => {
+      await add({ profiles: ['java'] });
+      const kit = makeKit();
+      const profiles = resolveProfiles(kit, ['java']);
+      const vars = templateVars(
+        project,
+        kit,
+        readFileSync(join(project, '.archon/kit.yaml'), 'utf-8'),
+        null
+      );
+      expect(computeDrift(project, kit, profiles, vars)).toMatchObject({
+        modified: [],
+        checked: 5,
+      });
+      writeFileSync(join(project, '.github/agent.md'), 'an older generator wrote this\n');
+      expect(computeDrift(project, kit, profiles, vars).modified).toEqual(['.github/agent.md']);
+      expect(computeDrift(project, kit, profiles)).toMatchObject({ modified: [], checked: 4 });
     });
     it('reports the defaults file beside kit.yaml as drift once edited', async () => {
       await add({ profiles: ['java'] });
