@@ -146,7 +146,7 @@
       "template": true,
       "origin": ".archon/config.yaml",
       "kind": "config",
-      "sha256": "29eb17ffc96c53f13a0dfb11357ca138324273665691d7105224acdf4c9a43f5"
+      "sha256": "a35c56e893855968cb26add30a71d3e81b2c9b743e3f31c5cb7563ee9ec15364"
     },
     {
       "path": ".archon/copilot/README.md",
@@ -332,6 +332,15 @@
       "sha256": "5ab6ae460fdc42e61473196ac42bf8d227c68c5b1eee0bb8fc0a05f894965572"
     },
     {
+      "path": ".archon/scripts/kit-gitignore.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/kit-gitignore.sh",
+      "kind": "script",
+      "sha256": "7290eb893ffe673236ecbd5444bce15477fcb680b340bf7959a2055a0fca7749"
+    },
+    {
       "path": ".archon/scripts/local-ci-run.sh",
       "profile": "core",
       "mode": "0755",
@@ -491,7 +500,7 @@
       "template": false,
       "origin": ".archon/scripts/run-buckets.json",
       "kind": "config",
-      "sha256": "de9468f315b764ac9005f37f64b39abd26e1bd35800fddb1c79aa9f59187cc52"
+      "sha256": "69953bffd3bdb460efcd39a6f83d8cc646f857edb339e3562f8923e9dc468832"
     },
     {
       "path": ".archon/scripts/run-label.js",
@@ -626,7 +635,7 @@
       "template": false,
       "origin": ".archon/scripts/test/build-feature.test.sh",
       "kind": "script",
-      "sha256": "efe650f7410987a31fdd6cd0e0c6492c735ccb8e1351ced69e6922fbea6f0b64"
+      "sha256": "6493754df02bbdc5949f258e257ac60782f393e790eaa2df9f44548396237b07"
     },
     {
       "path": ".archon/scripts/test/ci-by-sha.test.sh",
@@ -729,6 +738,15 @@
       "sha256": "10320ed31009eb4c21d5089a2f56472dec06d3f7189fa7d6ba9821c2e5819c1d"
     },
     {
+      "path": ".archon/scripts/test/kit-gitignore.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/test/kit-gitignore.test.sh",
+      "kind": "script",
+      "sha256": "131343a852e670a144f7d9acd5b4814be297c66667888cddd3748505b402d105"
+    },
+    {
       "path": ".archon/scripts/test/local-ci-off.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -764,7 +782,7 @@
       "template": true,
       "origin": ".archon/scripts/test/mcp-use-check.test.sh",
       "kind": "script",
-      "sha256": "6bf7cf1e06b36fdbd2dc735d12a8a13a50be25622997a638cc2e9d44886cbe80"
+      "sha256": "a8d833a0ca5d65c4bb34358010f8baf2d4d09bcefa19364413be61b257eb6a29"
     },
     {
       "path": ".archon/scripts/test/node-fence.test.sh",
@@ -990,7 +1008,7 @@
       "template": false,
       "origin": ".archon/scripts/test/workflow-contracts.test.sh",
       "kind": "script",
-      "sha256": "9ed96cc7148411651e9844fa855c35a072d3af98c4ccabb5a68ac4195168a8d7"
+      "sha256": "a59b60abb1d081ef910bf7b141e7efb57a08cb32b0e02b67f140637d0814d43d"
     },
     {
       "path": ".archon/scripts/ticket.sh",
@@ -1008,7 +1026,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "027cfb49fdd2215b462710a2ec56fcc34eb6fef80d8852cfc5d2dcdde3242fb3"
+      "sha256": "aa977a5f4790c6e4a198f0586b9e135328f1d701619e121af4f40963efb82504"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1678,7 +1696,7 @@
       "template": false,
       "origin": "scripts/install-tools.sh",
       "kind": "script",
-      "sha256": "6eb2460c81b2cc2bba1bd7857dca65a9b7c661d891c44f328769d2d55361ae1d"
+      "sha256": "3c66b2ab383b893f22d54c80306e0b729cc919e341f9f92ba47282f209c6d882"
     },
     {
       "path": "scripts/test/archon-suites.test.sh",
@@ -1785,7 +1803,7 @@
       "template": false,
       "origin": "scripts/test/install-tools.test.sh",
       "kind": "script",
-      "sha256": "96caab8478dec852b712882987eafd8fccfa69d3a6dd60df0015cad790310bbb"
+      "sha256": "bf9b339b886db0912f2aa9aec5ceefa2bdbbd757338daea1876669121a87e44f"
     },
     {
       "path": "scripts/test/run-suites.test.sh",
@@ -5011,6 +5029,11 @@
     }
   },
   "postInstall": [
+    {
+      "profile": "core",
+      "run": "bash .archon/scripts/kit-gitignore.sh",
+      "optional": false
+    },
     {
       "profile": "core",
       "run": "bash scripts/install-hooks.sh",

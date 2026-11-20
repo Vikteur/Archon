@@ -143,7 +143,7 @@ check "8 mcp-use node after plan" $(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  
 node8=$(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf")
 check "8 report only, a failure named on stderr" $(echo "$node8" | grep -qF 'mcp-use-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" explore plan \' \
   && echo "$node8" | grep -qF '|| echo "mcp-use-check.js failed; the run has no mcp-use.md" >&2'; echo $?)
-check "8 stop-route waits for it" $(grep -A1 '^  - id: stop-route$' "$wf" | grep -qF 'depends_on: [plan-check, mcp-use]'; echo $?)
+check "8 stop-route does not wait for it (report only)" $(grep -A1 '^  - id: stop-route$' "$wf" | grep -qxF '    depends_on: [plan-check]'; echo $?)
 
 echo "mcp-use-check: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -8,7 +8,8 @@
 # stay manual.
 #   bash scripts/install-tools.sh            install what is missing
 #   bash scripts/install-tools.sh --check    only report what is missing or at the wrong version; installs nothing and
-#                                            skips the git hooks; exit 1 when any tool is missing
+#                                            skips the git hooks; exit 1 when any tool is missing; notes a project
+#                                            without a git remote (a worktree run cannot start), whatever the exit
 # Environment (for tests; the defaults are right on a real machine):
 #   TOOLS_CONF                tool list (default: tools.conf beside this script)
 #   INSTALL_TOOLS_OS          windows | macos | linux (default: from uname)
@@ -168,6 +169,12 @@ done
 
 if [ "$check_only" -eq 1 ]; then
   echo
+  # A worktree run (Archon's default) branches off the git remote and a build run opens its pull request there: without
+  # one Archon stops before the first node with "Cannot determine git remote". Said here, before a run; not a tool, so
+  # it never changes the exit code.
+  if [ -e "$project/.git" ] && [ -z "$(git -C "$project" remote 2>/dev/null)" ]; then
+    echo "Note: $project has no git remote. A worktree run (the default) cannot start and a build run cannot open its pull request: add one with git remote add origin <url> before the first run."
+  fi
   if [ "${#todo[@]}" -eq 0 ]; then echo "Check: every tool is in place."; exit 0; fi
   missing=()
   for i in "${todo[@]}"; do missing+=("${names[i]}"); done
