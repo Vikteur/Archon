@@ -729,6 +729,15 @@
       "sha256": "ba058c721e4e706668e4b568108ad6631479f9fa3a0ed45a10217dc024fd6138"
     },
     {
+      "path": ".archon/scripts/test/dispatch.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "63478e8da072b7e3de35a6603f02e1ddd9091b74a2bb95d0fa0b62a4e59eaa92"
+    },
+    {
       "path": ".archon/scripts/test/fixtures/copilot-audit/empty.jsonl",
       "profile": "core",
       "mode": "0644",
@@ -1062,7 +1071,7 @@
       "template": true,
       "origin": ".archon/scripts/test/tool-advice.test.sh",
       "kind": "script",
-      "sha256": "61dfeb3109f3324e69dd36b7defe33d3b0f17f36d1ecd7a7b09d8e0c1c61c9a8"
+      "sha256": "540f19b32f305123732f5d698536719481fb4f4d84c8773978fd37442db9f00a"
     },
     {
       "path": ".archon/scripts/test/workflow-contracts.test.sh",
@@ -1089,7 +1098,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "6a3035c4fb3a49fd8a1a16cd6906c669f3a2712e48176f542834aa54cdfc5b0f"
+      "sha256": "bbf8d8266e68c97ff8acd1e8102859a91eda6199b09dae83f0ca113bc04ddb11"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1330,7 +1339,7 @@
       "template": false,
       "origin": ".claude/scripts/gate-change-check.sh",
       "kind": "script",
-      "sha256": "2687e34d653ef7f98381ab39fdcecebf1fc9466e088aba421b47494c899a7c26",
+      "sha256": "107e589218bd676d779de894a90c0ebbf231d320cbc53910cf75dfa2df129ce5",
       "when": "local_ci"
     },
     {
@@ -1856,7 +1865,7 @@
       "template": false,
       "origin": "scripts/test/gate-change-check.test.sh",
       "kind": "script",
-      "sha256": "b798c02893f2ba3daa2a0a19ba74e91a0a76ee94c1b47a2a0c557eaf35cc1a00",
+      "sha256": "d192c8444b079f1594aa7b0deea0fe988dcece653c75c56fa066aa0eb31c14fb",
       "when": "local_ci"
     },
     {
@@ -1950,13 +1959,23 @@
       "sha256": "359b23980e1507ae5b06a758dd5ba1e6e4596b4bf25bbaca9f36036ed08a94ec"
     },
     {
+      "path": ".claude/scripts/ci-gate.sh",
+      "profile": "java",
+      "mode": "0755",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "71d6634d3b25734a38636e9298bfee6f098db1b596047dc5afa26bf181774b12",
+      "when": "local_ci"
+    },
+    {
       "path": ".claude/scripts/ci-workflow-check.sh",
       "profile": "java",
       "mode": "0755",
       "template": true,
       "origin": ".claude/scripts/ci-workflow-check.sh",
       "kind": "script",
-      "sha256": "bca31ca48a4ad114861a43b1da01dab71e241b385243e11f3453a952603a2c30",
+      "sha256": "dbc38002c94bd32f31b1e1317b93e4f2e18830965b6b78cb1bc9bfb11f393ef8",
       "when": "local_ci"
     },
     {
@@ -2499,7 +2518,7 @@
       "template": false,
       "origin": null,
       "kind": "doc",
-      "sha256": "7bb2dfdcb93cdd4e5fd66c419c04909eac3e9fc8d8ee14134fa070f2e9c2d8ea",
+      "sha256": "d941eaacdb09d35d90a40c42f83ec9c66255e277a79ad3b453b26a402cb242a2",
       "createOnly": true
     },
     {
@@ -2827,6 +2846,35 @@
       "sha256": "8a98f96963579b3ada535d450872fbe26dd623ca6626e7fa1db61dfeddedb3dd"
     },
     {
+      "path": "scripts/test/build-shape-check.test.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "dcc8bf0faf62d10ebb453a1ead7d07566d3c5b951653c123f82381b60090954d"
+    },
+    {
+      "path": "scripts/test/ci-gate.test.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "43baf865166c37bdec1eed87c9ef504300cd69e56270a4e7f1d759ce08792b5a",
+      "when": "local_ci"
+    },
+    {
+      "path": "scripts/test/ci-workflow-check.test.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": true,
+      "origin": null,
+      "kind": "script",
+      "sha256": "8f630656bd6d31aaa45b153940de4de0172584b20180b96b900bc18828678e11",
+      "when": "local_ci"
+    },
+    {
       "path": "scripts/test/ci-workflow-scope.test.sh",
       "profile": "java",
       "mode": "0644",
@@ -2835,6 +2883,15 @@
       "kind": "script",
       "sha256": "0e432e8363ee5a42611fc57faacdc64d5818afa9db9ad63092dafeb29ea7f2f5",
       "when": "local_ci"
+    },
+    {
+      "path": "scripts/test/class-version-check.test.sh",
+      "profile": "java",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "8dd7e454cfe0aff8f9858c06827dad96de24a8d20a2191cb9a75dc72ae733df8"
     },
     {
       "path": "scripts/test/pin-proof-check.test.sh",
@@ -3298,7 +3355,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "7499df1dba6ce792819969429042639c766d057e7f373231cc5d05b73d380186",
+      "sha256": "5be09d98923a7bcfa94613ac74d0529fba4265210982d7ddf5729abc7437056d",
       "when": "local_ci"
     },
     {
@@ -3607,7 +3664,7 @@
       "template": false,
       "origin": ".github/ci-inputs.yml",
       "kind": "config",
-      "sha256": "d5ba61332178fdb42789d1d537623f22de4cabc09ca59f842b457667b363129a",
+      "sha256": "b11c65f5aa6f339785c880f3d8db948707c5041b5e83b8bd2d9f63252c7cdf82",
       "when": "local_ci"
     },
     {
@@ -3653,7 +3710,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "ae13bc4595f81d7ec4bab2669f38a8a2b8fa2415400c35c234d71821494b189d",
+      "sha256": "9d01ea1e49288d5d3ed12a07ba869f9656dc3cee07486af9ae05828346edc551",
       "when": "local_ci"
     },
     {

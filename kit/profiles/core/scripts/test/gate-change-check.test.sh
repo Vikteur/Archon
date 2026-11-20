@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Tests .claude/scripts/gate-change-check.sh (CI plan C11): a change to a gate (the job set or steps of ci.yml,
-# ci-inputs.yml, ci-plan.sh, the accept rules of local-ci-status.sh and the grammar's reader) fails unless the same
+# ci-inputs.yml, ci-plan.sh, the accept rules of local-ci-status.sh and the grammar's reader, the gates map of the kit
+# config) fails unless the same
 # change adds a dated decision entry to docs/memory.md that names the gate; comment-only changes are not gate changes.
 # Each case works in a throwaway repo whose commit "base" holds a small copy of every gate file.
 # Usage: bash scripts/test/gate-change-check.test.sh   (exit 0 = all pass)
@@ -67,6 +68,7 @@ echo done
 EOF
 printf 'ci_status_ran() {\n  printf ran\n}\nci_status_parse() {\n  echo kind=ran\n}\n' > "$tpl/.claude/scripts/ci-status-grammar.sh"
 printf '# Memory\n\n## 2026-10-01 — first\n- a decision\n' > "$tpl/docs/memory.md"
+printf 'stack: spring\ngates: # ci-gate.sh\n  format: report\n  secrets: report\n' > "$tpl/.archon/kit.yaml"
 echo readme > "$tpl/README.md"
 git -C "$tpl" init -q -b main && git -C "$tpl" add -A && git -C "$tpl" commit -qm base
 
@@ -150,6 +152,20 @@ commit; git checkout -q main; echo more >> README.md; commit; run main feat
 check "7 the base side is the merge-base, not the base's tip" "$([ "$rc" -eq 1 ] && said 'gate changed: ci-plan'; echo $?)"
 out="$(GATE_BASE=main bash "$script" 2>&1)"; rc=$?
 check "7 GATE_BASE names the default base" "$([ "$rc" -eq 0 ] && said 'no gate changed'; echo $?)"
+
+# 9. The report-only gates of ci-gate.sh: kit key gates in .archon/kit.yaml or .archon/kit.defaults.yaml.
+new_repo; sed -i 's/stack: spring/stack: quarkus/; s/# ci-gate.sh/# the CI gates/' .archon/kit.yaml; commit; run main
+check "9 another kit key or a comment in kit.yaml is no gate change" "$([ "$rc" -eq 0 ] && said 'no gate changed'; echo $?)"
+new_repo; sed -i 's/format: report/format: block/' .archon/kit.yaml; commit; run main
+check "9 a gate switched to block without an entry fails" "$([ "$rc" -eq 1 ] \
+  && said 'gate changed: kit-gates (.archon/kit.yaml: gates)' && said 'FAIL: kit-gates changed'; echo $?)"
+entry "kit-gates: format blocks"; commit; run main
+check "9 ... and passes with an entry that names kit-gates" "$([ "$rc" -eq 0 ] && said 'gate-change-check: ok'; echo $?)"
+new_repo; sed -i '/secrets: report/d' .archon/kit.yaml; commit; run main
+check "9 a gate taken out of the map is a gate change" "$([ "$rc" -eq 1 ] && said 'gate changed: kit-gates'; echo $?)"
+new_repo; printf 'gates:\n  coverage: block\n' > .archon/kit.defaults.yaml; commit; run main
+check "9 a new kit.defaults.yaml with gates is a gate change" "$([ "$rc" -eq 1 ] \
+  && said 'gate changed: kit-gates (.archon/kit.defaults.yaml: gates)'; echo $?)"
 
 # 8. Usage and fail closed.
 new_repo; run --bogus
