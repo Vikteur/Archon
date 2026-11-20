@@ -6,7 +6,8 @@
 //   node copilot-audit.js <run-id>           write .apm-audit/sessions/copilot-<run-id>.jsonl in the current directory
 //   node copilot-audit.js --names <run-id>   list the tool names the run log holds, with how each one maps
 // The file is rewritten whole on every call (idempotent), with records in the shape audit-log.sh writes; `agent` is the
-// node the call ran in (the hooks write "main": copilot-usage.js joins their trail to a node by its session id). Which Copilot
+// node the call ran in (the hooks write the node too, from KIT_NODE or ARCHON_NODE_EXECUTION, plus a "node" field; records
+// from before that say "main", so copilot-usage.js still joins a trail to a node by its session id). Which Copilot
 // tool is which Claude tool is .archon/copilot/tools.json (COPILOT_TOOLS overrides the path), never code here.
 // Fallback only: audit-log.sh may already have written this run's trail. The hooks cover the run only when a session file
 // other than copilot-*.jsonl holds a Skill record (tool === 'Skill', what skill-check.js needs) stamped at or after the
