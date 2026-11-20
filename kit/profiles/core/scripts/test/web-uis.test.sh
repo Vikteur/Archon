@@ -115,28 +115,28 @@ runm() { DANGEROUSLY_OMIT_AUTH=true DANGEROUSLY_BIND_ALL_INTERFACES=true MCP_POR
 msettle() { for _ in $(seq 1 25); do [ "$(grep -c '^---' "$tmp/inspector.log" 2>/dev/null)" -ge "$1" ] && return; sleep 0.2; done; }
 : > "$tmp/inspector.log"
 out="$(runm start)"; msettle 3
-url1="$(sed -n 's/^mcp-codegraph: //p' <<<"$out")"; url2="$(sed -n 's/^mcp-project-api: //p' <<<"$out")"
+url1="$(sed -n 's/^mcp-codegraph: //p' <<<"$out")"; url2="$(sed -n 's/^mcp-@@KIT_CONTRACT_SERVER_NAME@@: //p' <<<"$out")"
 url3="$(sed -n 's/^mcp-codegraph-app: //p' <<<"$out")"
 tok() { sed -n 's/.*[?&]MCP_INSPECTOR_API_TOKEN=\([0-9a-f]*\)$/\1/p' <<<"$1"; }
 check "a line per server, own ports, token in the URL: $out" '[[ "$url1" == "http://127.0.0.1:7201/?MCP_INSPECTOR_API_TOKEN="* && "$url2" == "http://127.0.0.1:7211/?MCP_INSPECTOR_API_TOKEN="* && "$url3" == "http://127.0.0.1:7221/?"* ]]'
 check "the token is long and random per server" '[ "$(tok "$url1" | wc -c)" -ge 33 ] && [ "$(tok "$url1")" != "$(tok "$url2")" ]'
 check "the extra project is a server (codegraph-app)" '[ -n "$url3" ]'
-check "three Inspector processes alive" 'alive mcp-codegraph && alive mcp-project-api && alive mcp-codegraph-app'
+check "three Inspector processes alive" 'alive mcp-codegraph && alive mcp-@@KIT_CONTRACT_SERVER_NAME@@ && alive mcp-codegraph-app'
 check "started from the project with --web --config: $(head -1 "$tmp/inspector.log")" 'grep -q "^$tmp/project|--web --config $tmp/state/mcp-codegraph.config.json$" "$tmp/inspector.log"'
 check "bound to 127.0.0.1, ports and token in the child env, no browser of its own" 'grep -qx "HOST=127.0.0.1" "$tmp/inspector.log" && grep -qx "CLIENT_PORT=7201" "$tmp/inspector.log" && grep -qx "MCP_SANDBOX_PORT=7202" "$tmp/inspector.log" && grep -qx "MCP_APP_ORIGIN_PORT=7205" "$tmp/inspector.log" && grep -qx "MCP_INSPECTOR_API_TOKEN=$(tok "$url1")" "$tmp/inspector.log" && grep -qx "MCP_AUTO_OPEN_ENABLED=false" "$tmp/inspector.log"'
 check "no DANGEROUSLY_* variable reaches the child (even set in the caller)" '! grep -q "^DANGEROUSLY_" "$tmp/inspector.log"'
-check "one server per config file" '[ "$(jq -r ".mcpServers | keys | join(\",\")" "$tmp/state/mcp-project-api.config.json")" = @@KIT_CONTRACT_SERVER_NAME@@ ] && [ "$(jq -r ".mcpServers.\"@@KIT_CONTRACT_SERVER_NAME@@\".type" "$tmp/state/mcp-project-api.config.json")" = stdio ] && [ "$(jq -r ".mcpServers.\"@@KIT_CONTRACT_SERVER_NAME@@\".tools // \"none\"" "$tmp/state/mcp-project-api.config.json")" = none ]'
+check "one server per config file" '[ "$(jq -r ".mcpServers | keys | join(\",\")" "$tmp/state/mcp-@@KIT_CONTRACT_SERVER_NAME@@.config.json")" = @@KIT_CONTRACT_SERVER_NAME@@ ] && [ "$(jq -r ".mcpServers.\"@@KIT_CONTRACT_SERVER_NAME@@\".type" "$tmp/state/mcp-@@KIT_CONTRACT_SERVER_NAME@@.config.json")" = stdio ] && [ "$(jq -r ".mcpServers.\"@@KIT_CONTRACT_SERVER_NAME@@\".tools // \"none\"" "$tmp/state/mcp-@@KIT_CONTRACT_SERVER_NAME@@.config.json")" = none ]'
 check "the extra codegraph server: same command and env, --path to the extra project" '[ "$(jq -c ".mcpServers[\"codegraph-app\"] | [.command, .args, .env.CODEGRAPH_MCP_TOOLS]" "$tmp/state/mcp-codegraph-app.config.json")" = "[\"codegraph\",[\"serve\",\"--mcp\",\"--path\",\"$tmp/front/app\"],\"explore,node\"]" ]'
 check "the config files are private" '[ "$(stat -c %a "$tmp/state/mcp-codegraph.config.json")" = 600 ]'
 check "nothing opened without --open" '[ ! -e "$tmp/open.log" ]'
 
 out="$(runm status)"
-check "status prints the same URL lines: $out" '[[ "$out" == *"mcp-codegraph: $url1"* && "$out" == *"mcp-project-api: $url2"* ]]'
+check "status prints the same URL lines: $out" '[[ "$out" == *"mcp-codegraph: $url1"* && "$out" == *"mcp-@@KIT_CONTRACT_SERVER_NAME@@: $url2"* ]]'
 out="$(runm start)"
 check "a second start reuses them, same token" '[[ "$out" == *"mcp-codegraph: $url1"* ]] && [ "$(grep -c "^---" "$tmp/inspector.log")" -eq 3 ]'
 pidm="$(cat "$tmp/state/mcp-codegraph.pid")"
 out="$(runm stop)"
-check "stop ends every Inspector: $out" '! kill -0 "$pidm" 2>/dev/null && ! alive mcp-project-api && ! alive mcp-codegraph-app && [ ! -e "$tmp/state/mcp-codegraph.url" ]'
+check "stop ends every Inspector: $out" '! kill -0 "$pidm" 2>/dev/null && ! alive mcp-@@KIT_CONTRACT_SERVER_NAME@@ && ! alive mcp-codegraph-app && [ ! -e "$tmp/state/mcp-codegraph.url" ]'
 check "stop removes the inspector configs" '! ls "$tmp"/state/mcp-*.config.json >/dev/null 2>&1'
 out="$(runm status)"
 check "status after stop prints no URL: $out" '[[ "$out" != *"MCP_INSPECTOR_API_TOKEN"* ]]'
