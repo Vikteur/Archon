@@ -26,8 +26,9 @@
 # A pending status counts as stale only when it names this host (`pid N@<host>`, or the legacy `running on <host>`) and
 # the queue has no live entry of the commit; the statuses are read once more first, so a run that ended between the two
 # reads is not taken for a dead one. When the queue cannot be asked, pending stays pending.
-# A main commit that changes only backlog/, docs/retro/ or docs/tokenomics/ (ci-skip.sh) answers the verdict of the
-# newest commit under it that changes anything else, with that commit named in the detail.
+# A main commit that changes only backlog/, docs/retro/ or docs/tokenomics/ (ci-skip.sh; backlog/ only with
+# backlog: true in .archon/kit.yaml) answers the verdict of the newest commit under it that changes anything else, with
+# that commit named in the detail.
 # Overrides: LOCAL_CI_WORKFLOW (the workflow whose jobs are required; default .github/workflows/ci.yml of <sha> itself),
 # CI_STATUS_GRAMMAR, CI_QUEUE (the grammar and queue scripts), CI_PLAN_MAX_AGE.
 # With local CI off (local_ci: false in .archon/kit.yaml, kit/SPEC.md Local CI switch) the project's own CI (GitHub

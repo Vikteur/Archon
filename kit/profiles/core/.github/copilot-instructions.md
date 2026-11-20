@@ -15,7 +15,7 @@ Do not build a ticket in this chat. Use the `archon-cli` skill (`.agents/skills/
 variant of the build workflow from the main checkout, detached:
 
 ```bash
-archon workflow run build-feature-copilot --detach "TASK-n"
+archon workflow run build-feature-copilot --detach "$(cat <ticket file>)"   # or "TASK-n" with backlog: true
 archon workflow status                 # active runs
 archon workflow attention --watch --json   # decisions and run ends (one stream, as a background task)
 archon workflow get <run-id> --json    # one run
@@ -26,6 +26,8 @@ archon workflow resume <run-id>        # a failed or paused run
 Start a run from the ticket text the user gives you (pasted, or read from a ticket tool): write it unchanged to
 a file in a scratch folder outside the repo, then run
 `archon workflow run build-feature-copilot --detach "$(cat <file>)"`, so no quoting or retyping changes it.
+The run takes that text as its ticket: its first line is the title, and a `Labels:` line in it names the STOP labels
+(`stop-…`). A `TASK-n` names a Backlog.md ticket only when `.archon/kit.yaml` has `backlog: true`.
 Never approve or reject `plan-approval` yourself: show the user the plan path and the STOP items the run names
 (`archon workflow get <run-id> --json`), and run `approve` or `reject` only on the user's own words.
 

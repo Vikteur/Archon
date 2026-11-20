@@ -123,6 +123,13 @@ check "1 --since keeps the later days only" "$(is '[.total.runs, (.by_day | keys
 check "1 ... with the credits of those days" "$(is .total.avoidable_total_min 9; echo $?)"
 run --ledger "$L" --repo "$tmp/none" --json
 check "1 without the commits every git class is unknown" "$(is '[.total.avoidable_min["same-tree"], .total.avoidable_min["rebase-only"], .total.avoidable_min.bookkeeping, .total.avoidable_min["red-tail"]]' '[0,0,0,6]'; echo $?)"
+# Without Backlog.md (backlog: false) backlog/ is the project's own folder: a change to it is no bookkeeping.
+out="$(KIT_BACKLOG=false bash "$script" --ledger "$L" --repo "$repo" --json 2>&1)"; rc=$?
+check "1 backlog: false (env): a change to backlog/ is not bookkeeping" "$(is '.total.avoidable_min.bookkeeping' 0; echo $?)"
+mkdir -p "$repo/.archon" && printf 'backlog: false\n' > "$repo/.archon/kit.yaml"
+run --ledger "$L" --repo "$repo" --json
+check "1 backlog: false in the repo's kit.yaml: the same" "$(is '.total.avoidable_min.bookkeeping' 0; echo $?)"
+rm -rf "$repo/.archon"
 
 # 2. The Gradle growth guard.
 G="$tmp/guard.jsonl"

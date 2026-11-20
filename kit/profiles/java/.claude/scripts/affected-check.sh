@@ -29,7 +29,9 @@
 #     scripts/test/agent-script-names.test.sh (every script it names exists).
 #   - anything else (docs, skills): nothing, and the path is printed as "not checked locally: <path>
 #     (<job>)", with the CI job that still checks it.
-#   - backlog/, AGENTS.md, CLAUDE.md: nothing, and nothing is printed (no CI job checks them on their own).
+#   - backlog/, AGENTS.md, CLAUDE.md: nothing, and nothing is printed (no CI job checks them on their own). backlog/
+#     only with backlog: true in .archon/kit.yaml (env KIT_BACKLOG, default true): without Backlog.md it is the
+#     project's own folder, read as any other path (a .md in it nothing, anything else not checked locally).
 # Usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync]
 # Prints each command before it runs it, stops at the first failure with its exit code, or prints
 # "affected-check: ok". --dry-run prints the commands without running them (and only says whether a merge is due). AFFECTED_BASE
@@ -49,6 +51,9 @@ done
 cd "$(git rev-parse --show-toplevel)" || exit 1
 # shellcheck source=../../.archon/scripts/test-task.sh
 . .archon/scripts/test-task.sh
+# shellcheck source=../../.archon/scripts/kit-config.sh
+. .archon/scripts/kit-config.sh 2> /dev/null || kit_get() { local e="KIT_${1^^}"; printf '%s' "${!e:-$2}"; }
+backlog_on=1; [ "$(kit_get backlog true)" != false ] || backlog_on=0
 base_ref="${AFFECTED_BASE:-origin/main}"
 
 # First bring the branch up to date with the base (retro fault: docs/memory.md appends turned PRs CONFLICTING, because
@@ -167,7 +172,8 @@ while IFS= read -r f; do
     case "$module_set" in *" $m "*) direct="$direct $m"; changed_files+=("$f"); continue ;; esac
   fi
   case "$f" in
-    backlog/*|AGENTS.md|CLAUDE.md|.archon/*|.claude/hooks/*|.gitignore|*.md) ;;
+    backlog/*) [ "$backlog_on" = 1 ] || case "$f" in *.md) ;; *) not_checked "$f" "every job" ;; esac ;;
+    AGENTS.md|CLAUDE.md|.archon/*|.claude/hooks/*|.gitignore|*.md) ;;
     *) not_checked "$f" "every job" ;;
   esac
 done <<< "$changed"

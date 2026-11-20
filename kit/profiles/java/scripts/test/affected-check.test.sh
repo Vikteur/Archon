@@ -173,6 +173,14 @@ check "backlog is not listed" bash -c '! grep -qF "backlog/t.md" <<< "$1"' _ "$o
 check "not checked: Dockerfile for every job" said "not checked locally: Dockerfile (every job)"
 check "not checked: anything else for every job" said "not checked locally: other.txt (every job)"
 check "not checked: still nothing runs" ran_nothing
+# Without Backlog.md (backlog: false) backlog/ is the project's own folder: read as any other path.
+new_repo "$r"
+mkdir -p backlog && echo a > backlog/data.json && echo a > backlog/notes.md
+run
+check "backlog on: backlog/ is not listed" bash -c '! grep -qF "backlog/" <<< "$1"' _ "$out"
+out="$(KIT_BACKLOG=false bash "$script" 2>&1)"; rc=$?
+check "backlog off: a backlog/ file is not checked locally" said "not checked locally: backlog/data.json (every job)"
+check "backlog off: a .md in it is not listed, as any .md" bash -c '! grep -qF "backlog/notes.md" <<< "$1"' _ "$out"
 
 # An unknown option is refused.
 new_repo "$r"
