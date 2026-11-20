@@ -155,7 +155,7 @@
       "template": false,
       "origin": ".archon/copilot/README.md",
       "kind": "doc",
-      "sha256": "aafe8aa6ff83586c6255302748e89b2f007e85be9106d3fddb15691b749685f3"
+      "sha256": "837a8afdedb4ff0f94828100e10c6385eb4e2ec4b36f002a046b41157907d153"
     },
     {
       "path": ".archon/copilot/baseline.md",
@@ -182,7 +182,16 @@
       "template": false,
       "origin": ".archon/copilot/hooks/run-guard.sh",
       "kind": "hook",
-      "sha256": "6e5b3cb1be10ef15896641ee8c0c2900d25ad5ec6069e5e8d14a5581e5603ed6"
+      "sha256": "32bba953f8483829581ad3408f2e1bad5892eb13c2377f842c678ba8e152f197"
+    },
+    {
+      "path": ".archon/copilot/node-fences.json",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/copilot/node-fences.json",
+      "kind": "config",
+      "sha256": "cfd8e99c605fe70338016393bcc41a8c953057619910ed145c574b0e7f614b12"
     },
     {
       "path": ".archon/copilot/tools.json",
@@ -740,6 +749,15 @@
       "sha256": "c1db3a2883543dc20b3c32352013f260f9af206ac77cf9b6f2a741c0285e51af"
     },
     {
+      "path": ".archon/scripts/test/node-fence.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/test/node-fence.test.sh",
+      "kind": "script",
+      "sha256": "3e8b699a5b9da8ae7e2cb0a84ea9e1b959ef83845fb8e0750ab2ff689a0a7e0b"
+    },
+    {
       "path": ".archon/scripts/test/open-pr.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -1107,7 +1125,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "92912e4dff5ea9e9d34f03b2682d3c04ed81bf7dc420cf9ecfb8bbb4fe348d6b"
+      "sha256": "35a329c023088ec29b167d204265aedfcff5f3ce4f283da47fe1f4f24d83d808"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
@@ -1295,7 +1313,7 @@
       "template": false,
       "origin": null,
       "kind": "hook",
-      "sha256": "68f17f7245fc90178583b04ea513050e88eb0465728ca99dfd4201610e420eed"
+      "sha256": "2168d603f9d977d6cc6141f58b9483d6e491a5220ba995dd439cce9b91bf8da2"
     },
     {
       "path": ".github/hooks/kit.json",
@@ -1304,7 +1322,7 @@
       "template": false,
       "origin": ".claude/settings.json",
       "kind": "hook",
-      "sha256": "adba4884c8bfda356397d768198e6683e8ecfff4eed35982020e9c446ab9ce4c"
+      "sha256": "7566cba5634189716249073c6e2f94dc0b77e835a7c54ce2f0e6a70f6c95ceb7"
     },
     {
       "path": ".github/instructions/general.instructions.md",
