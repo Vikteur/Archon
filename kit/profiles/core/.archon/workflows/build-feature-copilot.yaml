@@ -85,6 +85,7 @@ nodes:
     prompt: |
       Request: $ARGUMENTS
       Ticket: $ticket.output.task $ticket.output.title (its full text is in $ARTIFACTS_DIR/ticket.md).
+      Read files with `view`, folders with `glob` and text with `grep`, one call each; never `cat`, `ls` or `echo` in the shell (the fence denies them).
       Read $ARTIFACTS_DIR/ticket.md and $ARTIFACTS_DIR/plan-context.md first; read a file only for what they do not say,
       and each file once.
       Look code and the contract up with the CLIs first, from the repo root; the MCP tool of the same name answers
@@ -133,6 +134,7 @@ nodes:
       Request: $ARGUMENTS
       Ticket: $ticket.output.task $ticket.output.title. Read its full text in $ARTIFACTS_DIR/ticket.md first; never
       search the disk for it.
+      Read files with `view`, folders with `glob` and text with `grep`, one call each; never `cat`, `ls` or `echo` in the shell (the fence denies them).
       Then read $ARTIFACTS_DIR/plan-context.md (dependency tickets, modules, workflow nodes, docs/memory.md sections,
       every script's header and test) and $ARTIFACTS_DIR/explore.md (the code the request touches). Read a file only for
       what they do not say, and read each file once, a script too, with the Read tool: note what you need the first
@@ -395,6 +397,7 @@ nodes:
             - here: `schema` for the fields a mother, fixture or request body needs; `where` for an operation's existing@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
               HTTP tests and unit tests, to extend them instead of writing a second one.@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
             Grep stays the tool for text, config, logs and strings; read a file only for what these leave out.
+            Read files with `view`, folders with `glob` and text with `grep`, one call each; never `cat`, `ls` or `echo` in the shell (the fence denies them).
             Read $ARTIFACTS_DIR/step.md: the step to work on, cut from plan.md (its n, its lines, the steps folded into it,
             the owner decisions and the plan's answers). Read plan.md only for what step.md leaves out, and mark the step
             in plan.md. No step.md: read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its
@@ -507,6 +510,7 @@ nodes:
           mcp: { path: .archon/mcp/build-tools.json, optional: true }
           prompt: |
             Request: $ARGUMENTS
+            Read files with `view`, folders with `glob` and text with `grep`, one call each; never `cat`, `ls` or `echo` in the shell (the fence denies them).
             Read $ARTIFACTS_DIR/step.md: the step to work on, cut from plan.md (its n, its lines, the steps folded into it,
             the owner decisions and the plan's answers). Read plan.md only for what step.md leaves out, and mark the step
             in plan.md. No step.md: read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its
@@ -652,6 +656,7 @@ nodes:
       change no commit holds from git, file by file, before you mutate anything: it is a mutation an earlier attempt did
       not revert, or a fix it did not commit (make that fix again, tests first). The commits listed are an earlier
       attempt's fixes: keep them, never commit a fix twice, and review on from there.
+      Read files with `view`, folders with `glob` and text with `grep`, one call each; never `cat`, `ls` or `echo` in the shell (the fence denies them).
       Read $ARTIFACTS_DIR/review-tests.log: the review-tests node ran `AFFECTED_NO_SYNC=1 bash
       .claude/scripts/affected-check.sh` over the branch once, so do not run it again before you fix anything.
       A long run is cut to its failure lines and its last 200 lines; grep $ARTIFACTS_DIR/review-tests-full.log for
@@ -884,6 +889,7 @@ nodes:
           effort: medium
           denied_tools: ["Bash(*--no-verify*)", "Bash(*commit -n *)", "Bash(*commit-tickets*)", "Bash(*backlog task*)", "Bash(*sync-main*)", "Bash(*git push*@@KIT_BASE_BRANCH@@*)", "Bash(*git push*HEAD:@@KIT_BASE_BRANCH@@*)", "Bash(cd @@KIT_PROJECT_DIR@@ &&*)", "Bash(cd @@KIT_PROJECT_DIR@@;*)", "Bash(git -C @@KIT_PROJECT_DIR@@ *)"]
           prompt: |
+            Read files with `view`, folders with `glob` and text with `grep`, one call each; never `cat`, `ls` or `echo` in the shell (the fence denies them).
             Read $ARTIFACTS_DIR/ci-diagnosis.md and apply the fix, tests first: when the fix changes behaviour, commit
             the test that shows the failure alone, then the fix. Run the tests, commit, and `git push`.
             This node may run again after a transient failure; the next attempt starts on the worktree as the last one
