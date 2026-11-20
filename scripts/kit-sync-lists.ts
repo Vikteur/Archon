@@ -43,7 +43,7 @@ export const PROFILE_META: Record<
   java: {
     requires: ['core'],
     description:
-      'Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/PIT/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents.',
+      'Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents.',
   },
   'java-quarkus': {
     requires: ['java'],
@@ -213,6 +213,8 @@ export const NEVER_SHIP_GROUPS: Record<string, string[]> = {
       '.githooks/pre-push',
       'scripts/test/pre-push.test.sh',
     ],
+  'The mutation gate (PIT on the changed domain, usecase and gateway classes), never wired into a build.':
+    ['.claude/scripts/mutation-gate.sh', 'scripts/test/mutation-gate.test.sh'],
 };
 
 export const NEVER_SHIP: string[] = Object.values(NEVER_SHIP_GROUPS).flat();
@@ -334,7 +336,6 @@ export const FILES: Record<Profile, string[]> = {
     '.claude/scripts/ci-workflow-check.sh',
     '.claude/scripts/class-version-check.sh',
     '.claude/scripts/image-check.sh',
-    '.claude/scripts/mutation-gate.sh',
     '.claude/scripts/pin-proof-check.sh',
     '.claude/scripts/test-set-coverage.java',
     '.claude/scripts/test-set-coverage.sh',

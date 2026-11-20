@@ -13,7 +13,7 @@ export GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=core.autocrlf GIT_CONFIG_VALUE_0=fals
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
 export CI_LOCAL_ROOT=$root/ci CI_LEDGER=$root/ci/ledger.jsonl CI_PLAN_RUNNER=runner-1 CI_PLAN_SALT=salt-1 \
   CI_PLAN_CONTRACT_COMMIT=1111111111111111111111111111111111111111 CI_PLAN_BASE_IMAGES="eclipse-temurin:26 sha256:aa" \
-  CI_PLAN_NOW=1792500000 CI_PLAN_MUTATION_BASE=main
+  CI_PLAN_NOW=1792500000
 unset CI_SCOPE CI_REUSE CI_PLAN_SCOPE_FILE CI_PLAN_SALT_FILE CI_PLAN_MAX_AGE
 mkdir -p "$CI_LOCAL_ROOT"; : > "$CI_LEDGER"
 
@@ -30,9 +30,6 @@ jobs:
   test:
     steps:
       - run: ./gradlew build && bash scripts/test/unit.test.sh
-  mutation:
-    steps:
-      - run: bash .claude/scripts/mutation-gate.sh
   image:
     steps:
       - run: bash scripts/test/image.test.sh
@@ -44,7 +41,6 @@ cp "$here/.github/ci-inputs.yml" "$r/.github/ci-inputs.yml"
 cp "$script" "$r/.claude/scripts/ci-plan.sh"
 echo 'echo unit; cat config/settings.txt' > "$r/scripts/test/unit.test.sh"
 echo 'docker build .' > "$r/scripts/test/image.test.sh"
-cp "$here/.claude/scripts/mutation-gate.sh" "$r/.claude/scripts/mutation-gate.sh"
 echo 'a=1' > "$r/config/settings.txt"
 printf '@@KIT_CONTRACT_TAG_KEY@@=v1.0.0\n' > "$r/gradle.properties"
 echo 'echo gradle' > "$r/gradlew"
@@ -83,8 +79,8 @@ green() { # green <sha> <job> <fp> [extra jq object]
 out=$(plan "$c0")
 check "a header line" "$(printf '%s\n' "$out" | head -n 1 | cut -d' ' -f1-2)" "# ci-plan"
 check "one line per ci.yml job, in its order" "$(printf '%s\n' "$out" | sed 1d | cut -d' ' -f1 | sort | tr '\n' ' ')" \
-  "archon-scripts image mutation test "
-check "every job has a fingerprint" "$(printf '%s\n' "$out" | sed 1d | grep -cE ' fp=[0-9a-f]{64}$')" 4
+  "archon-scripts image test "
+check "every job has a fingerprint" "$(printf '%s\n' "$out" | sed 1d | grep -cE ' fp=[0-9a-f]{64}$')" 3
 check "an empty ledger reuses nothing" "$(printf '%s\n' "$out" | sed 1d | cut -d' ' -f2 | sort -u)" run
 check "the plan is deterministic" "$(plan "$c0")" "$out"
 check "the reason goes to stderr" "$(grep -c 'test: run, no green run' "$root/err")" 1
@@ -97,7 +93,7 @@ mv "$CI_LEDGER.off" "$CI_LEDGER"
 # --- which change moves which fingerprint -------------------------------------------------------------------------
 c_backlog=$(commit backlog backlog/tasks/task-2.md 'new task' docs/retro/r2.md 'r2' docs/tokenomics/daily-token-reports/d2.md 'd')
 o_backlog=$(plan "$c_backlog")
-for j in test mutation image; do
+for j in test image; do
   check "a bookkeeping-only change keeps the $j fingerprint" "$(fp $j "$o_backlog")" "$(fp $j "$out")"
 done
 [ "$(fp archon-scripts "$o_backlog")" != "$(fp archon-scripts "$out")" ]
@@ -117,22 +113,21 @@ o_test=$(plan "$c_test")
 # pipeline-script change does not.
 [ "$(fp image "$o_test")" != "$(fp image "$o_backlog")" ]; check "a src/test change moves image (its Gradle suites)" "$?" 0
 check "an .archon-only change keeps the image fingerprint" "$(fp image "$o_arch")" "$(fp image "$o_backlog")"
-check "a change outside the targets keeps mutation" "$(fp mutation "$o_test")" "$(fp mutation "$o_backlog")"
 c_main=$(commit src-main app/src/main/java/x/A.java 'class A { int y; }')
 o_main=$(plan "$c_main")
 [ "$(fp image "$o_main")" != "$(fp image "$o_test")" ]; check "a src/main change moves image" "$?" 0
 c_ci=$(commit ci .github/workflows/ci.yml "$(cat "$r/.github/workflows/ci.yml")
 # a comment")
 o_ci=$(plan "$c_ci")
-check "a ci.yml edit moves every job" "$(for j in test mutation image archon-scripts; do [ "$(fp $j "$o_ci")" != "$(fp $j "$o_main")" ] && echo x; done | wc -l | tr -d ' ')" 4
+check "a ci.yml edit moves every job" "$(for j in test image archon-scripts; do [ "$(fp $j "$o_ci")" != "$(fp $j "$o_main")" ] && echo x; done | wc -l | tr -d ' ')" 3
 c_man=$(commit manifest .github/ci-inputs.yml "$(cat "$r/.github/ci-inputs.yml")
 # a comment")
 o_man=$(plan "$c_man")
-check "a manifest change moves every job" "$(for j in test mutation image archon-scripts; do [ "$(fp $j "$o_man")" != "$(fp $j "$o_ci")" ] && echo x; done | wc -l | tr -d ' ')" 4
+check "a manifest change moves every job" "$(for j in test image archon-scripts; do [ "$(fp $j "$o_man")" != "$(fp $j "$o_ci")" ] && echo x; done | wc -l | tr -d ' ')" 3
 c_self=$(commit self .claude/scripts/ci-plan.sh "$(cat "$script")
 # changed")
 o_self=$(plan "$c_self")
-check "a planner change in the tree moves every job" "$(for j in test mutation image archon-scripts; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 4
+check "a planner change in the tree moves every job" "$(for j in test image archon-scripts; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 3
 check "another salt moves the fingerprint" "$( [ "$(CI_PLAN_SALT=salt-2 plan "$c_self" | grep '^test ')" != "$(line test "$o_self" | sed 's/^/test /')" ] && echo moved)" moved
 check "another runner class moves the fingerprint" "$( [ "$(CI_PLAN_RUNNER=runner-2 plan "$c_self" | grep '^archon-scripts ')" != "archon-scripts $(line archon-scripts "$o_self")" ] && echo moved)" moved
 check "another contract commit moves test" "$( [ "$(fp test "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" != "$(fp test "$o_self")" ] && echo moved)" moved
@@ -175,23 +170,6 @@ grep -q 'test: exclusion backlog/ cancelled, scripts/test/unit.test.sh names bac
 check "code keeps the word rule: a bare backlog in a script cancels" "$?" 0
 c_comment=$(commit restore scripts/test/unit.test.sh 'echo unit; cat config/settings.txt')
 
-# Mutation targets: a domain main class makes Gradle run, so the whole tree counts.
-git -C "$r" checkout -q -b feat "$c_comment"
-c_dom=$(commit domain foo-domain/src/main/java/x/Y.java 'class Y { int z; }')
-o_dom=$(plan "$c_dom" --explain)
-grep -q 'mutation: .* targets 1;' "$root/err"; check "a domain main class is a mutation target" "$?" 0
-c_dom2=$(commit domain-doc docs/memory.md 'memory 2')
-[ "$(fp mutation "$(plan "$c_dom2")")" != "$(fp mutation "$o_dom")" ]; check "with a target, any tree change moves mutation" "$?" 0
-check "without a target, docs/ does not move mutation" "$(fp mutation "$(CI_PLAN_MUTATION_BASE=$c_dom plan "$c_dom2")")" \
-  "$(fp mutation "$(CI_PLAN_MUTATION_BASE=$c_dom plan "$c_dom")")"
-check "no base for the targets: mutation runs without a fingerprint" "$(line mutation "$(CI_PLAN_MUTATION_BASE=nope plan "$c_dom2")")" "run fp=-"
-check "the tree's gate lists the targets: a domain test class is none" \
-  "$(plan "$(commit dom-test foo-domain/src/test/java/x/YTest.java 'class YTest {}')" --explain > /dev/null; grep -c 'mutation: .* targets 1;' "$root/err")" 1
-c_oldgate=$(commit old-gate .claude/scripts/mutation-gate.sh 'echo "FAIL: unknown argument $1"; exit 2')
-check "a gate without --list-targets: mutation runs without a fingerprint" "$(line mutation "$(plan "$c_oldgate")")" "run fp=-"
-grep -q 'mutation: run, no base for the mutation targets, or .claude/scripts/mutation-gate.sh cannot list them' "$root/err"
-check "and says why" "$?" 0
-git -C "$r" checkout -q main
 
 # .dockerignore that does not deny by default: the image reads the whole tree.
 c_di=$(commit dockerignore .dockerignore 'build/')
@@ -287,7 +265,7 @@ c_x=$(commit conflict docs/retro/r4.md 'other')
 git -C "$r" checkout -q main
 o_x=$(plan "$c_x" --base "$c_m")
 check "a conflict runs every job without a fingerprint" "$(printf '%s\n' "$o_x" | sed 1d | sort -u | cut -d' ' -f2- | sort -u)" "run fp=-"
-check "a conflict still lists every job" "$(printf '%s\n' "$o_x" | sed 1d | wc -l | tr -d ' ')" 4
+check "a conflict still lists every job" "$(printf '%s\n' "$o_x" | sed 1d | wc -l | tr -d ' ')" 3
 
 # --- an invalid manifest ------------------------------------------------------------------------------------------
 git -C "$r" checkout -q -b bad "$c_m"
@@ -312,7 +290,7 @@ git -C "$r" rm -q .claude/scripts/ci-plan.sh && c_np=$(commit no-planner)
 git -C "$r" checkout -q main
 o_none=$(bash "$script" --self-from "$c_np" "$r" "$c_m" 2>/dev/null)
 check "a base without a planner: every job runs" "$(printf '%s\n' "$o_none" | sed 1d | cut -d' ' -f2- | sort -u)" "run fp=-"
-check "a base without a planner: every job listed" "$(printf '%s\n' "$o_none" | sed 1d | wc -l | tr -d ' ')" 4
+check "a base without a planner: every job listed" "$(printf '%s\n' "$o_none" | sed 1d | wc -l | tr -d ' ')" 3
 
 # --- audit --------------------------------------------------------------------------------------------------------
 wt=$root/wt
@@ -326,14 +304,14 @@ cat > "$root/trace" <<TRACE
 101 openat(AT_FDCWD</x>, "/etc/passwd", O_RDONLY) = 7</etc/passwd>
 101 openat(AT_FDCWD</x>, ".git/HEAD", O_RDONLY) = 8<$wtp/.git>
 TRACE
-a_out=$(CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-trace test "$wt" "$root/trace" 2>/dev/null); a_rc=$?
+a_out=$(bash "$script" --audit-trace test "$wt" "$root/trace" 2>/dev/null); a_rc=$?
 check "audit: a read of an excluded file is a violation" "$(printf '%s\n' "$a_out" | grep -c '^violation test backlog/tasks/task-1.md$')" 1
 check "audit: a listed folder outside the inputs is a violation" "$(printf '%s\n' "$a_out" | grep -c '^violation test docs/retro/$')" 1
 check "audit: the summary" "$(printf '%s\n' "$a_out" | head -n 1)" "audit test: 2 tracked files read, 2 outside its inputs"
 check "audit: exit 1 on a violation" "$a_rc" 1
-CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-trace archon-scripts "$wt" "$root/trace" > /dev/null 2>&1
+bash "$script" --audit-trace archon-scripts "$wt" "$root/trace" > /dev/null 2>&1
 check "audit: archon-scripts reads the whole tree, no violation" "$?" 0
-CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-trace test "$wt" "$root/trace" --record > /dev/null 2>&1
+bash "$script" --audit-trace test "$wt" "$root/trace" --record > /dev/null 2>&1
 check "audit --record writes violation lines" "$(jq -r 'select(.event == "violation") | .path' "$CI_LEDGER" | sort | tr '\n' ' ')" \
   "backlog/tasks/task-1.md docs/retro/ "
 check "a recorded violation stops the reuse" "$(CI_REUSE=live plan "$c_m" | grep -c '^test reuse')" 0
@@ -355,7 +333,7 @@ while [ "$1" != -- ]; do [ "$1" = -o ] && { : > "$2"; shift; }; shift; done; shi
 "$@"; echo "strace: ptrace(PTRACE_LISTEN,pid:1,sig:0): Input/output error" >&2; exit 1
 SH
   chmod +x "$root/badstrace/strace"
-  CI_PLAN_MUTATION_BASE=HEAD PATH=$root/badstrace:$PATH bash "$script" --audit-run test "$wt" -- bash -c 'exit 0' 2> "$root/err"
+  PATH=$root/badstrace:$PATH bash "$script" --audit-run test "$wt" -- bash -c 'exit 0' 2> "$root/err"
   check "strace ends 1, the command 0: the command's exit status" "$?" 0
   grep -q "strace ended 1, the command 0" "$root/err"; check "strace ends 1, the command 0: said so" "$?" 0
   # strace quitting before the command (its PTRACE_LISTEN race is fatal) does not cut the step short: audit_run waits.
@@ -364,7 +342,7 @@ SH
 while [ "$1" != -- ]; do [ "$1" = -o ] && { : > "$2"; shift; }; shift; done; shift
 "$@" & sleep 1; echo "strace: ptrace(PTRACE_LISTEN,pid:1,sig:0): Input/output error" >&2; exit 1
 SH
-  CI_PLAN_MUTATION_BASE=HEAD PATH=$root/badstrace:$PATH bash "$script" --audit-run test "$wt" -- \
+  PATH=$root/badstrace:$PATH bash "$script" --audit-run test "$wt" -- \
     bash -c 'sleep 3; exit 6' 2> "$root/err"
   check "strace quits first: the command's exit status" "$?" 6
   grep -q "strace ended 1 before the command" "$root/err"; check "strace quits first: said so" "$?" 0
@@ -372,17 +350,17 @@ else
   echo "skip: this suite runs traced, the fake strace is not called"
 fi
 if command -v strace > /dev/null 2>&1 && strace -f -qq -o /dev/null true 2>/dev/null; then
-  CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-run test "$wt" --report "$root/report" -- cat backlog/tasks/task-1.md > /dev/null 2>&1
+  bash "$script" --audit-run test "$wt" --report "$root/report" -- cat backlog/tasks/task-1.md > /dev/null 2>&1
   check "strace: the command's exit status" "$?" 0
   check "strace: the excluded read is reported" "$(grep -c '^violation test backlog/tasks/task-1.md$' "$root/report")" 1
   # A process the command leaves running (a Gradle daemon) is stopped when the command ends: strace -f waits for it.
-  CI_PLAN_MUTATION_BASE=HEAD timeout 60 bash "$script" --audit-run test "$wt" -- \
+  timeout 60 bash "$script" --audit-run test "$wt" -- \
     bash -c 'setsid sleep 301 > /dev/null 2>&1 & exit 4' 2> "$root/err"
   check "strace: a process left running does not hold the command, its exit status" "$?" 4
   check "strace: the process left running is stopped and counted" \
     "$(grep -c 'stopped 1 process(es) the command left running' "$root/err")" 1
   # Under an outer trace strace cannot attach: the command runs untraced and the audit says so.
-  CI_PLAN_MUTATION_BASE=HEAD timeout 60 strace -f -qq -o /dev/null bash "$script" --audit-run test "$wt" -- \
+  timeout 60 strace -f -qq -o /dev/null bash "$script" --audit-run test "$wt" -- \
     bash -c 'exit 5' 2> "$root/err"
   check "already traced: the command's exit status" "$?" 5
   grep -q 'already traced' "$root/err"; check "already traced: said so" "$?" 0
@@ -399,8 +377,6 @@ check "archon-scripts is the whole tree, excluding nothing" "$(yq -o=json -I0 '[
 check "test is narrowed to the Java side, not the whole tree" "$(yq '.jobs.test.inputs[]' "$man" | grep -cxE '\.|\.archon/')" 0
 check "the planner, manifest and workflow are inputs of every job" \
   "$(yq '.always[]' "$man" | grep -cxE '\.github/ci-inputs\.yml|\.github/workflows/ci\.yml|\.claude/scripts/ci-plan\.sh')" 3
-check "the planner keeps no copy of the target rule (it asks mutation-gate.sh --list-targets)" \
-  "$(grep -c 'src/main/java' "$script")" 0
 
 echo "ci-plan tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

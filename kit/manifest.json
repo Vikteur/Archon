@@ -13,7 +13,7 @@
       "requires": [
         "core"
       ],
-      "description": "Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/PIT/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents."
+      "description": "Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents."
     },
     "java-quarkus": {
       "requires": [
@@ -596,7 +596,7 @@
       "template": false,
       "origin": ".archon/scripts/test/build-feature.test.sh",
       "kind": "script",
-      "sha256": "82afc5ffd5088daee98de5ff99c9980a394ab20f82e179cdbe422c89aa5e62fb"
+      "sha256": "25701362a6de918e8771601804a96d9318c18c7b79f15d55d2b189c70f8da413"
     },
     {
       "path": ".archon/scripts/test/ci-by-sha.test.sh",
@@ -758,7 +758,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-spike.test.sh",
       "kind": "script",
-      "sha256": "0c357e0d68017eb3ddf0115f37c3fe65a6e03aa2bdc094d32b7937724d699ad4"
+      "sha256": "a21bb0ebfa749b1bbdb0a7a1c501870f6adc6ba1080afaa84ca5205a33217f2b"
     },
     {
       "path": ".archon/scripts/test/pr-refresh.test.sh",
@@ -803,7 +803,7 @@
       "template": false,
       "origin": ".archon/scripts/test/red-triage.test.sh",
       "kind": "script",
-      "sha256": "b91a217415e0983fb8ed469c59c05a27cac9b15f587969192e04bc0822d33369"
+      "sha256": "43d79db3d244a35d9d3eac3399d6faea0aa8cdb3c658c03d934fdc06dd18eb41"
     },
     {
       "path": ".archon/scripts/test/retro-fence.test.sh",
@@ -947,7 +947,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "ea2cfd34c4f1a969ba8d445d3783f1842aa4b69c12d85ec11be6547ed1ad78e4"
+      "sha256": "b92a42e064e1c600acbfdad346f2842e98a222e07293381b4d02508e37d0049b"
     },
     {
       "path": ".archon/workflows/build-feature.yaml",
@@ -956,7 +956,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature.yaml",
       "kind": "workflow",
-      "sha256": "570f72c333370be8dd31a987250d0b08f180eeddc258bcdec1e370b0a8c39117"
+      "sha256": "9a7bbe8b72a15f444f66ac1afb02911a2c6cbcceb58728538dbb85a6ed313634"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1163,7 +1163,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-plan.sh",
       "kind": "script",
-      "sha256": "10cb298c7720ea847ad5ca95d617158335a8da5857031c070ab65a511d41438f"
+      "sha256": "1d0c2f4b1dfd23b1d05c13b89d13db683ddb1186a2385310390784f1aa0bda89"
     },
     {
       "path": ".claude/scripts/ci-queue.sh",
@@ -1672,7 +1672,7 @@
       "template": true,
       "origin": "scripts/test/ci-plan.test.sh",
       "kind": "script",
-      "sha256": "2c75818cfc2573d112e42fc96997a3c4bc8ce3863a0926e7a8ceae50a9f8154b"
+      "sha256": "8777225475bb2b45da3c14f51e36c32bedb8afa6bf5440a522c1dc8b0067764e"
     },
     {
       "path": "scripts/test/ci-queue.test.sh",
@@ -1771,7 +1771,7 @@
       "template": false,
       "origin": ".claude/scripts/affected-check.sh",
       "kind": "script",
-      "sha256": "77632667a5513b8d4d9b53428ba9ff2017e68a0e82ecc0e588b189ed3ea323bb"
+      "sha256": "d961828ab55869da6b52d1dc0d1805d9d10fc5692430bbc69899d1c4bfa95fe3"
     },
     {
       "path": ".claude/scripts/build-shape-check.sh",
@@ -1808,15 +1808,6 @@
       "origin": ".claude/scripts/image-check.sh",
       "kind": "script",
       "sha256": "1d3fe6ffce3fe1a604cf2bf11a0b80604945c75341335639e48f57351b260688"
-    },
-    {
-      "path": ".claude/scripts/mutation-gate.sh",
-      "profile": "java",
-      "mode": "0644",
-      "template": false,
-      "origin": ".claude/scripts/mutation-gate.sh",
-      "kind": "script",
-      "sha256": "41dc1184ce40fa250334a17367b1bbd5b291cb9828352be295d18db3d8905601"
     },
     {
       "path": ".claude/scripts/pin-proof-check.sh",
@@ -2349,7 +2340,7 @@
       "template": false,
       "origin": null,
       "kind": "doc",
-      "sha256": "04714781127b5db9cf841aeb069ddaca2de59ff8ea3fa41c6dfc4c832ea4e665",
+      "sha256": "cbb9078a9be99b1a1257fbfa0f79a83f076ed8b3d96861b2b92a9b28292c6c4a",
       "createOnly": true
     },
     {
@@ -2665,7 +2656,7 @@
       "template": false,
       "origin": "scripts/test/affected-check.test.sh",
       "kind": "script",
-      "sha256": "1a79c3b596112c03207bb77432d8f03d9290f65b456c2b62073f768bbdc0dbb9"
+      "sha256": "95f2f8f35e5223cc2fd6df31365f5dca55b1c911224cc37c2dc8bdc7ef11d17c"
     },
     {
       "path": "scripts/test/ci-workflow-scope.test.sh",
@@ -2675,33 +2666,6 @@
       "origin": null,
       "kind": "script",
       "sha256": "6a4693364c7a6890699935e36443c80763b8f5a9d4da4b70a17cd97aa7ae431d"
-    },
-    {
-      "path": "scripts/test/fixtures/mutation-gate/killed.xml",
-      "profile": "java",
-      "mode": "0644",
-      "template": false,
-      "origin": "scripts/test/fixtures/mutation-gate/killed.xml",
-      "kind": "script",
-      "sha256": "d4b73b2b44012f40663ca5e9183049593890864501dc0c2be5902e51c34092cb"
-    },
-    {
-      "path": "scripts/test/fixtures/mutation-gate/survived.xml",
-      "profile": "java",
-      "mode": "0644",
-      "template": false,
-      "origin": "scripts/test/fixtures/mutation-gate/survived.xml",
-      "kind": "script",
-      "sha256": "c1377413b2d0b799c259f7c6c57b03d5f0d9a1b52cbd82bb09ffcdc7bfb2bf8c"
-    },
-    {
-      "path": "scripts/test/mutation-gate.test.sh",
-      "profile": "java",
-      "mode": "0644",
-      "template": false,
-      "origin": "scripts/test/mutation-gate.test.sh",
-      "kind": "script",
-      "sha256": "5b4e47c24ea4890784dd156f93a0224d750c71a99957af3ab0d42df8d7e116ca"
     },
     {
       "path": "scripts/test/pin-proof-check.test.sh",
@@ -2746,7 +2710,7 @@
       "template": false,
       "origin": ".github/ci-inputs.yml",
       "kind": "config",
-      "sha256": "d8066a2e158b1092d65766074eb9715571829a7d30bd92d4b669c75835a6ca2e"
+      "sha256": "637b90768587c723bab9e7d6a3e22a51628110ebbc7a34aa63d51ac05644578e"
     },
     {
       "path": ".github/skills/api-first-controller/SKILL.md",
@@ -2827,7 +2791,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "b8dd486f01a75a2bc98928f916c8f0bcdd9ce4438a5a8a46b50d94bb6b6040d5"
+      "sha256": "e6887af6331b7ea76198d777708d9e7d34b6a8494af88e37b712eb9e89db8bc2"
     },
     {
       "path": "docs/code-maps/api-first-controller.md",
@@ -3054,7 +3018,7 @@
       "template": false,
       "origin": ".github/ci-inputs.yml",
       "kind": "config",
-      "sha256": "4e1b8616eb81566fdbf12a516b5bcd30e16e14085c0a5dcfa8d68f69cb9cf592"
+      "sha256": "84ade3dde1d2d8cbfd571a34f1ed146fcad4ff0472409805e1f08f25dde36424"
     },
     {
       "path": ".github/skills/api-first-controller/SKILL.md",
@@ -3162,7 +3126,7 @@
       "template": true,
       "origin": ".github/workflows/ci.yml",
       "kind": "config",
-      "sha256": "47e52cc80f5ecfeddc8154f995092e2a1f829dda73a5017f42dd154ccc51b07a"
+      "sha256": "a370c16a71d69ca3ae33ddbcd6faee63afed6346b76d137738472823ae7b8837"
     },
     {
       "path": "docs/code-maps/api-first-controller.md",

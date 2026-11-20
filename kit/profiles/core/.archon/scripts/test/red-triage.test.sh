@@ -135,7 +135,7 @@ check "8 runner infra reruns, green" $([ "$(field class)" = green ] && [ "$(fiel
 check "8 warns when the status does not say green on rerun" $(grep -q "no status says 'green on rerun after" <<< "$err"; echo $?)
 
 # 9. An infra job beside an own one: own, and no rerun.
-reset_all; red "$sha" test; red "$sha" mutation; joblog test "Address already in use"; joblog mutation "Mutation score 60% < 80%"
+reset_all; red "$sha" test; red "$sha" lint; joblog test "Address already in use"; joblog lint "3 lint problems"
 run -- "$sha"
 check "9 own beats infra; no rerun" $([ "$(field class)" = own ] && [ -z "$log" ]; echo $?)
 
@@ -150,7 +150,7 @@ run RED_TRIAGE_TODAY=2026-10-24 -- "$sha"
 check "10b expired signature: own, no rerun" $([ "$(field class)" = own ] && [ -z "$log" ]; echo $?)
 check "10b says it expired" $(grep -q 'expired on 2026-10-24' <<< "$err"; echo $?)
 # 10c. Listed for another job: not flaky here.
-reset_all; red "$sha" mutation; mkdir -p "$ci/$short"; echo "ClockTest > ticks FAILED" > "$ci/$short/mutation.log"
+reset_all; red "$sha" lint; mkdir -p "$ci/$short"; echo "ClockTest > ticks FAILED" > "$ci/$short/lint.log"
 run -- "$sha"
 check "10c other job's signature: own" $([ "$(field class)" = own ]; echo $?)
 # 10d. Flaky still red after its rerun: own (the signature did not explain it), exit 0.

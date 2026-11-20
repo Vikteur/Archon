@@ -100,10 +100,9 @@ nodes:
     # No Gradle and no test suite in the plan (owner decision 2026-10-18): the wrapper, every script that runs Gradle and
     # every test-suite run are denied. The one exception is .archon/scripts/plan-spike.sh, which matches none of these.
     # .archon/scripts/test/plan-spike.test.sh holds this list to every script that runs ./gradlew.
-    denied_tools: ["Bash(*gradlew*)", "Bash(*affected-check*)", "Bash(*build-shape-check*)", "Bash(*mutation-gate*)",
-      "Bash(*step-gate*)", "Bash(*ci-local*)", "Bash(*local-ci-run*)", "Bash(bash *.test.sh*)", "Bash(sh *.test.sh*)",
-      "Bash(./*.test.sh*)", "Bash(scripts/test/*.test.sh*)", "Bash(.archon/scripts/test/*.test.sh*)", "Bash(*smoke*)",
-      "Monitor"]
+    denied_tools: ["Bash(*gradlew*)", "Bash(*affected-check*)", "Bash(*build-shape-check*)", "Bash(*step-gate*)",
+      "Bash(*ci-local*)", "Bash(*local-ci-run*)", "Bash(bash *.test.sh*)", "Bash(sh *.test.sh*)", "Bash(./*.test.sh*)",
+      "Bash(scripts/test/*.test.sh*)", "Bash(.archon/scripts/test/*.test.sh*)", "Bash(*smoke*)", "Monitor"]
     prompt: |
       Request: $ARGUMENTS
       Backlog ticket: $ticket.output.task. Read its full text in $ARTIFACTS_DIR/ticket.md first (it is there when the
@@ -192,8 +191,8 @@ nodes:
       The templates the `## Scaffold` tables of those skills' docs/code-maps leaves link, and those leaves, are the
       conventions: a repo's own templates live in docs/scaffold-templates/project/; the kit's, one level up, are worked
       examples that no leaf links.
-      Never write a step that only runs tests, checks or gates: affected-check, tdd-check, the mutation gate, review and
-      CI run them all later in this workflow. An acceptance criterion a check proves goes under a `## Checks for review`
+      Never write a step that only runs tests, checks or gates: affected-check, tdd-check, review and CI run them all
+      later in this workflow. An acceptance criterion a check proves goes under a `## Checks for review`
       section (the check and the criterion), not in a step. A step that adds no behaviour and only updates docs, or
       only runs one named generator, cannot have a failing test: write it as `- [ ] (verify only) ...`. A step that only adds tests for behaviour that already exists (it pins the
       behaviour) is `- [ ] (pin only) ...`: its tests are proven by a mutation that turns them red.
@@ -462,7 +461,7 @@ nodes:
             A step that pushes, opens the pull request or reads CI is done by later nodes of this workflow: do not do
             it, mark it `- [x] (done by the workflow's open-pr and ci nodes)` and commit nothing for it.
             A step marked `- [ ] (verify only)` has no tests: make the docs change it names, or run the one generator it
-            names, and run no test suite and no gate (affected-check, tdd-check, mutation and review run later in this
+            names, and run no test suite and no gate (affected-check, tdd-check and review run later in this
             workflow); commit only the files that changed (if any), and mark it `- [x] (verify only) ...`.
             A step marked `- [ ] (pin only)` has its tests committed: run `AFFECTED_NO_SYNC=1
             AFFECTED_BASE="$(cat "$ARTIFACTS_DIR/step-base.sha")" bash .claude/scripts/affected-check.sh`, mark it
@@ -540,9 +539,8 @@ nodes:
     bash: |
       git rev-parse HEAD > "$ARTIFACTS_DIR/review-base.sha" && echo "review-base: $(cut -c1-12 "$ARTIFACTS_DIR/review-base.sha")"
 
-  # The branch-wide test run review reads (owner decision 2026-10-23, docs/memory.md): affected-check, with the mutation
-  # gate on a changed main class of a domain, usecase or gateway module, run once by a script instead of by the review
-  # agent. It never fails the node: a red run is the review's to read and fix.
+  # The branch-wide test run review reads (owner decision 2026-10-23, docs/memory.md): affected-check, run once by a
+  # script instead of by the review agent. It never fails the node: a red run is the review's to read and fix.
   - id: review-tests
     depends_on: [review-base]
     timeout: 3600000
@@ -565,15 +563,11 @@ nodes:
       Grep stays the tool for text, config, logs and strings; without the tools, read as before.
       On Copilot CLI an organization's MCP registry policy can block these servers while their CLIs still work: before you read as before, try `codegraph explore|node|callers|callees|impact|query <args>` (no other codegraph subcommand) and `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>`.
       Read $ARTIFACTS_DIR/review-tests.log: the review-tests node ran `AFFECTED_NO_SYNC=1 bash
-      .claude/scripts/affected-check.sh` over the branch once, so do not run it again before you fix anything. For a
-      changed main class of a domain, usecase or gateway module it ends with the mutation gate (PIT on those classes).
+      .claude/scripts/affected-check.sh` over the branch once, so do not run it again before you fix anything.
       A failing test in it is an issue.
       A green suite is not the verdict; check each of these and treat a miss as an issue:
-      - Mutations: do not hand-mutate a main class of a domain, usecase or gateway module: PIT covers it. Take the
-        mutation gate's result from that log: every `SURVIVED:` or `NO_COVERAGE:` line it prints is an issue (kill it
-        with a test; an equivalent mutant goes in config/mutation-accepted.txt with its reason). Hand-mutate only what
-        PIT does not cover, mainly the adapters: remove each guard line the branch adds there once, flip each new
-        condition, shift each boundary by one. Batch the mutations of one Gradle module into one run of its tests
+      - Mutations: hand-mutate what the branch adds: remove each guard line it adds once, flip each new condition,
+        shift each boundary by one. Batch the mutations of one Gradle module into one run of its tests
         (`./gradlew :<module>:test`, plus its `integrationTest`, `startupTest` or `resourceTest` when the tests that
         cover the lines are tagged for one) when they cannot hide each other: different methods, or different branches
         of one method; a red run names the failing tests, so split a batch only to tell which mutation one test

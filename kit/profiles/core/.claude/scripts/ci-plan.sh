@@ -21,8 +21,7 @@
 # $CI_LOCAL_ROOT/ci-plan.salt; none = "none"), the runner class (CI_PLAN_RUNNER, else OS, bash, git, java, node, yq, jq
 # and docker versions), the executed planner's blob, the job's manifest rule (.github/ci-inputs.yml) and the
 # exclusions that held, the git ls-tree lines of its inputs at the tested tree, the contract commit the pin of
-# gradle.properties resolves to (jobs with contract: true), the sorted mutation targets with their blobs (mutation),
-# and the local ids of the Dockerfile's base images (docker-context).
+# gradle.properties resolves to (jobs with contract: true), and the local ids of the Dockerfile's base images (docker-context).
 # Reuse sources come from the ledger CI_LEDGER (default $HOME/ci-local/ledger.jsonl), one JSON object a line,
 # read defensively (a line that does not parse, or lacks a field, is no source). A source is a record with
 #   event   "verdict" or "end"              sha     the commit the job ran on (40 hex), not this <sha>
@@ -36,8 +35,7 @@
 # stops every reuse of that job until its manifest rule changes.
 # Every job runs, and none reuses, when: --all or --audit; the kill switch is on (CI_SCOPE=all, or the file
 # CI_PLAN_SCOPE_FILE, default $CI_LOCAL_ROOT/scope-all); the merge conflicts; the manifest is missing or invalid; the
-# ledger is missing. A contract job runs when the pin does not resolve or is a branch pin; mutation runs when its
-# targets cannot be computed (no base).
+# ledger is missing. A contract job runs when the pin does not resolve or is a branch pin.
 # Mode, CI_REUSE: shadow (the default) prints "run" and logs "would reuse" to stderr, with shadow=<sha> on the line;
 # live prints "reuse". Going live is the owner's switch, not this file's: CI_REUSE unset and the file
 # $CI_LOCAL_ROOT/reuse-live present is live too (owner decision 2026-10-23); ci-local.sh exports it as CI_REUSE=live.
@@ -50,17 +48,14 @@
 # made with `strace -f -qq -y -e trace=open,openat,openat2 -e status=successful`. --record appends the violations to
 # the ledger. Reads through git objects are invisible to strace.
 # CI_LOCAL_ROOT defaults to $HOME/ci-local. Overrides for tests: CI_PLAN_NOW (epoch), CI_PLAN_CONTRACT_COMMIT,
-# CI_PLAN_CONTRACT_REMOTE (default https://github.com/@@KIT_CONTRACT_REPO@@.git), CI_PLAN_BASE_IMAGES,
-# CI_PLAN_MUTATION_BASE (default origin/main, without --base).
+# CI_PLAN_CONTRACT_REMOTE (default https://github.com/@@KIT_CONTRACT_REPO@@.git), CI_PLAN_BASE_IMAGES.
 set -uo pipefail
 export LC_ALL=C
 
 SELF=${BASH_SOURCE[0]}
 # D3 v1: the only folders a job may leave out, and the only jobs that may leave them out.
 ALLOWED_EXCLUDE=" backlog/ docs/retro/ docs/tokenomics/daily-token-reports/ docs/tokenomics/ticket-token-reports/ "
-EXCLUDE_JOBS=" test mutation image "
-# The mutation gate: the tested tree's copy answers which changed paths are targets (--list-targets), the one rule.
-GATE_PATH=.claude/scripts/mutation-gate.sh
+EXCLUDE_JOBS=" test image "
 MANIFEST=.github/ci-inputs.yml
 WORKFLOW=.github/workflows/ci.yml
 PLANNER_PATH=.claude/scripts/ci-plan.sh
@@ -191,25 +186,6 @@ closure() {
   cat "$tmp/set"
 }
 
-# mutation_targets: "<path> <blob>" of each mutation target of the change, sorted; exit 1 when there is no base or
-# the tree's gate cannot list them (no gate, or one without --list-targets): then the job runs. The tree's copy is the
-# one that will run, and it is an input of the job, so a changed rule never reuses a run made under the old one.
-mutation_targets() {
-  local mb
-  if [ -n "$base" ]; then mb=$base
-  else
-    mb=$(git -C "$repo" merge-base "$sha" "${CI_PLAN_MUTATION_BASE:-origin/main}" 2>/dev/null) || return 1
-  fi
-  git -C "$repo" -c core.quotePath=false diff --name-only --diff-filter=d "$mb" "$tree" 2>/dev/null > "$tmp/changed" \
-    || return 1
-  git -C "$repo" show "$tree:$GATE_PATH" > "$tmp/gate.sh" 2>/dev/null || return 1
-  (cd "$tmp" && bash "$tmp/gate.sh" --list-targets < "$tmp/changed" > "$tmp/targets.raw" 2>/dev/null) || return 1
-  sort -u "$tmp/targets.raw" > "$tmp/targets"
-  while IFS= read -r p; do
-    echo "$p $(git -C "$repo" rev-parse "$tree:$p" 2>/dev/null)"
-  done < "$tmp/targets"
-}
-
 # kit_key <dotted key> <default>: the key of .archon/kit.yaml at the tested tree (env KIT_<KEY> first), else the default.
 # Inline, not kit-config.sh: the planner runs as a blob of the base (git show), with no checkout beside it.
 kit_key() {
@@ -287,7 +263,7 @@ ledger_source() {
 
 # plan_job <job>: sets fp, decision, source, why for one job.
 plan_job() {
-  local job=$1 rule e name re hit pins targets="" ctx="" contract="-" images="-" kept=""
+  local job=$1 rule e name re hit pins ctx="" contract="-" images="-" kept=""
   fp=- decision=run source="" why="" rule_hash=""
   if [ -n "$manifest_bad" ]; then why="manifest: $manifest_bad"; return; fi
   rule=$(job_rule "$job")
@@ -296,10 +272,6 @@ plan_job() {
   : > "$tmp/pat"
   while IFS= read -r e; do [ -n "$e" ] && echo "A $(pat_re "$e")" >> "$tmp/pat"; done < <(yq '.always[]' "$tmp/manifest" | tr -d '\r')
   job_list "$job" inputs > "$tmp/inputs"
-  if job_flag "$job" mutation-targets; then
-    if ! targets=$(mutation_targets); then why="no base for the mutation targets, or $GATE_PATH cannot list them"; return; fi
-    [ -z "$targets" ] || job_list "$job" when-targets > "$tmp/inputs"
-  fi
   while IFS= read -r e; do [ -n "$e" ] && echo "I $(pat_re "$e")" >> "$tmp/pat"; done < "$tmp/inputs"
   if job_flag "$job" docker-context; then
     docker_patterns > "$tmp/dpat" || ctx="(.dockerignore does not deny by default: the whole tree)"
@@ -335,8 +307,8 @@ plan_job() {
   fp=$( {
     echo "ci-plan-fp v1"; echo "salt $salt"; echo "runner $runner"; echo "planner $planner"; echo "job $job"
     echo "rule $rule"; echo "kept-exclusions $kept"; echo "contract $contract"; echo "base-images $images"
-    echo "mutation-targets"; printf '%s\n' "$targets"; echo "inputs"; cat "$tmp/in.$job"; } | hash)
-  explain "$job: $(wc -l < "$tmp/in.$job" | tr -d ' ') input files${kept:+, excluding $kept}${ctx:+ $ctx}; contract $contract; targets $(printf '%s' "$targets" | grep -c .); fp=$fp"
+    echo "inputs"; cat "$tmp/in.$job"; } | hash)
+  explain "$job: $(wc -l < "$tmp/in.$job" | tr -d ' ') input files${kept:+, excluding $kept}${ctx:+ $ctx}; contract $contract; fp=$fp"
   if [ -n "$force" ]; then why=$force; return; fi
   source=$(ledger_source "$job" "$fp" "$runner")
   case "$source" in

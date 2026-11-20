@@ -233,15 +233,6 @@ if [ "$workflows" -eq 1 ]; then
   done
 fi
 
-# --- mutation gate (decision 2026-10-18, docs/memory.md) ---------------------------------------------------------
-# A changed main class of a domain, usecase or gateway module (shared-* included; gateways by the owner's decision of
-# 2026-10-18) runs the mutation gate after the tests, on the same base: PIT on the changed classes only
-# (.claude/scripts/mutation-gate.sh, tested by scripts/test/mutation-gate.test.sh).
-if printf '%s\n' "$changed" | grep -E '^(shared|[a-z][a-z0-9]*)-(domain|usecase|gateway)/src/main/java/.+\.java$' >/dev/null; then
-  cmds+=("bash .claude/scripts/mutation-gate.sh --base $base_ref")
-fi
-# --- end mutation gate -------------------------------------------------------------------------------------------
-
 # What CI still checks and this run does not: printed first, so a pass below is never read as covering it.
 for u in "${unchecked[@]+"${unchecked[@]}"}"; do echo "$u"; done
 

@@ -221,7 +221,7 @@ A profile is a group of kit files. You choose the profiles when you install.
 | Profile | Requires | Contents |
 |---|---|---|
 | `core` | none | Archon run tooling, hooks, generic skills and agents, the `codegraph` MCP entry, the tool installer, git hooks and the Copilot instructions. |
-| `java` | `core` | Shared Java and JVM skills, the layer rules, ArchUnit, PIT and Gradle CI scripts, the scaffolder, and the analyst, developer, test-writer and debugger agents. |
+| `java` | `core` | Shared Java and JVM skills, the layer rules, ArchUnit and Gradle CI scripts, the scaffolder, and the analyst, developer, test-writer and debugger agents. |
 | `java-quarkus` | `java` | Quarkus versions of the skills, the scaffold templates, the CI workflow and `run-app`. |
 | `java-spring` | `java` | The same set as `java-quarkus`, rewritten for Spring Boot. |
 | `openapi-contract` | `core` | The `contract-api` MCP server, contract readiness and pin checks, DB parity, and the contract agent. |

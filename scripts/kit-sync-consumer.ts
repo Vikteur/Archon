@@ -74,8 +74,12 @@ export const CONSUMER_TARGETED: Record<string, Rewrite[]> = {
     ],
     ['the groma step is stricter', 'the lint step is stricter', 2],
   ],
-  // A neutral second job in the fixtures: the source's Groma job does not ship.
-  '.archon/scripts/test/red-triage.test.sh': [['groma', 'lint', 4]],
+  // A neutral second job in the fixtures: the source's Groma and mutation jobs do not ship.
+  '.archon/scripts/test/red-triage.test.sh': [
+    ['groma', 'lint', 4],
+    ['Mutation score 60% < 80%', '3 lint problems', 1],
+    ['mutation', 'lint', 4],
+  ],
   // The output is source code: the mustache CLI HTML-escapes `{{x}}` (/ " & become &#x2F; &quot; &amp;).
   'scripts/scaffold.sh': [
     [

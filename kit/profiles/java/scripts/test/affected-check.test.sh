@@ -87,7 +87,6 @@ build_template() {
   echo a > scripts/lone.sh
   echo a > .claude/scripts/shape-check.sh; stub scripts/test/shape-check.test.sh shape-check.test.sh
   stub .claude/scripts/ci-workflow-check.sh ci-workflow-check.sh
-  stub .claude/scripts/mutation-gate.sh mutation-gate.sh
   for t in contract-read-only-check ci-workflow-check ci-workflow generated-untracked-check codegen contract-pin; do
     stub "scripts/test/$t.test.sh" "$t.test.sh"
   done
@@ -326,26 +325,12 @@ on_main 'echo b > x-domain/src/A.java'
 AFFECTED_NO_SYNC=1 run
 check "merge-base: main's later commit does not count" ran_nothing
 
-# A changed main class of a domain or usecase module runs the mutation gate after the tests, on the same base.
+# A changed main class of a usecase module runs the tests of that module and of every module that depends on it.
 new_repo "$r"
 mkdir -p x-usecase/src/main/java/app && echo b > x-usecase/src/main/java/app/B.java && git add -A && git commit -qm uc
 run
-check "domain/usecase main class: tests, then the mutation gate" \
-  test "$(cat "$log")" = "$(printf 'gradlew :application:test :x-adapter:test :x-usecase:test\nmutation-gate.sh --base origin/main')"
-
-# A changed main class of a gateway module runs it too (owner decision 2026-10-18).
-new_repo "$r"
-mkdir -p y-gateway/src/main/java/app && echo b > y-gateway/src/main/java/app/B.java && git add -A && git commit -qm gw
-run
-check "gateway main class: tests, then the mutation gate" \
-  test "$(cat "$log")" = "$(printf 'gradlew :application:test :y-gateway:test\nmutation-gate.sh --base origin/main')"
-
-# A test class or an adapter class runs no mutation gate.
-new_repo "$r"
-mkdir -p x-domain/src/test/java/app x-adapter/src/main/java/app
-echo b > x-domain/src/test/java/app/BTest.java && echo b > x-adapter/src/main/java/app/B.java && git add -A && git commit -qm t
-run
-check "test or adapter class: no mutation gate" test "$(grep -c mutation-gate "$log")" -eq 0
+check "usecase main class: its module's tests and its dependents'" \
+  test "$(cat "$log")" = "gradlew :application:test :x-adapter:test :x-usecase:test"
 
 # The first failure stops the run with its exit code.
 new_repo "$r"
