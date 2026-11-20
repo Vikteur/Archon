@@ -417,7 +417,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "93c059c0f56e529a0d88b9991da21ec92be1fa5b8126ad5d13f18a53ddeb971e"
+      "sha256": "2e1333313e9e343ec8a95e5427f8696b87a1f75cf08407b663e3e12ab1701f05"
     },
     {
       "path": ".archon/scripts/pr-refresh.sh",
@@ -879,7 +879,7 @@
       "template": false,
       "origin": null,
       "kind": "script",
-      "sha256": "866ca47bd4b2b3921155a5171219bdceeff2f102c549eb5777ebda97d6b556c5"
+      "sha256": "7f4aab9967e1c76e77a54da9c485fe630920433514d34a4cdb67e90e86e29c56"
     },
     {
       "path": ".archon/scripts/test/pr-refresh.test.sh",
