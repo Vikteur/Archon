@@ -35,7 +35,8 @@ jobs:
   test:
     # Every module's src/ and build file, the Gradle wrapper and settings, config/; the gates after Gradle run
     # .claude/scripts/: pin-proof-check.sh reads .archon/pin-proofs.txt, build-shape-check.sh docs/memory.md and the
-    # boot jar, generated-untracked-check.sh's git reads .gitignore.
+    # boot jar. No contract: this is the job of a project without the openapi-contract profile, which ships its own
+    # ci-inputs.yml at this path.
     inputs:
       - "*/src/**"
       - "*.gradle.kts"
@@ -48,10 +49,8 @@ jobs:
       - .claude/scripts/
       - .archon/pin-proofs.txt
       - docs/memory.md
-      - .gitignore
     exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
     readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
-    contract: true
 
   archon-scripts:
     # ci-workflow-check.sh reads .github/, the build file and docs/memory.md; the .archon suites read the checkout, so
