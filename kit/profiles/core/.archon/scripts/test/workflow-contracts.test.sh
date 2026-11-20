@@ -9,14 +9,14 @@
 #  - a run never merges: no gh pr merge and no merge API call; a team member merges;
 #  - W1, every repo script a workflow names (.archon/scripts/…, .claude/scripts/…, .claude/hooks/scripts/…,
 #    .github/skills/<skill>/scripts/…, scripts/…) exists, so a renamed or unmerged script fails here, not in a run;
-#  - W4, open-pr keeps its lease: build-feature's open-pr node runs open-pr.sh, and every push in open-pr.sh carries
+#  - W4, open-pr keeps its lease: build-feature-copilot's open-pr node runs open-pr.sh, and every push in open-pr.sh carries
 #    --force-with-lease=<branch>:<head last seen> (TASK-70: a plain push of a rebased branch was rejected);
-#  - W5, every build-feature node has a time bucket in .archon/scripts/run-buckets.json, so a renamed node cannot drop
+#  - W5, every build-feature-copilot node has a time bucket in .archon/scripts/run-buckets.json, so a renamed node cannot drop
 #    out of the run telemetry silently (ROADMAP R18). Without that file this part is reported as SKIPPED.
 #  - every node whose prompt tells it to `git commit` denies Bash(*--no-verify*) and Bash(*commit -n *), and
 #    .archon/config.yaml points core.hooksPath at .archon/githooks, whose hooks are executable: the commit-shape hook
 #    runs in every run worktree and an agent cannot skip it (owner decision D12, 2026-10-20);
-#  - build-feature's ci-fix loop starts with red-head (a head red on the same job as main stops as RED_FROM_MAIN), a fix
+#  - build-feature-copilot's ci-fix loop starts with red-head (a head red on the same job as main stops as RED_FROM_MAIN), a fix
 #    without a commit fails as CI_FIX_NO_COMMIT, and diagnose and fix may not push to main or commit tickets (D13, D14).
 #  W1, W4 and W5 are ROADMAP R17 (T12); each check also runs on a fixture of the old code, where it must fail.
 #  - a dry run with default stubs of each workflow ends `Simulation outcome: completed`; a build workflow's plan
@@ -91,7 +91,7 @@ open_pr_unleased() { # open_pr_unleased <workflow yaml> <open-pr.sh>
   grep -vE -- '--force-with-lease="?\$?[^[:space:]:]+:[^[:space:]]*' <<< "$pushes" | sed '/^$/d; s/^/no lease against the head last seen: /'
 }
 
-# The build-feature node ids that run-buckets.json does not name, one per line (W5). The map may be keyed by node id
+# The build workflow's node ids that run-buckets.json does not name, one per line (W5). The map may be keyed by node id
 # or by bucket; a node counts as bucketed when its id is a key or a value anywhere in it.
 unbucketed() { # unbucketed <workflow yaml> <run-buckets.json>
   yq -o=json '.' "$1" | BUCKETS="$2" node -e '
@@ -132,7 +132,7 @@ hook_gaps() { # hook_gaps <root>
   for h in "$1"/.archon/githooks/*; do [ ! -f "$h" ] || [ -x "$h" ] || echo "not executable: ${h#"$1"/}"; done
 }
 
-# What build-feature's ci-fix loop lacks, one line each (failure recovery, D13, D14)
+# What the build workflow's ci-fix loop lacks, one line each (failure recovery, D13, D14)
 ci_fix_gaps() { # ci_fix_gaps <workflow yaml>
   local first r n
   first=$(yq -r '.nodes[] | select(.id == "ci-fix") | .loop_group.nodes[0].id' "$1")

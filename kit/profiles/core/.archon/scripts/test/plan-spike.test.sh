@@ -72,7 +72,7 @@ bash "$script" "$root/none" compileJava "q" > /dev/null 2>&1; [ $? -eq 2 ]; chec
 # block (the plan-block trial ended 2026-10-24): an include: cannot carry denied_tools.
 wf="$top/.archon/workflows/build-feature-copilot.yaml"
 block=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /^    include: / { print $2; exit }' "$wf")
-[ -z "$block" ]; check "build-feature's plan includes no block ($block)" $?
+[ -z "$block" ]; check "build-feature-copilot's plan includes no block ($block)" $?
 denied=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /denied_tools:/ { d = 1 } p && d { print } p && d && /\]/ { exit }' "$wf")
 for want in '*gradlew*' '*affected-check*' '*build-shape-check*' '*step-gate*' '*ci-local*' '*local-ci-run*' \
   'bash *.test.sh*' 'sh *.test.sh*' './*.test.sh*' 'scripts/test/*.test.sh*' '.archon/scripts/test/*.test.sh*'; do

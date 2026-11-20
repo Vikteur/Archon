@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for .archon/scripts/blocked-stop.sh against throwaway plans, and for its place in the build loops of
-# build-feature: a `BLOCKED:` plan stops inside the loop, so it never reaches skill-check.
+# build-feature-copilot: a `BLOCKED:` plan stops inside the loop, so it never reaches skill-check.
 # Usage: bash .archon/scripts/test/blocked-stop.test.sh   (exit 0 = all pass)
 set -uo pipefail
 
