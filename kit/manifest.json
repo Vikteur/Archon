@@ -189,7 +189,7 @@
       "template": false,
       "origin": ".archon/copilot/tools.json",
       "kind": "config",
-      "sha256": "b6d117a6e03c08729f4ee19568c4b59eb59a94e5324abe350bd00a05fef2529f"
+      "sha256": "378277a56ed5946325b72809500f406c05b3c24c7a02ab504f16da6aa6f12d21"
     },
     {
       "path": ".archon/githooks/commit-msg",
@@ -291,7 +291,7 @@
       "template": false,
       "origin": ".archon/scripts/copilot-audit.js",
       "kind": "script",
-      "sha256": "6324dfced01863ac5584047c9d31d07284926d661c6c5b5c14af566eeff239ef"
+      "sha256": "c8d9e63601ab32cd313e38e509f25c8c15bb5a25d9feb0ab4b9d78299ebebcf8"
     },
     {
       "path": ".archon/scripts/copilot-usage.js",
@@ -372,7 +372,7 @@
       "template": true,
       "origin": ".archon/scripts/mcp-use-check.js",
       "kind": "script",
-      "sha256": "91be1ed6c7914415c90055eb0531c83f5810a659437e77a494966e16baa91f1a"
+      "sha256": "d838198d55c4589a848495fb0974eea674fd5f1894ada7f3ce7df4560477f26c"
     },
     {
       "path": ".archon/scripts/open-pr.sh",
@@ -697,7 +697,7 @@
       "template": false,
       "origin": ".archon/scripts/test/copilot-audit.test.sh",
       "kind": "script",
-      "sha256": "53d4704bc6c7bee8852fd1ea0ea533e6caa5e1677237d3494e7a4ab014be8ad0"
+      "sha256": "a54237e8444631ff05b5ed326074d10b2bb0d786ae9433e0e2c599d23d5c6998"
     },
     {
       "path": ".archon/scripts/test/copilot-guard.test.sh",
@@ -816,7 +816,7 @@
       "template": true,
       "origin": ".archon/scripts/test/mcp-use-check.test.sh",
       "kind": "script",
-      "sha256": "20f730f5a5c29b64d42c2c5e90558eb5b6e2f8f6142c10cc367bb78326347320"
+      "sha256": "ec8904c6667a531d7ce6197ed740dda8d59a118f201df34c4d8ee920642f530a"
     },
     {
       "path": ".archon/scripts/test/node-fence.test.sh",
@@ -825,7 +825,7 @@
       "template": false,
       "origin": ".archon/scripts/test/node-fence.test.sh",
       "kind": "script",
-      "sha256": "089986b42a2cb470b477a12e605f62bda9fc607cf9c3575ca5456590a0ecb988"
+      "sha256": "8566f6ff6df9aa499d683af8f892b2893cf9011d4884d91857fce88cf7471dff"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -843,7 +843,7 @@
       "template": false,
       "origin": ".archon/scripts/test/payload.test.sh",
       "kind": "script",
-      "sha256": "c8f827a6f2391fe2a8d55af1307c4d54cdd85458087d0f65261444b98b90bde5"
+      "sha256": "91ca15372838875a5d266f59443e7aa729574d9b11e6780f716834ced55e5941"
     },
     {
       "path": ".archon/scripts/test/plan-context.test.sh",
@@ -1213,7 +1213,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/payload.sh",
       "kind": "hook",
-      "sha256": "8a5f74e7fb7b747338ad6bc50e347e1c2688887e60d3ce67008dd5392c1e6aea"
+      "sha256": "ee2887590b63472c08f9b6901903e2dd02dbdb86c8d7d94c82a60c7f5f834bbc"
     },
     {
       "path": ".claude/hooks/scripts/scope-guard.sh",
