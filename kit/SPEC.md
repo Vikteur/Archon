@@ -254,11 +254,14 @@ fails the step, so a typo never turns a gate off. Env `KIT_GATES_<KEY>` override
 that changes the `gates` map of `.archon/kit.yaml` or `.archon/kit.defaults.yaml` without that entry. The plan's order:
 format, contract lint, secrets, coverage, each a week in report mode first; `tests-ran` can block at once.
 
-**What a project sets up.** The kit adds no plugin to a build and installs no tool. Spotless (`com.diffplug.spotless`)
-and JaCoCo (the `jacoco` plugin, with `reports { xml.required = true }`) go in the project's build or convention
-plugin. `gitleaks` (8.19 or newer for `gitleaks dir`; older builds fall back to `detect --no-git`) and `spectral`
-(`@stoplight/spectral-cli`, on PATH or in `node_modules/.bin`) go on the CI machine. Until then each gate reports
-"not set up" and passes.
+**What a project sets up.** The kit adds no plugin to a build. Spotless (`com.diffplug.spotless`) and JaCoCo (the
+`jacoco` plugin, with `reports { xml.required = true }`) go in the project's build or convention plugin; until then
+those gates report "not set up" and pass. `scripts/install-tools.sh` installs the two tools: `gitleaks` for every
+project (8.19 or newer for `gitleaks dir`; older builds fall back to `detect --no-git`; on Linux the pinned 8.30.1
+release into `~/.local/bin`, checked against its checksums file, else winget or Homebrew) and `spectral`
+(`@stoplight/spectral-cli` 6.17.1 through npm) only when `profiles` in `.archon/kit.yaml` names `openapi-contract`: its
+tools.conf row carries that profile in a seventh column. `--check` lists either as missing; the gate also finds
+`spectral` in `node_modules/.bin`.
 
 **No dependency review yet.** It is left to the owner: the plan asks for a Gradle plugin that works without a network
 account or token. OWASP `dependency-check-gradle` asks for an NVD API key to update its database in reasonable time,
