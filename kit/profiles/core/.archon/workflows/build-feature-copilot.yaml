@@ -120,7 +120,7 @@ nodes:
     # every test-suite run are denied. The one exception is .archon/scripts/plan-spike.sh, which matches none of these.
     # .archon/scripts/test/plan-spike.test.sh holds this list to every script that runs ./gradlew.
     denied_tools: ["Bash(*gradlew*)", "Bash(*affected-check*)", "Bash(*build-shape-check*)", "Bash(*step-gate*)",
-      "Bash(*ci-local*)", "Bash(*local-ci-run*)", "Bash(bash *.test.sh*)", "Bash(sh *.test.sh*)", "Bash(./*.test.sh*)",
+      "Bash(*ci-local*)", "Bash(*local-ci-run*)", "Bash(*ci-gate*)", "Bash(bash *.test.sh*)", "Bash(sh *.test.sh*)", "Bash(./*.test.sh*)",
       "Bash(scripts/test/*.test.sh*)", "Bash(.archon/scripts/test/*.test.sh*)", "Bash(*smoke*)", "Monitor"]
     prompt: |
       Request: $ARGUMENTS

@@ -46,7 +46,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../.archon/scripts/kit-config.sh
 . "$here/../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { local e="${3:-}"; printf '%s' "${!e:-$2}"; }
 gradle_line="$(kit_get ci.gradle_line "./gradlew test integrationTest build" KIT_CI_GRADLE_LINE)"
-contract_repo="$(kit_get contract.repo @@KIT_CONTRACT_REPO@@ KIT_CONTRACT_REPO)"
+contract_repo="$(kit_get contract.repo "@@KIT_CONTRACT_REPO@@" KIT_CONTRACT_REPO)"  # quoted: an empty default stays an argument
 contract_name="${contract_repo#*/}"
 checkout_name="$(kit_get contract.checkout_step "Check out $contract_name" KIT_CONTRACT_CHECKOUT_STEP)"
 readonly_run="bash .claude/scripts/contract-read-only-check.sh contract"
@@ -99,6 +99,11 @@ contract_ci=0
 if [ ! -f "$lock" ] || grep -qxF .claude/scripts/contract-pin.sh <<< "$owned" || [ -f .claude/scripts/contract-pin.sh ] \
     || { declare -F kit_list >/dev/null && kit_list profiles | tr -d '\r' | grep -qxF openapi-contract; }; then
   contract_ci=1
+fi
+# Every contract rule names the hub repo: with the profile in and kit key contract.repo unset, the rendered ci.yml checks
+# out an empty repository, and that is a FAIL of its own, named before the rules it breaks.
+if [ "$contract_ci" -eq 1 ] && [ -z "$contract_repo" ]; then
+  bad "kit key contract.repo is not set (owner/repo of the contract hub, or env KIT_CONTRACT_REPO): the openapi-contract profile's contract checkout has no repository"
 fi
 contract_scripts_re='\.claude/scripts/(contract-read-only-check|contract-pin|generated-untracked-check)\.sh'
 

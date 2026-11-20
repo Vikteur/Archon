@@ -1098,7 +1098,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "6a3035c4fb3a49fd8a1a16cd6906c669f3a2712e48176f542834aa54cdfc5b0f"
+      "sha256": "bbf8d8266e68c97ff8acd1e8102859a91eda6199b09dae83f0ca113bc04ddb11"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1975,7 +1975,7 @@
       "template": true,
       "origin": ".claude/scripts/ci-workflow-check.sh",
       "kind": "script",
-      "sha256": "bca31ca48a4ad114861a43b1da01dab71e241b385243e11f3453a952603a2c30",
+      "sha256": "dbc38002c94bd32f31b1e1317b93e4f2e18830965b6b78cb1bc9bfb11f393ef8",
       "when": "local_ci"
     },
     {
@@ -2871,7 +2871,7 @@
       "template": true,
       "origin": null,
       "kind": "script",
-      "sha256": "52b16c56c6b7805e51bffbf83db69b0c7365bd3161098be43084b3215bce3e9c",
+      "sha256": "8f630656bd6d31aaa45b153940de4de0172584b20180b96b900bc18828678e11",
       "when": "local_ci"
     },
     {

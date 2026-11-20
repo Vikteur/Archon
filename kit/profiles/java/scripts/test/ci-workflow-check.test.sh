@@ -5,7 +5,8 @@
 # gate after the contract checkout, the contract checkout, read-only proof and pin in every job that runs ./gradlew,
 # the spec argument on every ./gradlew run (a report-only gate step's too), and one job definition. Each case writes a
 # throwaway repo without a lock (every workflow is the kit's, the contract rules hold). Where this checkout is an
-# install, the kit's own rendered ci.yml must pass as well.
+# install, the kit's own rendered ci.yml must pass as well, or, with the contract profile in and kit key contract.repo
+# unset, be refused with that key named.
 # Usage: bash scripts/test/ci-workflow-check.test.sh   (exit 0 = all pass; needs yq, mikefarah v4)
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -27,8 +28,20 @@ if [ -f "$ci" ] && [ -f "$root/docs/memory.md" ] && ! grep -q '@@KIT_' "$ci"; th
   java="$(yq '[.jobs[].steps[] | select(has("uses")) | select(.uses | test("^actions/setup-java@")) | .with["java-version"]][0]' "$ci")"
   printf 'java { toolchain { languageVersion.set(JavaLanguageVersion.of(%s)) } }\n' "$java" > "$tmp/build.gradle.kts"
   out="$(cd "$root" && bash "$script" .github/workflows "$tmp/build.gradle.kts" docs/memory.md 2>&1)"; rc=$?
-  check "0 the kit's rendered ci.yml passes, its report-only gate steps included" "$([ "$rc" -eq 0 ] \
-    && said 'ci-workflow: ok' && grep -q 'ci-gate.sh tests-ran' "$ci"; echo $?)"
+  # The install's own config, read the way the checker reads it: kit key contract.repo (env KIT_CONTRACT_REPO first),
+  # and the openapi-contract profile in when its contract-pin.sh is in the tree or kit key profiles names it.
+  repo="$(cd "$root" && . .archon/scripts/kit-config.sh 2>/dev/null && kit_get contract.repo "" KIT_CONTRACT_REPO)"
+  contract_in=0
+  if [ -f "$root/.claude/scripts/contract-pin.sh" ] || (cd "$root" && . .archon/scripts/kit-config.sh 2>/dev/null \
+      && kit_list profiles | tr -d '\r' | grep -qxF openapi-contract); then contract_in=1; fi
+  if [ "$contract_in" -eq 0 ] || [ -n "$repo" ]; then
+    check "0 the kit's rendered ci.yml passes, its report-only gate steps included" "$([ "$rc" -eq 0 ] \
+      && said 'ci-workflow: ok' && grep -q 'ci-gate.sh tests-ran' "$ci"; echo $?)"
+  else
+    # A default install: the contract profile is in and contract.repo is "", so ci.yml checks out an empty repository.
+    check "0 the kit's rendered ci.yml with contract.repo unset is refused, the unset repo named" "$([ "$rc" -eq 1 ] \
+      && said 'FAIL: kit key contract.repo is not set' && ! said 'ci-workflow: ok'; echo $?)"
+  fi
 fi
 
 export KIT_CONTRACT_REPO=acme/api-contract KIT_CONFIG="$tmp/none/kit.yaml"
