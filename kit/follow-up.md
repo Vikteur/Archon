@@ -7,8 +7,8 @@ open. Unless a line says "verified", the facts come from the report of the lane 
 
 ## The measured run (step 3 of [plan.md])
 
-Two `build-feature-copilot` runs on the scratch project, 2026-11-20, each driven by a Sonnet subagent with an isolated
-Archon. Neither is complete, so the baseline is not replaced.
+Three `build-feature-copilot` runs on the scratch project, 2026-11-20, each driven by a Sonnet subagent with an
+isolated Archon. None is complete, so the baseline is not replaced.
 
 - **Run 1, `8c961580…`** (kit `56763529a`) stopped at `tdd-check`: the kit update commit was in its branch range,
   because the real push guard refused the update's push to the scratch project's `main`, as it should (verified).
@@ -17,6 +17,13 @@ Archon. Neither is complete, so the baseline is not replaced.
   `pr-body.sh` wrote `pr-body: wrote …` on stdout before `open-pr.sh`'s JSON, and the node's `output_format` needs one
   JSON document (`failureKind: output_contract`). The line came with `f2fd954b2`, already in `local/console`; it is
   fixed on this branch (below). `ci`, `triage`, `ci-fix` and `ready` did not run.
+- **Run 3, `bdccdb95…`** (kit `83690321b`) failed in the build loop after about 8.5 min: `implement` hit its 10
+  iterations. The first build agent wrote and committed the right controller without loading its Build skills (run 2's
+  did load them), so `step-check` reopened the step; the nine retries never loaded them either (verified: no `skill`
+  call in any build-step session, `skills-missing.md` never viewed). The cause is in the kit: the test-side check that
+  runs between a build-side miss and the next build agent passed and removed `skills-missing.md`, so no retry could see
+  the miss. Fixed below. Iteration 1 per node: explore 33 s, 368k, 9 turns; plan 54 s, 470k, 10; write-tests 32 s,
+  423k, 11; build-step 25 s, 311k, 9. The loop's ten rounds took 140 calls and about 5.1M input tokens.
 
 Per node: wall time, Copilot input tokens, turns. Run 2 against baseline run B of
 `kit/profiles/core/.archon/copilot/baseline.md` and run 1:
@@ -38,10 +45,19 @@ plan and review are still heavier: review ran `gradlew test` 7 times for a one-e
 - **Fence denies: 20 in run 1, 14 in run 2.** Run 2 has no `2>&1` deny: `./gradlew test > red/step-1.log 2>&1` was
   allowed. What is still denied: shell `cat`, `ls`, `echo` and `grep` (6, against 12), pipes to `tail` or `head` after
   a build (6), `git --no-pager log` forms (4), a `for` loop, and a `grep` with a list of 3 paths (denied by design).
-  **Open, the owner's call:** a read-only filter (`tail`, `head`) after a pipe, and `git --no-pager log`.
-- **The audit records hold no denies.** The `.apm-audit` records come from postToolUse, which a denied call never
-  reaches. They name the node (`"node":"<node>"`). A deny names the node only in its message, and only Copilot's own
-  session log (`events.jsonl`) keeps it. **Open:** record denies in the audit trail too.
+  The owner allowed the filter and `git --no-pager` (2026-11-20); both are fixed below.
+- **Run 3's denies: 37, and 37 `DENY` audit records** (verified: the same count per session in all 22 sessions, each
+  with its node). `| tail -15` after affected-check went through 12 times; no agent used `git --no-pager`. The causes:
+  - 15 in write-tests: its own retry line asks for `git log … step-base..HEAD`, and test-writer's list has no `git log`.
+    **Open, the owner's call:** add `git log` to test-writer's list, or have write-tests read `git diff --stat
+    <step-base> HEAD` instead (that needs `workflow-contracts`' retry case, which wants `git log` in every retrying
+    node, to accept it for write-tests).
+  - 11 `ls`/`cat`/`echo` compounds, despite the prompt line; 6 build-step `./gradlew test | tail` (the developer list
+    has `./gradlew :` only; it fell back to affected-check); 4 compounds after `;`; 1 `echo` in plan.
+  - 1 explore `grep` with 5 paths, denied by design, but its reason reads "jq failed", like a guard crash.
+- **The audit records held no denies in runs 1 and 2.** The `.apm-audit` records come from postToolUse, which a denied
+  call never reaches. They name the node (`"node":"<node>"`). A deny named the node only in its message, and only
+  Copilot's own session log (`events.jsonl`) kept it. The guard now writes the deny record itself (below).
 - **The push through `.githooks/pre-push`: partly.** `core.hooksPath` is `.githooks`, and the worktree's `pre-push`
   calls the real `push-guard.sh`; run 1 saw it refuse `main`, and run 2's branch push went through. That the hook ran
   on the branch push is inferred, not seen.
@@ -60,8 +76,20 @@ plan and review are still heavier: review ran `gradlew test` 7 times for a one-e
     `<&` now stays in its segment; a real `&` after it still splits, and so does one behind an escaped `\>`. The old
     guard also let `<(…)` and `>(…)` through, a process substitution that hides a command as `$(` does: it is now
     denied. `node-fence.test.sh` has 10 new cases; 8 of them fail on the old guard.
-  - The prompts that name a run file say to read files with `view`, `glob` and `grep`, never `cat`, `ls` or `echo`.
-    No list is widened (owner, 2026-11-20).
+  - The six prompts that name a run file (explore, plan, write-tests, build-step, review and ci-fix's fix) say to read
+    files with `view`, `glob` and `grep`, never `cat`, `ls` or `echo`. No list is widened for those reads (owner,
+    2026-11-20).
+  - `tail` or `head` with count options only is allowed right after a single `|` or `|&` (owner, 2026-11-20): not
+    alone, not after `||` or `;`, not with a file operand, `-f` or a redirect, and what follows is still checked.
+  - `git --no-pager <cmd>` is read as `git <cmd>`, against the same lists (owner, 2026-11-20): `test-writer` still
+    may not run `git log`.
+  - A deny writes a `DENY` record to `.apm-audit/sessions/<session>.jsonl` (owner, 2026-11-20): the `TOOL` record's
+    fields (the arg cut to 200 bytes a line), the node and the reason. Only when that folder exists (the guard makes
+    none), and a failed write never changes the decision. `node-fence.test.sh` has 19 more cases (127); the old guard
+    denies the three new allow cases and writes no record.
+  - A check that passes removes only a miss note of its own side (`skills-missing.md`, `scaffold-missing.md`), and
+    `step-cut.js` copies the notes into `step.md` under `## Misses of the last round`, which every loop agent reads
+    (run 3). 10 new cases in `step-cut`, `skill-check` and `step-check`; 8 of them fail on the old scripts.
   - A `grep` whose `paths` is a list of one string counts as that path, in `payload.sh` and in `claudeCall`
     (`copilot-audit.js`, also read by `run-trace.js` and `mcp-use-check.js`); a longer list is still denied.
   - `mcp-use-check` counts Copilot's MCP names (`<server>-`, `codegraph-`), not only `mcp__<server>__`.
