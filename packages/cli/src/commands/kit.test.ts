@@ -266,6 +266,22 @@ describe('kit', () => {
       expect(await add()).toBe(0);
       expect(logs.join('\n')).toContain('0 written');
     });
+    it('gives an unchanged executable its mode back, and leaves an unchanged plain file alone', async () => {
+      expect(await add({ profiles: ['java'] })).toBe(0);
+      chmodSync(join(project, 'scripts/run.sh'), 0o644);
+      logs.length = 0;
+      expect(await add({ dryRun: true })).toBe(0);
+      expect(statSync(join(project, 'scripts/run.sh')).mode & 0o111).toBe(0);
+      expect(logs.join('\n')).toContain('1 would be written');
+      logs.length = 0;
+      expect(await add()).toBe(0);
+      expect(statSync(join(project, 'scripts/run.sh')).mode & 0o111).not.toBe(0);
+      expect(statSync(join(project, 'README.md')).mode & 0o111).toBe(0);
+      expect(logs.join('\n')).toContain('1 written');
+      logs.length = 0;
+      expect(await add()).toBe(0);
+      expect(logs.join('\n')).toContain('0 written');
+    });
     it('updates a file it wrote that the project never edited, keeps one the project edited', async () => {
       await add({ profiles: ['java'] });
       writeFileSync(join(project, 'src.txt'), 'my edit\n');
