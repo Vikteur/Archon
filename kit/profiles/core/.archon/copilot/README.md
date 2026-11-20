@@ -14,6 +14,9 @@ The workflow ships with the kit, and a kit update replaces it only while it is u
   refuses unsafe shell commands (no-verify, push to main, the main checkout) inside an Archon run worktree only. The file is in
   Copilot's native `preToolUse` format. `-p` runs skip repo hooks in an untrusted folder: trust `~/.archon/workspaces` once
   ("Yes, and remember this folder") or copy `.github/hooks/archon-run-guard.json` into `${COPILOT_HOME:-~/.copilot}/hooks/`.
+- Hook input: preToolUse comes batched, `{cwd, sessionId, toolCalls: [{id, name, args}]}`; `.github/hooks/dispatch.sh`
+  runs each hook once per call and `hooks/run-guard.sh` checks every call. Tool names map through `tools.json`.
+  [baseline.md](baseline.md) has the payload shapes and the per-node time and tokens of two real runs.
 
 ## Set up (owner, once)
 

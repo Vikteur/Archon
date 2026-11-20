@@ -109,5 +109,10 @@ chmod -x "$main/.git/hooks/pre-push"
 push on
 check "6 a clone hook that is not executable: refused (fails closed)" $([ "$rc" -ne 0 ]; echo $?)
 
+# The hook copies a clone switches on itself (git config core.hooksPath .githooks) are executable too: git skips a hook
+# that is not, with no more than a hint, so a kit install that drops the bit loses the commit check silently.
+out=$(for h in "$repo_root"/.githooks/* "$repo_root"/.archon/githooks/*; do [ ! -f "$h" ] || [ -x "$h" ] || echo "not executable: ${h#"$repo_root"/}"; done)
+check "every hook under .githooks and .archon/githooks is executable" $([ -z "$out" ]; echo $?)
+
 echo "commit-msg tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

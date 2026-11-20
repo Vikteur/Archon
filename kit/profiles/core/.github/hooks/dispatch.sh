@@ -8,6 +8,11 @@
 # does), else from the project root. On PreToolUse it turns a Claude deny (hookSpecificOutput.permissionDecision, or
 # exit 2 with the reason on stderr) into Copilot's top-level permissionDecision/permissionDecisionReason. A missing
 # script is a no-op, as in settings.json. The script's stderr passes through; dispatch.sh itself always exits 0.
+# A batched payload (Copilot CLI 1.0.114 preToolUse: {cwd, sessionId, toolCalls: [{id, name, args}, ...]}, observed
+# with up to 5 calls) is split: the hook runs once per call, each as {cwd, sessionId, toolCallId, toolName, toolArgs}.
+# On PreToolUse the first call that is denied denies the whole batch (its reason names the call); with no deny the
+# first non-empty output is printed. A batch jq cannot read is denied on PreToolUse (the guards would otherwise never
+# see the calls) and skipped on any other event; an empty toolCalls array runs nothing.
 set -uo pipefail
 event="${1:-}"; matcher="${2:-}"; script="${3:-}"
 [ "$#" -ge 3 ] || exit 0
@@ -22,7 +27,6 @@ payload="$(cat)"
 if [ -f "$root/.claude/hooks/scripts/payload.sh" ]; then
   # shellcheck source=/dev/null
   . "$root/.claude/hooks/scripts/payload.sh"
-  payload="$(hook_normalize_payload "$payload")"
 fi
 
 kit_deny() { # kit_deny <reason>: a deny decision in the Copilot and the Claude shape
@@ -31,28 +35,25 @@ kit_deny() { # kit_deny <reason>: a deny decision in the Copilot and the Claude 
   printf '{"permissionDecision":"deny","permissionDecisionReason":"%s","hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' "$r" "$r"
 }
 
-if [ -n "$matcher" ] && [ "$matcher" != "*" ]; then
-  tool=""
-  re='"tool_name"[[:space:]]*:[[:space:]]*"([^"]*)"'
-  [[ $payload =~ $re ]] && tool="${BASH_REMATCH[1]}"
-  [[ $tool =~ ^($matcher)$ ]] || exit 0
-fi
-
-case "$script" in
-  .claude/hooks/*) dir="$root/.claude/hooks" ;;
-  *) dir="$root" ;;
-esac
-errf="$(mktemp)"
-trap 'rm -f "$errf"' EXIT
-out="$(cd "$dir" && printf '%s' "$payload" | bash "$root/$script" "$@" 2>"$errf")"
-rc=$?
-cat "$errf" >&2
-
-if [ "$event" = PreToolUse ]; then
+run_one() { # run_one <normalized payload> [script args...]: sets out, rc and reason (a PreToolUse deny); rc=-1 when the matcher skips the call
+  local p="$1" tool="" re='"tool_name"[[:space:]]*:[[:space:]]*"([^"]*)"' dir conv
+  shift
+  out=""; rc=-1; reason=""
+  if [ -n "$matcher" ] && [ "$matcher" != "*" ]; then
+    [[ $p =~ $re ]] && tool="${BASH_REMATCH[1]}"
+    [[ $tool =~ ^($matcher)$ ]] || return 0
+  fi
+  case "$script" in
+    .claude/hooks/*) dir="$root/.claude/hooks" ;;
+    *) dir="$root" ;;
+  esac
+  out="$(cd "$dir" && printf '%s' "$p" | bash "$root/$script" "$@" 2>"$errf")"
+  rc=$?
+  cat "$errf" >&2
+  [ "$event" = PreToolUse ] || return 0
   if [ "$rc" -eq 2 ]; then
-    reason="$(tr '\n' ' ' <"$errf")"
-    kit_deny "${reason:-blocked by $script}"
-    exit 0
+    reason="$(tr '\n' ' ' <"$errf")"; reason="${reason:-blocked by $script}"
+    out=""; return 0
   fi
   case "$out" in
     *'"permissionDecision"'*)
@@ -60,8 +61,49 @@ if [ "$event" = PreToolUse ]; then
         conv="$(printf '%s' "$out" | jq -c 'if type == "object" and (.hookSpecificOutput.permissionDecision // null) != null and (.permissionDecision // null) == null
           then . + {permissionDecision: .hookSpecificOutput.permissionDecision, permissionDecisionReason: (.hookSpecificOutput.permissionDecisionReason // "")}
           else . end' 2>/dev/null)" && out="$conv"
+        [ "$(printf '%s' "$out" | jq -r 'if type == "object" then .permissionDecision // "" else "" end' 2>/dev/null)" = deny ] \
+          && reason="$(printf '%s' "$out" | jq -r '.permissionDecisionReason // ""' 2>/dev/null)" && reason="${reason:-blocked by $script}"
+      else
+        case "$out" in *'"permissionDecision":"deny"'*|*'"permissionDecision": "deny"'*) reason="blocked by $script" ;; esac
       fi ;;
   esac
+  return 0
+}
+
+errf="$(mktemp)"
+trap 'rm -f "$errf"' EXIT
+
+case "$payload" in
+  *'"toolCalls"'*)
+    calls=""
+    if command -v jq >/dev/null 2>&1; then
+      calls="$(printf '%s' "$payload" | jq -c 'if type == "object" and (.toolCalls | type) == "array"
+        then . as $o | .toolCalls[] | ($o | del(.toolCalls)) + {toolCallId: .id, toolName: .name, toolArgs: .args}
+        else error("not a batch") end' 2>/dev/null)" || calls="!"
+    else
+      calls="!"
+    fi
+    if [ "$calls" = "!" ]; then
+      [ "$event" != PreToolUse ] || kit_deny "the batched tool calls (toolCalls) are not readable here (needs jq), so $script cannot check them"
+      exit 0
+    fi
+    first=""
+    while IFS= read -r call; do
+      [ -n "$call" ] || continue
+      name="$(printf '%s' "$call" | jq -r '.toolName // "?"' 2>/dev/null)"
+      if [ -f "$root/.claude/hooks/scripts/payload.sh" ]; then call="$(hook_normalize_payload "$call")"; fi
+      run_one "$call" "$@"
+      if [ -n "$reason" ]; then kit_deny "$name call: $reason"; exit 0; fi
+      [ -n "$first" ] || first="$out"
+    done <<<"$calls"
+    [ -z "$first" ] || printf '%s\n' "$first"
+    exit 0 ;;
+esac
+
+if [ -f "$root/.claude/hooks/scripts/payload.sh" ]; then payload="$(hook_normalize_payload "$payload")"; fi
+run_one "$payload" "$@"
+if [ -n "$reason" ]; then
+  if [ "$rc" -eq 2 ]; then kit_deny "$reason"; exit 0; fi
 fi
 [ -z "$out" ] || printf '%s\n' "$out"
 exit 0
