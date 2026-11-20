@@ -155,7 +155,7 @@
       "template": false,
       "origin": ".archon/copilot/README.md",
       "kind": "doc",
-      "sha256": "a6f122b19fab62c0c6f2ae6cdd21ef0a5abdbd943637ec6a64a5ae09952bb2ae"
+      "sha256": "ae96bfb857ca8e5ae2541601cb207efac57028c5ca51e7e5167f1e49d654136a"
     },
     {
       "path": ".archon/copilot/deny.json",
@@ -293,7 +293,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.js",
       "kind": "script",
-      "sha256": "e19b40dc9a34e71d0c0e100343e3fc64d5fe111011bcf839ad2424b0b47f6fc6"
+      "sha256": "688136a97fd6fa2a2d172cc04420598cf94a3d6499276413ff09cffc7ebc2889"
     },
     {
       "path": ".archon/scripts/kit-config.sh",
@@ -302,7 +302,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.sh",
       "kind": "script",
-      "sha256": "b18696c6947c330ef5fcee2537f83fe7e5a734a25164fa2d35c97329af00bb15"
+      "sha256": "5ab6ae460fdc42e61473196ac42bf8d227c68c5b1eee0bb8fc0a05f894965572"
     },
     {
       "path": ".archon/scripts/local-ci-run.sh",
@@ -356,7 +356,7 @@
       "template": true,
       "origin": ".archon/scripts/plan-context.sh",
       "kind": "script",
-      "sha256": "cfc9208a0071b2bc2fd4dc1d7654dd3f86288599f721d0146db3c82819a6a784"
+      "sha256": "84b3cffabd89065ca60bea57105b6b37147be796b43b8004b4410f056452025e"
     },
     {
       "path": ".archon/scripts/plan-order.js",
@@ -437,7 +437,7 @@
       "template": false,
       "origin": ".archon/scripts/retro-stopped.sh",
       "kind": "script",
-      "sha256": "f243e528e4e8a759e3a27a3a166b8bcf31268c91e5afba4d7e5c8489979a1285"
+      "sha256": "084086127f2ec7008f80c9d2191fadc6637e513c77cf07d16ecd2b1b2bdaa0cc"
     },
     {
       "path": ".archon/scripts/retro-umbrella.sh",
@@ -491,7 +491,7 @@
       "template": false,
       "origin": ".archon/scripts/run-metrics.js",
       "kind": "script",
-      "sha256": "3afe79b6762e76a07567f4d026953b3767026687e2fba75aaf15d6f4c6300ce0"
+      "sha256": "92d306cbac776ce32921e3a43177673445f0f0a591fa0b64ac89036a2c40280c"
     },
     {
       "path": ".archon/scripts/run-trace.js",
@@ -590,7 +590,7 @@
       "template": false,
       "origin": ".archon/scripts/test/blocked-stop.test.sh",
       "kind": "script",
-      "sha256": "c5b552cca33929180419f6bf85250f83091c4c8b5de06f2d211cda4a80f20baf"
+      "sha256": "3584cfb106e4f0360454b73144eb1cfff4662184948dc5f396810700ae3a311b"
     },
     {
       "path": ".archon/scripts/test/build-feature.test.sh",
@@ -599,7 +599,7 @@
       "template": false,
       "origin": ".archon/scripts/test/build-feature.test.sh",
       "kind": "script",
-      "sha256": "25701362a6de918e8771601804a96d9318c18c7b79f15d55d2b189c70f8da413"
+      "sha256": "efe650f7410987a31fdd6cd0e0c6492c735ccb8e1351ced69e6922fbea6f0b64"
     },
     {
       "path": ".archon/scripts/test/ci-by-sha.test.sh",
@@ -728,7 +728,7 @@
       "template": true,
       "origin": ".archon/scripts/test/mcp-use-check.test.sh",
       "kind": "script",
-      "sha256": "b5a342a87f177f9f5ea981c5d245c562473c24a6c7c19bc4c8ff364a4c56fbac"
+      "sha256": "c1db3a2883543dc20b3c32352013f260f9af206ac77cf9b6f2a741c0285e51af"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -755,7 +755,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-context.test.sh",
       "kind": "script",
-      "sha256": "e3b622eb5fd920c2cda978d8849e9549dc54f92f5b7808f0423fee9530d413c6"
+      "sha256": "156dfa23a239d5bd02d69e7dcfbaceea5eaf386c9cc6b461cc52f4677b35ed69"
     },
     {
       "path": ".archon/scripts/test/plan-order.test.sh",
@@ -764,7 +764,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-order.test.sh",
       "kind": "script",
-      "sha256": "46de8039612b3fc0afd43e29199dd69031a22a19ad8836027beadbfdfc52a5e4"
+      "sha256": "2783c8132f95678ce1220dad7641b894f3a643895c527c6e9822705852e983c7"
     },
     {
       "path": ".archon/scripts/test/plan-spike.test.sh",
@@ -773,7 +773,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-spike.test.sh",
       "kind": "script",
-      "sha256": "203297ef80c6902a699b1364d56e485cc0f2617e0d75f056f8a8385718d37fba"
+      "sha256": "88d3daa45f81c01b8b7742db2775d5f2eebe49680eb9299d4a1da4a6f2c2030e"
     },
     {
       "path": ".archon/scripts/test/pr-refresh.test.sh",
@@ -800,7 +800,7 @@
       "template": false,
       "origin": ".archon/scripts/test/ready-node.test.sh",
       "kind": "script",
-      "sha256": "35e44efa64d623c99855a4b29c1854fe0ca38c6cae7dc10238609964c49d952a"
+      "sha256": "f25f3aa71e71eefc64d7b694f752db81ca1d1fa3164124c877c5ed78b09865ea"
     },
     {
       "path": ".archon/scripts/test/rebase-main.test.sh",
@@ -828,7 +828,7 @@
       "template": false,
       "origin": ".archon/scripts/test/retro-fence.test.sh",
       "kind": "script",
-      "sha256": "413543270c31170be7e7b8206f16e8e22e8f055e98e59665e407113d04f32192"
+      "sha256": "373ab097dde5528988b8532ea0c8be797013aa08919643f94f824f83c6e9650d"
     },
     {
       "path": ".archon/scripts/test/retro-stopped.test.sh",
@@ -837,7 +837,7 @@
       "template": false,
       "origin": ".archon/scripts/test/retro-stopped.test.sh",
       "kind": "script",
-      "sha256": "378c5a99b485749cfd914791867ba7a8189eaa559ece5e1193fbaac87d14e0c6"
+      "sha256": "040457c996fef05614c87c7df8f883b6fd31ce6845be0a68adcb94e1d74a9164"
     },
     {
       "path": ".archon/scripts/test/retro.test.sh",
@@ -864,7 +864,7 @@
       "template": false,
       "origin": ".archon/scripts/test/run-metrics.test.sh",
       "kind": "script",
-      "sha256": "519c07c2ce21a560a8d9902b5675c3eaab38307c0926acdc75440814ee142f29"
+      "sha256": "5559821db5c74d741e462239baf012132e78925ec7e6c2fa127c665386d5430b"
     },
     {
       "path": ".archon/scripts/test/run-trace.test.sh",
@@ -918,7 +918,7 @@
       "template": false,
       "origin": ".archon/scripts/test/step-check.test.sh",
       "kind": "script",
-      "sha256": "23b2f720bd6677e00fe1ad4c86db2fc1cc7d5a25d77943a07ff04ecd238242b3"
+      "sha256": "ffa9541c94463ba0761cd7756f7da3c117ae82b94c0b0fe4d7041fe201e84235"
     },
     {
       "path": ".archon/scripts/test/tdd-check.test.sh",
@@ -945,7 +945,7 @@
       "template": false,
       "origin": ".archon/scripts/test/workflow-contracts.test.sh",
       "kind": "script",
-      "sha256": "b0d0ca97a8dc5d11037d6ece7d3f6038d605ddaf471324499c944380778c9cae"
+      "sha256": "9ed96cc7148411651e9844fa855c35a072d3af98c4ccabb5a68ac4195168a8d7"
     },
     {
       "path": ".archon/scripts/ticket.sh",
@@ -1268,7 +1268,7 @@
       "template": false,
       "origin": ".github/copilot-instructions.md",
       "kind": "instructions",
-      "sha256": "8dbaaaa8c8f859bc24ea925ef93306fd9e43d29bc89c655399e3b0817b80f757"
+      "sha256": "c4e25ad6090215935f86f58ca334abfe3e4c901b322ec66e9a18646076cd3e96"
     },
     {
       "path": ".github/hooks/archon-run-guard.json",
