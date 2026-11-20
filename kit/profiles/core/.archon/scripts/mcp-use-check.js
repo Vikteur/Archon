@@ -1,6 +1,6 @@
 // Did the explore and plan nodes ask the MCP servers, or search by hand? (docs/mcp/plan.md, C8; P2: a script, not a
 // model.) Reads the run's Archon log (every tool call of every node) and writes <artifacts-dir>/mcp-use.md: per node,
-// its calls to the contract server and CodeGraph against its Grep, Glob and Bash searches, its contract reads and its whole Java
+// its calls to the contract server and CodeGraph (MCP and CLI apart) against its Grep, Glob and Bash searches, its contract reads and its whole Java
 // reads, and a verdict. pr-refresh.sh copies the report into the pull request.
 //   node mcp-use-check.js <artifacts-dir> <run-id> [<node>...]   (default nodes: explore plan)
 //   --strict   exit 1 when a node is warned (not yet used: the report mode comes first, as for tool-advice.sh, D5)
@@ -8,7 +8,9 @@
 // docs (docs/, a .md file, the run's artifacts: CodeGraph does not index them, so reading them by hand is right), the
 // contract (contract/, openapi.yaml, an operationId) or code (anything else). A Read of a .java file with no offset or
 // limit is a whole Java read. Hand work is the code searches plus the whole Java reads.
-// A Bash call to the codegraph CLI or to scripts/contract-mcp/cli.mjs counts as a call to that server.
+// A Bash call to the codegraph CLI (explore, node, callers, callees, impact, query) or to the contract server's CLI
+// (node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy) counts as having asked that server, and is reported
+// apart from its MCP calls: each server cell reads `mcp: <n>, cli: <n>`.
 // A Copilot tool name (bash, grep, glob, view) counts as the Claude tool .archon/copilot/tools.json maps it to
 // (copilot-audit.js); without that file the names count as they are.
 // A node is warned when a server was up (the last "mcp: ..." line of <artifacts-dir>/mcp-status.txt) and the node
@@ -36,7 +38,7 @@ const DOCS = /(^|[\s/'"=])docs\/|\.md\b|ARTIFACTS_DIR|\/artifacts\//;
 // A Bash call that is the shell fallback of an MCP server (Copilot CLI blocks them): the codegraph CLI and the contract
 // server's cli.mjs (contract-mcp, or the kit's renamed contract-mcp), after an optional `rtk ` or `rtk proxy `.
 const CODEGRAPH_CLI = /^(?:rtk\s+(?:proxy\s+)?)?codegraph\s+(?:explore|node|callers|callees|impact|query)\s/;
-const SERVER_CLI = /^(?:rtk\s+(?:proxy\s+)?)?node\s+(?:\.\/)?scripts\/(?:portal|contract)-mcp\/cli\.mjs\s/;
+const SERVER_CLI = /^(?:rtk\s+(?:proxy\s+)?)?node\s+(?:\.\/)?scripts\/(?:portal|contract)-mcp\/cli\.mjs\s+(?:search|read|where|schema|usedBy)\s/;
 const kind = text => (CONTRACT.test(text) ? 'contract' : DOCS.test(text) ? 'docs' : 'code');
 
 function servers(art) {
@@ -56,7 +58,8 @@ function stages(command) {
 const rel = p => String(p || '').replace(/\\/g, '/').replace(/^.*?\/(?:worktrees|runs)\/[^/]+\//, '');
 
 function newCounts() {
-  return { calls: 0, server: 0, codegraph: 0, grep: 0, glob: 0, bash: 0, contract: 0, whole: 0 };
+  // server and codegraph: MCP tool calls; serverCli and codegraphCli: the shell fallback's calls
+  return { calls: 0, server: 0, serverCli: 0, codegraph: 0, codegraphCli: 0, grep: 0, glob: 0, bash: 0, contract: 0, whole: 0 };
 }
 
 // Map<node, counts> over the log's tool calls; a node id matches its own steps and the steps inside it (implement.*)
@@ -88,8 +91,8 @@ function count(text, nodes) {
       if (/\.java$/i.test(f) && input.offset === undefined && input.limit === undefined) c.whole++;
     } else if (name === 'Bash') {
       for (const s of stages(input.command)) {
-        if (CODEGRAPH_CLI.test(`${s} `)) { c.codegraph++; continue; }
-        if (SERVER_CLI.test(`${s} `)) { c.server++; continue; }
+        if (CODEGRAPH_CLI.test(`${s} `)) { c.codegraphCli++; continue; }
+        if (SERVER_CLI.test(`${s} `)) { c.serverCli++; continue; }
         const prog = s.split(/\s+/)[0].replace(/^.*\//, '');
         if (!SEARCH_PROGS.has(prog)) continue;
         const k = kind(s);
@@ -101,14 +104,19 @@ function count(text, nodes) {
   return out;
 }
 
+// Asked a server: an MCP call or a CLI fallback call
+const askedCodegraph = c => c.codegraph + c.codegraphCli;
+const askedServer = c => c.server + c.serverCli;
+const cell = (mcp, cli) => `mcp: ${mcp}, cli: ${cli}`;
+
 function verdict(node, c, up) {
   if (!c.calls) return 'no tool calls in the log';
   if (!up) return 'not judged: no MCP status for this run';
   const why = [];
   const hand = c.grep + c.glob + c.bash + c.whole;
   const min = HAND_MIN[node] || HAND_MIN_DEFAULT;
-  if (up.codegraph && hand >= min && c.codegraph === 0) why.push(`searched or read code by hand ${hand} times (threshold ${min}) and never asked CodeGraph`);
-  if (up.contract && c.contract > 0 && c.server === 0) why.push(`read the contract by hand ${c.contract} times and never asked ${up.server}`);
+  if (up.codegraph && hand >= min && askedCodegraph(c) === 0) why.push(`searched or read code by hand ${hand} times (threshold ${min}) and never asked CodeGraph`);
+  if (up.contract && c.contract > 0 && askedServer(c) === 0) why.push(`read the contract by hand ${c.contract} times and never asked ${up.server}`);
   return why.length ? `WARN: ${why.join('; ')}` : 'ok';
 }
 
@@ -121,7 +129,7 @@ function report(nodes, counts, up, logFound) {
     '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |');
   for (const n of nodes) {
     const c = counts.get(n);
-    L.push(`| ${n} | ${c.server} | ${c.codegraph} | ${c.grep} | ${c.glob} | ${c.bash} | ${c.contract} | ${c.whole} | ${verdict(n, c, up)} |`);
+    L.push(`| ${n} | ${cell(c.server, c.serverCli)} | ${cell(c.codegraph, c.codegraphCli)} | ${c.grep} | ${c.glob} | ${c.bash} | ${c.contract} | ${c.whole} | ${verdict(n, c, up)} |`);
   }
   L.push('');
   return L.join('\n');

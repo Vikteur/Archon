@@ -67,10 +67,14 @@ run 7 main "$root/body.md"
 check "3 new commit listed" $(grep -qE '^- [0-9a-f]+ test: add c$' "$root/body.md"; echo $?)
 check "3 count updated" $(grep -qE '(^|[^0-9])3 files? changed' "$root/body.md"; echo $?)
 check "3 decisions copied" $(grep -q 'D1: keep it small' "$root/body.md" && grep -q 'D2: no cache' "$root/body.md"; echo $?)
+check "3 under exactly one Decisions heading, inside the block, word for word" \
+  $([ "$(grep -cx '## Decisions' "$root/body.md")" -eq 1 ] && [ "$(grep -cx -- '- D1: keep it small' "$root/body.md")" -eq 1 ] \
+    && awk '/pr-refresh:start/{on=1} /pr-refresh:end/{on=0} on && /^## Decisions$/{d=1} on && d && /^- D2: no cache$/{f=1} END{exit !f}' "$root/body.md"; echo $?)
 check "3 other plan sections not copied" $(! grep -q '^y$' "$root/body.md"; echo $?)
 check "3 one block only" $([ "$(grep -c 'pr-refresh:start' "$root/body.md")" -eq 1 ]; echo $?)
 second=$(cat "$root/body.md"); run 7 main "$root/body.md"
 check "3 idempotent" $([ "$second" = "$(cat "$root/body.md")" ]; echo $?)
+check "3 still one Decisions heading after a refresh" $([ "$(grep -cx '## Decisions' "$root/body.md")" -eq 1 ]; echo $?)
 check "3 body text before block untouched" $(grep -q 'Wrong claim: 99 tests.' "$root/body.md"; echo $?)
 
 # 3b. The scaffold report goes into the block without its title, replaced on the next refresh, idempotent.

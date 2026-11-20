@@ -4,8 +4,9 @@
 # rest of the body is never touched.
 #   pr-refresh.sh <pr> <base> <body-file>
 #     <body-file> is rewritten in place, then `gh pr edit <pr> --body-file <body-file>` publishes it.
-#     The block holds: the commits of origin/<base>..HEAD, the changed-file count, and, when
-#     $ARTIFACTS_DIR/plan.md has a "## Owner decisions" section, a copy of that section's body, and, when
+#     The block holds: when $ARTIFACTS_DIR/plan.md has a "## Owner decisions" section, that section's body copied
+#     word for word under `## Decisions` (the only writer of that section: owner decision 2026-11-20; pr-body.sh writes
+#     none), then the commits of origin/<base>..HEAD, the changed-file count, and, when
 #     $ARTIFACTS_DIR/scaffold-check.md exists, that report without its title (the scaffold gate's; the full list stays folded),
 #     and, when $ARTIFACTS_DIR/mcp-use.md exists (mcp-use-check.js's), that report without its title,
 #     and, when $ARTIFACTS_DIR/stop-items.txt exists (stop-route's), the "STOP items touched:" line,
@@ -27,17 +28,19 @@ trap 'rm -rf "$tmp"' EXIT
 files=$(git diff --name-only "origin/$base...HEAD" | wc -l | tr -d ' ')
 {
   echo "$start"
+  plan="${ARTIFACTS_DIR:-}/plan.md"
+  if [ -n "${ARTIFACTS_DIR:-}" ] && [ -f "$plan" ] && grep -q '^## Owner decisions[[:space:]]*$' "$plan"; then
+    echo "## Decisions"
+    echo
+    echo "Copied word for word from the plan's \`## Owner decisions\` section, as the plan records who took each."
+    awk '/^## /{ if (on) exit; on = ($0 ~ /^## Owner decisions[ \t]*$/); next } on' "$plan"
+    echo
+  fi
   echo "### Commits (generated)"
   echo
   git log --format='- %h %s' "origin/$base..HEAD"
   echo
   if [ "$files" = 1 ]; then echo "1 file changed"; else echo "$files files changed"; fi
-  plan="${ARTIFACTS_DIR:-}/plan.md"
-  if [ -n "${ARTIFACTS_DIR:-}" ] && [ -f "$plan" ] && grep -q '^## Owner decisions[[:space:]]*$' "$plan"; then
-    echo
-    echo "### Owner decisions (from the plan)"
-    awk '/^## /{ if (on) exit; on = ($0 ~ /^## Owner decisions[ \t]*$/); next } on' "$plan"
-  fi
   scaffold="${ARTIFACTS_DIR:-}/scaffold-check.md"
   if [ -n "${ARTIFACTS_DIR:-}" ] && [ -f "$scaffold" ]; then
     echo
