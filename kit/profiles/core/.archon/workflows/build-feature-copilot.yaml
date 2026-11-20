@@ -659,7 +659,7 @@ nodes:
       A green suite is not the verdict; check each of these and treat a miss as an issue:
       - Mutations: hand-mutate what the branch adds: remove each guard line it adds once, flip each new condition,
         shift each boundary by one. Batch the mutations of one Gradle module into one run of its tests
-        (`./gradlew :<module>:test`, plus its `integrationTest`, `startupTest` or `resourceTest` when the tests that
+        (`./gradlew :<module>:test`, plus its `integrationTest` or `resourceTest` when the tests that
         cover the lines are tagged for one) when they cannot hide each other: different methods, or different branches
         of one method; a red run names the failing tests, so split a batch only to tell which mutation one test
         caught. Never the whole suite. A mutation no test catches is an issue. Revert each mutation from git, file by
