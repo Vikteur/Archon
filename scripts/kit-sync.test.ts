@@ -7,7 +7,13 @@ import { renderBundledKit } from './generate-bundled-kit';
 import { depsCheck, installableSets, judgeDeps, KNOWN_GAPS } from './kit-sync-deps';
 import { genericThisRepo, renamePath } from './kit-sync-generic';
 import { SRC } from './kit-sync-source-name';
-import { applySuiteNouns, classifySuite, suiteOf, suiteSubject } from './kit-sync-tests';
+import {
+  applySuiteNouns,
+  classifySuite,
+  SUITE_FIXTURES,
+  suiteOf,
+  suiteSubject,
+} from './kit-sync-tests';
 import {
   applyGlobalRewrites,
   applyRewrites,
@@ -914,6 +920,20 @@ describe('never-ship files', () => {
       '.archon/scripts/copilot-workflow.js',
     ])
       expect(NEVER_SHIP).toContain(p);
+  });
+
+  test("a never-ship suite's fixtures stay out with it: its SUITE_FIXTURES entry is no dead rule", () => {
+    // The source still tracks these fixtures; without the entry suiteOf throws on them and the sync fails.
+    expect(classify('scripts/test/fixtures/mutation-gate/killed.xml', '')).toEqual({
+      exclude: true,
+      why: 'its suite never ships',
+    });
+    for (const [dir, suite] of Object.entries(SUITE_FIXTURES))
+      if (NEVER_SHIP.includes(suite))
+        expect(classify(`${dir}x.xml`, '')).toEqual({
+          exclude: true,
+          why: 'its suite never ships',
+        });
   });
 
   test('the groups hold no path twice, and keep the tools a person runs', () => {
