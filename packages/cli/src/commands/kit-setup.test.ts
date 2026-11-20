@@ -623,7 +623,7 @@ describe('kit setup', () => {
       expect(agents).not.toContain('BACKLOG.MD GUIDELINES');
       const out = lines.join('\n');
       expect(out).toContain('ok Groma map: groma init, java scanner, first scan');
-      expect(out).toContain('the pre-push check (groma-check) refuses a push');
+      expect(out).toContain('Groma map: groma/ holds a first scan');
     });
 
     it('with Backlog.md the board stays and AGENTS.md says where the tickets live', async () => {
@@ -643,7 +643,7 @@ describe('kit setup', () => {
       expect(ran('groma')).toEqual([]);
       const out = lines.join('\n');
       expect(out).toContain('Groma map: skipped (groma/ is already there)');
-      expect(out).not.toContain('refuses a push');
+      expect(out).not.toContain('holds a first scan');
     });
 
     it('skips the Groma map when groma is not on PATH', async () => {

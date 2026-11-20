@@ -8,7 +8,9 @@
 # A repo without groma/ has not set Groma up: the script prints a notice (a GitHub Actions ::notice:: in Actions) and
 # passes, so neither the pre-push hook nor CI blocks on a map the project does not keep. `backlog: false` in
 # .archon/kit.yaml (else in kit.defaults.yaml beside it; env KIT_BACKLOG first) drops the two Backlog.md checks, and
-# `agent_cli: copilot` (read the same way; env KIT_AGENT_CLI first) the CLAUDE.md import check.
+# `agent_cli: copilot` (read the same way; env KIT_AGENT_CLI first) the CLAUDE.md import check, and
+# `groma_descriptions: optional` (read the same way; env KIT_GROMA_DESCRIPTIONS first; the default) turns an element
+# without a description into a note; `required` fails it.
 # Usage: groma-check.sh
 set -euo pipefail
 
@@ -39,6 +41,13 @@ for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
   [[ -z "$agent_cli" ]] || break
   [[ -f "$f" ]] && agent_cli=$(sed -n 's/^agent_cli:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
 done
+# Descriptions (groma_descriptions, read the same way; env KIT_GROMA_DESCRIPTIONS first): optional unless required.
+descriptions="${KIT_GROMA_DESCRIPTIONS:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$descriptions" ]] || break
+  [[ -f "$f" ]] && descriptions=$(sed -n 's/^groma_descriptions:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
+[[ "$descriptions" == required ]] || descriptions=optional
 
 fail() {
   echo "FAIL: $1" >&2
@@ -58,9 +67,10 @@ if [[ -d groma ]] && "$groma" agent-instructions 2>/dev/null | head -1 | grep -q
 fi
 
 echo "Check: every element has a description"
+[[ "$descriptions" == required ]] || echo "  optional: groma_descriptions: optional (a missing one is a note, not a failure)"
 while IFS= read -r file; do
   if ! sed -n '/^---$/,/^---$/p' "$file" | grep -qE '^description: *[^ ]'; then
-    fail "$file has no description"
+    if [[ "$descriptions" == required ]]; then fail "$file has no description"; else echo "  note: $file has no description"; fi
   fi
 done < <(grep -rlE '^type: (C4|Person|External)' groma 2>/dev/null || true)
 

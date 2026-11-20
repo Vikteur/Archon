@@ -52,9 +52,10 @@ script then cannot log `gh` in for you.
     view in the browser only once it answers, and names a view that does not answer within
     90 seconds. `archon kit web <backend>` does the same later.
 
-When `groma-check` fails on the committed first scan of the Groma map (an element without a
-description), the closing list says so: the pre-push check refuses a push until an agent
-curates the map (it runs `groma agent-instructions`) and you commit `groma/`.
+When `groma-check` fails on the committed first scan of the Groma map, the closing list says
+so: the pre-push check refuses a push until an agent fixes what it names. A map element
+without a description is only a note while `groma_descriptions` in `.archon/kit.yaml` is
+`optional` (the default); `required` fails it.
 
 | Option | Effect |
 |--------|--------|
@@ -164,7 +165,7 @@ terminal. A step that fails is shown as failed with that log path. The later ste
 run, and the command exits 1 at the end.
 
 The last screen lists the web view URLs, a note when the Groma map is a first scan (commit
-it, and have an agent curate it when the pre-push check asks), the command that stops them
+it, and have an agent curate it), the command that stops them
 (`bash scripts/web-uis.sh stop` in the backend), the log path and the Copilot login: run
 `copilot`, then `/login`, and finish it in a browser signed in as the GitHub account that
 has Copilot. That account may differ from the one `gh` uses.

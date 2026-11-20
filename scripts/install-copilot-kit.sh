@@ -287,8 +287,8 @@ fi
 GROMA_NOTE=""
 if [ -d "$BACKEND/groma" ] && [ -f "$BACKEND/.claude/scripts/groma-check.sh" ] \
   && ! (cd "$BACKEND" && bash .claude/scripts/groma-check.sh >/dev/null 2>&1); then
-  GROMA_NOTE="  - Curate the Groma map before the first push: the pre-push check refuses it until then.
-    Ask an agent to curate it (it runs \`groma agent-instructions\`), then commit groma/.
+  GROMA_NOTE="  - Fix the Groma map before the first push: the pre-push check (groma-check) fails on it.
+    Run: cd $BACKEND && bash .claude/scripts/groma-check.sh, then ask an agent to fix what it names.
 "
 fi
 

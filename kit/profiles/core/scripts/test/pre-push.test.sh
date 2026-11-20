@@ -374,6 +374,28 @@ cli_repo() { # cli_repo <name> <kit.yaml agent_cli line or ->: a map repo withou
   git -C "$d" add -A && git -C "$d" commit -q -m cli
   echo "$d"
 }
+# (n) groma_descriptions: an element without a description is a note by default and fails only when required.
+desc_repo() { # desc_repo <name> <kit.yaml groma_descriptions line or ->: a map repo with one undescribed element
+  local d
+  d="$(new_map_repo "$1")"
+  mkdir -p "$d/.archon" "$d/groma/actors"
+  printf 'profiles: [core]\nbacklog: false\n%s\n' "$([ "$2" = - ] || echo "$2")" > "$d/.archon/kit.yaml"
+  printf -- '---\ntype: C4 Actor\ngroma:\n  id: bare\n---\n' > "$d/groma/actors/bare.md"
+  git -C "$d" add -A && git -C "$d" commit -q -m desc
+  echo "$d"
+}
+r="$(desc_repo descdef -)"
+rc="$(run_check "$r" descdef)"; last_err="$tmp/descdef.err"
+check "without groma_descriptions, an element without a description passes" test "$rc" -eq 0
+check "without groma_descriptions, the missing description is a note" grep -q 'note: groma/actors/bare.md has no description' "$tmp/descdef.out"
+r="$(desc_repo descreq 'groma_descriptions: required')"
+rc="$(run_check "$r" descreq)"; last_err="$tmp/descreq.err"
+check "groma_descriptions: required fails an element without a description" grep -q 'bare.md has no description' "$tmp/descreq.err"
+check "groma_descriptions: required fails the check" test "$rc" -eq 1
+r="$(desc_repo descenv 'groma_descriptions: optional')"
+rc="$(run_check "$r" descenv KIT_GROMA_DESCRIPTIONS=required)"; last_err="$tmp/descenv.err"
+check "KIT_GROMA_DESCRIPTIONS=required overrides kit.yaml" test "$rc" -eq 1
+
 r="$(cli_repo clicop 'agent_cli: copilot')"
 rc="$(run_check "$r" clicop)"; last_err="$tmp/clicop.err"
 check "agent_cli: copilot passes without a CLAUDE.md" test "$rc" -eq 0

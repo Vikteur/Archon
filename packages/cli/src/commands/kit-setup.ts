@@ -959,8 +959,8 @@ function finish(run: SetupRun, urls: string[]): number {
   const groma = !run.gromaFirstScan
     ? []
     : [
-        'Groma map: groma/ holds a first scan. Commit it; the pre-push check (groma-check) refuses a push',
-        'while an element has no description: ask an agent to curate the map (it runs `groma agent-instructions`).',
+        'Groma map: groma/ holds a first scan. Commit it, and have an agent curate it (it runs',
+        '`groma agent-instructions`); descriptions are optional (groma_descriptions in .archon/kit.yaml).',
       ];
   const next = [
     ...web,
