@@ -5,7 +5,8 @@
 // tool calls (Archon's copilot provider logs `tool.execution_start` as {type:"tool_call", name, rawInput}).
 //   node copilot-audit.js <run-id>           write .apm-audit/sessions/copilot-<run-id>.jsonl in the current directory
 //   node copilot-audit.js --names <run-id>   list the tool names the run log holds, with how each one maps
-// The file is rewritten whole on every call (idempotent), with records in the shape audit-log.sh writes. Which Copilot
+// The file is rewritten whole on every call (idempotent), with records in the shape audit-log.sh writes; `agent` is the
+// node the call ran in (the hooks write "main": copilot-usage.js joins their trail to a node by its session id). Which Copilot
 // tool is which Claude tool is .archon/copilot/tools.json (COPILOT_TOOLS overrides the path), never code here.
 // Fallback only: audit-log.sh may already have written this run's trail. The hooks cover the run only when a session file
 // other than copilot-*.jsonl holds a Skill record (tool === 'Skill', what skill-check.js needs) stamped at or after the
@@ -26,6 +27,22 @@ function loadMap() {
   const tools = new Map();
   for (const [name, m] of Object.entries(cfg.tools || {})) tools.set(name.toLowerCase(), typeof m === 'string' ? { as: m } : m);
   return { ev, tools };
+}
+
+// The Claude shape of one tool_call event: { name, input }. A name tools.json maps takes the Claude name, and its key is
+// filled from the first source field that holds a string; any other name and its input stay as they are. run-trace.js and
+// mcp-use-check.js read Copilot runs through it.
+function claudeCall(e, { ev, tools }) {
+  const name = String(e[ev.nameField] || e.name || '');
+  const raw = e[ev.inputField] && typeof e[ev.inputField] === 'object' ? e[ev.inputField] : {};
+  const m = tools.get(name.toLowerCase());
+  if (!m) return { name, input: raw };
+  const input = { ...raw };
+  if (m.key && !(typeof input[m.key] === 'string' && input[m.key])) {
+    const src = (m.from || [m.key]).find(k => typeof raw[k] === 'string' && raw[k]);
+    if (src) input[m.key] = raw[src];
+  }
+  return { name: m.as, input };
 }
 
 const cut = (s, n) => (s.length > n ? [s.slice(0, n), true] : [s, false]);
@@ -58,7 +75,7 @@ function audit(text, runId, { ev, tools }) {
     const [argText, argCut] = cut(JSON.stringify(arg), m.key === 'command' ? 200 : 1024);
     const t = Date.parse(o.ts || o.observedAt || e.observedAt || '');
     const rec = {
-      type: 'TOOL', event: 'postToolUse', session: `copilot-${runId}`, agent: 'main', ts: o.ts || '',
+      type: 'TOOL', event: 'postToolUse', session: `copilot-${runId}`, agent: String(o.step || 'main'), ts: o.ts || '',
       loggedAt: t ? new Date(t).toISOString().replace(/\.\d+Z$/, 'Z') : '', tool: m.as, arg: argText,
     };
     if (argCut) rec.argCut = true;
@@ -121,4 +138,4 @@ function main(argv) {
 }
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
-module.exports = { audit, loadMap };
+module.exports = { audit, loadMap, claudeCall };

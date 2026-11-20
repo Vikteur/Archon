@@ -9,6 +9,8 @@
 // contract (contract/, openapi.yaml, an operationId) or code (anything else). A Read of a .java file with no offset or
 // limit is a whole Java read. Hand work is the code searches plus the whole Java reads.
 // A Bash call to the codegraph CLI or to scripts/contract-mcp/cli.mjs counts as a call to that server.
+// A Copilot tool name (bash, grep, glob, view) counts as the Claude tool .archon/copilot/tools.json maps it to
+// (copilot-audit.js); without that file the names count as they are.
 // A node is warned when a server was up (the last "mcp: ..." line of <artifacts-dir>/mcp-status.txt) and the node
 //   - did hand work at least its threshold of times (explore 8, plan 5, any other node 8) and never called CodeGraph, or
 //   - read the contract by hand and never called the contract server.
@@ -19,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const { findLog } = require('./run-trace.js');
 const { kitGet } = require('./kit-config.js');
+const { loadMap, claudeCall } = require('./copilot-audit.js');
 
 const SERVER = kitGet('contract.server_name', '@@KIT_CONTRACT_SERVER_NAME@@');
 
@@ -58,6 +61,8 @@ function newCounts() {
 
 // Map<node, counts> over the log's tool calls; a node id matches its own steps and the steps inside it (implement.*)
 function count(text, nodes) {
+  let map;
+  try { map = loadMap(); } catch { map = { ev: { nameField: 'name', inputField: 'rawInput' }, tools: new Map() }; }
   const out = new Map(nodes.map(n => [n, newCounts()]));
   for (const l of text.split('\n')) {
     let o;
@@ -67,8 +72,7 @@ function count(text, nodes) {
     const node = nodes.find(n => o.step === n || String(o.step || '').startsWith(`${n}.`));
     if (!node) continue;
     const c = out.get(node);
-    const name = String(e.name || '');
-    const input = e.rawInput || {};
+    const { name, input } = claudeCall(e, map);
     c.calls++;
     if (name.startsWith(`mcp__${SERVER}__`)) c.server++;
     else if (name.startsWith('mcp__codegraph__')) c.codegraph++;

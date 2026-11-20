@@ -34,8 +34,10 @@ description: |
 nodes:
   - id: ticket
     bash: |
-      # The run trace (skills, templates, scripts per node) in the ARTIFACTS tab; it follows the run and exits when it ends.
-      node .archon/scripts/run-trace.js --start "$WORKFLOW_ID" "$ARTIFACTS_DIR" >/dev/null 2>&1 || true
+      # The run trace (skills, templates, scripts per node, the run's warnings, the Copilot usage per node) in the ARTIFACTS
+      # tab; it follows the run and exits when it ends. A fallback's stderr line is what trace.md lists as a warning.
+      node .archon/scripts/run-trace.js --start "$WORKFLOW_ID" "$ARTIFACTS_DIR" >/dev/null \
+        || echo "run-trace.js failed; the run has no trace.md" >&2
       out=$(bash .archon/scripts/ticket.sh "$ARGUMENTS") || exit $?
       # The @@KIT_CONTRACT_SERVER_NAME@@ and CodeGraph MCP servers need git-ignored things in this worktree (node_modules, the contract,
       # the readiness report; the .codegraph/ index). mcp-setup.sh readies both and writes .archon/mcp/build-tools.json
@@ -250,7 +252,8 @@ nodes:
   - id: mcp-use
     depends_on: [plan]
     bash: |
-      node .archon/scripts/mcp-use-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" explore plan || true
+      node .archon/scripts/mcp-use-check.js "$ARTIFACTS_DIR" "$WORKFLOW_ID" explore plan \
+        || echo "mcp-use-check.js failed; the run has no mcp-use.md" >&2
 
   # The STOP items the ticket labels or the plan name are listed for the plan approval and the pull request.
   # stop-items.txt is what pr-refresh.sh writes as the body's "STOP items touched:" line (P2: a script words it).

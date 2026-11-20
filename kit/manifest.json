@@ -164,7 +164,7 @@
       "template": false,
       "origin": null,
       "kind": "doc",
-      "sha256": "c1e436a001387cef30236dbec770112902789e132c9100662e6407e6cc1d7011"
+      "sha256": "6dd968db850bbc44404e7a77c63d3eb25d46faa80dfdc684a55dbe62db74a091"
     },
     {
       "path": ".archon/copilot/deny.json",
@@ -293,7 +293,16 @@
       "template": false,
       "origin": ".archon/scripts/copilot-audit.js",
       "kind": "script",
-      "sha256": "d1345a87224241fde78e2aa4d38409bbd71f2b02b7b38ccddc6a9888112dc918"
+      "sha256": "8cc97cba7fe4f9c546d78a92708f7bfc1b43b588209b9ee953374f977f99bafd"
+    },
+    {
+      "path": ".archon/scripts/copilot-usage.js",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "a1df763d3a75b30775f7f4cfcdb6bf7877c0921b3bd42add9cc5dbb1e1a565a3"
     },
     {
       "path": ".archon/scripts/kit-config.js",
@@ -347,7 +356,7 @@
       "template": true,
       "origin": ".archon/scripts/mcp-use-check.js",
       "kind": "script",
-      "sha256": "b5bdc33163f1b2901ac930088499312288621a9d6587a6fda4cc10c118c7e33f"
+      "sha256": "d4a837b64324cd213cd6cb64422927f72f56d662b7147a7bfd3f99d1d5f05b98"
     },
     {
       "path": ".archon/scripts/open-pr.sh",
@@ -365,7 +374,7 @@
       "template": true,
       "origin": ".archon/scripts/plan-context.sh",
       "kind": "script",
-      "sha256": "84b3cffabd89065ca60bea57105b6b37147be796b43b8004b4410f056452025e"
+      "sha256": "48e64550b29e4bdce81dd96bf71995cc1ae16f0f11030c4cca83f976811cd133"
     },
     {
       "path": ".archon/scripts/plan-order.js",
@@ -500,7 +509,7 @@
       "template": false,
       "origin": ".archon/scripts/run-metrics.js",
       "kind": "script",
-      "sha256": "92d306cbac776ce32921e3a43177673445f0f0a591fa0b64ac89036a2c40280c"
+      "sha256": "b1df211a0edb7131149fc9aecd8057b8050fe81fb322dc2e089ce78d784e333d"
     },
     {
       "path": ".archon/scripts/run-trace.js",
@@ -509,7 +518,7 @@
       "template": false,
       "origin": ".archon/scripts/run-trace.js",
       "kind": "script",
-      "sha256": "cd13926c8363503f149efcb8df5f73090d4cd52a20186a3112329cda05eb04a6"
+      "sha256": "945f2b3345965dbfedcfd7237a8605833a57bb5fcffb6b2b88228362268860c3"
     },
     {
       "path": ".archon/scripts/scaffold-check.js",
@@ -666,6 +675,15 @@
       "sha256": "1be4df140cd231ff4d43af134f3ebcb1a7edc160364a4e2185818ee8d5a47b41"
     },
     {
+      "path": ".archon/scripts/test/copilot-usage.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "ba058c721e4e706668e4b568108ad6631479f9fa3a0ed45a10217dc024fd6138"
+    },
+    {
       "path": ".archon/scripts/test/fixtures/copilot-audit/empty.jsonl",
       "profile": "core",
       "mode": "0644",
@@ -681,7 +699,7 @@
       "template": false,
       "origin": ".archon/scripts/test/fixtures/copilot-audit/expected.jsonl",
       "kind": "script",
-      "sha256": "528bf71113a4e19c23d3faf620e24ede55bb18400b24bbeb698e69a4fd727714"
+      "sha256": "7cf28075640625aeb02a9b99f4dcfe500f05fdbd7d8b2b9edc1b30acfb0a9e5a"
     },
     {
       "path": ".archon/scripts/test/fixtures/copilot-audit/run.jsonl",
@@ -737,7 +755,7 @@
       "template": true,
       "origin": ".archon/scripts/test/mcp-use-check.test.sh",
       "kind": "script",
-      "sha256": "c1db3a2883543dc20b3c32352013f260f9af206ac77cf9b6f2a741c0285e51af"
+      "sha256": "6bf7cf1e06b36fdbd2dc735d12a8a13a50be25622997a638cc2e9d44886cbe80"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -764,7 +782,7 @@
       "template": false,
       "origin": ".archon/scripts/test/plan-context.test.sh",
       "kind": "script",
-      "sha256": "156dfa23a239d5bd02d69e7dcfbaceea5eaf386c9cc6b461cc52f4677b35ed69"
+      "sha256": "5ba160a26dcb4d9189e403e214a2b48d456ce0f8f96a83a39261db05e6e09ebd"
     },
     {
       "path": ".archon/scripts/test/plan-order.test.sh",
@@ -873,7 +891,7 @@
       "template": false,
       "origin": ".archon/scripts/test/run-metrics.test.sh",
       "kind": "script",
-      "sha256": "5559821db5c74d741e462239baf012132e78925ec7e6c2fa127c665386d5430b"
+      "sha256": "bfb598b099fa1e6bae6318aada82690b8faa53db46be9d2a562c90792a13b484"
     },
     {
       "path": ".archon/scripts/test/run-trace.test.sh",
@@ -882,7 +900,7 @@
       "template": false,
       "origin": ".archon/scripts/test/run-trace.test.sh",
       "kind": "script",
-      "sha256": "cfabacfb627449910b5f94e1bb962aba76cb05f1859f18aa542176c7900406a6"
+      "sha256": "c696e5beecadd1ffc19d66671d78121f559a32577725f3cfa6a9dcfde2930670"
     },
     {
       "path": ".archon/scripts/test/scaffold-step.test.sh",
@@ -972,7 +990,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "b92a42e064e1c600acbfdad346f2842e98a222e07293381b4d02508e37d0049b"
+      "sha256": "027cfb49fdd2215b462710a2ec56fcc34eb6fef80d8852cfc5d2dcdde3242fb3"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -981,7 +999,7 @@
       "template": false,
       "origin": ".archon/workflows/portal-metrics.yaml",
       "kind": "workflow",
-      "sha256": "2e7ed1cdb32840db15d8534784141ecae79188f3f92704570f6aa74315827a11"
+      "sha256": "27aea08d6e868095a7fc3d25029e3a735b25cf6edd4b1fc5b32902fd408e642c"
     },
     {
       "path": ".archon/workflows/sdlc/.shared/metric-views.json",
@@ -1761,6 +1779,15 @@
       "sha256": "f5d352a9062ced252c62bca3309041717cc3bfe3a75a75b6013a4355357461a5"
     },
     {
+      "path": "scripts/test/tokenomics-copilot.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": null,
+      "kind": "script",
+      "sha256": "24944f894033e1c761c7da9906095fb3c7dc8509bacdd54f22bd784c6ef195d6"
+    },
+    {
       "path": "scripts/test/web-uis.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -1785,7 +1812,7 @@
       "template": true,
       "origin": "scripts/tokenomics/tokenomics.js",
       "kind": "script",
-      "sha256": "e500fe9b57f5d304a7416b0e702001ac17619d4017dd7426575ed13bc318c0bd"
+      "sha256": "9aa0f05fbd4fdf52271fb3632fc10ddf1c563f6430f88227773822a00577e77f"
     },
     {
       "path": "scripts/tools.conf",

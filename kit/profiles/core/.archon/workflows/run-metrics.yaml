@@ -2,7 +2,8 @@ name: run-metrics
 description: |
   Record this project's past runs as metrics for the console's Metrics tab: the pull requests build-feature runs
   opened (sdlc.prs_opened, sdlc.prs_merged, sdlc.prs_abandoned, sdlc.pr_merge_rate, with the runs that worked on
-  each) and every run's start and recorded cost (runs.started, runs.spend_usd). Re-runs replace earlier records.
+  each), every run's start and recorded cost (runs.started, runs.spend_usd), and per Copilot agent node and model the
+  tokens, model calls and Copilot cost units of the CLI's own session log (copilot.*). Re-runs replace earlier records.
 
   Use when: the Metrics tab should show current figures. Run it on demand (`archon workflow run run-metrics`);
   nothing schedules it.
