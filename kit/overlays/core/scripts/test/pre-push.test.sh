@@ -396,6 +396,29 @@ r="$(desc_repo descenv 'groma_descriptions: optional')"
 rc="$(run_check "$r" descenv KIT_GROMA_DESCRIPTIONS=required)"; last_err="$tmp/descenv.err"
 check "KIT_GROMA_DESCRIPTIONS=required overrides kit.yaml" test "$rc" -eq 1
 
+# (o) groma_curation: a map that is still its first scan is a note by default and fails only when required.
+printf '%s\n' '#!/usr/bin/env bash' \
+  '[ "$1" != agent-instructions ] || echo "This map is still its first scan: curate it"' > "$tmp/firstscan-groma"
+chmod +x "$tmp/firstscan-groma"
+first_scan() { # first_scan <name> <kit.yaml groma_curation line or -> [env...]: prints groma-check's exit code
+  local d n="$1" line="$2"
+  shift 2
+  d="$(new_map_repo "$n")"
+  mkdir -p "$d/.archon"
+  printf 'profiles: [core]\nbacklog: false\n%s\n' "$([ "$line" = - ] || echo "$line")" > "$d/.archon/kit.yaml"
+  git -C "$d" add -A && git -C "$d" commit -q -m curation
+  (cd "$d" && env "$@" GROMA="$tmp/firstscan-groma" bash .claude/scripts/groma-check.sh > "$tmp/$n.out" 2> "$tmp/$n.err")
+  echo $?
+}
+rc="$(first_scan curdef -)"; last_err="$tmp/curdef.err"
+check "without groma_curation, a first scan passes" test "$rc" -eq 0
+check "without groma_curation, the first scan is a note" grep -q 'note: groma agent-instructions reports a first scan' "$tmp/curdef.out"
+rc="$(first_scan curreq 'groma_curation: required')"; last_err="$tmp/curreq.err"
+check "groma_curation: required fails a first scan" grep -q 'reports a first scan; curate the map' "$tmp/curreq.err"
+check "groma_curation: required fails the check" test "$rc" -eq 1
+rc="$(first_scan curenv 'groma_curation: optional' KIT_GROMA_CURATION=required)"; last_err="$tmp/curenv.err"
+check "KIT_GROMA_CURATION=required overrides kit.yaml" test "$rc" -eq 1
+
 r="$(cli_repo clicop 'agent_cli: copilot')"
 rc="$(run_check "$r" clicop)"; last_err="$tmp/clicop.err"
 check "agent_cli: copilot passes without a CLAUDE.md" test "$rc" -eq 0

@@ -10,7 +10,8 @@
 # .archon/kit.yaml (else in kit.defaults.yaml beside it; env KIT_BACKLOG first) drops the two Backlog.md checks, and
 # `agent_cli: copilot` (read the same way; env KIT_AGENT_CLI first) the CLAUDE.md import check, and
 # `groma_descriptions: optional` (read the same way; env KIT_GROMA_DESCRIPTIONS first; the default) turns an element
-# without a description into a note; `required` fails it.
+# without a description into a note; `required` fails it. `groma_curation` (env KIT_GROMA_CURATION first) does the
+# same for a map that is still its first scan.
 # Usage: groma-check.sh
 set -euo pipefail
 
@@ -48,6 +49,13 @@ for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
   [[ -f "$f" ]] && descriptions=$(sed -n 's/^groma_descriptions:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
 done
 [[ "$descriptions" == required ]] || descriptions=optional
+# Curation (groma_curation, read the same way; env KIT_GROMA_CURATION first): optional unless required.
+curation="${KIT_GROMA_CURATION:-}"
+for f in .archon/kit.yaml .archon/kit.defaults.yaml; do
+  [[ -z "$curation" ]] || break
+  [[ -f "$f" ]] && curation=$(sed -n 's/^groma_curation:[[:space:]]*["'"'"']\{0,1\}\([a-z]*\).*/\1/p' "$f" | head -n 1)
+done
+[[ "$curation" == required ]] || curation=optional
 
 fail() {
   echo "FAIL: $1" >&2
@@ -62,8 +70,13 @@ elif ! grep -q '"id": *"java"' groma/scanners.json; then
 fi
 
 echo "Check: the map is curated, not a first scan"
+[[ "$curation" == required ]] || echo "  optional: groma_curation: optional (a first scan is a note, not a failure)"
 if [[ -d groma ]] && "$groma" agent-instructions 2>/dev/null | head -1 | grep -q 'still its first scan'; then
-  fail "groma agent-instructions reports a first scan; curate the map"
+  if [[ "$curation" == required ]]; then
+    fail "groma agent-instructions reports a first scan; curate the map"
+  else
+    echo "  note: groma agent-instructions reports a first scan; curate the map when you can"
+  fi
 fi
 
 echo "Check: every element has a description"

@@ -55,7 +55,8 @@ script then cannot log `gh` in for you.
 When `groma-check` fails on the committed first scan of the Groma map, the closing list says
 so: the pre-push check refuses a push until an agent fixes what it names. A map element
 without a description is only a note while `groma_descriptions` in `.archon/kit.yaml` is
-`optional` (the default); `required` fails it.
+`optional` (the default), and a map that is still its first scan while `groma_curation` is;
+`required` fails either.
 
 | Option | Effect |
 |--------|--------|

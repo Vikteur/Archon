@@ -7,6 +7,7 @@ base_branch: main
 gh_accounts: [] # gh-switch-account skill: the gh accounts to switch between, e.g. [alice, alice-work]
 agent_cli: copilot # install-tools.sh and kit-config.sh: the agent CLI this project runs, claude | copilot
 groma_descriptions: optional # groma-check.sh: optional (a map element without a description is a note) | required (it fails)
+groma_curation: optional # groma-check.sh: optional (a map that is still its first scan is a note) | required (it fails)
 build_workflow: build-feature-copilot
 java_version: 21 # kit add takes JavaLanguageVersion.of(N) of build.gradle.kts, buildSrc/ or build-logic/; set to another, it refuses
 pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh, either stack: one <item>|<module>|<task>|<class> line each

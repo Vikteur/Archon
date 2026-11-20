@@ -1235,7 +1235,7 @@
       "template": false,
       "origin": ".claude/scripts/groma-check.sh",
       "kind": "script",
-      "sha256": "0398ac0bdea80027e2bc9d52123ca5d5ede9bedb177060fdfecf20232b2e394c"
+      "sha256": "1b466e8d5cfb7569179433cc7eab506d07f8080e12cf98b3b0d1463540586639"
     },
     {
       "path": ".claude/scripts/groma-delta.sh",
@@ -1784,7 +1784,7 @@
       "template": false,
       "origin": "scripts/test/pre-push.test.sh",
       "kind": "script",
-      "sha256": "c985676dc6e24a520d746a0a2b2eeeb316d398c3c2a36e6630ded55bf3f25d63"
+      "sha256": "0fff9e449bf673e20ed4f3df6465b92868fdbaa89fee341e709693abcf032699"
     },
     {
       "path": "scripts/test/run-suites.test.sh",
