@@ -141,7 +141,11 @@ fi
 
 # The spring stack (KIT_STACK=spring) reads the same file; so does a root with no list.
 r="$(fresh_root nolist)"; rm -f "$r/.archon/pin-proofs.txt"
-refused "refuses_a_root_without_a_list" "$r" "no pin proofs in .archon/pin-proofs.txt"
+out="$(bash "$script" "$r" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && grep -qxF "pin-proof: skipped, no .archon/pin-proofs.txt (the project lists no framework pin proofs; add the file to check them)" <<<"$out" \
+  && ! grep -q '^FAIL' <<<"$out"; then pass "skips_with_a_notice_without_a_list_file"; else fail "skips_with_a_notice_without_a_list_file: exit $rc" "$out"; fi
+r="$(fresh_root emptylist)"; printf '# none yet\n\n' >"$r/.archon/pin-proofs.txt"
+refused "refuses_a_list_file_with_no_proof" "$r" "no pin proofs in .archon/pin-proofs.txt"
 spring_list='# item|module|task|class
 starts @SpringBootTest|application|integrationTest|com.example.application.guest.GuestApiIntegrationTest
 
@@ -162,7 +166,8 @@ srefused() { # <case> <root> <fragment>: refused with KIT_STACK=spring
 r="$(spring_root spring-ok "$spring_list")"
 out="$(KIT_STACK=spring bash "$script" "$r" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && grep -qxF "pin-proof: ok" <<<"$out"; then pass "spring_accepts_the_listed_reports_passing"; else fail "spring_accepts_the_listed_reports_passing: exit $rc" "$out"; fi
-srefused "spring_refuses_no_list_file" "$(spring_root spring-nolist)" "no pin proofs in .archon/pin-proofs.txt"
+out="$(KIT_STACK=spring bash "$script" "$(spring_root spring-nolist)" 2>&1)"; rc=$?
+if [ "$rc" -eq 0 ] && grep -q '^pin-proof: skipped, no .archon/pin-proofs.txt' <<<"$out"; then pass "spring_skips_without_a_list_file"; else fail "spring_skips_without_a_list_file: exit $rc" "$out"; fi
 srefused "spring_refuses_a_list_of_only_comments" "$(spring_root spring-comments '# nothing yet')" "no pin proofs"
 r="$(spring_root spring-failed "$spring_list")"
 write_report "$r" application test com.example.application.architecture.ArchitectureTest 4 0 1 0

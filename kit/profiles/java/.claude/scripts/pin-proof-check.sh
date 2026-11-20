@@ -6,7 +6,8 @@
 # Exit 0 = ok, 1 = refused (one FAIL line each), 2 = usage.
 # The list is the project's file, on either stack: kit key `pin_proofs` (env KIT_PIN_PROOFS, default
 # .archon/pin-proofs.txt, relative to <repo-root>), one `<item>|<module>|<task>|<class>` line per proof, `#` comments and
-# blank lines skipped. A missing or empty list is refused, so a build never passes with nothing proven.
+# blank lines skipped. A project without the list file has no pins to prove: the check skips with a notice (exit 0).
+# A list file that holds no proof is refused, so a build that keeps a list never passes with nothing proven.
 set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../.archon/scripts/kit-config.sh
@@ -23,8 +24,11 @@ failed=0
 fail() { echo "FAIL: $1"; failed=1; }
 
 list="$(kit_get pin_proofs .archon/pin-proofs.txt KIT_PIN_PROOFS)"
-proofs=""
-[ -f "$list" ] && proofs="$(tr -d '\r' <"$list" | grep -vE '^[[:space:]]*(#|$)')"
+if [ ! -f "$list" ]; then
+  echo "pin-proof: skipped, no $list (the project lists no framework pin proofs; add the file to check them)"
+  exit 0
+fi
+proofs="$(tr -d '\r' <"$list" | grep -vE '^[[:space:]]*(#|$)')"
 if [ -z "$proofs" ]; then
   echo "FAIL: no pin proofs in $list (list each <item>|<module>|<task>|<class> there)"
   exit 1
