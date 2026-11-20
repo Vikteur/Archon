@@ -4,9 +4,8 @@
 #   ci-local.sh [--post] [--force] [--keep] [--all] [--audit] [--rerun-failed] [--jobs a,b] [<sha>|<pr-number>|<pr-number>:<sha>]
 # The workflow is read from the commit under test, so the runner follows CI as it changes. Each job gets its own
 # clean, detached worktree of the commit (never the current checkout); a pull request is tested as CI tests it, merged
-# into its base. All jobs run side by side, each job's steps in order (owner decision 2026-10-18); the build's
-# Testcontainers and the image build share Docker without trouble here (both green on 047a3a8). Should that change, the
-# jobs listed in CI_LOCAL_SERIAL (e.g. "test image") run one after the other instead.
+# into its base. All jobs run side by side, each job's steps in order (owner decision 2026-10-18); the jobs listed in
+# CI_LOCAL_SERIAL (e.g. "test archon-scripts") run one after the other instead.
 #   --post   post one GitHub commit status per job on the commit, context local-ci/<job> (pending at the start, then
 #            success or failure): the result by SHA that ci-by-sha.sh reads. Needs every job.
 #   --force  with --post, run even when the commit has a finished local CI run or a live one (queued behind it, never
@@ -50,20 +49,15 @@
 # CI_LOCAL_LOCK_POLL seconds (default 2). Two runs, each with its jobs side by side, were more than this machine carries:
 # archon-scripts took 829s of its 900 beside another run (2d1461f). CI_LOCAL_SLOTS=2 lets two go side by side again
 # (the load average goes in the ledger's start and end lines).
-# Two runs side by side never share a name, a folder or a port: two commits with the same 7-character prefix never run
+# Two runs side by side never share a name or a folder: two commits with the same 7-character prefix never run
 # side by side (ci-queue.sh), and everything a run owns is named by that prefix:
 #   - its folder $CI_LOCAL_ROOT/<sha7>, its job worktrees in it, and its WSL clones ~/ci-local/<sha7>/<job>;
-#   - every step gets CI_LOCAL_RUN=<sha7>, CI_LOCAL_SLOT=<k>, CI_IMAGE_TAG=app:ci-<sha7> (the image
-#     image.test.sh builds and checks), IMAGE_CHECK_NAME=app-image-check-<sha7> (image-check.sh's container and
-#     network prefix) and IMAGE_CHECK_PORT=<18080 + k - 1> (its host port, one per slot k); a variable the workflow sets
-#     on the job or the step wins;
-#   - after each job, only the run's own image-check leftovers are removed; after the run (not with --keep), its own
-#     image tag, never another one.
-# The jobs in CI_LOCAL_XRUN (default "image") run one at a time across runs, a run waiting (the wait counts with the
-# needs: wait, not with the job's own time or its timeout): two Docker builds of the Dockerfile at once share its Gradle
-# cache mount, where one Gradle cannot ask the other for its lock and fails after a minute. Gradle on the host needs no
-# such lock: each job worktree has its own project cache (.gradle), its builds their own daemon, and a shared ~/.gradle
-# is safe for Gradle. Testcontainers and the app tests take free ports (Quarkus test-port=0, Spring RANDOM_PORT).
+#   - every step gets CI_LOCAL_RUN=<sha7> and CI_LOCAL_SLOT=<k> (one per slot k); a variable the workflow sets on the
+#     job or the step wins.
+# The jobs in CI_LOCAL_XRUN (default none) run one at a time across runs, a run waiting (the wait counts with the
+# needs: wait, not with the job's own time or its timeout): for a job whose steps hold something two runs cannot
+# share. Gradle on the host needs no such lock: each job worktree has its own project cache (.gradle), its builds their
+# own daemon, and a shared ~/.gradle is safe for Gradle. Testcontainers and the app tests take free ports (Quarkus test-port=0, Spring RANDOM_PORT).
 # A plain --post call (no --force, --rerun-failed, --all or --audit) runs nothing and exits 0 when the commit's local
 # CI is finished (local-ci-status.sh reads green or red) or pending with its run alive (a live queue entry). It says
 # which and names the folder. A pending one whose run is gone (stale: local-ci-status.sh finds no live queue entry of
@@ -95,8 +89,6 @@
 # over its ci.yml timeout-minutes is stopped and posts `timed out after <m> min`; CI_LOCAL_FAIL_FAST (D6) decides the
 # rest of a red run: when-queued (default) stops its other jobs only while another run is queued, always stops them,
 # never lets them finish. A stopped job posts error `cancelled: <red job> failed and run #<n> is queued, not a pass`.
-# After each job, the run's own Docker leftovers of image-check (app-image-check-<sha7>-<pid>, its process gone)
-# are removed, and the run's port still held is noted in the job's log.
 set -uo pipefail
 
 post="" force="" keep="" only="" all="" audit="" rerun_failed=""
@@ -246,7 +238,7 @@ ledger() { ci_ledger "$1" --arg sha "$sha" --arg run "${run_id:-}" --argjson pr 
 ledger request --arg mode "$([ -n "$post" ] && echo post || echo check)" --arg jobs "$(echo $jobs)" --argjson t_req "$t_req"
 
 # The queue (ci-queue.sh) in front of the run locks. One local CI per slot on this machine (owner decisions 2026-10-18,
-# TASK-56, and D18: two slots): the jobs of one run share its CPUs and Docker; two runs share no name or port (see the
+# TASK-56, and D18: two slots): the jobs of one run share its CPUs and Docker; two runs share no name or folder (see the
 # header). A lock whose process is gone is taken over, a queue entry whose process is gone is reaped.
 q_init "$root"
 mode=$([ -n "$post" ] && echo post || echo check)
@@ -298,9 +290,7 @@ done
 t_lock=$(date -u +%s)
 q_locked q_set "$qn" state running
 # What this run owns, by its commit's 7-character prefix and its slot (D18): see the header.
-run_tag="app:ci-$short" run_name="app-image-check-$short" run_port=$((18080 + ${Q_SLOT:-1} - 1))
-run_env=(CI_LOCAL_RUN="$short" CI_LOCAL_SLOT="${Q_SLOT:-1}" CI_IMAGE_TAG="$run_tag" IMAGE_CHECK_NAME="$run_name"
-  IMAGE_CHECK_PORT="$run_port")
+run_env=(CI_LOCAL_RUN="$short" CI_LOCAL_SLOT="${Q_SLOT:-1}")
 
 fetch origin || { echo "git fetch origin failed" >&2; exit 1; }
 if [ -n "$pr" ]; then
@@ -311,7 +301,7 @@ fi
 
 # The paths the .archon suites read from the checkout: the scripts and suites themselves, the scope guard and its
 # policy (retro-fence, developer-fence), .gitignore (developer-fence checks the local policy is ignored) and the workflow that runs
-# them. What else the scripts call (groma-check, commit-reports.sh, backlog/, docs/retro/) the suites stub.
+# them. What else the scripts call (commit-reports.sh, backlog/, docs/retro/) the suites stub.
 ARCHON_SUITE_PATHS=(.archon/ .claude/hooks/ .gitignore .github/workflows/ci.yml)
 ARCHON_SUITE_GLOB='.archon/scripts/test/*.test.sh'
 archon_skip="" archon_suites="" archon_note="" archon_change=""
@@ -492,7 +482,7 @@ result() {
 # xrun_lock <job>: in the job's process, waits for its CI_LOCAL_XRUN turn across runs, then holds it until the job's
 # process ends (flock on fd 7, released by the kernel also when the job is stopped; without flock, a lock folder whose
 # process is gone is taken over).
-xrun=" ${CI_LOCAL_XRUN-image} "
+xrun=" ${CI_LOCAL_XRUN-} "
 xrun_lock() {
   local job=$1 lock="$root/.xrun-$1" holder said=""
   if command -v flock > /dev/null; then
@@ -925,35 +915,6 @@ kill_tree() {
   kill -KILL "$p" 2>/dev/null
 }
 
-# clean_leftovers <job>: after a job, this run's Docker leftovers of image-check whose process is gone (its containers
-# and network are named app-image-check-<sha7>-<pid>; another run's are never touched), and a note when the run's
-# port is still held. Without Docker, nothing.
-clean_leftovers() {
-  local job=$1 d=${CI_LOCAL_DOCKER:-docker} n pid held
-  command -v "$d" > /dev/null || return 0
-  for n in $( { timeout 30 "$d" ps -a --filter "name=$run_name-" --format '{{.Names}}'
-                timeout 30 "$d" network ls --filter "name=$run_name-" --format '{{.Name}}'; } 2>/dev/null | sort -u); do
-    [[ "$n" == "$run_name"-* ]] || continue
-    pid=${n#"$run_name"-}; pid=${pid%-db}
-    [[ "$pid" =~ ^[0-9]+$ ]] || continue
-    kill -0 "$pid" 2>/dev/null && continue
-    { timeout 60 "$d" rm -f "$n" || timeout 60 "$d" network rm "$n"; } > /dev/null 2>&1 \
-      && echo "after the job: removed the leftover $n (its process $pid is gone)" >> "$out/$job.log"
-  done
-  held=$(timeout 30 "$d" ps --filter "publish=$run_port" --format '{{.Names}}' 2>/dev/null | head -n 1)
-  [ -n "$held" ] && echo "after the job: port $run_port is still held by the container $held" >> "$out/$job.log"
-  return 0
-}
-
-# remove_own_image: after the run, the image tag only this run built (CI_IMAGE_TAG); never another tag.
-remove_own_image() {
-  local d=${CI_LOCAL_DOCKER:-docker}
-  command -v "$d" > /dev/null || return 0
-  timeout 30 "$d" image inspect "$run_tag" > /dev/null 2>&1 || return 0
-  timeout 120 "$d" image rm "$run_tag" > /dev/null 2>&1 && echo "removed this run's image tag $run_tag"
-  return 0
-}
-
 # stop_result <job>: the result of a job the watcher stopped (.stop: "timedout <min>" or "cancelled <why>").
 stop_result() {
   local job=$1 how arg t0 secs
@@ -975,7 +936,6 @@ launch_job() {
   if [ -s "$out/$job.stop" ]; then stop_result "$job"
   elif [ ! -s "$out/$job.result" ]; then result "$job" failure 0 0 infra 0 0 "the job ended without a result"
   fi
-  clean_leftovers "$job"
   finish_job "$job"
 }
 
@@ -1058,7 +1018,6 @@ cat "$out/summary.txt"
 if [ -z "$keep" ]; then
   for j in $jobs; do git -C "$main" worktree remove --force "$out/wt-$j" 2>/dev/null; done
   git -C "$main" worktree prune
-  remove_own_image
 fi
 ended=1
 exit $ok

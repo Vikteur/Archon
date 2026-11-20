@@ -397,13 +397,6 @@ export const STANDALONE_TARGETED: Record<string, Rewrite[]> = {
       1,
     ],
   ],
-  '.archon/scripts/groma-links.sh': [
-    [
-      'edited in the backlog checkout and committed by close-out.',
-      'edited in the backlog checkout and committed by whoever closes it.',
-      1,
-    ],
-  ],
   '.archon/scripts/local-ci-run.sh': [
     [
       'a run worktree that calls this is deleted at close-out while the',

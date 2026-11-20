@@ -98,7 +98,7 @@ out="$review_prompt"
 check "9 review: reads the branch-wide run of review-tests, runs none first" \
   $(grep -q 'Read $ARTIFACTS_DIR/review-tests.log' <<< "$review_prompt" && ! grep -q 'First run' <<< "$review_prompt"; echo $?)
 
-# 9b. review-tests runs the branch-wide affected-check (with the mutation gate) once, into review-tests.log, and never
+# 9b. review-tests runs the branch-wide affected-check once, into review-tests.log, and never
 # fails the node: a red run is the review's to read and fix. A stub affected-check stands in for the real one.
 tests_bash=$(node review-tests bash)
 out="$tests_bash"
@@ -106,11 +106,11 @@ check "9b review-tests runs affected-check branch-wide, not synced" $(grep -q 'A
 check "9b review-tests has a timeout" $([ "$(node review-tests timeout)" -ge 1800000 ] 2>/dev/null; echo $?)
 mkdir -p "$r/.claude/scripts"
 for want in 0 1; do
-  printf 'echo "SURVIVED: a mutant"; echo "base=${AFFECTED_BASE:-none} sync=${AFFECTED_NO_SYNC:-}"; exit %s\n' "$want" > "$r/.claude/scripts/affected-check.sh"
+  printf 'echo "FAILED: a test"; echo "base=${AFFECTED_BASE:-none} sync=${AFFECTED_NO_SYNC:-}"; exit %s\n' "$want" > "$r/.claude/scripts/affected-check.sh"
   out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$tests_bash" 2>&1); rc=$?
   check "9b review-tests (affected-check exit $want): the node passes and says the exit" $([ "$rc" -eq 0 ] && grep -q "exit $want" <<< "$out"; echo $?)
   check "9b review-tests (affected-check exit $want): the log holds the output" \
-    $(grep -qx 'SURVIVED: a mutant' "$art/review-tests.log" && grep -qx 'base=none sync=1' "$art/review-tests.log"; echo $?)
+    $(grep -qx 'FAILED: a test' "$art/review-tests.log" && grep -qx 'base=none sync=1' "$art/review-tests.log"; echo $?)
 done
 rm -rf "$r/.claude"
 check "9 review: the re-run uses review-base" $(grep -q 'AFFECTED_BASE="$(cat "$ARTIFACTS_DIR/review-base.sha")"' <<< "$review_prompt"; echo $?)
@@ -126,7 +126,7 @@ check "10 review reads Checks for review" $(grep -q '## Checks for review' <<< "
 
 # 11. No committing agent may skip the hook; the agent nodes may not use Monitor.
 denies() { yq "[.. | select(tag == \"!!map\" and .id == \"$2\") | .denied_tools[]] | join(\" \")" "$1"; }
-for n in write-tests build-step review map-curate fix; do
+for n in write-tests build-step review fix; do
   d=$(denies "$wf" "$n"); out="$n: $d"
   check "11 build-feature $n denies --no-verify and commit -n" $([[ "$d" == *'Bash(*--no-verify*)'* && "$d" == *'Bash(*commit -n *)'* ]]; echo $?)
 done

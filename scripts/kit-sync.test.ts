@@ -6,6 +6,7 @@ import { trackTempRoots } from '@archon/paths/test-utils';
 import { renderBundledKit } from './generate-bundled-kit';
 import { depsCheck, installableSets, judgeDeps, KNOWN_GAPS } from './kit-sync-deps';
 import { genericThisRepo, renamePath } from './kit-sync-generic';
+import { SRC } from './kit-sync-source-name';
 import { applySuiteNouns, classifySuite, suiteOf, suiteSubject } from './kit-sync-tests';
 import {
   applyGlobalRewrites,
@@ -21,6 +22,7 @@ import {
   DISPATCH_SH,
   fencedAgents,
   KIT_MODULES,
+  kitOrigin,
   leakCheck,
   mcpFallbackCommands,
   NEVER_SHIP,
@@ -32,6 +34,7 @@ import {
   parseHookCommand,
   type Rewrite,
   snapshot,
+  sourcePathOf,
   sync,
   verifyKit,
   WORKFLOW_FALLBACK,
@@ -105,7 +108,7 @@ argument-hint: "[base]"
 ---
 # Grill
 
-See .claude/skills/grill-pr/references and .claude/skills/run-wedding-portal/SKILL.md.
+See .claude/skills/grill-pr/references and .claude/skills/${SRC.runSkill}/SKILL.md.
 `;
 
 const SETTINGS = {
@@ -147,12 +150,12 @@ function fixture(): string {
   write(root, '.claude/skills/grill-pr/SKILL.md', SKILL);
   write(
     root,
-    '.claude/skills/run-wedding-portal/SKILL.md',
-    '---\nname: run-wedding-portal\ndescription: Run it.\n---\nRun.\n'
+    `.claude/skills/${SRC.runSkill}/SKILL.md`,
+    `---\nname: ${SRC.runSkill}\ndescription: Run it.\n---\nRun.\n`
   );
   write(
     root,
-    '.claude/skills/run-wedding-portal/scripts/smoke.sh',
+    `.claude/skills/${SRC.runSkill}/scripts/smoke.sh`,
     '#!/usr/bin/env bash\necho ok\n',
     true
   );
@@ -169,7 +172,7 @@ function fixture(): string {
   write(
     root,
     '.archon/scripts/test/guard.test.sh',
-    'bash .claude/hooks/scripts/guard.sh # wedding-portal\n'
+    `bash .claude/hooks/scripts/guard.sh # ${SRC.repo}\n`
   );
   write(root, 'scripts/test/image.test.sh', 'excluded\n');
   write(root, 'docs/scaffold-templates/a/resource.mustache', 'import jakarta.ws.rs.GET;\n');
@@ -643,11 +646,11 @@ describe('placeholders and rewrites', () => {
   });
 
   test('the main checkout path becomes the built-in project-dir placeholder', () => {
-    expect(applyGlobalRewrites('"Bash(cd /home/viktor/wedding-portal &&*)"')).toBe(
+    expect(applyGlobalRewrites(`"Bash(cd /home/viktor/${SRC.repo} &&*)"`)).toBe(
       '"Bash(cd @@KIT_PROJECT_DIR@@ &&*)"'
     );
-    expect(applyGlobalRewrites('/home/viktor/wedding-portal-wt/x')).toBe(
-      '/home/viktor/wedding-portal-wt/x'
+    expect(applyGlobalRewrites(`/home/viktor/${SRC.repo}-wt/x`)).toBe(
+      `/home/viktor/${SRC.repo}-wt/x`
     );
     expect(
       leakCheck([{ profile: 'core', path: 'a', content: 'cd @@KIT_PROJECT_DIR@@' }]).failures
@@ -655,15 +658,40 @@ describe('placeholders and rewrites', () => {
   });
 
   test('the global rewrites move skill paths and the contract repo', () => {
-    expect(
-      applyGlobalRewrites('bash .claude/skills/run-wedding-portal/x.sh run-wedding-portal')
-    ).toBe('bash .github/skills/run-app/x.sh run-app');
+    expect(applyGlobalRewrites(`bash .claude/skills/${SRC.runSkill}/x.sh ${SRC.runSkill}`)).toBe(
+      'bash .github/skills/run-app/x.sh run-app'
+    );
     expect(applyGlobalRewrites('".claude\\skills\\gh" .claude/skills-old')).toBe(
       '".github\\skills\\gh" .claude/skills-old'
     );
     expect(applyGlobalRewrites('gh repo clone Vikteur/rekord-contract')).toBe(
       'gh repo clone @@KIT_CONTRACT_REPO@@'
     );
+  });
+});
+
+describe('the source name', () => {
+  test('every source-only name derives from one value, and the tests run under the placeholder', () => {
+    expect(SRC).toEqual({
+      repo: 'sample-app',
+      snake: 'sample_app',
+      word: 'sample',
+      Word: 'Sample',
+      WORD: 'SAMPLE',
+      umbrella: 'sampleapp',
+      runSkill: 'run-sample-app',
+    });
+  });
+
+  test('a renamed skill is recorded under its kit name, and maps back to the source path', () => {
+    expect(kitOrigin(`.claude/skills/${SRC.runSkill}/smoke.sh`)).toBe(
+      '.claude/skills/run-app/smoke.sh'
+    );
+    expect(kitOrigin('.claude/skills/grill-pr/SKILL.md')).toBe('.claude/skills/grill-pr/SKILL.md');
+    expect(sourcePathOf('.claude/skills/run-app/smoke.sh')).toBe(
+      `.claude/skills/${SRC.runSkill}/smoke.sh`
+    );
+    expect(sourcePathOf('.claude/hooks/x.sh')).toBe('.claude/hooks/x.sh');
   });
 });
 
@@ -676,7 +704,7 @@ describe('project nouns and Copilot paths', () => {
     ).toBe(
       'mcp__@@KIT_CONTRACT_SERVER_NAME@@__read @@KIT_CONTRACT_SERVER_NAME@@ scripts/contract-mcp/x contract-mcp: up run-metrics @@KIT_CONTRACT_TAG_KEY@@ my-portal-api'
     );
-    expect(applyGlobalRewrites('WorkingDirectory=%h/wedding-portal')).toBe(
+    expect(applyGlobalRewrites(`WorkingDirectory=%h/${SRC.repo}`)).toBe(
       'WorkingDirectory=@@KIT_PROJECT_DIR@@'
     );
     expect(renamePath('scripts/portal-mcp/server.mjs')).toBe('scripts/contract-mcp/server.mjs');
@@ -841,7 +869,9 @@ describe('test suites', () => {
 
   test("the source's nouns become neutral ones", () => {
     expect(
-      applySuiteNouns('Viktor Van Steenweghen runs wedding-portal-hooks on WeddingId in app.rekord')
+      applySuiteNouns(
+        `Viktor Van Steenweghen runs ${SRC.repo}-hooks on ${SRC.Word}Id in app.rekord`
+      )
     ).toBe('Example Owner runs project-hooks on OrderId in com.example');
   });
 });
@@ -852,8 +882,8 @@ describe('leak check', () => {
       { profile: 'core', path: 'a', content: 'cd /home/viktor/x' },
       { profile: 'core', path: 'b', content: 'as Vikteur' },
       { profile: 'java', path: 'c', content: `token ghp_${'a'.repeat(36)}` },
-      { profile: 'java', path: 'd', content: 'the wedding portal' },
-      { profile: 'java-quarkus', path: 'e', content: 'the wedding portal' },
+      { profile: 'java', path: 'd', content: `the ${SRC.word} portal` },
+      { profile: 'java-quarkus', path: 'e', content: `the ${SRC.word} portal` },
       { profile: 'core', path: 'f', content: 'clean' },
       { profile: 'core', path: 'g', content: '"owner": "Viktor Van Steenweghen"' },
     ]);
@@ -1036,7 +1066,7 @@ describe('sync on a fixture repo', () => {
       }[];
     };
     expect(manifest.source).toEqual({
-      name: 'sample-app',
+      name: 'archon-kit',
       commit: git(src, 'rev-parse', 'HEAD').trim(),
     });
     const keys = manifest.files.map(f => `${f.profile}/${f.path}`);
@@ -1199,14 +1229,14 @@ describe('sync on a fixture repo', () => {
     const src = fixture();
     const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-overlay-')));
     const sha = new Bun.CryptoHasher('sha256')
-      .update(readFileSync(join(src, '.claude/skills/run-wedding-portal/SKILL.md')))
+      .update(readFileSync(join(src, `.claude/skills/${SRC.runSkill}/SKILL.md`)))
       .digest('hex');
     write(
       out,
       'overlays/java-spring/overlay.json',
       JSON.stringify({
         '.github/skills/run-app/SKILL.md': {
-          derivedFrom: '.claude/skills/run-wedding-portal/SKILL.md',
+          derivedFrom: '.claude/skills/run-app/SKILL.md',
           sourceSha256: sha,
         },
       })
@@ -1223,13 +1253,13 @@ describe('sync on a fixture repo', () => {
         files: { profile: string; origin: string }[];
       }
     ).files.find(x => x.profile === 'java-spring');
-    expect(f?.origin).toBe('.claude/skills/run-wedding-portal/SKILL.md');
+    expect(f?.origin).toBe('.claude/skills/run-app/SKILL.md');
     expect(verifyKit(out)).toEqual([]);
 
     write(
       src,
-      '.claude/skills/run-wedding-portal/SKILL.md',
-      '---\nname: run-wedding-portal\ndescription: Run.\n---\nNew.\n'
+      `.claude/skills/${SRC.runSkill}/SKILL.md`,
+      `---\nname: ${SRC.runSkill}\ndescription: Run.\n---\nNew.\n`
     );
     git(src, 'commit', '-q', '-am', 'change');
     const check = sync(src, out, true, NO_REWRITES);

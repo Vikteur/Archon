@@ -4,10 +4,13 @@
  * missing, like the rest of TARGETED. scripts/kit-sync.ts runs them.
  */
 import type { Rewrite } from './kit-sync-lists';
+import { reEsc, SRC } from './kit-sync-source-name';
+
+const REPO = SRC.repo;
 
 /** Project-noun tokens, rewritten in every shipped text file (after TARGETED, before PATH_REWRITES). */
 export const NOUN_REWRITES: [RegExp, string][] = [
-  [/%h\/wedding-portal(?![\w-])/g, '@@KIT_PROJECT_DIR@@'], // systemd units
+  [new RegExp(`%h/${reEsc(REPO)}(?![\\w-])`, 'g'), '@@KIT_PROJECT_DIR@@'], // systemd units
   [/mcp__portal-api__/g, 'mcp__@@KIT_CONTRACT_SERVER_NAME@@__'],
   [/(?<![\w-])portal-api(?![\w-])/g, '@@KIT_CONTRACT_SERVER_NAME@@'],
   [/(?<![\w-])portal-mcp(?!\w)/g, 'contract-mcp'], // scripts/portal-mcp/, portal-mcp-setup.sh, `portal-mcp:` lines
@@ -117,54 +120,34 @@ const SOURCE_MODULES =
 export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   '.archon/scripts/retro-umbrella.sh': [
     [
-      'was the umbrella repo weddingapp until its docs moved into wedding-portal (2026-10-17), so',
+      `was the umbrella repo ${SRC.umbrella} until its docs moved into ${REPO} (2026-10-17), so`,
       'was a separate umbrella repo until its docs moved into this repo, so',
       1,
     ],
   ],
   '.archon/scripts/ticket.sh': [
-    ['The Backlog lives in the wedding-portal repo.', 'The Backlog lives in this repo.', 1],
-  ],
-  '.claude/scripts/groma-check.sh': [
-    ["is weddingapp's\n# scripts/web-uis.sh.)", 'is\n# scripts/web-uis.sh.)', 1],
+    [`The Backlog lives in the ${REPO} repo.`, 'The Backlog lives in this repo.', 1],
   ],
   'scripts/tools.conf': [
-    [
-      "# wedding-portal's Gradle toolchain is Java 25",
-      "# the project's JDK (its Gradle toolchain)",
-      1,
-    ],
-    ["Testcontainers in wedding-portal's tests", "Testcontainers in the project's tests", 1],
-    ["under wedding-portal's .archon/", "under the project's .archon/", 1],
-    ["(wedding-portal's backlog/)", "(the project's backlog/)", 1],
-    [
-      "the architecture map in wedding-portal; 0.6.6 is the pin wedding-portal's CI installs",
-      "the architecture map (groma/); 0.6.6 is the pin the kit's source CI installs",
-      1,
-    ],
+    [`# ${REPO}'s Gradle toolchain is Java 25`, "# the project's JDK (its Gradle toolchain)", 1],
+    [`Testcontainers in ${REPO}'s tests`, "Testcontainers in the project's tests", 1],
+    [`under ${REPO}'s .archon/`, "under the project's .archon/", 1],
+    [`(${REPO}'s backlog/)`, "(the project's backlog/)", 1],
   ],
   'scripts/install-tools.sh': [
     ['#   PORTAL_DIR      ', '#   PROJECT_DIR     ', 1],
     ['portal=${PORTAL_DIR:-', 'project=${PROJECT_DIR:-', 1],
     ['$portal/', '$project/', 6],
     ['cd "$portal"', 'cd "$project"', 1],
-    ["Switching on wedding-portal's git hooks", "Switching on the project's git hooks", 1],
-    ['failed: wedding-portal hooks', `failed: ${HOOKS}`, 1],
-    ['("wedding-portal-hooks")', '("project-hooks")', 1],
-    ['Skipped wedding-portal hooks:', `Skipped ${HOOKS}:`, 1],
-  ],
-  'scripts/web-uis.sh': [
-    [
-      '# wedding-portal (`backlog browser`), the Groma architecture map of wedding-portal (`groma web`)',
-      '# this project (`backlog browser`), the Groma architecture map of this project (`groma web`)',
-      1,
-    ],
-    ['while wedding-portal has no groma/ folder', 'while this project has no groma/ folder', 1],
+    [`Switching on ${REPO}'s git hooks`, "Switching on the project's git hooks", 1],
+    [`failed: ${REPO} hooks`, `failed: ${HOOKS}`, 1],
+    [`("${REPO}-hooks")`, '("project-hooks")', 1],
+    [`Skipped ${REPO} hooks:`, `Skipped ${HOOKS}:`, 1],
   ],
   'scripts/tokenomics/commit-reports.sh': [
-    ["<repo dir: wedding-portal's main checkout>", "<repo dir: the project's main checkout>", 1],
+    [`<repo dir: ${REPO}'s main checkout>`, "<repo dir: the project's main checkout>", 1],
   ],
-  // The build and image gates: the source's own values sit in their defaults; an install reads its kit.yaml.
+  // The build gate: the source's own values sit in its defaults; an install reads its kit.yaml.
   '.claude/scripts/build-shape-check.sh': [
     [
       'no Python or\n# rekord-api remnant is back.',
@@ -172,27 +155,17 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
       1,
     ],
     [SOURCE_MODULES, 'default_mods="-"', 1],
-    ['"\\"${root_name:-wedding-portal}\\""', '"\\"${root_name:-}\\""', 1],
+    ['"\\"${root_name:-' + REPO + '}\\""', '"\\"${root_name:-}\\""', 1],
     ['kit_get build_shape.memory_marker UD-17 ', 'kit_get build_shape.memory_marker - ', 1],
     ['kit_get build_shape.forbidden rekord-api ', 'kit_get build_shape.forbidden - ', 1],
   ],
-  '.claude/scripts/image-check.sh': [
-    ['wedding-image-check', 'app-image-check', 2],
-    ['db_user="wedding_portal"\ndb_name="wedding_portal"', 'db_user="app"\ndb_name="app"', 1],
-    [' and the ops/throttle settings.', '.', 1],
-    [
-      '   -e WEDDING_OPS_USERNAME="ops" -e WEDDING_OPS_PASSWORD="$(openssl rand -hex 16)" \\\n  -e WEDDING_THROTTLE_SERVER_KEY="$(openssl rand -base64 32)" "$image")"',
-      ' "$image")"',
-      1,
-    ],
-  ],
   '.claude/scripts/ci-local.sh': [
-    ['wedding-portal:ci-', 'app:ci-', 2],
-    ['wedding-image-check-', 'app-image-check-', 4],
+    [`${REPO}:ci-`, 'app:ci-', 2],
+    [`${SRC.word}-image-check-`, 'app-image-check-', 4],
   ],
   // The contract scripts' defaults: an install's kit.yaml names its own; the shipped defaults are generic examples.
   'scripts/portal-mcp/kit-config.mjs': [
-    ["'project_name': 'wedding-portal',", "'project_name': 'app',", 1],
+    [`'project_name': '${REPO}',`, "'project_name': 'app',", 1],
     [
       "'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/app/rekord/api',",
       "'contract.generated_dir': 'shared-adapter/build/generated/openapi/src/gen/java/com/example/api',",
@@ -213,10 +186,10 @@ export const NOUN_TARGETED: Record<string, Rewrite[]> = {
   ],
   // kit-config.mjs's shipped project_name default is 'app' (above), so its suite expects that.
   'scripts/test/portal-mcp.test.sh': [
-    ['app.rekord.api wedding-portal from-env', 'app.rekord.api app from-env', 1],
+    [`app.rekord.api ${REPO} from-env`, 'app.rekord.api app from-env', 1],
   ],
   'docs/scaffold-templates/domain/id.mustache': [
-    ['e.g. Wedding renders WeddingId', 'e.g. Order renders OrderId', 1],
+    [`e.g. ${SRC.Word} renders ${SRC.Word}Id`, 'e.g. Order renders OrderId', 1],
   ],
   'docs/code-maps/code-generation.md': [
     ['`app/rekord/planning/domain/`', '`com/example/orders/domain/`', 1],

@@ -38,15 +38,14 @@ What it does, in order (a rerun is safe; it updates what is there):
   2. installs Bun if it is missing
   3. clones or updates the Archon fork (Vikteur/Archon, branch local/console), builds and installs it
   4. pulls the contract's repository when it is a clean git checkout
-  5. runs `archon kit setup`: tools (jq, yq, gh, node, codegraph, copilot, rtk, groma, the MCP
-     Inspector), the kit, the contract MCP server, both CodeGraph indexes, the Groma map (groma init
-     and a first scan), the rtk hooks
+  5. runs `archon kit setup`: tools (jq, yq, gh, node, codegraph, copilot, rtk, the MCP
+     Inspector), the kit, the contract MCP server, both CodeGraph indexes, the rtk hooks
   6. logs gh in when it is not (in a terminal only)
   7. runs `archon kit doctor` on the backend
   8. commits the kit on a new branch in each repo whose tree was clean before (it never pushes)
   9. runs a dry run of build-feature-copilot
  10. starts the web views and opens each in the browser once it answers (`archon kit web`): the MCP
-     Inspectors (codegraph of each repo, the contract server on your contract), the Groma map, the
+     Inspectors (codegraph of each repo, the contract server on your contract), the
      Backlog.md board when it is on, and the Archon web UI (`archon serve`, started when it is not running)
 It assumes Copilot CLI is up to date and logged in. It never writes a token anywhere.
 Log: ~/.archon/logs/install-copilot-kit-<timestamp>.log
@@ -129,7 +128,7 @@ if [ "$DRY_RUN" = 1 ]; then
   echo "Dry run: nothing changed. The plan:"
   echo "  archon     clone or update $FORK_URL ($FORK_BRANCH) in $ARCHON_DIR, build and install it"
   echo "  contract   $CONTRACT"
-  echo "  backend    $BACKEND (kit, contract MCP, codegraph, Groma map, rtk)"
+  echo "  backend    $BACKEND (kit, contract MCP, codegraph, rtk)"
   echo "  frontend   ${FRONTEND:-(none)}"
   echo "  backlog    $(onoff "$BACKLOG" on off)"
   echo "  web views  $(onoff "$WEB" "start and open them once they answer (archon kit web)" off)"
@@ -283,15 +282,6 @@ else
   archon kit web "$BACKEND" || warn "not every web view answered; see the lines above (archon kit web $BACKEND retries)"
 fi
 
-# A first Groma scan fails the pre-push check until an agent curates the map.
-GROMA_NOTE=""
-if [ -d "$BACKEND/groma" ] && [ -f "$BACKEND/.claude/scripts/groma-check.sh" ] \
-  && ! (cd "$BACKEND" && bash .claude/scripts/groma-check.sh >/dev/null 2>&1); then
-  GROMA_NOTE="  - Fix the Groma map before the first push: the pre-push check (groma-check) fails on it.
-    Run: cd $BACKEND && bash .claude/scripts/groma-check.sh, then ask an agent to fix what it names.
-"
-fi
-
 # ---------------------------------------------------------------- summary
 echo
 if [ ${#WARNINGS[@]} -eq 0 ]; then
@@ -303,7 +293,7 @@ fi
 cat <<EOF
 
 Next:
-${GROMA_NOTE}  - Push the branch '$BRANCH' in each committed repo and open a PR, as you usually do.
+  - Push the branch '$BRANCH' in each committed repo and open a PR, as you usually do.
   - Work in Copilot:  cd $BACKEND && copilot     then /agent to pick an agent, /mcp for the servers
   - Build something:  cd $BACKEND && archon workflow run build-feature-copilot "what to build"
   - Open the web views again: archon kit web $BACKEND

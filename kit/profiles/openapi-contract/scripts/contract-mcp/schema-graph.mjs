@@ -14,10 +14,10 @@ const KEEP = ['type', 'format', 'enum', 'nullable', 'readOnly', 'writeOnly', 'de
   'uniqueItems', 'minProperties', 'maxProperties', 'x-extensible-enum'];
 const SKIP_DIRS = new Set(['build', 'node_modules', '.git', '.gradle', '.codegraph', 'contract', 'out']);
 
-// A route as one line: a property, item or map step sticks to the schema before it (`weddingPage.items[]`).
+// A route as one line: a property, item or map step sticks to the schema before it (`folderPage.items[]`).
 const joinRoute = (steps) => steps.reduce((out, s) => (/^(\.|\[\]|\{\})/.test(s) && out ? out + s : out ? `${out} > ${s}` : s), '');
 const refName = (ref) => ref.replace(/^#\/components\/schemas\//, '');
-// The generator's Java name for a schema: its first letter capitalised (`weddingPage` → `WeddingPage`).
+// The generator's Java name for a schema: its first letter capitalised (`folderPage` → `FolderPage`).
 export const javaName = (name) => name[0].toUpperCase() + name.slice(1);
 const sentence = (s) => { const p = firstParagraph(s).replace(/\s+/g, ' '); const m = /^.*?[.!?](?=\s|$)/.exec(p); return m ? m[0] : p; };
 

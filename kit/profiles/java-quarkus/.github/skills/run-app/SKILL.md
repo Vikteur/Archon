@@ -1,6 +1,6 @@
 ---
 name: run-app
-description: Start, run, smoke-test and stop the wedding-portal backend (Quarkus dev mode on :8080 with a Dev Services PostgreSQL). Use when asked to run, start, launch or boot the portal app or backend, check that it comes up, hit its endpoints, look at its dev database, or stop it.
+description: Start, run, smoke-test and stop the backend (Quarkus dev mode on :8080 with a Dev Services PostgreSQL). Use when asked to run, start, launch or boot the portal app or backend, check that it comes up, hit its endpoints, look at its dev database, or stop it.
 ---
 
 The backend is a Quarkus server; drive it with `.github/skills/run-app/smoke.sh`, which starts dev mode in the
@@ -30,7 +30,7 @@ bash .github/skills/run-app/smoke.sh stop
 A cold start takes about 17 s (contract clone included); a warm one reuses the running instance. `start` first makes
 sure `contract/` exists: it clones `@@KIT_CONTRACT_REPO@@` there when missing and checks it out at
 `@@KIT_CONTRACT_TAG_KEY@@` from `gradle.properties` with `.claude/scripts/contract-pin.sh`. It sets throwaway ops credentials
-(`ops` / `local-dev-only`) unless `WEDDING_OPS_USERNAME` / `WEDDING_OPS_PASSWORD` are set.
+(`ops` / `local-dev-only`) unless `APP_OPS_USERNAME` / `APP_OPS_PASSWORD` are set.
 
 `check` prints one PASS/FAIL line per step:
 
@@ -51,13 +51,13 @@ To query the dev database yourself:
 
 ```bash
 db=$(docker ps --filter ancestor=postgres:18.6-alpine --format '{{.ID}}' | head -1)
-docker exec "$db" psql -U quarkus -d wedding_portal -c '\dt'
+docker exec "$db" psql -U quarkus -d app -c '\dt'
 ```
 
 ## Run (human path)
 
 ```bash
-WEDDING_OPS_USERNAME=ops WEDDING_OPS_PASSWORD=local-dev-only ./gradlew :application:quarkusDev   # Ctrl-C stops it
+APP_OPS_USERNAME=ops APP_OPS_PASSWORD=local-dev-only ./gradlew :application:quarkusDev   # Ctrl-C stops it
 ```
 
 Needs `contract/` in place first (see Gotchas). Dev UI: http://localhost:8080/q/dev-ui.

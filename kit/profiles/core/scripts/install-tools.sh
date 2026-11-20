@@ -314,7 +314,7 @@ else
   done
 fi
 
-# The repo's git hooks (.githooks/: commit-msg, the pre-push map check) are switched on by its own script.
+# The repo's git hooks (.githooks/: commit-msg) are switched on by its own script.
 echo
 if [ -f "$project/scripts/install-hooks.sh" ]; then
   echo "Switching on the project's git hooks (scripts/install-hooks.sh)"

@@ -4,9 +4,12 @@
  * The contract is `kit/SPEC.md`. The copy lists and rewrites are in kit-sync-lists.ts, the conversions in
  * kit-sync-convert.ts, and the source and overlay reading in kit-sync-source.ts; this file builds, writes and checks.
  *
- *   bun run scripts/kit-sync.ts <source-repo> [--out kit]          regenerate kit/profiles and kit/manifest.json
- *   bun run scripts/kit-sync.ts <source-repo> --check [--out kit]  regenerate into a temp dir, exit 1 on drift
+ *   KIT_SOURCE=<name> bun run scripts/kit-sync.ts <source-repo> [--out kit]          regenerate kit/profiles and kit/manifest.json
+ *   KIT_SOURCE=<name> bun run scripts/kit-sync.ts <source-repo> --check [--out kit]  regenerate into a temp dir, exit 1 on drift
  *   bun run scripts/kit-sync.ts --verify [--out kit]               no source needed: manifest <-> files, overlays, leaks
+ *
+ * KIT_SOURCE is the source repo's name (kebab case): every source-only name the rewrites look for derives from it
+ * (scripts/kit-sync-source-name.ts, kit/SPEC.md Source name). A sync refuses to run without it.
  *
  * The source is read from its HEAD commit (git-tracked files only), never from its work tree, so the output is the
  * same on every machine for one source commit. Every tracked file under the scanned roots must be assigned to a
@@ -60,6 +63,7 @@ import {
   FILES,
   GLOBAL_REWRITES,
   type Kind,
+  kitOrigin,
   LEAF_PROFILES,
   leakCheck,
   NEVER_SHIP,
@@ -76,6 +80,7 @@ import {
   SKILL_RENAMES,
   TARGETED,
 } from './kit-sync-lists';
+import { KIT_NAME, SOURCE_FROM_ENV } from './kit-sync-source-name';
 import {
   type OverlayFile,
   readOverlays,
@@ -444,7 +449,7 @@ function sourceFiles(src: Source, rewrites: Record<string, Rewrite[]>): KitFile[
         path: targetPath(f.path, a.convert),
         profile: a.profile,
         mode: f.gitMode === '100755' ? '0755' : '0644',
-        origin: f.path,
+        origin: kitOrigin(f.path),
         content: convertText(f, raw, a, rewrites[f.path] ?? [], ctx),
       })
     );
@@ -576,7 +581,7 @@ export function buildKit(
   const bad = all.find(f => f.path.startsWith('/') || f.path.split('/').includes('..'));
   if (bad) throw new Error(`${bad.profile}/${bad.path}: not a relative project path`);
   return {
-    source: { name: src.name, commit: src.commit },
+    source: { name: KIT_NAME, commit: src.commit },
     aliases: aliasesOf(src),
     files: all,
     ...leakCheck(all),
@@ -791,7 +796,9 @@ function parseArgs(argv: string[]): CliArgs | string {
     else args.source = a;
   }
   if (!args.verify && !args.source)
-    return 'usage: kit-sync.ts <source-repo> [--check] [--out kit] | kit-sync.ts --verify [--out kit]';
+    return 'usage: KIT_SOURCE=<name> kit-sync.ts <source-repo> [--check] [--out kit] | kit-sync.ts --verify [--out kit]';
+  if (!args.verify && !SOURCE_FROM_ENV)
+    return "KIT_SOURCE is not set: name the source repo (kebab case, e.g. KIT_SOURCE=shop-portal); kit-sync derives the source's own names from it";
   args.out = resolve(args.out);
   return args;
 }
@@ -825,7 +832,7 @@ function runSync(args: CliArgs): number {
   const counts = PROFILES.map(p => `${p} ${r.kit.files.filter(f => f.profile === p).length}`).join(
     ', '
   );
-  const at = `${r.kit.source.name}@${r.kit.source.commit.slice(0, 12)}`;
+  const at = `${args.source}@${r.kit.source.commit.slice(0, 12)}`;
   if (!args.check) {
     console.log(`kit written from ${at}: ${counts}`);
     return 0;

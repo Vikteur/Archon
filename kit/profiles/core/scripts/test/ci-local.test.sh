@@ -3,7 +3,7 @@
 # Usage: bash scripts/test/ci-local.test.sh   (exit 0 = all pass)
 set -uo pipefail
 # A local CI run that runs this suite passes its own run scope; the runner under test must not inherit it.
-unset CI_LEDGER CI_REUSE CI_SCOPE CI_LOCAL_SLOTS CI_LOCAL_RUN CI_LOCAL_SLOT CI_IMAGE_TAG IMAGE_CHECK_NAME IMAGE_CHECK_PORT
+unset CI_LEDGER CI_REUSE CI_SCOPE CI_LOCAL_SLOTS CI_LOCAL_RUN CI_LOCAL_SLOT CI_LOCAL_XRUN
 unset CI_LOCAL_LOOKUP_TRIES
 export CI_LOCAL_LOOKUP_PAUSE=0
 # Short waits for the watcher, the needs and the lock (each defaults to 1-2 s): about 100 runs here spent most of their
@@ -627,36 +627,6 @@ check "15 a job over its timeout-minutes is stopped" $([ "$rc" -eq 1 ] && [ $(( 
 check "15 and posts timed out after <m> min" $(grep -q 'state=failure -f context=local-ci/slow -f description=timed out after 0.05 min (ci.yml timeout-minutes)$' "$root/gh.log"; echo $?)
 check "15 its step process is gone" $(! pgrep -f 'sleep 40' > /dev/null; echo $?)
 
-# 16. After a job: the run's own Docker leftovers of image-check (app-image-check-<sha7>-<pid>) whose process is gone
-# go; a live one's stay, and so do another run's (another sha7), even when its process is gone. After the run, its own
-# image tag goes, never another.
-sleep 300 & live_pid=$!
-sleep 0 & dead_pid=$!; wait "$dead_pid"
-own="app-image-check-${sha:0:7}"
-cat > "$root/bin/docker-stub" <<STUB
-#!/usr/bin/env bash
-echo "docker \$*" >> "$root/docker.log"
-case "\$1 \$2" in
-  "ps -a") printf '%s\n' $own-$dead_pid $own-$dead_pid-db $own-$live_pid app-image-check-0000000-$dead_pid app-image-check-$dead_pid other ;;
-  "network ls") printf '%s\n' $own-$dead_pid app-image-check-0000000-$dead_pid ;;
-  "ps --filter") echo $own-$live_pid ;;
-esac
-exit 0
-STUB
-chmod +x "$root/bin/docker-stub"; : > "$root/docker.log"
-CI_LOCAL_DOCKER=docker-stub run --jobs red "$sha"
-check "16 a leftover whose process is gone is removed" $(grep -qx "docker rm -f $own-$dead_pid" "$root/docker.log" \
-  && grep -qx "docker rm -f $own-$dead_pid-db" "$root/docker.log" && grep -q "removed the leftover $own-$dead_pid" "$out_dir/red.log"; echo $?)
-check "16 a live run's containers and others stay" $(! grep -q "rm -f $own-$live_pid" "$root/docker.log" && ! grep -q "rm -f other" "$root/docker.log"; echo $?)
-check "16 another run's leftovers stay, also when their process is gone" $(grep -q -- "--filter name=$own-" "$root/docker.log" \
-  && ! grep -q "rm -f app-image-check-0000000" "$root/docker.log" && ! grep -q "rm app-image-check-0000000" "$root/docker.log" \
-  && ! grep -qx "docker rm -f app-image-check-$dead_pid" "$root/docker.log"; echo $?)
-check "16 a held port of the run is noted" $(grep -q -- "--filter publish=18080" "$root/docker.log" \
-  && grep -q "port 18080 is still held by the container $own-$live_pid" "$out_dir/red.log"; echo $?)
-check "16 after the run, only its own image tag goes" $(grep -qx "docker image rm app:ci-${sha:0:7}" "$root/docker.log" \
-  && [ "$(grep -c '^docker image rm' "$root/docker.log")" -eq 1 ]; echo $?)
-kill "$live_pid"; wait "$live_pid" 2>/dev/null
-
 # 17. --audit: no reuse, and each step runs under ci-plan.sh --audit-run --record (a report per step).
 git -C "$root/repo" checkout -q "$p_base" -- .github/workflows/ci.yml; git -C "$root/repo" commit -qam "quick again"
 sha=$(git -C "$root/repo" rev-parse HEAD); out_dir="$root/out/${sha:0:7}"
@@ -665,9 +635,9 @@ check "17 the planner plans with --audit" $([ "$rc" -eq 0 ] && grep -q 'quick ru
 check "17 the worktree's git index is settled before the steps" $(grep -q -- '--audit: settled the worktree.s git index' "$out_dir/quick.log"; echo $?)
 check "17 the step runs under --audit-run" $(grep -qE '^audit quick: [0-9]+ tracked files read|strace not found|already traced' "$out_dir/quick.log"; echo $?)
 
-# 18. Two slots (CI_LOCAL_SLOTS=2, owner decision D18; one is the default since 2026-10-22): runs of two commits go side by side and share no name, folder or port:
-# each step gets the run's own CI_LOCAL_RUN, image tag, image-check name prefix and port (one per slot); the image job
-# (CI_LOCAL_XRUN) still runs one at a time across runs, the later one waiting; each run removes only its own image tag.
+# 18. Two slots (CI_LOCAL_SLOTS=2, owner decision D18; one is the default since 2026-10-22): runs of two commits go side by side and share no name or folder:
+# each step gets the run's own CI_LOCAL_RUN and slot; a job in CI_LOCAL_XRUN still runs one at a time across runs, the
+# later one waiting.
 # Unset, CI_LOCAL_SLOTS is one run at a time.
 cat > "$root/repo/.github/workflows/ci.yml" <<YML
 jobs:
@@ -676,13 +646,13 @@ jobs:
     steps:
       - name: Records what the run owns
         run: |
-          echo "\$CI_LOCAL_RUN \$CI_LOCAL_SLOT \$CI_IMAGE_TAG \$IMAGE_CHECK_NAME \$IMAGE_CHECK_PORT \$PWD" > $marks/side.\$CI_LOCAL_RUN
+          echo "\$CI_LOCAL_RUN \$CI_LOCAL_SLOT \$PWD" > $marks/side.\$CI_LOCAL_RUN
           date +%s.%N > $marks/side.\$CI_LOCAL_RUN.t0; sleep \${SIDE:-1}; date +%s.%N > $marks/side.\$CI_LOCAL_RUN.t1
-  image:
+  serial:
     runs-on: ubuntu-latest
     steps:
-      - name: Builds and checks the image
-        run: date +%s.%N > $marks/image.\$CI_LOCAL_RUN.t0; sleep 2; date +%s.%N > $marks/image.\$CI_LOCAL_RUN.t1
+      - name: Holds what two runs cannot share
+        run: date +%s.%N > $marks/serial.\$CI_LOCAL_RUN.t0; sleep 2; date +%s.%N > $marks/serial.\$CI_LOCAL_RUN.t1
 YML
 git -C "$root/repo" commit -qam "two slots"
 two=()
@@ -690,30 +660,27 @@ for n in a b c d; do echo "$n" > "$root/repo/slot-$n"; git -C "$root/repo" add -
 A=${two[0]:0:7} B=${two[1]:0:7}
 overlap() { awk -v a0="$(cat "$marks/$1.$2.t0")" -v a1="$(cat "$marks/$1.$2.t1")" -v b0="$(cat "$marks/$1.$3.t0")" -v b1="$(cat "$marks/$1.$3.t1")" \
   'BEGIN { exit !(a0 < b1 && b0 < a1) }'; }
-: > "$root/docker.log"; rm -f "$root"/slot*.rc
-bg slota CI_LOCAL_SLOTS=2 SIDE=6 CI_LOCAL_DOCKER=docker-stub -- "${two[0]}"; waitfor '[ "$(entries)" -ge 1 ]'
-bg slotb CI_LOCAL_SLOTS=2 SIDE=6 CI_LOCAL_DOCKER=docker-stub -- "${two[1]}"
+rm -f "$root"/slot*.rc
+bg slota CI_LOCAL_SLOTS=2 SIDE=6 CI_LOCAL_XRUN=serial -- "${two[0]}"; waitfor '[ "$(entries)" -ge 1 ]'
+bg slotb CI_LOCAL_SLOTS=2 SIDE=6 CI_LOCAL_XRUN=serial -- "${two[1]}"
 waitfor '[ -e "$root/slota.rc" ] && [ -e "$root/slotb.rc" ]'; waitfor '[ -e "$root/slota.rc" ] && [ -e "$root/slotb.rc" ]'
 out="$(cat "$root/slota.out" "$root/slotb.out" 2>/dev/null)"
 check "18 two runs of two commits both pass" $([ "$(cat "$root/slota.rc")" = 0 ] && [ "$(cat "$root/slotb.rc")" = 0 ]; echo $?)
 check "18 their jobs run side by side" $(overlap side "$A" "$B"; echo $?)
-read -r ra sa ta na pa wa < "$marks/side.$A"; read -r rb sb tb nb pb wb < "$marks/side.$B"
-check "18 each run has its own slot and port" $([ "$(printf '%s\n' "$sa $pa" "$sb $pb" | sort | tr '\n' ' ')" = "1 18080 2 18081 " ]; echo $?)
-check "18 each run has its own image tag, image-check names and folder" $([ "$ta" = "app:ci-$A" ] && [ "$tb" = "app:ci-$B" ] \
-  && [ "$na" = "app-image-check-$A" ] && [ "$nb" = "app-image-check-$B" ] \
+read -r ra sa wa < "$marks/side.$A"; read -r rb sb wb < "$marks/side.$B"
+check "18 each run has its own slot" $([ "$(printf '%s\n' "$sa" "$sb" | sort | tr '\n' ' ')" = "1 2 " ]; echo $?)
+check "18 each run has its own run id and folder" $([ "$ra" = "$A" ] && [ "$rb" = "$B" ] \
   && [ "$wa" = "$root/out/$A/wt-side" ] && [ "$wb" = "$root/out/$B/wt-side" ]; echo $?)
 check "18 the ledger names both slots" $(jq -se --arg a "$A" --arg b "$B" '[.[] | select(.ev == "start" and ((.run | startswith($a)) or (.run | startswith($b)))) | .slot] | sort == [1, 2]' "$ledger" > /dev/null; echo $?)
-check "18 the image job runs one at a time across runs" $(! overlap image "$A" "$B" \
-  && grep -q "waits for the image job of run [0-9a-f]\{7\}\.r[0-9]* to end: one at a time across runs (CI_LOCAL_XRUN)" "$root/out/$A/image.log" "$root/out/$B/image.log"; echo $?)
-check "18 each run removes its own image tag only" $(grep -qx "docker image rm app:ci-$A" "$root/docker.log" \
-  && grep -qx "docker image rm app:ci-$B" "$root/docker.log" && [ "$(grep -c '^docker image rm' "$root/docker.log")" -eq 2 ]; echo $?)
+check "18 a CI_LOCAL_XRUN job runs one at a time across runs" $(! overlap serial "$A" "$B" \
+  && grep -q "waits for the serial job of run [0-9a-f]\{7\}\.r[0-9]* to end: one at a time across runs (CI_LOCAL_XRUN)" "$root/out/$A/serial.log" "$root/out/$B/serial.log"; echo $?)
 C=${two[2]:0:7} D=${two[3]:0:7}
 bg slotc SIDE=2 -- "${two[2]}"; waitfor '[ "$(entries)" -ge 1 ]'
 bg slotd SIDE=2 -- "${two[3]}"
 waitfor '[ -e "$root/slotc.rc" ] && [ -e "$root/slotd.rc" ]'; waitfor '[ -e "$root/slotc.rc" ] && [ -e "$root/slotd.rc" ]'
 out="$(cat "$root/slotc.out" "$root/slotd.out" 2>/dev/null)"
-check "18 unset: one run at a time, on port 18080" $([ "$(cat "$root/slotc.rc")" = 0 ] && [ "$(cat "$root/slotd.rc")" = 0 ] \
-  && ! overlap side "$C" "$D" && [ "$(cut -d' ' -f2,5 "$marks/side.$C")" = "1 18080" ] && [ "$(cut -d' ' -f2,5 "$marks/side.$D")" = "1 18080" ]; echo $?)
+check "18 unset: one run at a time, in slot 1" $([ "$(cat "$root/slotc.rc")" = 0 ] && [ "$(cat "$root/slotd.rc")" = 0 ] \
+  && ! overlap side "$C" "$D" && [ "$(cut -d' ' -f2 "$marks/side.$C")" = 1 ] && [ "$(cut -d' ' -f2 "$marks/side.$D")" = 1 ]; echo $?)
 CI_LOCAL_SLOTS=0 run --jobs side "${two[0]}"
 check "18 CI_LOCAL_SLOTS must be 1 or more" $([ "$rc" -eq 2 ] && grep -q "CI_LOCAL_SLOTS must be a whole number" <<<"$out"; echo $?)
 

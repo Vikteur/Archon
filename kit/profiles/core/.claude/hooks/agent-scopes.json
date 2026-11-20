@@ -208,7 +208,6 @@
         ".github/",
         "docs/",
         "backlog/",
-        "groma/",
         "AGENTS.md",
         "CLAUDE.md",
         "~/.archon/workspaces/*/artifacts/",

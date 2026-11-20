@@ -7,4 +7,4 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 git -C "$repo_root" config core.hooksPath .githooks
-echo "Git hooks switched on: core.hooksPath = .githooks (commit-msg checks the message, pre-push runs .claude/scripts/groma-check.sh)"
+echo "Git hooks switched on: core.hooksPath = .githooks (commit-msg checks the message)"

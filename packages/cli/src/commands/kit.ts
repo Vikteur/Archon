@@ -1251,7 +1251,6 @@ export function checkTools(
       name: 'backlog',
       detail: `off (backlog: false in ${backlogOff})`,
     });
-  check('groma', true, ['--version']);
   check('java', false, ['-version']);
   check('docker', false, ['--version']);
   return checks;

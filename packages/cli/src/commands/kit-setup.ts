@@ -4,9 +4,8 @@
  * A terminal dialog asks for the backend repository, the frontend repository (optional), the API contract file and
  * whether to use Backlog.md (default no),
  * then installs the tools, puts the kit into the backend, points it at the contract, indexes both repositories for
- * CodeGraph, sets up the backend's Groma map (groma init and a first scan), gives the frontend the codegraph MCP
- * server, adds the rtk hooks, checks every MCP server, then starts the web views (the MCP Inspectors, the Groma map,
- * the Backlog.md board, the Archon web UI) and opens each in the browser once it answers. `archon kit web` is that
+ * CodeGraph, gives the frontend the codegraph MCP server, adds the rtk hooks, checks every MCP server, then starts the
+ * web views (the MCP Inspectors, the Backlog.md board, the Archon web UI) and opens each in the browser once it answers. `archon kit web` is that
  * last step alone. Flags answer the dialog for a run without a terminal. Each step's output goes to a log file under the
  * Archon home, never to the terminal; a failed step is reported with that log and the later steps still run.
  *
@@ -20,12 +19,11 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from 'fs';
 import { homedir } from 'os';
-import { basename, dirname, extname, join, resolve } from 'path';
+import { dirname, extname, join, resolve } from 'path';
 import { format } from 'util';
 import { getArchonHome } from '@archon/paths';
 import { parse as parseYaml, parseDocument } from 'yaml';
@@ -71,13 +69,6 @@ const CONTRACT_SETUP_SCRIPTS = [
   '.archon/scripts/portal-mcp-setup.sh',
 ];
 const WEB_UIS = 'scripts/web-uis.sh';
-const GROMA_DIR = 'groma';
-const AGENTS_MD = 'AGENTS.md';
-/** The Backlog.md block `groma init` writes into AGENTS.md, whether the project uses Backlog.md or not. */
-const BACKLOG_BLOCK =
-  /\n*<!-- BACKLOG\.MD GUIDELINES START -->[\s\S]*?<!-- BACKLOG\.MD GUIDELINES END -->\n?/;
-/** The line the kit's groma-check.sh wants in AGENTS.md while Backlog.md is on. */
-export const BACKLOG_LINE = "This repo's tickets live in its own Backlog.md backlog (`backlog/`).";
 /** How long the web views get to answer before they are reported as not opened. */
 const WEB_READY_MS = 90_000;
 const OPENERS = ['wslview', 'explorer.exe', 'xdg-open', 'open'];
@@ -86,7 +77,7 @@ export const KIT_SETUP_USAGE = `Usage: archon kit setup [--backend <path> --cont
 
 Asks for the backend repository, the frontend repository, the API contract file and whether to use
 Backlog.md, then installs the tools, the kit, the contract MCP server, the CodeGraph indexes, the rtk
-hooks, the Groma map and the web views (each opened in the browser once it answers). Without a
+hooks and the web views (each opened in the browser once it answers). Without a
 terminal, --backend and --contract are required.
 
 Options:
@@ -572,7 +563,6 @@ function summary(options: KitSetupOptions, answers: Answers, profiles: string[])
     'kit',
     'contract',
     'codegraph',
-    'groma map',
     `frontend MCP${skipped(answers.frontend === null, 'no frontend')}`,
     `rtk hooks${skipped(options.noRtk, '--no-rtk')}`,
     'servers check',
@@ -613,8 +603,6 @@ interface SetupRun extends Answers {
   logPath: string;
   log: OutputSink;
   failed: string[];
-  /** The Groma step made a new map: a first scan, still to be curated. */
-  gromaFirstScan: boolean;
 }
 
 function startRun(options: KitSetupOptions, deps: KitSetupDeps, prepared: Prepared): SetupRun {
@@ -638,7 +626,6 @@ function startRun(options: KitSetupOptions, deps: KitSetupDeps, prepared: Prepar
     logPath,
     log,
     failed: [],
-    gromaFirstScan: false,
   };
 }
 
@@ -754,56 +741,6 @@ async function codegraphStep(run: SetupRun): Promise<void> {
       runIn(run, run.backend, 'bash', [CODEGRAPH_SETUP, dir])
     );
     return `${done} indexed`;
-  });
-}
-
-/**
- * AGENTS.md after `groma init`: without Backlog.md, the Backlog.md block init wrote goes (a block that was there
- * before stays); with it, the line that says where the tickets live is added when missing. Null: no AGENTS.md.
- */
-export function agentsAfterGromaInit(
-  text: string | null,
-  before: string | null,
-  backlog: boolean
-): string | null {
-  if (text === null) return before;
-  let out = text;
-  if (!backlog && !(before ?? '').includes('BACKLOG.MD GUIDELINES START')) {
-    out = `${out.replace(BACKLOG_BLOCK, '\n').trimEnd()}\n`;
-  }
-  if (backlog && !out.includes('Backlog.md backlog')) out = `${out.trimEnd()}\n\n${BACKLOG_LINE}\n`;
-  if (before === null && out.trim() === '') return null;
-  return out;
-}
-
-/** The backend's Groma map: groma init, the java scanner with the java profile, and a first scan. */
-async function gromaStep(run: SetupRun): Promise<void> {
-  if (!run.deps.which('groma')) return skip(run, 'Groma map', 'groma is not on PATH');
-  const { backend } = run;
-  if (existsSync(join(backend, GROMA_DIR)))
-    return skip(run, 'Groma map', 'groma/ is already there');
-  await step(run, 'Groma map', async () => {
-    const agents = join(backend, AGENTS_MD);
-    const read = (): string | null => (existsSync(agents) ? readFileSync(agents, 'utf-8') : null);
-    const before = read();
-    const hadBacklog = existsSync(join(backend, 'backlog'));
-    const java = resolveProfiles(run.kit, run.profiles).includes('java');
-    try {
-      await runIn(run, backend, 'groma', ['init', '--directory', GROMA_DIR, basename(backend)]);
-      if (java) await runIn(run, backend, 'groma', ['scanner', 'add', '@groma/scanner-java']);
-      await runIn(run, backend, 'groma', ['scan']);
-    } finally {
-      // groma init also writes a Backlog.md board and its AGENTS.md block: the project's answer decides.
-      if (!run.backlog && !hadBacklog && existsSync(join(backend, 'backlog'))) {
-        rmSync(join(backend, 'backlog'), { recursive: true, force: true });
-        run.log('removed the backlog/ groma init wrote (Backlog.md is off)\n');
-      }
-      const after = agentsAfterGromaInit(read(), before, run.backlog);
-      if (after === null) rmSync(agents, { force: true });
-      else if (after !== read()) writeFileSync(agents, after);
-    }
-    run.gromaFirstScan = true;
-    return `groma init${java ? ', java scanner' : ''}, first scan (curate it before the first push)`;
   });
 }
 
@@ -956,15 +893,8 @@ function finish(run: SetupRun, urls: string[]): number {
           `Stop them: cd ${run.backend} && bash ${WEB_UIS} stop`,
         ]
       : ['Web views: none started'];
-  const groma = !run.gromaFirstScan
-    ? []
-    : [
-        'Groma map: groma/ holds a first scan. Commit it, and have an agent curate it (it runs',
-        '`groma agent-instructions`); descriptions are optional (groma_descriptions in .archon/kit.yaml).',
-      ];
   const next = [
     ...web,
-    ...groma,
     `Log: ${run.logPath}`,
     '',
     'Copilot login: run `copilot`, then `/login`, and finish it in a browser signed in as the GitHub',
@@ -1001,7 +931,6 @@ export async function kitSetupCommand(
   await kitStep(run);
   await contractStep(run);
   await codegraphStep(run);
-  await gromaStep(run);
   await frontendStep(run);
   await rtkStep(run);
   await serversStep(run);
@@ -1011,8 +940,8 @@ export async function kitSetupCommand(
 
 export const KIT_WEB_USAGE = `Usage: archon kit web [path]
 
-Starts the web views of the project at path (default: the current folder): the MCP Inspectors, the
-Groma map and the Backlog.md board (scripts/web-uis.sh), and the Archon web UI (archon serve, started
+Starts the web views of the project at path (default: the current folder): the MCP Inspectors and
+the Backlog.md board (scripts/web-uis.sh), and the Archon web UI (archon serve, started
 when it does not answer). Each opens in the browser once it answers.
 Stop them: bash scripts/web-uis.sh stop
 

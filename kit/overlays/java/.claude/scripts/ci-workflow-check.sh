@@ -5,7 +5,7 @@
 # @@KIT_CONTRACT_REPO@@ with the one CI secret CONTRACT_TOKEN in every workflow (the secret appears nowhere else, and
 # the secrets context is never used as a whole), proves that token read-only right after the checkout, never skips
 # either step, fails closed (no step runs after a failed checkout), sets up the Temurin of the Gradle toolchain in
-# every setup-java, and pins every action by a 40-character commit SHA. Every job that runs ./gradlew or the image build
+# every setup-java, and pins every action by a 40-character commit SHA. Every job that runs ./gradlew
 # (TASK-2.3) also checks out the contract, proves the token read-only, runs contract-pin.sh right after, and passes
 # -Pcontract.spec=contract/dist/openapi.yaml to every ./gradlew run.
 # The job rules of UD-31 (owner decision 2026-10-20, docs/memory.md: a job runs or is reused, never not-required), on
@@ -255,12 +255,12 @@ else
   done
 fi
 
-# Every job that runs ./gradlew or the image build generates code or starts the application (TASK-2.3): it checks out the
+# Every job that runs ./gradlew generates code or starts the application (TASK-2.3): it checks out the
 # contract, proves the token read-only, checks out the pin right after, and passes the spec to every ./gradlew run.
 pin_run="bash .claude/scripts/contract-pin.sh contract"
 spec_arg="-Pcontract.spec=contract/dist/openapi.yaml"
 for j in $(q '.jobs | keys | .[]' "$ci"); do
-  q ".jobs[\"$j\"].steps[].run" "$ci" | grep -qE '\./gradlew|scripts/test/image\.test\.sh' || continue
+  q ".jobs[\"$j\"].steps[].run" "$ci" | grep -qE '\./gradlew' || continue
   jruns=(); jrepos=(); jnames=()
   while IFS=$'\t' read -r idx repo run; do
     jrepos[idx]="$repo"; jruns[idx]="$run"

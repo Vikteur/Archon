@@ -62,9 +62,9 @@ are rerun by the script, never by you.
    - Keep both intents. Never pick `--ours`/`--theirs` wholesale for source code; for generated files take the
      base's version and regenerate them (never hand-edit generated code, P4).
    - Check no markers are left: `git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- <FILE>`.
-4. Run `bash .claude/scripts/affected-check.sh --no-sync --pre-push` and fix what the resolution broke: it runs only
-   the tests the branch's change touches and CI's cheap steps for it, then the groma map against the base, never the
-   whole suite (owner decision 2026-10-17); `--no-sync` because a rebase must not merge the base in. Never run
+4. Run `bash .claude/scripts/affected-check.sh --no-sync` and fix what the resolution broke: it runs only
+   the tests the branch's change touches and CI's cheap steps for it, never the whole suite (owner decision
+   2026-10-17); `--no-sync` because a rebase must not merge the base in. Never run
    `./gradlew test` or `./gradlew check` over the whole build. CI is the verdict (P5); a rebase that resolved no
    conflict runs nothing locally.
 5. `git add` the resolved files, then `git rebase --continue`; repeat steps 3 to 5 for every commit that stops.

@@ -67,12 +67,12 @@ verdict() { # verdict <sha> <run> <t> <job> <state> <description>
   # patch rebased onto a later main in the same PR (6 min: rebase-only).
   run_lines "$feat" f.r1 "$base1" 7 '"TASK-1"' "$d1" $((d1 + 600)) 0
   verdict "$feat" f.r1 $((d1 + 500)) test success "success in 480s on h"
-  verdict "$feat" f.r1 $((d1 + 590)) groma success "reused from 0123456789ab; fp=abc; scope=def"
+  verdict "$feat" f.r1 $((d1 + 590)) lint success "reused from 0123456789ab; fp=abc; scope=def"
   run_lines "$same_tree" s.r1 "$base1" 7 '"TASK-1"' $((d1 + 1000)) $((d1 + 1300)) 0
   # Since reuse went live a reused job writes a reuse or same-tree line, not a verdict.
   printf '{"v":1,"ev":"reuse","t":%s,"sha":"%s","run":"s.r1","job":"test","state":"success","description":"reused from 0123456789ab; fp=abc; scope=def"}\n' \
     $((d1 + 1001)) "$same_tree"
-  printf '{"v":1,"ev":"same-tree","t":%s,"sha":"%s","run":"s.r1","job":"groma","state":"success","description":"reused from 0123456789ab; same tree"}\n' \
+  printf '{"v":1,"ev":"same-tree","t":%s,"sha":"%s","run":"s.r1","job":"lint","state":"success","description":"reused from 0123456789ab; same tree"}\n' \
     $((d1 + 1002)) "$same_tree"
   run_lines "$rebased" b.r1 "$base2" 7 '"TASK-1"' $((d1 + 2000)) $((d1 + 2360)) 0
   printf '{"v":1,"ev":"decision","t":%s,"sha":"%s","run":"b.r1","job":"test","decision":"would reuse","source":"0123456789ab","fp":"fp","scope":"blob","taken":"run"}\n' \
@@ -130,7 +130,7 @@ guard_ledger() { # guard_ledger <first secs> <last secs> [<n>]: n green test run
   local n=${3:-5} i
   for i in $(seq 1 "$n"); do
     run_lines "$feat" "g.a$i" "$base1" 1 null $((d1 + i * 100)) $((d1 + i * 100 + 50)) 0 \
-      "{\"test\":{\"res\":\"success\",\"own\":$1,\"kind\":\"ran\"},\"groma\":{\"res\":\"success\",\"own\":9999,\"kind\":\"ran\"}}"
+      "{\"test\":{\"res\":\"success\",\"own\":$1,\"kind\":\"ran\"},\"lint\":{\"res\":\"success\",\"own\":9999,\"kind\":\"ran\"}}"
     run_lines "$feat" "g.b$i" "$base1" 1 null $((d1 + 20 * day + i * 100)) $((d1 + 20 * day + i * 100 + 50)) 0 \
       "{\"test\":{\"res\":\"success\",\"own\":$2,\"kind\":\"ran\"}}"
   done
@@ -148,7 +148,7 @@ run --ledger "$G"
 check "2 without --guard it is reported, exit 0" "$([ "$rc" -eq 0 ] && said 'tripped'; echo $?)"
 out="$(CI_COST_GROWTH=1.5 bash "$script" --ledger "$G" --guard 2>&1)"; rc=$?
 check "2 CI_COST_GROWTH sets the limit" "$([ "$rc" -eq 0 ] && said 'holds'; echo $?)"
-out="$(CI_COST_GRADLE_JOBS=groma bash "$script" --ledger "$G" --guard --json 2>&1)"; rc=$?
+out="$(CI_COST_GRADLE_JOBS=lint bash "$script" --ledger "$G" --guard --json 2>&1)"; rc=$?
 check "2 CI_COST_GRADLE_JOBS picks the jobs" "$([ "$rc" -eq 0 ] && is .guard.state '"too few samples"'; echo $?)"
 guard_ledger 100 300 4 > "$G"; run --ledger "$G" --guard
 check "2 too few samples never trips" "$([ "$rc" -eq 0 ] && said 'too few samples (4 and 4 of 5 needed'; echo $?)"

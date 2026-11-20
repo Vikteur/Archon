@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
-import { PROFILES, type Profile, SCANNED_ROOTS } from './kit-sync-lists';
+import { PROFILES, type Profile, SCANNED_ROOTS, sourcePathOf } from './kit-sync-lists';
 // ---------------------------------------------------------------------------------------------------------------
 // Reading the source
 // ---------------------------------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ export function staleOverlays(overlays: OverlayFile[], src: Source): string[] {
   const out: string[] = [];
   for (const o of overlays) {
     if (!o.entry.derivedFrom) continue;
-    const f = src.files.get(o.entry.derivedFrom);
+    const f = src.files.get(sourcePathOf(o.entry.derivedFrom));
     const now = f ? sha256(f.content) : null;
     if (now !== o.entry.sourceSha256)
       out.push(

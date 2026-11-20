@@ -76,7 +76,7 @@ field() { node -e 'console.log(JSON.parse(process.argv[1])[process.argv[2]])' "$
 printf '# none\n' > "$root/flaky.tsv"
 
 # 1. Every job green: class green, exit 0, no rerun.
-reset_all; green "$sha" test; green "$sha" groma
+reset_all; green "$sha" test; green "$sha" lint
 run -- "$sha"
 check "1 green, exit 0" $([ "$rc" -eq 0 ] && [ "$(field class)" = green ] && [ "$(field rerun)" = none ]; echo $?)
 check "1 no rerun" $([ -z "$log" ]; echo $?)
@@ -105,12 +105,12 @@ run -- "$sha"
 check "4 main's infra red is not main-state" $([ "$(field class)" = own ]; echo $?)
 
 # 5. A merge conflict: conflict, exit 0, never a rerun.
-reset_all; st "$sha" test failure "failure (merge conflict with the base abc1234) on host"; st "$sha" groma failure "failure (merge conflict with the base abc1234) on host"
+reset_all; st "$sha" test failure "failure (merge conflict with the base abc1234) on host"; st "$sha" lint failure "failure (merge conflict with the base abc1234) on host"
 run -- "$sha"
 check "5 conflict, exit 0" $([ "$rc" -eq 0 ] && [ "$(field class)" = conflict ] && [ -z "$log" ]; echo $?)
 
 # 6. An infra signature in the log: one rerun of the red jobs only, on the same commit and pull request, green after it.
-reset_all; green "$sha" groma; red "$sha" test; joblog test "Caused by: Cannot connect to the Docker daemon at unix:///var/run/docker.sock"
+reset_all; green "$sha" lint; red "$sha" test; joblog test "Caused by: Cannot connect to the Docker daemon at unix:///var/run/docker.sock"
 run RERUN_POST="test|success|success in 40s on host; green on rerun after infra:docker-daemon" -- --pr https://github.com/o/r/pull/7 "$sha"
 check "6 green after the rerun, exit 0" $([ "$rc" -eq 0 ] && [ "$(field class)" = green ]; echo $?)
 check "6 rerun green-after the signature" $([ "$(field rerun)" = green-after:infra:docker-daemon ]; echo $?)
@@ -135,7 +135,7 @@ check "8 runner infra reruns, green" $([ "$(field class)" = green ] && [ "$(fiel
 check "8 warns when the status does not say green on rerun" $(grep -q "no status says 'green on rerun after" <<< "$err"; echo $?)
 
 # 9. An infra job beside an own one: own, and no rerun.
-reset_all; red "$sha" test; red "$sha" mutation; joblog test "Address already in use"; joblog mutation "Mutation score 60% < 80%"
+reset_all; red "$sha" test; red "$sha" lint; joblog test "Address already in use"; joblog lint "3 lint problems"
 run -- "$sha"
 check "9 own beats infra; no rerun" $([ "$(field class)" = own ] && [ -z "$log" ]; echo $?)
 
@@ -150,7 +150,7 @@ run RED_TRIAGE_TODAY=2026-10-24 -- "$sha"
 check "10b expired signature: own, no rerun" $([ "$(field class)" = own ] && [ -z "$log" ]; echo $?)
 check "10b says it expired" $(grep -q 'expired on 2026-10-24' <<< "$err"; echo $?)
 # 10c. Listed for another job: not flaky here.
-reset_all; red "$sha" mutation; mkdir -p "$ci/$short"; echo "ClockTest > ticks FAILED" > "$ci/$short/mutation.log"
+reset_all; red "$sha" lint; mkdir -p "$ci/$short"; echo "ClockTest > ticks FAILED" > "$ci/$short/lint.log"
 run -- "$sha"
 check "10c other job's signature: own" $([ "$(field class)" = own ]; echo $?)
 # 10d. Flaky still red after its rerun: own (the signature did not explain it), exit 0.
@@ -169,7 +169,7 @@ run -- --no-rerun "$sha"
 check "11 --no-rerun: exit 3, off" $([ "$rc" -eq 3 ] && [ "$(field rerun)" = off ] && [ -z "$log" ]; echo $?)
 
 # 12. Cannot triage: a job pending, no status at all. Exit 1.
-reset_all; red "$sha" test; st "$sha" groma pending "running since 10:00, pid 1@host"
+reset_all; red "$sha" test; st "$sha" lint pending "running since 10:00, pid 1@host"
 run -- "$sha"
 check "12 pending: exit 1" $([ "$rc" -eq 1 ] && grep -q pending <<< "$err"; echo $?)
 reset_all

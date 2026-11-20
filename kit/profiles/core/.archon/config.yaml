@@ -33,7 +33,7 @@ worktree:
 # - The commit-msg hook in run worktrees (owner decision D12, 2026-10-20): git reads core.hooksPath from these three
 #   variables, so .archon/githooks/commit-msg checks each commit's subject and shape while the agent is still there. A
 #   relative hooksPath resolves against the worktree, so each run uses its own branch's hook. Never clone-wide: that
-#   would also turn on .githooks/pre-push in every checkout. Rollback: remove these three lines.
+#   would also turn on the hooks of .githooks/ in every checkout. Rollback: remove these three lines.
 # - No background commands in agent nodes (R13): a command moved to the background keeps the node open until it ends.
 #   Here only, never in .claude/settings.json: a chat session may run a waiter in the background.
 env:

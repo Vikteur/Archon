@@ -5,6 +5,7 @@
 import { mergeRewrites, NOUN_REWRITES, NOUN_TARGETED } from './kit-sync-generic';
 import { STANDALONE_TARGETED } from './kit-sync-standalone-text';
 import { CONSUMER_TARGETED } from './kit-sync-consumer';
+import { reEsc, SRC } from './kit-sync-source-name';
 
 export const PROFILES = [
   'core',
@@ -43,7 +44,7 @@ export const PROFILE_META: Record<
   java: {
     requires: ['core'],
     description:
-      'Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/PIT/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents.',
+      'Shared Java/JVM skills, the layer rules as .github/instructions, ArchUnit/Gradle CI scripts, the scaffolder and its stack-neutral templates, and the analyst, developer, test-writer and debugger agents.',
   },
   'java-quarkus': {
     requires: ['java'],
@@ -201,6 +202,22 @@ export const NEVER_SHIP_GROUPS: Record<string, string[]> = {
   ],
   'The Copilot workflow generator: the kit ships its output, transformed (scripts/kit-sync-standalone.ts).':
     ['.archon/scripts/copilot-workflow.js', '.archon/scripts/test/copilot-workflow.test.sh'],
+  'The Groma architecture map, its checks and the pre-push hook that ran them (owner decision 2026-11-20).':
+    [
+      '.claude/scripts/groma-check.sh',
+      '.claude/scripts/groma-delta.sh',
+      '.archon/scripts/groma-links.sh',
+      '.archon/scripts/groma-sync.sh',
+      '.archon/scripts/test/groma-links.test.sh',
+      '.archon/scripts/test/groma-sync.test.sh',
+      'scripts/test/groma-delta.test.sh',
+      '.githooks/pre-push',
+      'scripts/test/pre-push.test.sh',
+    ],
+  'The mutation gate (PIT on the changed domain, usecase and gateway classes), never wired into a build.':
+    ['.claude/scripts/mutation-gate.sh', 'scripts/test/mutation-gate.test.sh'],
+  "The image CI job's check of a built image (a multi-stage Dockerfile contract not every project follows).":
+    ['.claude/scripts/image-check.sh', 'scripts/test/image-check.test.sh'],
 };
 
 export const NEVER_SHIP: string[] = Object.values(NEVER_SHIP_GROUPS).flat();
@@ -259,14 +276,33 @@ export const SKILL_PROFILES: Record<string, Profile> = {
   'persistence-repository': 'java-quarkus',
   resilience4j: 'java-quarkus',
   testcontainers: 'java-quarkus',
-  'run-wedding-portal': 'java-quarkus',
+  [SRC.runSkill]: 'java-quarkus',
   'contract-agent-readiness': 'openapi-contract',
   'contract-db-parity': 'openapi-contract',
   'contract-slice': 'openapi-contract',
 };
 
 /** Source skill folders that ship under another name. */
-export const SKILL_RENAMES: Record<string, string> = { 'run-wedding-portal': 'run-app' };
+export const SKILL_RENAMES: Record<string, string> = { [SRC.runSkill]: 'run-app' };
+
+const RENAMED_SKILL = /^\.claude\/skills\/([^/]+)\//;
+
+/**
+ * A source path as the kit records it (a manifest origin, an overlay's derivedFrom): a renamed skill's files under the
+ * name they ship as, so the kit names no source skill. sourcePathOf maps it back for the staleness check.
+ */
+export function kitOrigin(path: string): string {
+  const from = RENAMED_SKILL.exec(path)?.[1];
+  const to = from === undefined ? undefined : SKILL_RENAMES[from];
+  return to === undefined ? path : path.replace(RENAMED_SKILL, `.claude/skills/${to}/`);
+}
+
+/** The source path a recorded origin stands for: kitOrigin reversed. */
+export function sourcePathOf(origin: string): string {
+  const to = RENAMED_SKILL.exec(origin)?.[1];
+  const from = Object.keys(SKILL_RENAMES).find(k => SKILL_RENAMES[k] === to);
+  return from === undefined ? origin : origin.replace(RENAMED_SKILL, `.claude/skills/${from}/`);
+}
 
 export const RULE_PROFILES: Record<string, Profile> = {
   general: 'core',
@@ -305,8 +341,6 @@ export const FILES: Record<Profile, string[]> = {
     '.claude/scripts/ci-queue.sh',
     '.claude/scripts/ci-status-grammar.sh',
     '.claude/scripts/gate-change-check.sh',
-    '.claude/scripts/groma-check.sh',
-    '.claude/scripts/groma-delta.sh',
     '.claude/scripts/run-suites.sh',
     '.githooks/*',
     '.github/copilot-instructions.md',
@@ -323,8 +357,6 @@ export const FILES: Record<Profile, string[]> = {
     '.claude/scripts/build-shape-check.sh',
     '.claude/scripts/ci-workflow-check.sh',
     '.claude/scripts/class-version-check.sh',
-    '.claude/scripts/image-check.sh',
-    '.claude/scripts/mutation-gate.sh',
     '.claude/scripts/pin-proof-check.sh',
     '.claude/scripts/test-set-coverage.java',
     '.claude/scripts/test-set-coverage.sh',
@@ -460,15 +492,18 @@ export const TARGETED: Record<string, Rewrite[]> = mergeRewrites(
  * kit-sync-generic.ts's PATH_REWRITES, except in its PATH_SKIP files.
  */
 export const GLOBAL_REWRITES: [RegExp, string][] = [
-  [/\/home\/viktor\/wedding-portal(?![\w-])/g, '@@KIT_PROJECT_DIR@@'],
-  [/\.claude([/\\])skills\1run-wedding-portal/g, '.github$1skills$1run-app'],
-  [/(?<![\w-])run-wedding-portal(?![\w-])/g, 'run-app'],
+  [new RegExp(`/home/viktor/${reEsc(SRC.repo)}(?![\\w-])`, 'g'), '@@KIT_PROJECT_DIR@@'],
+  [
+    new RegExp(`\\.claude([/\\\\])skills\\1${reEsc(SRC.runSkill)}`, 'g'),
+    '.github$1skills$1run-app',
+  ],
+  [new RegExp(`(?<![\\w-])${reEsc(SRC.runSkill)}(?![\\w-])`, 'g'), 'run-app'],
   [/Vikteur\/rekord-contract/g, '@@KIT_CONTRACT_REPO@@'],
   ...NOUN_REWRITES,
 ];
 
 /** The source's main checkout: `archon kit add` renders @@KIT_PROJECT_DIR@@ as the project's absolute path. */
-export const PROJECT_DIR = /\/home\/viktor\/wedding-portal(?![\w-])/g;
+export const PROJECT_DIR = new RegExp(`/home/viktor/${reEsc(SRC.repo)}(?![\\w-])`, 'g');
 export const CONTRACT_SERVER = '@@KIT_CONTRACT_SERVER_NAME@@';
 export const SOURCE_CONTRACT_SERVER = /(?<![\w-])portal-api(?![\w-])/g;
 
@@ -486,7 +521,7 @@ const LEAK_FAIL: [string, RegExp][] = [
   ['Slack token', /\bxox[abprs]-[A-Za-z0-9-]{10,}/],
   ['API key', /\bsk-(ant-)?[A-Za-z0-9_-]{32,}/],
 ];
-const LEAK_WARN = /wedding|rekord|portal/gi;
+const LEAK_WARN = new RegExp(`${reEsc(SRC.word)}|rekord|portal`, 'gi');
 const LEAK_WARN_FREE: Profile[] = ['java-quarkus', 'openapi-contract'];
 
 export interface LeakReport {

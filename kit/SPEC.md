@@ -48,7 +48,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 | Profile | Requires | Content |
 |---|---|---|
 | `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks, `.github/copilot-instructions.md` and the instructions templates. |
-| `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/PIT/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
+| `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
 | `java-quarkus` | java | The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus-flavoured scaffold templates, and run-wedding-portal → `run-app`. |
 | `java-spring` | java | The same paths as `java-quarkus`, rewritten for Spring Boot. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
 | `openapi-contract` | core | The contract-api MCP server (`scripts/contract-mcp/**`, from the source's `scripts/portal-mcp/**`), `scripts/contract-agent-readiness/**`, contract-pin, contract-db-parity and the contract-agent. |
@@ -121,8 +121,6 @@ stack: spring                # quarkus | spring: the gates that differ per frame
 base_branch: main
 gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
-groma_descriptions: optional # groma-check.sh: optional (an undescribed map element is a note) | required
-groma_curation: optional     # groma-check.sh: optional (a first-scan map is a note) | required
 build_workflow: build-feature-copilot
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
@@ -205,6 +203,12 @@ contract:
   `main-ci.sh`, `ticket-files.sh`, `close-out.sh` and the scripts only they call), the STOP approval ledger
   (`stop-approve.sh`, `stop-check.sh`, `stop-round.sh`, `.archon/stop/**`) and the Copilot workflow generator. No copy
   list overrides the never-ship list; a suite of a never-ship script never ships either.
+- Tooling the owner removed from the kit (owner decision 2026-11-20), in `NEVER_SHIP_GROUPS` too, so a sync never
+  brings it back and a shipped line that names one of its scripts fails the leak check: the Groma architecture map
+  (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the `.githooks/pre-push` hook that ran the
+  map check, and their suites) and the mutation gate (`mutation-gate.sh`, PIT on the changed classes, its suite and
+  fixtures), and the image CI job's check (`image-check.sh` and its suite): the kit's CI job set is `archon-scripts`
+  and `test`.
 - What kit-sync strips with them: the `.claude/settings.json` hooks and deny entries that name a never-ship file, and
   the never-ship agents' entries in `.claude/hooks/agent-scopes.json`. A shipped line that still names a never-ship
   file (a script's basename, `delegator.md`, `delegator.agent.md` or a systemd unit) fails the leak check; the

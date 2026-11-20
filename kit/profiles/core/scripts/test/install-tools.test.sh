@@ -281,31 +281,21 @@ setver tool-a 2.88.1; setver tool-b 22.0.0; setver tool-c 1.53.0; setver tool-d 
 run PATH="$root/bin:$(dirname "$(command -v git)"):/usr/bin:/bin"
 check "I14 exit 0 without a manager" [ "$rc" = 0 ]
 
-# I15: the real scripts/tools.conf: 15 tools, known kinds, every column filled, groma pinned like example-app CI.
+# I15: the real scripts/tools.conf: 14 tools, known kinds, every column filled.
 conf=$(sed -e 's/#.*//' "$real_conf" | grep -v '^[[:space:]]*$')
 out="$conf"
-check "I15 15 tools" [ "$(grep -c . <<< "$conf")" = 15 ]
+check "I15 14 tools" [ "$(grep -c . <<< "$conf")" = 14 ]
 check "I15 order" [ "$(cut -d'|' -f1 <<< "$conf" | tr -d ' ' | tr '\n' ' ')" = \
-  "git gh node jq yq java docker claude copilot archon backlog groma codegraph rtk mcp-inspector " ]
+  "git gh node jq yq java docker claude copilot archon backlog codegraph rtk mcp-inspector " ]
 check "I15 six columns, none empty" [ -z "$(awk -F'|' 'NF != 6 { print; next } { for (i = 1; i <= 6; i++) { v = $i; gsub(/[[:space:]]/, "", v); if (v == "") print } }' <<< "$conf")" ]
 check "I15 known kinds" [ -z "$(cut -d'|' -f3 <<< "$conf" | tr -d ' ' | grep -vxE 'pkg|npm|script')" ]
 pin() { awk -F'|' -v n="$1" '{ gsub(/ /, "", $1); gsub(/ /, "", $2) } $1 == n { print $2 }' <<< "$conf"; }
-check "I15 groma is pinned to 0.6.6" [ "$(pin groma)" = 0.6.6 ]
 check "I15 rtk is pinned to 1.1.0 (not 1.2.x)" [ "$(pin rtk)" = 1.1.0 ]
 check "I15 rtk installs from the v1.1.0 install script" grep -q '| https://raw.githubusercontent.com/rtk-ai/rtk/v1.1.0/install.sh |' <<< "$conf"
 check "I15 rtk comes from winget on Windows" grep -q '^rtk .*| winget:rtk-ai.rtk ' <<< "$conf"
 check "I15 rtk is never cargo-installed" [ -z "$(grep -i cargo <<< "$conf")" ]
 check "I15 the inspector is pinned to 2.13.0" [ "$(pin mcp-inspector)" = 2.13.0 ]
 check "I15 the inspector is the official npm package" grep -q '^mcp-inspector .*| npm .*@modelcontextprotocol/inspector .*mcp-inspector --version' <<< "$conf"
-project_ci="$here/../../.github/workflows/ci.yml"
-if [ ! -f "$project_ci" ]; then
-  echo "SKIP: I15 groma pin vs example-app CI ($project_ci not found)"
-elif ! grep -qF "npm install -g groma.md@" "$project_ci"; then
-  # example-app CI installs no groma until its fresh map exists (TASK-1.1 skeleton); nothing to match then.
-  echo "SKIP: I15 groma pin vs example-app CI (it installs no groma)"
-else
-  check "I15 groma pin matches example-app CI" grep -qF "npm install -g groma.md@$(pin groma)" "$project_ci"
-fi
 project_agents="$here/../../AGENTS.md"
 if [ ! -f "$project_agents" ]; then
   echo "SKIP: I15 backlog pin vs example-app AGENTS.md ($project_agents not found)"

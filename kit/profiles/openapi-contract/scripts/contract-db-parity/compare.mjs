@@ -27,7 +27,7 @@ const ignoreTables = new Set(map.ignoreTables ?? []);
 const ignoreColumns = map.ignoreColumns ?? [];
 const accepted = map.accept ?? {};
 
-// Read models and wrappers share their object's table: weddingSummary, weddingCreated -> wedding.
+// Read models and wrappers share their object's table: folderSummary, folderCreated -> folder.
 const OBJECT_SUFFIXES = /(Summary|Detail|Details|View|Response|Result|Created|Issued|Preview|Dto|Resource|Model)$/;
 const TEXT = new Set(['text', 'character varying', 'character', 'citext', 'varchar', 'bpchar']);
 const INT32 = new Set(['integer', 'smallint']);

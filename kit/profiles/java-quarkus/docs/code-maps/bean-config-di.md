@@ -10,7 +10,7 @@ kind: worked-example
 > All content has been generated under the direct supervision of a named individual,
 > and under the AI.Backbone Orchestrator Compliance framework
 
-## This repo (wedding-portal)
+## This repo (the Quarkus original)
 These are the real facts. Everything from "Where this pattern lives" down is the pseudonymized worked example
 (`shop-backend`): follow its structure, not its names. Decisions: [memory, 2026-10-17].
 
@@ -86,8 +86,8 @@ Expected: reject the change — declare the client under `quarkus.cxf.client."<n
 
 ## Drift / exceptions
 - None observed beyond the module-prefixed `@Named` convention noted above.
-- **Throttle key:** `wedding.throttle.server-key` (base64, ≥32 bytes) is required in prod from env `WEDDING_THROTTLE_SERVER_KEY`, fixed throwaway values in `%dev`/`%test`; `ThrottleKeyHasher` checks it at start-up and never logs it.
-- **Proxy:** `WEDDING_PROXY_FORWARDING` (default false) and `WEDDING_TRUSTED_PROXIES` (default empty) go together, both or neither; `ForwardingGuard` refuses one without the other at start-up. `%test` forwards from 127.0.0.1.
+- **Throttle key:** `app.throttle.server-key` (base64, ≥32 bytes) is required in prod from env `APP_THROTTLE_SERVER_KEY`, fixed throwaway values in `%dev`/`%test`; `ThrottleKeyHasher` checks it at start-up and never logs it.
+- **Proxy:** `APP_PROXY_FORWARDING` (default false) and `APP_TRUSTED_PROXIES` (default empty) go together, both or neither; `ForwardingGuard` refuses one without the other at start-up. `%test` forwards from 127.0.0.1.
 - **Session:** `SessionCookieMechanism` reads `rm_session` and hands the token to `SessionIdentityProvider` (an `IdentityProvider<SessionTokenAuthenticationRequest>`), which runs `ResolveSessionUseCase` on a worker thread (`runBlocking`); no request context is active there and none is needed, the use case's `@Transactional` carries the EntityManager. A missing, malformed or stale cookie leaves the request anonymous; `VertxSessionCookies` writes the cookie through `SessionCookies`.
 
 ## Provenance

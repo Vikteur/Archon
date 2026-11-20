@@ -3,7 +3,7 @@
 # dev database. A running instance on the port is reused, never restarted.
 #   smoke.sh [up|start|check|stop|status]     (default: up = start, then check)
 # Overrides: PORT (8080), STATE_DIR (pid and log; default ${TMPDIR:-/tmp}/run-app),
-# WEDDING_OPS_USERNAME / WEDDING_OPS_PASSWORD (default ops / local-dev-only: a throwaway local pair, never a real one),
+# APP_OPS_USERNAME / APP_OPS_PASSWORD (default ops / local-dev-only: a throwaway local pair, never a real one),
 # START_TIMEOUT seconds (300).
 # Exits 0 when every step passed, 1 otherwise; each check prints one PASS or FAIL line.
 set -uo pipefail
@@ -13,8 +13,8 @@ port="${PORT:-8080}"
 state="${STATE_DIR:-${TMPDIR:-/tmp}/run-app}"
 log="$state/app.log"
 base="http://localhost:$port"
-export WEDDING_OPS_USERNAME="${WEDDING_OPS_USERNAME:-ops}"
-export WEDDING_OPS_PASSWORD="${WEDDING_OPS_PASSWORD:-local-dev-only}"
+export APP_OPS_USERNAME="${APP_OPS_USERNAME:-ops}"
+export APP_OPS_PASSWORD="${APP_OPS_PASSWORD:-local-dev-only}"
 mkdir -p "$state"
 
 up() { curl -s -o /dev/null --max-time 2 "$base/api/health"; }
@@ -61,7 +61,7 @@ expect() { # expect <label> <status> <body-regex|-> <curl args...>
 
 check() {
   up || { echo "FAIL: nothing answers at $base; run: smoke.sh start"; return 1; }
-  local ops="$WEDDING_OPS_USERNAME:$WEDDING_OPS_PASSWORD"
+  local ops="$APP_OPS_USERNAME:$APP_OPS_PASSWORD"
   expect "GET /api/health (open)"                    200 '"ok":true'               "$base/api/health"
   expect "GET /q/health/live (open)"                 200 '"status": "UP"'          "$base/q/health/live"
   expect "GET /q/health/ready without credentials"   401 -                         "$base/q/health/ready"
@@ -76,7 +76,7 @@ check() {
     echo "FAIL dev database: no postgres:18.6-alpine container"; fails=$((fails + 1))
   else
     local hist
-    hist="$(docker exec "$db" psql -U quarkus -d wedding_portal -tAc \
+    hist="$(docker exec "$db" psql -U quarkus -d app -tAc \
       "select coalesce(version, 'R') || ' ' || description || ' ' || success from flyway_schema_history order by installed_rank" 2>&1)"
     if grep -q ' true$' <<<"$hist" && ! grep -q ' false$' <<<"$hist"; then
       echo "PASS dev database $db: flyway history"; sed 's/^/       /' <<<"$hist"

@@ -36,11 +36,11 @@
     "sourceSha256": "0bdaa5361dba4d297ca2abbe6e8b70f91785e610b21cddfd25546ba8991d8d9c"
   },
   ".github/skills/run-app/SKILL.md": {
-    "derivedFrom": ".claude/skills/run-wedding-portal/SKILL.md",
+    "derivedFrom": ".claude/skills/run-app/SKILL.md",
     "sourceSha256": "443983360722853108e859dda6aaebfaf400de1d8dba5e3e644ac999685b55ea"
   },
   ".github/skills/run-app/smoke.sh": {
-    "derivedFrom": ".claude/skills/run-wedding-portal/smoke.sh",
+    "derivedFrom": ".claude/skills/run-app/smoke.sh",
     "sourceSha256": "f42171d25d255889d6d14f26bfcc60790ce66f049fdb6d706ae6becaf155bd14"
   },
   ".github/skills/testcontainers/SKILL.md": {
