@@ -9,6 +9,8 @@
 #   local-ci-status the accept rules of .archon/scripts/local-ci-status.sh, its functions parse, verify and accept,
 #                   and the grammar's reader ci_status_parse in .claude/scripts/ci-status-grammar.sh (comment and blank
 #                   lines do not count)
+#   kit-gates       the gates map of .archon/kit.yaml or .archon/kit.defaults.yaml: a report-only gate of ci-gate.sh
+#                   switched to block or back, or a gate added or removed (comments and other keys do not count)
 # A decision entry: the change adds to docs/memory.md a dated heading `## <yyyy-mm-dd> — …` (or `### <yyyy-mm-dd> — …`,
 # the entry level of a memory.md that groups its entries under `## Decisions`), and the lines it adds there
 # name every gate it changes by the name in the first column above (ci-status-grammar counts for local-ci-status).
@@ -40,6 +42,8 @@ inputs=.github/ci-inputs.yml
 plan=.claude/scripts/ci-plan.sh
 status=.archon/scripts/local-ci-status.sh
 grammar=.claude/scripts/ci-status-grammar.sh
+kit_config=.archon/kit.yaml
+kit_defaults=.archon/kit.defaults.yaml
 
 # at <side> <path>: the file at the base or the head side; empty when it does not exist there.
 at() {
@@ -93,6 +97,13 @@ if [ -z "$accept_changed" ] && changed "$grammar"; then
     && accept_changed="$grammar: ci_status_parse"
 fi
 [ -n "$accept_changed" ] && gate local-ci-status "$accept_changed"
+for f in "$kit_config" "$kit_defaults"; do
+  changed "$f" || continue
+  need_yq "$f"
+  if [ "$(at base "$f" | yq_of '.gates // {}')" != "$(at head "$f" | yq_of '.gates // {}')" ]; then
+    gate kit-gates "$f: gates"; break
+  fi
+done
 
 if [ "${#gates[@]}" -eq 0 ]; then
   echo "gate-change-check: no gate changed"

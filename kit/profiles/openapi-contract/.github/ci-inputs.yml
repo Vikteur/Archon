@@ -35,8 +35,9 @@ jobs:
   test:
     # Every module's src/ and build file, the Gradle wrapper and settings, config/; the gates after Gradle run
     # .claude/scripts/: pin-proof-check.sh reads .archon/pin-proofs.txt, build-shape-check.sh docs/memory.md and the
-    # boot jar, generated-untracked-check.sh's git reads .gitignore. The openapi-contract profile ships this manifest; it
-    # wins over java-spring's, whose test job reads no contract.
+    # boot jar, generated-untracked-check.sh's git reads .gitignore, ci-gate.sh contract-lint the project's own
+    # .spectral.yaml when the contract has none. The openapi-contract profile ships this manifest; it wins over
+    # java-spring's, whose test job reads no contract.
     inputs:
       - "*/src/**"
       - "*.gradle.kts"
@@ -50,6 +51,8 @@ jobs:
       - .archon/pin-proofs.txt
       - docs/memory.md
       - .gitignore
+      - .spectral.yaml
+      - .spectral.yml
     exclude: [backlog/, docs/retro/, docs/tokenomics/daily-token-reports/, docs/tokenomics/ticket-token-reports/]
     readers: ["*/src/**", "**/*.gradle.kts", "*.gradle.kts", "gradle/**", gradle.properties, settings.gradle.kts]
     contract: true

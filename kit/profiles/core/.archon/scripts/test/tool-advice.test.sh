@@ -79,6 +79,27 @@ case_ "Bash that only builds is silent" none "$(call developer Bash '{"command":
 case_ "the main session's Bash is never covered" none \
   "$(jq -cn '{tool_name:"Bash",tool_input:{command:"cat contract/dist/openapi.yaml"}}' | bash "$hook" PreToolUse | kind)"
 
+# Copilot CLI payloads (toolName/toolArgs, agentType): payload.sh maps them to the Claude shape, so the same rules hold.
+copilot() { # copilot <payload JSON> → what the hook prints
+  printf '%s' "$1" | CLAUDE_PROJECT_DIR="$wt" bash "$hook" PreToolUse
+}
+case_ "Copilot: a developer view of contract/ is advised" advice \
+  "$(copilot "{\"agentType\":\"developer\",\"toolName\":\"view\",\"toolArgs\":{\"path\":\"$wt/contract/dist/openapi.yaml\"}}" | kind)"
+case_ "Copilot: toolArgs as a JSON string, a grep for a symbol is advised" advice \
+  "$(copilot '{"agentType":"debugger","toolName":"grep","toolArgs":"{\"pattern\":\"SignInUseCase\"}"}' | kind)"
+case_ "Copilot: a bash contract read is advised" advice \
+  "$(copilot '{"agentType":"analyst","toolName":"bash","toolArgs":{"command":"cat contract/dist/openapi.yaml"}}' | kind)"
+out="$(printf '%s' '{"agentType":"developer","toolName":"bash","toolArgs":{"command":"cat contract/x.yaml"}}' \
+  | TOOL_ADVICE_CONTRACT=refuse CLAUDE_PROJECT_DIR="$wt" bash "$hook" PreToolUse)"
+printf '%s' "$out" | jq -e '.permissionDecision == "deny" and .hookSpecificOutput.permissionDecision == "deny"' >/dev/null \
+  && ok "Copilot: refuse denies in both shapes, Copilot's top level too" || bad "Copilot: refuse denies in both shapes" "$out"
+case_ "Copilot: a root session that names no agent is never covered" none \
+  "$(copilot '{"toolName":"view","toolArgs":{"path":"contract/dist/openapi.yaml"}}' | kind)"
+case_ "Copilot: KIT_AGENT names the root agent, which is covered" advice \
+  "$(KIT_AGENT=developer copilot '{"toolName":"view","toolArgs":{"path":"contract/dist/openapi.yaml"}}' | kind)"
+case_ "Copilot: the contract-agent is never covered" none \
+  "$(copilot '{"agentType":"contract-agent","toolName":"view","toolArgs":{"path":"contract/dist/openapi.yaml"}}' | kind)"
+
 # A build-feature run worktree: every session in it is covered, for the servers in its build-tools.json.
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 home="$tmp/archon"; run="$home/workspaces/owner/repo/worktrees/build-feature-1"

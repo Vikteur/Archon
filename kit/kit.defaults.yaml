@@ -28,6 +28,13 @@ modules: # layer globs, used by the .github/instructions applyTo fields and the 
 generated_globs: ["**/build/generated/**"]
 ci: # .github/workflows/ci.yml and ci-workflow-check.sh
   gradle_line: "./gradlew test integrationTest build" # the Gradle run of CI's test job, every task named, none excluded
+gates: # .claude/scripts/ci-gate.sh (kit/SPEC.md, Report-only gates): report prints a finding and passes, block fails the
+  # job. Every gate ships report; switching one to block is a gate change (a dated docs/memory.md entry, gate-change-check.sh).
+  tests_ran: report # the test job's JUnit XML counts more than zero tests
+  format: report # ./gradlew spotlessCheck, when the build applies Spotless
+  coverage: report # ./gradlew jacocoTestReport and the line and branch coverage, when the build applies JaCoCo; no threshold
+  secrets: report # gitleaks over the checkout (archon-scripts job), redacted
+  contract_lint: report # spectral lint of contract.spec_path (openapi-contract profile)
 commands:
   test: "./gradlew test"
   integration_test: "./gradlew integrationTest"

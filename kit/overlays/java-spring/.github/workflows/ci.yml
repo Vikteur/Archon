@@ -31,6 +31,13 @@ jobs:
       - name: Build and test
         id: gradle
         run: @@KIT_CI_GRADLE_LINE@@ --build-cache --parallel --stacktrace
+      # A green build that ran no test proves nothing: the JUnit XML must count a test (ci-gate.sh, kit key
+      # gates.tests_ran). After a red build the same count says whether any test ran before it broke.
+      - name: Tests ran
+        run: bash .claude/scripts/ci-gate.sh tests-ran
+      - name: Tests ran before the red build
+        if: failure() && steps.gradle.outcome == 'failure'
+        run: bash .claude/scripts/ci-gate.sh tests-ran
       # Each pinned framework item (.archon/pin-proofs.txt) is proved by a test that ran in this build.
       - name: Framework pin proof
         run: bash .claude/scripts/pin-proof-check.sh
@@ -41,6 +48,11 @@ jobs:
       # The Spring Boot plugin only in application, the boot jar's layout, every module under the component scan.
       - name: Build shape
         run: bash .claude/scripts/build-shape-check.sh
+      # Report-only gates (kit/SPEC.md): each prints its findings and passes until its kit key gates.<gate> is block.
+      - name: Format (Spotless, report-only)
+        run: bash .claude/scripts/ci-gate.sh format ./gradlew spotlessCheck --build-cache --parallel --stacktrace
+      - name: Coverage (JaCoCo, report-only)
+        run: bash .claude/scripts/ci-gate.sh coverage ./gradlew jacocoTestReport --build-cache --parallel --stacktrace
       - name: Upload test reports
         if: failure() && steps.gradle.outcome == 'failure'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -63,6 +75,9 @@ jobs:
           node-version: '22'
       - name: CI workflow rules
         run: bash .claude/scripts/ci-workflow-check.sh
+      # gitleaks over the checkout, redacted: file, line and rule of a finding, never the text (kit key gates.secrets).
+      - name: Secret scan (gitleaks, report-only)
+        run: bash .claude/scripts/ci-gate.sh secrets
       - name: Every .archon test suite passes
         run: |
           git config --global user.name ci

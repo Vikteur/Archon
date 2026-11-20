@@ -164,6 +164,12 @@ contract:
   checkout_step: "Check out the contract"   # ci-workflow-check.sh: the contract checkout step
   generated_dir: ""          # e.g. shared-adapter/build/generated/openapi/src/main/java/com/acme/api
   api_package: ""            # e.g. com.acme.api
+gates:                       # ci-gate.sh: report (the default) or block; see Report-only gates
+  tests_ran: report
+  format: report
+  coverage: report
+  secrets: report
+  contract_lint: report
 ```
 
 ## Local CI switch (`local_ci`)
@@ -178,7 +184,8 @@ take that verdict by SHA (`ci-by-sha.sh`). A project that runs its own CI, such 
   `ci-audit.sh`, `ci-cost.sh` and `gate-change-check.sh`, with their `scripts/test/` suites; `.archon/scripts/ci-skip.sh`;
   `.archon/red-triage/infra.tsv` and `flaky.tsv`; and the local-mode suites `ci-by-sha`, `local-ci-run`,
   `local-ci-status` and `red-triage` under `.archon/scripts/test/`;
-- java: `.claude/scripts/ci-workflow-check.sh` and `scripts/test/ci-workflow-scope.test.sh`;
+- java: `.claude/scripts/ci-workflow-check.sh` and `.claude/scripts/ci-gate.sh`, with `scripts/test/ci-workflow-scope.test.sh`,
+  `ci-workflow-check.test.sh` and `ci-gate.test.sh`;
 - java-quarkus, java-spring and openapi-contract: `.github/workflows/ci.yml` and `.github/ci-inputs.yml`.
 
 **The CI definition per profile.** java-spring's `ci.yml` and `ci-inputs.yml` hold no contract step: no contract
@@ -221,6 +228,40 @@ exists), and read the switch at runtime (`kit_get local_ci true`, env `KIT_LOCAL
 
 `.archon/scripts/test/local-ci-off.test.sh` covers that mode. `affected-check.sh` runs `gate-change-check.sh` and
 `ci-workflow-check.sh` only when they exist. Switching back to `true` and running `kit add` writes the files again.
+
+## Report-only gates (`gates`)
+
+`.claude/scripts/ci-gate.sh <gate> [<command>...]` runs one gate as a step of `.github/workflows/ci.yml`, in both the
+java-spring and the openapi-contract copy. Each gate has a kit key under `gates`, `report` by default:
+
+| Gate | Kit key | Step | What it checks |
+|---|---|---|---|
+| `tests-ran` | `gates.tests_ran` | test job, after the Gradle run, and again after a red one | the JUnit XML under `*/build/test-results/` counts more than zero tests, not all skipped; each module and task prints its count |
+| `format` | `gates.format` | test job | `./gradlew spotlessCheck`, when a build file applies Spotless |
+| `coverage` | `gates.coverage` | test job | `./gradlew jacocoTestReport`, when a build file applies JaCoCo; prints line and branch coverage per report, no threshold |
+| `secrets` | `gates.secrets` | archon-scripts job | `gitleaks` over the checkout with `--redact`; prints file, line and rule, never the matched text |
+| `contract-lint` | `gates.contract_lint` | test job, openapi-contract only | `spectral lint` of the pinned spec with `contract/.spectral.yaml`, `.spectral.yaml`, else `spectral:oas` |
+
+`report`: a finding, or a gate that is not set up (no Spotless or JaCoCo in the build, no `gitleaks` or `spectral` on
+PATH), prints a `::warning::` line and the step passes. `block`: the same exits 1 and fails the job. Any other value
+fails the step, so a typo never turns a gate off. Env `KIT_GATES_<KEY>` overrides a key.
+
+**Switching a gate to block** is a gate change: set `gates.<gate>: block` in `.archon/kit.yaml` and add a dated
+`### yyyy-mm-dd` entry to `docs/memory.md` in the same change. `gate-change-check.sh` (gate `kit-gates`) fails a branch
+that changes the `gates` map of `.archon/kit.yaml` or `.archon/kit.defaults.yaml` without that entry. The plan's order:
+format, contract lint, secrets, coverage, each a week in report mode first; `tests-ran` can block at once.
+
+**What a project sets up.** The kit adds no plugin to a build and installs no tool. Spotless (`com.diffplug.spotless`)
+and JaCoCo (the `jacoco` plugin, with `reports { xml.required = true }`) go in the project's build or convention
+plugin. `gitleaks` (8.19 or newer for `gitleaks dir`; older builds fall back to `detect --no-git`) and `spectral`
+(`@stoplight/spectral-cli`, on PATH or in `node_modules/.bin`) go on the CI machine. Until then each gate reports
+"not set up" and passes.
+
+**No dependency review yet.** It is left to the owner: the plan asks for a Gradle plugin that works without a network
+account or token. OWASP `dependency-check-gradle` asks for an NVD API key to update its database in reasonable time,
+and by default its OSS Index analyzer sends the dependency coordinates to Sonatype and its Central analyzer sends
+artifact hashes to Maven Central (both can be turned off). Snyk and Sonatype's own plugins need a token. CycloneDX
+writes an SBOM and checks nothing; Gradle's dependency verification checks checksums and signatures, not advisories.
 
 ## Conversion rules (kit-sync)
 
