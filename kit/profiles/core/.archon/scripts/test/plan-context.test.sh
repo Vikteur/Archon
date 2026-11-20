@@ -9,6 +9,8 @@ export GIT_CONFIG_KEY_0=gc.auto GIT_CONFIG_VALUE_0=0
 export GIT_CONFIG_KEY_1=maintenance.auto GIT_CONFIG_VALUE_1=false
 export GIT_CONFIG_KEY_2=receive.autoGc GIT_CONFIG_VALUE_2=false
 
+# The build workflow is read from .archon/kit.yaml only, never from the caller's environment.
+unset BUILD_WORKFLOW KIT_CONFIG
 script="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/plan-context.sh"
 pass=0; fail=0
 root="$(mktemp -d)"
@@ -121,6 +123,13 @@ has "## build-feature-copilot nodes"; check "no ticket.md still writes the pack"
 
 # Read-only: the pack changes nothing in the checkout.
 [ -z "$(git status --porcelain)" ]; check "checkout untouched" $?
+
+# The nodes are those of the workflow build_workflow in .archon/kit.yaml names, not of the kit's default.
+printf 'build_workflow: my-build\n' > .archon/kit.yaml
+printf 'nodes:\n  - id: only-mine\n' > .archon/workflows/my-build.yaml
+bash "$script" "$root/missing.md" > "$root/out.md"; check "kit.yaml build_workflow exits 0" $?
+has "## my-build nodes" && grep -qx -- "- only-mine" "$root/out.md" && ! has "## build-feature-copilot nodes"
+check "the nodes of the workflow build_workflow names" $?
 
 echo "plan-context: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
