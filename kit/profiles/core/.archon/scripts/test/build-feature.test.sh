@@ -162,6 +162,27 @@ rm "$art/ci-fix-before.sha"
 out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1); rc=$?
 check "13 fix-made: no before sha counts as a commit made (red-head did not run)" $([ "$rc" -eq 0 ]; echo $?)
 check "13 red-head prints RED_FROM_MAIN" $(cif red-head bash | grep -q 'RED_FROM_MAIN'; echo $?)
+# red-head run in the throwaway repo: a gh stub on PATH, and a local-ci-status.sh stub that answers MAIN_ST for main's
+# commit and HEAD_ST for the head's.
+mkdir -p "$r/.archon/scripts" "$root/bin"
+printf '#!/usr/bin/env bash\necho acme/repo\n' > "$root/bin/gh"; chmod +x "$root/bin/gh"
+printf '#!/usr/bin/env bash\nif [ "$2" = "$(git rev-parse HEAD)" ]; then echo "$HEAD_ST"; else echo "$MAIN_ST"; fi\n' \
+  > "$r/.archon/scripts/local-ci-status.sh"
+git -C "$r" update-ref refs/remotes/origin/main "$(git -C "$r" rev-parse HEAD~1)"
+rh=$(cif red-head bash | sed 's/@@KIT_BASE_BRANCH@@/main/g')
+red_head() { # red_head <main state line> <head state line>
+  out=$(cd "$r" && PATH="$root/bin:$PATH" ARTIFACTS_DIR="$art" MAIN_ST="$1" HEAD_ST="$2" bash -c "$rh" 2>&1); rc=$?
+}
+red_head "red local-ci/test=failure" "red local-ci/test=failure"
+check "13 red-head: main red on the head's red job -> RED_FROM_MAIN, exit 1" $([ "$rc" -eq 1 ] && grep -q '^RED_FROM_MAIN' <<< "$out"; echo $?)
+red_head "green every job passed" "red local-ci/test=failure"
+check "13 red-head: main green -> not from main" $([ "$rc" -eq 0 ] && grep -qF '{"red_from_main": false}' <<< "$out"; echo $?)
+for st in none pending stale superseded; do
+  red_head "$st no verdict" "red local-ci/test=failure"
+  check "13 red-head: main $st -> unknown, not false, the round goes on" $([ "$rc" -eq 0 ] \
+    && grep -qF '{"red_from_main": "unknown"}' <<< "$out" && ! grep -qF '"red_from_main": false' <<< "$out" \
+    && grep -q "has no CI verdict ($st)" <<< "$out"; echo $?)
+done
 for n in diagnose fix; do
   d=$(denies "$wf" "$n"); out="$n: $d"
   check "13 $n cannot push to main or commit tickets" $([[ "$d" == *'Bash(*git push*main*)'* && "$d" == *'Bash(*commit-tickets*)'* && "$d" == *'Bash(*sync-main*)'* ]]; echo $?)
