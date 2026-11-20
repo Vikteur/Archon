@@ -1332,6 +1332,9 @@ describe('the committed kit', () => {
     expect(text).toContain('Never approve or reject `plan-approval` yourself');
     expect(text).toContain("only on the user's own words");
   });
+  test('the kit defaults to Java 26 when the build names no toolchain', () => {
+    expect(readFileSync(join(kit, 'kit.defaults.yaml'), 'utf8')).toMatch(/^java_version: 26 /m);
+  });
   test('git ignores no file the manifest lists', () => {
     const paths = manifest.files.map(f => `profiles/${f.profile}/${f.path}`);
     const r = Bun.spawnSync(['git', '-C', kit, 'check-ignore', '--no-index', '--stdin'], {

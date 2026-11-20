@@ -9,7 +9,7 @@ agent_cli: copilot # install-tools.sh and kit-config.sh: the agent CLI this proj
 groma_descriptions: optional # groma-check.sh: optional (a map element without a description is a note) | required (it fails)
 groma_curation: optional # groma-check.sh: optional (a map that is still its first scan is a note) | required (it fails)
 build_workflow: build-feature-copilot
-java_version: 21 # kit add takes JavaLanguageVersion.of(N) of build.gradle.kts, buildSrc/ or build-logic/; set to another, it refuses
+java_version: 26 # kit add takes JavaLanguageVersion.of(N) of build.gradle.kts, buildSrc/ or build-logic/; set to another, it refuses
 pin_proofs: .archon/pin-proofs.txt # pin-proof-check.sh, either stack: one <item>|<module>|<task>|<class> line each
 build_shape: # build-shape-check.sh; "-" turns one check off, with a notice
   modules: "-" # the settings.gradle.kts modules, space-separated, e.g. "application order-adapter order-domain"

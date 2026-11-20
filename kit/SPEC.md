@@ -124,7 +124,7 @@ agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copi
 groma_descriptions: optional # groma-check.sh: optional (an undescribed map element is a note) | required
 groma_curation: optional     # groma-check.sh: optional (a first-scan map is a note) | required
 build_workflow: build-feature-copilot
-java_version: 21              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
+java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
   modules: "-"               # the settings.gradle.kts modules, space-separated
