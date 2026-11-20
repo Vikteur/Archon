@@ -1316,7 +1316,7 @@
       "template": false,
       "origin": ".github/copilot-instructions.md",
       "kind": "instructions",
-      "sha256": "781978edc0e4c3bc7fcfd2bbc35173b500cfc727982968703022b56854ef9a58"
+      "sha256": "8dbaaaa8c8f859bc24ea925ef93306fd9e43d29bc89c655399e3b0817b80f757"
     },
     {
       "path": ".github/hooks/archon-run-guard.json",

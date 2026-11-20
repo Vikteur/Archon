@@ -1325,6 +1325,13 @@ describe('the committed kit', () => {
       );
     }
   });
+  test('Copilot starts a run from ticket text kept in a file and never answers the plan approval itself', () => {
+    const text = readFileSync(join(kit, 'profiles/core/.github/copilot-instructions.md'), 'utf8');
+    expect(text).toContain('archon workflow run build-feature-copilot --detach "$(cat <file>)"');
+    expect(text).toContain('pasted, or read from a ticket tool');
+    expect(text).toContain('Never approve or reject `plan-approval` yourself');
+    expect(text).toContain("only on the user's own words");
+  });
   test('git ignores no file the manifest lists', () => {
     const paths = manifest.files.map(f => `profiles/${f.profile}/${f.path}`);
     const r = Bun.spawnSync(['git', '-C', kit, 'check-ignore', '--no-index', '--stdin'], {

@@ -326,6 +326,11 @@ export const STANDALONE_TARGETED: Record<string, Rewrite[]> = {
       'Never merge: the run stops once for a person to approve the plan and ends when its pull request is ready, and a team member reviews and merges it. The run tooling follows `BUILD_WORKFLOW` (default `build-feature`).',
       1,
     ],
+    [
+      '```\n\nThe run asks its blocked questions through `attention`',
+      '```\n\nStart a run from the ticket text the user gives you (pasted, or read from a ticket tool): write it unchanged to\na file in a scratch folder outside the repo, then run\n`archon workflow run build-feature-copilot --detach "$(cat <file>)"`, so no quoting or retyping changes it.\nNever approve or reject `plan-approval` yourself: show the user the plan path and the STOP items the run names\n(`archon workflow get <run-id> --json`), and run `approve` or `reject` only on the user\'s own words.\n\nThe run asks its blocked questions through `attention`',
+      1,
+    ],
   ],
   '.claude/rules/general.md': [
     [
