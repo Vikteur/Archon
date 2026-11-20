@@ -43,6 +43,9 @@ const SCAFFOLD_ROW = /^\| \[[^\]]+\]\(\.\.\/(scaffold-templates\/[^)]+\.mustache
 const AGENT_SERVER_ARG = /^ {4}args: \["((?:scripts|\.archon)\/[^"]+)"/gm;
 // A test suite a CI workflow runs by name (a glob is no dependency).
 const CI_SUITE = /(?<![\w/.-])((?:\.archon\/)?scripts\/test\/[\w.-]+\.test\.sh)\b/g;
+// A script a CI step runs (`bash .claude/scripts/x.sh`): the measured run of 2026-11-20 failed on a contract-pin.sh
+// that a set without openapi-contract does not ship.
+const CI_SCRIPT = /(?<![\w/.-])bash ((?:\.claude|\.archon)\/scripts\/[\w./-]+\.sh)\b/g;
 
 function needsOf(f: DepFile): { needs: string; why: string }[] {
   const out: { needs: string; why: string }[] = [];
@@ -60,9 +63,12 @@ function needsOf(f: DepFile): { needs: string; why: string }[] {
     f.content.includes(`\`${CONTRACT_CLI} *\``)
   )
     out.push({ needs: CONTRACT_CLI_PATH, why: 'its MCP fallback' });
-  if (f.path === '.github/workflows/ci.yml')
+  if (f.path === '.github/workflows/ci.yml') {
     for (const m of f.content.matchAll(CI_SUITE))
       out.push({ needs: m[1] ?? '', why: 'a CI step runs it' });
+    for (const m of f.content.matchAll(CI_SCRIPT))
+      out.push({ needs: m[1] ?? '', why: 'a CI step runs it' });
+  }
   return out;
 }
 
@@ -85,9 +91,15 @@ export const KNOWN_GAPS: { match: RegExp; reason: string }[] = [
   },
   {
     match:
-      /^core,java,java-quarkus(,openapi-contract)?: \.github\/workflows\/ci\.yml needs (\.archon\/)?scripts\/test\/\S+ \(a CI step runs it\)/,
+      /^core,openapi-contract: \.github\/workflows\/ci\.yml needs \.claude\/scripts\/\S+ \(a CI step runs it\)/,
     reason:
-      "the java-quarkus ci.yml is still the source's own, which names the source's suites; it needs an overlay like java-spring's",
+      "no java profile: openapi-contract's ci.yml is the Spring build's workflow with the contract steps, which wins over java-spring's; without java there is no Gradle build for it to run",
+  },
+  {
+    match:
+      /^core,java,java-quarkus(,openapi-contract)?: \.github\/workflows\/ci\.yml needs (\.archon\/)?scripts\/test\/\S+ \(a CI step runs it\)|^core,java,java-quarkus: \.github\/workflows\/ci\.yml needs \.claude\/scripts\/\S+ \(a CI step runs it\)/,
+    reason:
+      "the java-quarkus ci.yml is still the source's own, which names the source's suites and the contract steps; it needs an overlay like java-spring's",
   },
 ];
 

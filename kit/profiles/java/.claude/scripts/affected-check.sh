@@ -11,8 +11,8 @@
 #     `resourceTest` (the start-up tag only on the quarkus stack, kit key `stack`; a spring build has no startupTest); when an
 #     *-adapter module or application changed, every affected module also runs the slow sets its tests are tagged
 #     for. A root Gradle file (build.gradle.kts, settings.gradle.kts, gradle/, gradlew) changes every module.
-#     gradle.properties turns the configuration cache on, so Gradle runs one module's test sets side by side:
-#     application's four sets take ~2m20s instead of ~3m36s (measured 2026-10-23, docs/memory.md).
+#     The kit ships no gradle.properties: a project that turns the configuration cache on there
+#     (org.gradle.configuration-cache=true) lets Gradle run one module's test sets side by side.
 #   - .archon/scripts/X.sh, .archon/scripts/X/..., .archon/scripts/test/X.test.sh: .archon/scripts/test/X.test.sh.
 #   - a path ci-local.sh's ARCHON_SUITE_PATHS names (.archon/, .claude/hooks/, .gitignore, ci.yml): also the .archon
 #     suites .claude/scripts/archon-suites.sh selects for the change, as CI's archon-scripts job does ("all": every

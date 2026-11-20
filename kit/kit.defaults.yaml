@@ -30,6 +30,8 @@ modules: # layer globs, used by the .github/instructions applyTo fields and the 
   gateway: "**/*-gateway/**"
   platform: "**/platform/**"
 generated_globs: ["**/build/generated/**"]
+ci: # .github/workflows/ci.yml and ci-workflow-check.sh
+  gradle_line: "./gradlew test integrationTest build" # the Gradle run of CI's test job, every task named, none excluded
 commands:
   test: "./gradlew test"
   integration_test: "./gradlew integrationTest"

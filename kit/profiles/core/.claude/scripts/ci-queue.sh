@@ -16,9 +16,8 @@
 # Slots: CI_LOCAL_SLOTS (default 1, owner decision 2026-10-22; D18's 2 lets two side by side) runs may hold a slot at a time.
 # Slot 1 is the lock folder .running (the lock of the runner before the queue, so an older runner and this one still
 # exclude each other), slot k > 1 is .running.<k>. An entry may take a slot when fewer than CI_LOCAL_SLOTS live entries
-# are ahead of it and none of them is the same commit, or a commit with the same 7-character prefix: a run's folder,
-# WSL clone, image tag and container names are named by that prefix (ci-local.sh), so two such runs never go side by
-# side.
+# are ahead of it and none of them is the same commit, or a commit with the same 7-character prefix: a run's folder
+# and its WSL clones are named by that prefix (ci-local.sh), so two such runs never go side by side.
 
 q_init() { # q_init [root]
   CI_QUEUE_ROOT=${1:-${CI_QUEUE_ROOT:?CI_QUEUE_ROOT is not set}}

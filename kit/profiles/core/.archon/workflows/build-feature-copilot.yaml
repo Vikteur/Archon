@@ -781,7 +781,8 @@ nodes:
       max_iterations: 3
       until_bash: bash .archon/scripts/ci-by-sha.sh --check
       # Failure recovery: red-head stops the round when main is red on a job
-      # that is red on the head too (RED_FROM_MAIN: rebase once main is green, not a fix here); fix-made fails the
+      # that is red on the head too (RED_FROM_MAIN: rebase once main is green, not a fix here); a main with no verdict
+      # (none, pending, stale, superseded) is unknown, not "not from main", and the round goes on; fix-made fails the
       # round when the fix agent made no commit (CI_FIX_NO_COMMIT), and ends the run as blocked, with the diagnosis,
       # when that diagnosis says the red came in with the base (BLOCKED_NEEDS_PERSON). No node
       # of ci-fix may push to main or write to the main checkout (denied_tools).
@@ -794,6 +795,11 @@ nodes:
             m=$(bash .archon/scripts/local-ci-status.sh "$repo" "$main")
             h=$(bash .archon/scripts/local-ci-status.sh "$repo" "$(git rev-parse HEAD)")
             red() { printf '%s' "$1" | grep -oE 'local-ci/[A-Za-z0-9_.-]+=(failure|error)' | cut -d= -f1 | sort -u; }
+            case "${m%% *}" in
+              green|red) ;;
+              *) echo "red-head: main $main has no CI verdict (${m%% *}): whether the red came from main is unknown" >&2
+                 echo '{"red_from_main": "unknown"}'; exit 0 ;;
+            esac
             if [ "${m%% *}" = red ] && [ -n "$(comm -12 <(red "$m") <(red "$h"))" ]; then
               echo "RED_FROM_MAIN: main $main is red on a job that is red on the head too" >&2; exit 1
             fi

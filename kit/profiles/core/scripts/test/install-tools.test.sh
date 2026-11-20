@@ -465,5 +465,65 @@ run INSTALL_TOOLS_OS=macos TOOLS_CONF="$root/rtk.conf" LOCAL_PREFIX="$root/rp" P
 check "R4 macOS: same install script, brew not used" logged "curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/v1.1.0/install.sh" 
 check "R4 macOS: no brew call" [ -z "$(grep '^brew' "$log")" ]
 
+# J: the java row follows kit key java_version (its version, winget id and cask); D: --check reads whether docker's
+# daemon answers and gh is logged in, and never prints gh auth status's output.
+cat > "$root/java.conf" <<'CONF'
+java | 26 | pkg | EclipseAdoptium.Temurin.26.JDK | cask:temurin@26 | java -version
+CONF
+tool java "$root/bin" stderr
+mkdir -p "$root/p-j21/.archon" "$root/p-jdef/.archon"
+printf 'java_version: 21 # the toolchain\n' > "$root/p-j21/.archon/kit.yaml"
+printf 'java_version: 26\n' > "$root/p-jdef/.archon/kit.defaults.yaml"
+fresh j1
+setver java 21.0.4
+script_args=--check
+run TOOLS_CONF="$root/java.conf" PROJECT_DIR="$root/p-j21"
+check "J1 --check: JDK 21 fits kit key java_version 21" said "ok       java 21.0.4"
+check "J1 --check: exit 0" [ "$rc" = 0 ]
+run TOOLS_CONF="$root/java.conf" PROJECT_DIR="$root/p-jdef"
+check "J1 --check: JDK 21 does not fit java_version 26 of kit.defaults.yaml" said "missing  java (wants 26, has 21.0.4)"
+run TOOLS_CONF="$root/java.conf" PROJECT_DIR="$root/p-jdef" INSTALL_TOOLS_JAVA_VERSION=21
+check "J1 INSTALL_TOOLS_JAVA_VERSION wins over kit.yaml" [ "$rc" = 0 ]
+script_args=
+fresh j2
+run TOOLS_CONF="$root/java.conf" PROJECT_DIR="$root/p-j21"
+check "J2 Windows: the winget id carries kit key java_version" logged "winget install --id EclipseAdoptium.Temurin.21.JDK $winget_flags"
+fresh j3
+run INSTALL_TOOLS_OS=macos TOOLS_CONF="$root/java.conf" PROJECT_DIR="$root/p-j21"
+check "J3 macOS: the cask carries kit key java_version" logged "brew install --cask temurin@21"
+
+cat > "$root/ready.conf" <<'CONF'
+docker | - | pkg | Docker.DockerDesktop | cask:docker | docker --version
+gh     | - | pkg | GitHub.cli           | gh          | gh --version
+CONF
+mkdir -p "$root/readybin"
+cat > "$root/readybin/docker" <<'STUB'
+#!/usr/bin/env bash
+case "$1" in --version) echo "Docker version 27.3.1, build ce12230" ;; info) [ -z "${DOCKER_DOWN:-}" ] || exit 1; echo ok ;; esac
+STUB
+cat > "$root/readybin/gh" <<'STUB'
+#!/usr/bin/env bash
+case "$1 ${2:-}" in
+  "--version ") echo "gh version 2.63.2 (2024-12-05)" ;;
+  "auth status") echo "  - Token: gho_STUBSECRETTOKEN"; [ -z "${GH_OUT:-}" ] || { echo "not logged in" >&2; exit 1; } ;;
+esac
+STUB
+chmod +x "$root/readybin/docker" "$root/readybin/gh"
+fresh d1
+script_args=--check
+run TOOLS_CONF="$root/ready.conf" PATH="$root/readybin:$PATH"
+check "D1 --check: docker's daemon answers" said "ready    docker: the daemon answers"
+check "D1 --check: gh is logged in" said "ready    gh: logged in to github.com"
+check "D1 --check: exit 0" [ "$rc" = 0 ]
+check "D1 --check: gh auth status's output is never printed" nosaid "gho_"
+run TOOLS_CONF="$root/ready.conf" PATH="$root/readybin:$PATH" DOCKER_DOWN=1 GH_OUT=1
+check "D2 --check: a daemon that does not answer is not ready" said "not ready docker: the daemon does not answer"
+check "D2 --check: gh not logged in is not ready" said "not ready gh: not logged in to github.com (gh auth login)"
+check "D2 --check: exit 1, both named" [ "$rc" = 1 ]
+check "D2 --check: summary names them" said "Check: installed but not ready: docker gh"
+check "D2 --check: no missing line" nosaid "Check: missing or wrong version"
+check "D2 --check: gh auth status's output is never printed" nosaid "gho_"
+script_args=
+
 echo "install-tools tests: $pass passed, $fail failed"
 [ "$fail" = 0 ]

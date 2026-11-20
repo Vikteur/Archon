@@ -27,8 +27,8 @@
 # Steps the runner cannot reproduce fail, so a new kind of step is noticed: an unknown action or ${{ }} expression.
 # The ones it knowingly does not run are reported "skipped-locally", never "passed":
 #   - "Contract token is read-only": checks the CI secret's scope; locally the contract is cloned with gh's own login.
-#   - actions/cache, buildkit-cache-dance, upload-artifact: the local Docker keeps its cache mounts, reports stay
-#     in the worktree.
+#   - actions/cache, upload-artifact: the local caches (~/.gradle, the job's .gradle) stay, reports stay in the
+#     worktree.
 # One step runs only when the change needs it (owner decision 2026-10-18, narrowing UD-15.e for this step): "Every
 # .archon test suite passes" runs when the change touches a path in ARCHON_SUITE_PATHS, the files those suites read
 # from the checkout, or when the change cannot be computed; otherwise it is reported "SKIPPED", with the reason. The
@@ -36,12 +36,14 @@
 # against its first parent (a merge brings in the pull request). When it runs, it runs only the suites
 # .claude/scripts/archon-suites.sh selects for the change (the ones that run, or name, a file it touches); the summary
 # names them, and when none is selected the step is "SKIPPED".
-# setup-java uses the local JDK of that version (JAVA_HOME_<n>, or the Adoptium install); setup-gradle and setup-node
+# setup-java uses the local JDK of that version (JAVA_HOME_<n>, the Adoptium, Linux or macOS install folders, SDKMAN's,
+# else the java on PATH when its major is that version); setup-gradle and setup-node
 # use the local Gradle home and node. git config --global and npm install -g go to the job's own folder.
 # The jobs in CI_LOCAL_WSL (default "archon-scripts", owner decision 2026-10-18) run in WSL, distro CI_LOCAL_WSL_DISTRO
 # (default Ubuntu): a clone of the job's worktree on the distro's own disk (~/ci-local/<sha7>/<job>), where the shell
 # suites run about 20 times faster than in Git Bash and on Linux, as on ubuntu-latest. The distro needs bash, git, jq,
-# yq and node. Without wsl.exe, the distro or one of those tools the job runs in Git Bash, and its summary says why.
+# yq and node. Without wsl.exe, the distro or one of those tools the job runs in Git Bash, and its summary says why;
+# on a Linux or macOS host without wsl.exe there is no detour, and the job runs here with no such line.
 # CI_LOCAL_WSL= (empty) runs every job in Git Bash.
 # Runs queue (ci-queue.sh): a call joins one first-come-first-served queue at once; with --post every job's status then
 # reads `queued #n pos p since hh:mm, pid N@host`, and `running since hh:mm, pid N@host` once its turn came.
@@ -395,7 +397,9 @@ in_wsl() { # in_wsl <wsl.sh arguments>
 }
 for j in $jobs; do
   [[ "$wsl_jobs" == *" $j "* ]] || continue
-  if ! command -v wsl.exe > /dev/null; then wsl_why="no wsl.exe"
+  if ! command -v wsl.exe > /dev/null; then
+    # The detour is Git Bash's on Windows; on Linux or macOS the job runs here, as on ubuntu-latest, and says nothing.
+    case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) wsl_why="no wsl.exe" ;; *) wsl_jobs=" " ;; esac
   elif ! why=$(in_wsl check 2>&1); then wsl_why="WSL $distro: $(printf '%s' "$why" | tr -d '\r\0' | tail -1)"
   fi
   break
@@ -405,10 +409,15 @@ done
 java_home() {
   local v=$1 var="JAVA_HOME_$1" d
   if [ -n "${!var:-}" ]; then echo "${!var}"; return; fi
-  for d in "/c/Program Files/Eclipse Adoptium/jdk-$v"* "/usr/lib/jvm/temurin-$v"* "/usr/lib/jvm/java-$v"*; do
+  for d in "/c/Program Files/Eclipse Adoptium/jdk-$v"* "/usr/lib/jvm/temurin-$v"* "/usr/lib/jvm/java-$v"* \
+      "/Library/Java/JavaVirtualMachines/temurin-$v"*.jdk/Contents/Home "${HOME:-}/.sdkman/candidates/java/$v"*; do
     [ -x "$d/bin/java" ] || [ -x "$d/bin/java.exe" ] && { echo "$d"; return; }
   done
-  return 1
+  # The java on PATH (a team member's JDK installed elsewhere), when its major is v: its own java.home.
+  command -v java > /dev/null || return 1
+  [ "$(java -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | head -n 1)" = "$v" ] || return 1
+  d=$(java -XshowSettings:properties -version 2>&1 | tr -d '\r' | sed -n 's/^ *java\.home = //p' | head -n 1)
+  [ -n "$d" ] && echo "$d"
 }
 
 # expand <text>: the ${{ }} expressions the workflow uses, resolved; an unknown one fails the step.
@@ -630,8 +639,8 @@ run_job() {
           local nv
           if [ -n "$wsl" ]; then nv="WSL node $(in_wsl node 2>&1)"; else nv="local node $(node --version 2>&1)"; fi
           log "$nv (CI: $(jq -r '.with["node-version"] // ""' <<<"$step"))" ;;
-        actions/cache|reproducible-containers/buildkit-cache-dance|actions/upload-artifact)
-          res=skipped-locally; log "the local Docker keeps its cache mounts; reports stay in the worktree" ;;
+        actions/cache|actions/upload-artifact)
+          res=skipped-locally; log "the local caches stay; reports stay in the worktree" ;;
         *) log "action not reproduced locally: $uses"; res=failure ;;
       esac
     elif [ "$res" = success ] && [ -n "$run" ]; then

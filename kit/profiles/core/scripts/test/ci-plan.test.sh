@@ -118,7 +118,14 @@ o_self=$(plan "$c_self")
 check "a planner change in the tree moves every job" "$(for j in test archon-scripts; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 2
 check "another salt moves the fingerprint" "$( [ "$(CI_PLAN_SALT=salt-2 plan "$c_self" | grep '^test ')" != "$(line test "$o_self" | sed 's/^/test /')" ] && echo moved)" moved
 check "another runner class moves the fingerprint" "$( [ "$(CI_PLAN_RUNNER=runner-2 plan "$c_self" | grep '^archon-scripts ')" != "archon-scripts $(line archon-scripts "$o_self")" ] && echo moved)" moved
-check "another contract commit moves test" "$( [ "$(fp test "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" != "$(fp test "$o_self")" ] && echo moved)" moved
+# test reads the contract only where the shipped manifest flags it (the openapi-contract profile's ci-inputs.yml);
+# without that profile another contract commit keeps it.
+test_contract=$(yq '.jobs.test.contract // false' "$r/.github/ci-inputs.yml")
+if [ "$test_contract" = true ]; then
+  check "another contract commit moves test" "$( [ "$(fp test "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" != "$(fp test "$o_self")" ] && echo moved)" moved
+else
+  check "test reads no contract: another contract commit keeps it" "$(fp test "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" "$(fp test "$o_self")"
+fi
 check "another contract commit keeps archon-scripts" "$(fp archon-scripts "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" "$(fp archon-scripts "$o_self")"
 
 # An exclusion a reader names is cancelled for that plan.
@@ -159,7 +166,11 @@ c_comment=$(commit restore scripts/test/unit.test.sh 'echo unit; cat config/sett
 # A branch pin cannot be resolved to a commit: the contract jobs run.
 c_branch=$(commit branch-pin gradle.properties '@@KIT_CONTRACT_TAG_KEY@@=feature/x')
 o_branch=$(plan "$c_branch")
-check "a branch pin runs test without a fingerprint" "$(line test "$o_branch")" "run fp=-"
+if [ "$test_contract" = true ]; then
+  check "a branch pin runs test without a fingerprint" "$(line test "$o_branch")" "run fp=-"
+else
+  check "test reads no contract: a branch pin leaves its fingerprint" "$(fp test "$o_branch" | grep -cE '^[0-9a-f]{64}$')" 1
+fi
 check "a branch pin leaves archon-scripts alone" "$(fp archon-scripts "$o_branch" | grep -cE '^[0-9a-f]{64}$')" 1
 git -C "$r" reset -q --hard "$c_self"
 

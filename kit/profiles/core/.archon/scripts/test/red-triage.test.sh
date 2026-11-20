@@ -200,6 +200,8 @@ done < "$here/../red-triage/infra.tsv"
 check "15 infra.tsv regexes are valid" $([ -z "$bad" ]; echo $?)
 bad=$(awk -F'\t' '!/^#/ && NF > 0 && (NF != 4 || $2 !~ /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)' "$here/../red-triage/flaky.tsv")
 check "15 flaky.tsv: <id><TAB><date><TAB><job><TAB><regex> per line" $([ -z "$bad" ]; echo $?)
+out=$(grep -v '^#' "$here/../red-triage/flaky.tsv" | grep -v '^[[:space:]]*$')
+check "15 flaky.tsv ships with no signature: a flaky test is the project's own" $([ -z "$out" ]; echo $?)
 
 echo "red-triage tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

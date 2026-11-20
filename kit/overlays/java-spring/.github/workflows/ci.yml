@@ -3,9 +3,10 @@ name: CI
 # The job definition that .claude/scripts/ci-local.sh reads and runs: the local CI is the verdict, so GitHub never runs
 # this file on its own (no push or pull_request trigger); workflow_dispatch only keeps it a valid workflow.
 # .claude/scripts/ci-workflow-check.sh holds it to its rules: every action pinned by commit SHA, every job with a
-# timeout and no if, the contract checked out with the one CI secret and proved read-only, every ./gradlew run given
-# the contract spec, and the job set equal to the last "CI job set" entry of docs/memory.md
-# (`archon-scripts, test`). .github/ci-inputs.yml lists each job's inputs.
+# timeout and no if, and the job set equal to the last "CI job set" entry of docs/memory.md (`archon-scripts, test`).
+# .github/ci-inputs.yml lists each job's inputs. This is the workflow of a project without the openapi-contract
+# profile: no contract checkout, no CI secret. That profile ships its own ci.yml at this path, which wins over this one
+# and adds the contract steps; the check holds a project that has it to the contract rules too.
 on:
   workflow_dispatch:
 
@@ -18,34 +19,23 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      # The contract, read with the one read-only CI secret. An empty secret fails this step and nothing after it
-      # runs; the failure-only step below is gated on the gradle step's outcome.
-      - name: Check out the contract
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          repository: @@KIT_CONTRACT_REPO@@
-          path: contract
-          token: ${{ secrets.CONTRACT_TOKEN }}
-      - name: Contract token is read-only
-        run: bash .claude/scripts/contract-read-only-check.sh contract
-      - name: Contract at the pinned ref
-        run: bash .claude/scripts/contract-pin.sh contract
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           distribution: temurin
           java-version: '@@KIT_JAVA_VERSION@@'
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
       # test: unit, slice and ArchUnit tests; integrationTest: @SpringBootTest and Testcontainers; build: the boot jar.
+      # The task list is kit key ci.gradle_line (ci-workflow-check.sh requires it). --build-cache reuses task outputs
+      # and --parallel runs independent modules side by side; the configuration cache is the project's own choice
+      # (org.gradle.configuration-cache=true in gradle.properties), since a plugin that does not support it fails the build.
       - name: Build and test
         id: gradle
-        run: ./gradlew test integrationTest build -Pcontract.spec=contract/dist/openapi.yaml --stacktrace
+        run: @@KIT_CI_GRADLE_LINE@@ --build-cache --parallel --stacktrace
       # Each pinned framework item (.archon/pin-proofs.txt) is proved by a test that ran in this build.
       - name: Framework pin proof
         run: bash .claude/scripts/pin-proof-check.sh
       # No test-set-coverage step: it guards a build that skips a test set by tag, and this build splits test and
       # integrationTest by tag without skipping one (it also needs Java 24+). Add it when the build starts skipping a set.
-      - name: Generated code untracked
-        run: bash .claude/scripts/generated-untracked-check.sh
       - name: Java bytecode of the toolchain
         run: bash .claude/scripts/class-version-check.sh
       # The Spring Boot plugin only in application, the boot jar's layout, every module under the component scan.
@@ -56,7 +46,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: test-reports
-          path: '*/build/reports/tests/'
+          path: |
+            */build/reports/tests/
+            */build/test-results/**/*.xml
 
   archon-scripts:
     # The script gates that need no build: the CI workflow rules (this file), the .archon test suites (four at a time,
@@ -65,6 +57,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # The suites run node scripts (.archon/scripts/*.js, the MCP servers): Node 22.19 or newer, as scripts/tools.conf.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
       - name: CI workflow rules
         run: bash .claude/scripts/ci-workflow-check.sh
       - name: Every .archon test suite passes

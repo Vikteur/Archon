@@ -23,6 +23,15 @@
 # tag, its own use of the contract token), and only the kit's own workflow is the job definition ci-local.sh reads.
 # The Java toolchain is the first JavaLanguageVersion.of(N) in the build file, else in a Gradle file under buildSrc/,
 # else under build-logic/ (a convention plugin), the order kit add and class-version-check.sh read it in.
+# The contract rules above (the contract checkout, its secret, the read-only proof, the pin, the spec argument) hold
+# where the openapi-contract profile is installed: there is no .archon/kit.lock.json (the kit's own source), the lock
+# tracks that profile's .claude/scripts/contract-pin.sh, that script is in the tree, or kit key profiles names
+# openapi-contract. Any one of them is enough. A project installed without the profile gets the kit's ci.yml without
+# contract steps, and the check holds that instead: no workflow names CONTRACT_TOKEN, and no job of the job definition
+# checks out a contract, runs a contract script (contract-read-only-check.sh, contract-pin.sh,
+# generated-untracked-check.sh: they ship with the profile) or passes -Pcontract.spec.
+# The required gradle run is kit key ci.gradle_line (default ./gradlew test integrationTest build), the line the kit's
+# ci.yml renders from the same key.
 # The rules hold on either stack (kit key `stack`): nothing here reads it. The contract repo is kit key contract.repo
 # (default @@KIT_CONTRACT_REPO@@); its checkout step is named "Check out <repo name>", or kit key contract.checkout_step.
 # Usage: bash .claude/scripts/ci-workflow-check.sh [<workflow-dir>] [<build-file>] [<memory-file>]
@@ -33,10 +42,10 @@ set -uo pipefail
 dir="${1:-.github/workflows}"
 build_file="${2:-build.gradle.kts}"
 memory_file="${3:-docs/memory.md}"
-gradle_line="./gradlew test integrationTest build"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../../.archon/scripts/kit-config.sh
 . "$here/../../.archon/scripts/kit-config.sh" 2>/dev/null || kit_get() { local e="${3:-}"; printf '%s' "${!e:-$2}"; }
+gradle_line="$(kit_get ci.gradle_line "./gradlew test integrationTest build" KIT_CI_GRADLE_LINE)"
 contract_repo="$(kit_get contract.repo @@KIT_CONTRACT_REPO@@ KIT_CONTRACT_REPO)"
 contract_name="${contract_repo#*/}"
 checkout_name="$(kit_get contract.checkout_step "Check out $contract_name" KIT_CONTRACT_CHECKOUT_STEP)"
@@ -84,6 +93,14 @@ lock=.archon/kit.lock.json
 owned=""
 [ -f "$lock" ] && owned="$(yq -p json '.files | keys | .[]' "$lock" 2>/dev/null | tr -d '\r')"
 owns() { [ ! -f "$lock" ] || grep -qxF -- "${1#./}" <<< "$owned"; }
+# The contract rules hold where the openapi-contract profile is installed (see the header); without it, the rules of a
+# workflow with no contract steps.
+contract_ci=0
+if [ ! -f "$lock" ] || grep -qxF .claude/scripts/contract-pin.sh <<< "$owned" || [ -f .claude/scripts/contract-pin.sh ] \
+    || { declare -F kit_list >/dev/null && kit_list profiles | tr -d '\r' | grep -qxF openapi-contract; }; then
+  contract_ci=1
+fi
+contract_scripts_re='\.claude/scripts/(contract-read-only-check|contract-pin|generated-untracked-check)\.sh'
 
 files=()
 for f in "${all_files[@]}"; do
@@ -116,17 +133,22 @@ for f in "${files[@]}"; do
   fi
 
   # Every contract checkout, in any job of any workflow, uses the CI secret; the secret appears nowhere else.
+  # Without the openapi-contract profile there is no contract checkout, so the secret appears nowhere.
   good_checkouts=0
-  while IFS= read -r t; do
-    [ -n "$t" ] || continue
-    if [ "$t" = "$token_expr" ]; then
-      good_checkouts=$((good_checkouts + 1))
-    else
-      "$report" "$f: the $contract_name checkout must use token $token_expr and nothing else"
-    fi
-  done < <(q '.. | select(tag == "!!map" and has("uses")) | select(.uses | test("^actions/checkout@")) | select(.with.repository == "'"$contract_repo"'") | (.with.token | tostring)' "$f")
-  [ "$(grep -o 'CONTRACT_TOKEN' "$f" | wc -l | tr -d ' ')" -eq "$good_checkouts" ] \
-    || "$report" "$f: CONTRACT_TOKEN may appear only as the token of the $contract_name checkout"
+  if [ "$contract_ci" -eq 1 ]; then
+    while IFS= read -r t; do
+      [ -n "$t" ] || continue
+      if [ "$t" = "$token_expr" ]; then
+        good_checkouts=$((good_checkouts + 1))
+      else
+        "$report" "$f: the $contract_name checkout must use token $token_expr and nothing else"
+      fi
+    done < <(q '.. | select(tag == "!!map" and has("uses")) | select(.uses | test("^actions/checkout@")) | select(.with.repository == "'"$contract_repo"'") | (.with.token | tostring)' "$f")
+    [ "$(grep -o 'CONTRACT_TOKEN' "$f" | wc -l | tr -d ' ')" -eq "$good_checkouts" ] \
+      || "$report" "$f: CONTRACT_TOKEN may appear only as the token of the $contract_name checkout"
+  elif grep -q 'CONTRACT_TOKEN' "$f"; then
+    "$report" "$f: CONTRACT_TOKEN is the CI secret of the openapi-contract profile, which is not installed: no workflow uses it"
+  fi
 
   # Only a kit-owned workflow can be the job definition ci-local.sh reads.
   if [ "$report" = bad ] && q '.jobs[].steps[].run' "$f" | grep -qF "$gradle_line"; then
@@ -204,13 +226,14 @@ done < <(q ".jobs[\"$job\"].steps[] | select(has(\"uses\")) | select(.uses | tes
 [ "$(q ".jobs[\"$job\"][\"continue-on-error\"]" "$ci")" != "true" ] || bad "$ci: job $job may not continue on error (job)"
 
 # Steps of the build job, one TSV line each: index name uses repository path token persist-credentials run if
-# continue-on-error id ("null" for an absent value).
+# continue-on-error id ("null" for an absent value). A tab or newline in a value (a multi-line path: or run: block) is
+# a space, so each step stays one line.
 names=(); uses=(); repos=(); paths=(); persists=(); runs=(); ifs_=(); ids=()
 while IFS=$'\t' read -r idx name use repo path token persist run iff coe id; do
   names[idx]="$name"; uses[idx]="$use"; repos[idx]="$repo"; paths[idx]="$path"
   persists[idx]="$persist"; runs[idx]="$run"; ifs_[idx]="$iff"; ids[idx]="$id"
   if [ "$coe" = "true" ]; then bad "$ci: job $job may not continue on error ($name)"; fi
-done < <(q ".jobs[\"$job\"].steps | to_entries | .[] | [.key, (.value.name | tostring), (.value.uses | tostring), (.value.with.repository | tostring), (.value.with.path | tostring), (.value.with.token | tostring), (.value.with[\"persist-credentials\"] | tostring), (.value.run | tostring), (.value[\"if\"] | tostring), (.value[\"continue-on-error\"] | tostring), (.value.id | tostring)] | @tsv" "$ci")
+done < <(q ".jobs[\"$job\"].steps | to_entries | .[] | [.key, (.value.name | tostring), (.value.uses | tostring), (.value.with.repository | tostring), (.value.with.path | tostring), (.value.with.token | tostring), (.value.with[\"persist-credentials\"] | tostring), (.value.run | tostring), (.value[\"if\"] | tostring), (.value[\"continue-on-error\"] | tostring), (.value.id | tostring)] | map(tostring | sub(\"[\\t\\n]\"; \" \")) | @tsv" "$ci")
 
 label() { [ "${names[$1]}" != "null" ] && echo "${names[$1]}" || echo "${uses[$1]}"; }
 
@@ -221,7 +244,9 @@ for i in "${!uses[@]}"; do
   [ -n "$checkout" ] || checkout="$i"
 done
 
-if [ -z "$checkout" ]; then
+if [ "$contract_ci" -eq 0 ]; then
+  :   # no contract checkout to hold to its rules: the jobs below are checked for contract steps instead
+elif [ -z "$checkout" ]; then
   bad "$ci: job $job has no step that checks out $contract_repo"
 else
   [ "${names[$checkout]}" = "$checkout_name" ] || bad "$ci: the $contract_name checkout step must be named \"$checkout_name\""
@@ -259,7 +284,19 @@ fi
 # contract, proves the token read-only, checks out the pin right after, and passes the spec to every ./gradlew run.
 pin_run="bash .claude/scripts/contract-pin.sh contract"
 spec_arg="-Pcontract.spec=contract/dist/openapi.yaml"
+# Without the openapi-contract profile no job has a contract step: its scripts and its secret are not installed.
+if [ "$contract_ci" -eq 0 ]; then
+  for j in $(q '.jobs | keys | .[]' "$ci"); do
+    [ "$(q "[.jobs[\"$j\"].steps[] | select((.with.path // \"\") == \"contract\" or ((.with.repository // \"\") != \"\" and .with.repository == \"$contract_repo\"))] | length" "$ci")" = 0 ] \
+      || bad "$ci: job $j checks out a contract, but the openapi-contract profile is not installed"
+    q ".jobs[\"$j\"].steps[].run" "$ci" | grep -qE "$contract_scripts_re" \
+      && bad "$ci: job $j runs a script of the openapi-contract profile, which is not installed: $(q ".jobs[\"$j\"].steps[].run" "$ci" | grep -oE "$contract_scripts_re" | sort -u | tr '\n' ' ' | sed 's/ $//')"
+    q ".jobs[\"$j\"].steps[].run" "$ci" | grep -qF -e "-Pcontract.spec" \
+      && bad "$ci: job $j passes -Pcontract.spec, but the openapi-contract profile is not installed"
+  done
+fi
 for j in $(q '.jobs | keys | .[]' "$ci"); do
+  [ "$contract_ci" -eq 1 ] || break
   q ".jobs[\"$j\"].steps[].run" "$ci" | grep -qE '\./gradlew' || continue
   jruns=(); jrepos=(); jnames=()
   while IFS=$'\t' read -r idx repo run; do

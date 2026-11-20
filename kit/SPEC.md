@@ -138,6 +138,8 @@ agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copi
 build_workflow: build-feature-copilot   # run-metrics.js, retro-stopped.sh and plan-context.sh find the build workflow by this
 local_ci: true               # false: the project runs its own CI; see Local CI switch
 backlog: true                # false: no Backlog.md, a run's ticket is the pasted text; see Backlog switch
+ci:
+  gradle_line: "./gradlew test integrationTest build"   # ci.yml's Gradle run and ci-workflow-check.sh's required one
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
@@ -179,7 +181,33 @@ take that verdict by SHA (`ci-by-sha.sh`). A project that runs its own CI, such 
   `.archon/red-triage/infra.tsv` and `flaky.tsv`; and the local-mode suites `ci-by-sha`, `local-ci-run`,
   `local-ci-status` and `red-triage` under `.archon/scripts/test/`;
 - java: `.claude/scripts/ci-workflow-check.sh` and `scripts/test/ci-workflow-scope.test.sh`;
-- java-quarkus and java-spring: `.github/workflows/ci.yml` and `.github/ci-inputs.yml`.
+- java-quarkus, java-spring and openapi-contract: `.github/workflows/ci.yml` and `.github/ci-inputs.yml`.
+
+**The CI definition per profile.** java-spring's `ci.yml` and `ci-inputs.yml` hold no contract step: no contract
+checkout, no read-only token check, no `contract-pin.sh` or `generated-untracked-check.sh`, no `-Pcontract.spec`.
+openapi-contract ships its own copies at the same paths, the same workflow with those steps, and wins as the later
+profile, so a set with openapi-contract keeps today's contract gates. `ci-workflow-check.sh` follows the install: it
+holds a workflow to the contract rules (a `CONTRACT_TOKEN` checkout, the pin and read-only steps, `-Pcontract.spec`)
+when the lock tracks `.claude/scripts/contract-pin.sh`, that script is in the tree, `profiles` in `kit.yaml` names
+openapi-contract, or there is no lock; otherwise it fails a kit-owned workflow that has any contract step or names
+`CONTRACT_TOKEN`. The test job's Gradle run is `ci.gradle_line` plus `--build-cache --parallel` (the configuration
+cache is the project's choice, `org.gradle.configuration-cache` in its `gradle.properties`); on a red Gradle step it
+uploads `*/build/reports/tests/` and the JUnit XML. `pin-proof-check.sh` skips with a notice when the project has no
+`pin_proofs` file, and refuses one that lists no proof. `.archon/red-triage/flaky.tsv` ships with no signature.
+
+**On a team member's machine.** `scripts/install-tools.sh --check`, which `kit doctor` runs, takes the JDK major from
+`java_version` (not tools.conf's default) and checks that Docker's daemon answers and that `gh` is logged in to
+github.com, reading only the exit status of `gh auth status`. `ci-local.sh`'s `setup-java` finds a JDK of the version in
+`JAVA_HOME_<n>`, the Adoptium, `/usr/lib/jvm`, macOS and SDKMAN folders, else takes the `java` on PATH when its major
+fits. The WSL detour of `CI_LOCAL_WSL` is Git Bash's on Windows: on Linux or macOS without `wsl.exe` the job runs where
+it is, with no "runs in Git Bash" line.
+
+**The ledger is per checkout.** `ci-local.sh` appends what it did to `$CI_LEDGER`, by default
+`$CI_LOCAL_ROOT/ledger.jsonl`, where `CI_LOCAL_ROOT` defaults to `ci-local/` beside the main checkout. Each machine and
+checkout has its own; nothing merges them, and the cost report (`ci-cost.sh`) and the reuse audit (`ci-audit.sh`) read
+only the one beside them. It is never a gate: the verdict is the `local-ci/<job>` statuses on the commit, which every
+team member reads by SHA through `gh`, whichever machine posted them. A team that wants one shared verdict machine runs
+local CI on that one machine; a team that wants none sets `local_ci: false`.
 
 The four scripts the build workflows name stay, as the workflow contract requires (every script a workflow names
 exists), and read the switch at runtime (`kit_get local_ci true`, env `KIT_LOCAL_CI`) so the workflows run unchanged:
