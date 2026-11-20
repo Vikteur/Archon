@@ -136,6 +136,7 @@ gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
 build_workflow: build-feature-copilot   # run-metrics.js, retro-stopped.sh and plan-context.sh find the build workflow by this
 local_ci: true               # false: the project runs its own CI; see Local CI switch
+backlog: true                # false: no Backlog.md, a run's ticket is the pasted text; see Backlog switch
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
@@ -193,6 +194,23 @@ exists), and read the switch at runtime (`kit_get local_ci true`, env `KIT_LOCAL
 
 `.archon/scripts/test/local-ci-off.test.sh` covers that mode. `affected-check.sh` runs `gate-change-check.sh` and
 `ci-workflow-check.sh` only when they exist. Switching back to `true` and running `kit add` writes the files again.
+
+## Backlog switch (`backlog`)
+
+`backlog: true`, the default of `kit.defaults.yaml`, keeps tickets in Backlog.md: a request that names a TASK id builds
+that ticket. A project that keeps its tickets elsewhere (Jira) sets `backlog: false` (`archon kit setup` writes it
+unless `--backlog` is given). The scripts read the switch at runtime (`kit_get backlog true`, env `KIT_BACKLOG`):
+
+- `install-tools.sh` leaves Backlog.md out;
+- `ticket.sh` (the build workflow's `ticket` node) never asks the Backlog: the request text is the ticket. It writes
+  that text unchanged to the run's `ticket.md`, in the shape of a Backlog ticket (a `Ticket - <first line>` title,
+  the `Labels:` line of the text, the text under `Description:`), so every node reads one file either way, and takes
+  the STOP labels (`stop-…`) from that `Labels:` line. A request without a TASK id is read the same way with `true`;
+- the pull request text names no Backlog ticket (`pr_note` of the `ticket` node is empty);
+- `backlog/` is no bookkeeping folder: a commit under it runs CI (`ci-skip.sh`, `ci-cost.sh`), and `affected-check.sh`
+  prints it as not checked locally.
+
+`.archon/scripts/test/ticket.test.sh` covers both modes.
 
 ## Conversion rules (kit-sync)
 
@@ -273,8 +291,8 @@ The Copilot build workflow ships standalone (`scripts/kit-sync-standalone.ts`, a
   reaches the agents as reviewer notes. A run in a container cannot pause, so run it in a worktree.
 - **The run ends at `ready`.** The nodes after it (`auto-merge`, `merged`, `main-ci`, `ticket-files`, `finalize`,
   `close-out`) are cut. Once CI on the head is green the pull request is marked ready for review, and a team member
-  reviews, merges it and closes the Backlog ticket (the run's `map-links` edit is left uncommitted in the backlog
-  checkout for them). A red head or a conflict at `ready` fails the run, so a person sees it. After the merge,
+  reviews, merges it and closes the ticket (with Backlog.md, the run's `map-links` edit is left uncommitted in the
+  backlog checkout for them). A red head or a conflict at `ready` fails the run, so a person sees it. After the merge,
   `cleanup-merged.sh <branch>` deletes the run's branch and worktree.
 - **Checked.** The cut expects exactly those tail ids after `ready`, `implement` to depend on `stop-route` once, and
   every text rewrite to match its count; a result that still reads a cut node's output or names a cut script or the

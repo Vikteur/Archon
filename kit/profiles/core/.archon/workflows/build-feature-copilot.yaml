@@ -2,12 +2,12 @@
 name: build-feature-copilot
 description: |
   Copilot variant of build-feature.
-  Use when: building one Backlog ticket (name its TASK-n) or one small request, end to end in this repo.
+  Use when: building one ticket (a Backlog TASK-n, or the ticket text pasted) or one small request, end to end in this repo.
   Steps: read the ticket and build the plan's context pack -> map the code the request touches -> plan (no Gradle) -> a person
   approves the plan, its STOP items named, or rejects it and the run ends -> per step, the test agent
   writes failing tests, then the build agent makes them pass -> review -> test-first check -> push and open a DRAFT pull request -> wait for CI by commit
   SHA, fix a red run (at most 3 rounds) -> mark it ready for review. The run ends there: a team member reviews and
-  merges the pull request and closes the Backlog ticket; the run never merges. The retro (lessons learned and the
+  merges the pull request and closes the ticket; the run never merges. The retro (lessons learned and the
   ticket's ADRs) is not part of this workflow: it is launched separately, after the pull request is merged (see
   docs/retro/README.md).
   NOT for: contract (spec) changes in the hub repo, or work spanning several tickets.
@@ -53,7 +53,9 @@ nodes:
       properties:
         task: { type: string }
         stop: { type: string }
-      required: [task, stop]
+        title: { type: string }
+        pr_note: { type: string }
+      required: [task, stop, title, pr_note]
 
   # A cheap, read-only map of the code the request touches, so the plan starts from facts instead of a search.
   - id: explore
@@ -67,7 +69,7 @@ nodes:
     idle_timeout: 600000
     prompt: |
       Request: $ARGUMENTS
-      Backlog ticket: $ticket.output.task (full text in $ARTIFACTS_DIR/ticket.md when it is set).
+      Ticket: $ticket.output.task $ticket.output.title (its full text is in $ARTIFACTS_DIR/ticket.md).
       Read $ARTIFACTS_DIR/ticket.md and $ARTIFACTS_DIR/plan-context.md first; read a file only for what they do not say,
       and each file once.
       If mcp__@@KIT_CONTRACT_SERVER_NAME@@__* or mcp__codegraph__* tools are in your tool list (the ticket node's mcp-setup.sh
@@ -105,8 +107,8 @@ nodes:
       "Bash(scripts/test/*.test.sh*)", "Bash(.archon/scripts/test/*.test.sh*)", "Bash(*smoke*)", "Monitor"]
     prompt: |
       Request: $ARGUMENTS
-      Backlog ticket: $ticket.output.task. Read its full text in $ARTIFACTS_DIR/ticket.md first (it is there when the
-      request names one); never search the disk for it.
+      Ticket: $ticket.output.task $ticket.output.title. Read its full text in $ARTIFACTS_DIR/ticket.md first; never
+      search the disk for it.
       Then read $ARTIFACTS_DIR/plan-context.md (dependency tickets, modules, workflow nodes, docs/memory.md sections,
       every script's header and test) and $ARTIFACTS_DIR/explore.md (the code the request touches). Read a file only for
       what they do not say, and read each file once, a script too, with the Read tool: note what you need the first
@@ -283,7 +285,7 @@ nodes:
       form: approval
       attention: |
         Approve the plan before the run writes any code.
-        Ticket: $ticket.output.task
+        Ticket: $ticket.output.task $ticket.output.title
         Plan: $ARTIFACTS_DIR/plan.md
         STOP items the ticket or the plan touches (empty: none): $stop-route.output.why
         Approve to build it; reject (with the reason) to end the run.
@@ -633,7 +635,7 @@ nodes:
     prompt: |
       Request: $ARGUMENTS
       Write the pull request description for the changes on this branch to $ARTIFACTS_DIR/pr-body.md: what changed
-      and why, the tests, and the Backlog ticket ($ticket.output.task) when there is one. When the plan has a
+      and why, and the tests. $ticket.output.pr_note When the plan has a
       `## Owner decisions` section, copy it into a section `## Decisions` word for word, each with who decided it
       (the owner, or the coordinator acting for the owner); never credit a decision to someone the record does not
       name. Leave a line `<!-- pr-refresh:start -->`, then `<!-- pr-refresh:end -->`, before `## Merge`: a

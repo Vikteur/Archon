@@ -2,7 +2,8 @@
 # The commits that get no local CI (owner decisions 2026-10-22 and 2026-10-23, docs/memory.md): a ticket commit, a retro
 # or the token reports is pushed to main when it is ready and runs nothing. A commit is such a commit when every file it
 # changes against its first parent is under backlog/, docs/retro/ or docs/tokenomics/ (an empty change, or a root
-# commit, is not); one that also changes
+# commit, is not); backlog/ only with backlog: true in .archon/kit.yaml (env KIT_BACKLOG, default true): without
+# Backlog.md it is the project's own folder and runs CI. One that also changes
 # anything else runs CI as before. Its verdict is the one of the newest commit under it, along the first parents, that
 # changes anything else.
 #   ci-skip.sh paths              the paths, one a line
@@ -13,7 +14,10 @@
 # Run in the checkout (git reads the current directory). ci-local.sh and local-ci-run.sh refuse such a commit;
 # local-ci-status.sh and ci-audit.sh read past it.
 set -uo pipefail
-PATHS=(backlog/ docs/retro/ docs/tokenomics/)
+# shellcheck source=kit-config.sh
+. "$(dirname "${BASH_SOURCE[0]}")/kit-config.sh"
+PATHS=(docs/retro/ docs/tokenomics/)
+[ "$(kit_get backlog true)" = false ] || PATHS=(backlog/ "${PATHS[@]}")
 
 exempt() { # exempt <sha>: every file the commit changes against its first parent is under PATHS
   local files f p ok

@@ -13,7 +13,8 @@
 #   avoidable  the lock minutes of runs that need not have run, each run credited once, to the first class it is in:
 #     same-tree   a green run of the same tree on the same base ran before it
 #     rebase-only an earlier green run of the same PR had the same patch (git patch-id of base..sha), on another sha
-#     bookkeeping every path the run's change touched is bookkeeping: backlog/, docs/retro/, docs/tokenomics/
+#     bookkeeping every path the run's change touched is bookkeeping: backlog/ (with backlog: true in the repo's
+#                 .archon/kit.yaml, env KIT_BACKLOG, default true), docs/retro/, docs/tokenomics/
 #     red-tail    a red run's minutes after its first failing verdict (the rest of it was needed to learn it is red)
 #   The first three need the commits in --repo (default: the repo around the working directory); a commit it does not
 #   have puts the run in no class and is counted as "unknown".
@@ -67,6 +68,11 @@ jq -rs '
 
 # The git facts per run: its tree, its patch-id against the base, and whether its change is bookkeeping only.
 bookkeeping='^(backlog/|docs/retro/|docs/tokenomics/)'
+# shellcheck source=../../.archon/scripts/kit-config.sh
+if . "$(dirname "${BASH_SOURCE[0]}")/../../.archon/scripts/kit-config.sh" 2> /dev/null \
+  && [ "$(KIT_CONFIG="${KIT_CONFIG:-${repo:-.}/.archon/kit.yaml}" kit_get backlog true)" = false ]; then
+  bookkeeping='^(docs/retro/|docs/tokenomics/)'
+fi
 {
   echo '{'
   first=1

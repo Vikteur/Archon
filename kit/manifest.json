@@ -256,7 +256,7 @@
       "template": false,
       "origin": ".archon/scripts/ci-skip.sh",
       "kind": "script",
-      "sha256": "19d7b7803c882b759dd9b34e7f06c3388e4a65e867d84d7858083ba2aab18c23",
+      "sha256": "056272ce3daeb830298d087a3786db27b6d872f301db7bd2e7962a56538addfc",
       "when": "local_ci"
     },
     {
@@ -320,7 +320,7 @@
       "template": false,
       "origin": ".archon/scripts/local-ci-status.sh",
       "kind": "script",
-      "sha256": "7e36cb3852713678571df6cbedfc1c3cd317b2d8bff57fcc33c5769fc74ff4a8"
+      "sha256": "e42391ef22c6b0df9310ef210894dc4ddcc8184612ccea773aad27566c0590d1"
     },
     {
       "path": ".archon/scripts/mcp-setup.sh",
@@ -708,7 +708,7 @@
       "template": false,
       "origin": ".archon/scripts/test/local-ci-run.test.sh",
       "kind": "script",
-      "sha256": "1a0e19331d3263ba843d98b8b64023355954e441ef35245b94df374a70b05e0b",
+      "sha256": "d8ab9f2dba1ff502a9ef8c5f5274d188bc9c14a42cc5a43e190fbb13b0deb371",
       "when": "local_ci"
     },
     {
@@ -930,6 +930,15 @@
       "sha256": "b3b98cddebd69632ae10bfc970ba3a3c53fa835d8439aefee52e79dd2dd853a5"
     },
     {
+      "path": ".archon/scripts/test/ticket.test.sh",
+      "profile": "core",
+      "mode": "0644",
+      "template": false,
+      "origin": ".archon/scripts/test/ticket.test.sh",
+      "kind": "script",
+      "sha256": "d6a579fba8a391d1b2345060bb1cfae6085d8fd71158e57d00c44d10e5bf3bdb"
+    },
+    {
       "path": ".archon/scripts/test/tool-advice.test.sh",
       "profile": "core",
       "mode": "0644",
@@ -954,7 +963,7 @@
       "template": false,
       "origin": ".archon/scripts/ticket.sh",
       "kind": "script",
-      "sha256": "434cfe72a6a719ad77e5158b47d62267a9bf905a26d67e5a13b510ea565bfe4c"
+      "sha256": "6ec82d9a5d25a1f9225613561dc29d44f685bcb2024ab59be77b1798f994defd"
     },
     {
       "path": ".archon/workflows/build-feature-copilot.yaml",
@@ -963,7 +972,7 @@
       "template": true,
       "origin": ".archon/workflows/build-feature-copilot.yaml",
       "kind": "workflow",
-      "sha256": "b92a42e064e1c600acbfdad346f2842e98a222e07293381b4d02508e37d0049b"
+      "sha256": "6c12037011dbd14e841f5cd6759f079cfed13028d6f3ce469b9ad1c9ffe2708b"
     },
     {
       "path": ".archon/workflows/run-metrics.yaml",
@@ -1134,7 +1143,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-audit.sh",
       "kind": "script",
-      "sha256": "5009fa2840ab61cbc561cfcc9077cde2aae1cfa9de6a8be63a1fd466c05a2157",
+      "sha256": "2598d1ae63b1f175fbddb8fe39a5c04d81d7d38f8417d1c241f5b35ddbec4937",
       "when": "local_ci"
     },
     {
@@ -1144,7 +1153,7 @@
       "template": false,
       "origin": ".claude/scripts/ci-cost.sh",
       "kind": "script",
-      "sha256": "c21d2b49b5175fa9a45ea2eceb33639438f93a09d742feef6b30f4b2cb23aa8e",
+      "sha256": "6c6d08eef09270b0072d799c41eb7493840fc159ebe6b4e5ca4d9f71716f0dbe",
       "when": "local_ci"
     },
     {
@@ -1268,7 +1277,7 @@
       "template": false,
       "origin": ".github/copilot-instructions.md",
       "kind": "instructions",
-      "sha256": "c4e25ad6090215935f86f58ca334abfe3e4c901b322ec66e9a18646076cd3e96"
+      "sha256": "888b40ec92262801c850f5de9ccda0a846cb68f93e0b60e0696d90d4b327c3e3"
     },
     {
       "path": ".github/hooks/archon-run-guard.json",
@@ -1661,7 +1670,7 @@
       "template": false,
       "origin": "scripts/test/ci-cost.test.sh",
       "kind": "script",
-      "sha256": "5566b206e07b7266cc4311c2a1c06e4f3e858a5907f9a1b3ccbf050229669a1a",
+      "sha256": "d5416f4de6c073314eb148811c7ab67b4a2983569f647f06c649b455e3435bac",
       "when": "local_ci"
     },
     {
@@ -1794,7 +1803,7 @@
       "template": false,
       "origin": ".claude/scripts/affected-check.sh",
       "kind": "script",
-      "sha256": "25bb323dac993a8ef3f92b77aaa939da0f9ffd22cc95cf04c025af242e0423f4"
+      "sha256": "455a4128b3f958bad46253623a1884926735cd6c2522e04fe27e4ad465ee5ed6"
     },
     {
       "path": ".claude/scripts/build-shape-check.sh",
@@ -2671,7 +2680,7 @@
       "template": false,
       "origin": "scripts/test/affected-check.test.sh",
       "kind": "script",
-      "sha256": "017708f9c7eda46d75ed4bb1e20a4a78bbef702e5bc473a50809ad467df58792"
+      "sha256": "038235829b59a296c6c6398dedf80420ee0718a2b51aec43ca1b686dcd939beb"
     },
     {
       "path": "scripts/test/ci-workflow-scope.test.sh",
