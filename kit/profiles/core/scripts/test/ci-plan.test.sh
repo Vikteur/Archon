@@ -39,16 +39,12 @@ jobs:
   archon-scripts:
     steps:
       - run: bash scripts/test/unit.test.sh
-  groma:
-    steps:
-      - run: bash .claude/scripts/groma-check.sh
 YML
 cp "$here/.github/ci-inputs.yml" "$r/.github/ci-inputs.yml"
 cp "$script" "$r/.claude/scripts/ci-plan.sh"
 echo 'echo unit; cat config/settings.txt' > "$r/scripts/test/unit.test.sh"
 echo 'docker build .' > "$r/scripts/test/image.test.sh"
 cp "$here/.claude/scripts/mutation-gate.sh" "$r/.claude/scripts/mutation-gate.sh"
-echo 'echo groma' > "$r/.claude/scripts/groma-check.sh"
 echo 'a=1' > "$r/config/settings.txt"
 printf '@@KIT_CONTRACT_TAG_KEY@@=v1.0.0\n' > "$r/gradle.properties"
 echo 'echo gradle' > "$r/gradlew"
@@ -87,8 +83,8 @@ green() { # green <sha> <job> <fp> [extra jq object]
 out=$(plan "$c0")
 check "a header line" "$(printf '%s\n' "$out" | head -n 1 | cut -d' ' -f1-2)" "# ci-plan"
 check "one line per ci.yml job, in its order" "$(printf '%s\n' "$out" | sed 1d | cut -d' ' -f1 | sort | tr '\n' ' ')" \
-  "archon-scripts groma image mutation test "
-check "every job has a fingerprint" "$(printf '%s\n' "$out" | sed 1d | grep -cE ' fp=[0-9a-f]{64}$')" 5
+  "archon-scripts image mutation test "
+check "every job has a fingerprint" "$(printf '%s\n' "$out" | sed 1d | grep -cE ' fp=[0-9a-f]{64}$')" 4
 check "an empty ledger reuses nothing" "$(printf '%s\n' "$out" | sed 1d | cut -d' ' -f2 | sort -u)" run
 check "the plan is deterministic" "$(plan "$c0")" "$out"
 check "the reason goes to stderr" "$(grep -c 'test: run, no green run' "$root/err")" 1
@@ -104,9 +100,8 @@ o_backlog=$(plan "$c_backlog")
 for j in test mutation image; do
   check "a bookkeeping-only change keeps the $j fingerprint" "$(fp $j "$o_backlog")" "$(fp $j "$out")"
 done
-for j in groma archon-scripts; do
-  [ "$(fp $j "$o_backlog")" != "$(fp $j "$out")" ]; check "a bookkeeping change moves $j (never narrowed)" "$?" 0
-done
+[ "$(fp archon-scripts "$o_backlog")" != "$(fp archon-scripts "$out")" ]
+check "a bookkeeping change moves archon-scripts (the whole tree)" "$?" 0
 # The test job is the Java side (owner decision 2026-10-23): a pipeline-script change keeps it, docs/memory.md moves it.
 c_arch=$(commit archon .archon/scripts/x.sh 'echo x')
 o_arch=$(plan "$c_arch")
@@ -129,19 +124,19 @@ o_main=$(plan "$c_main")
 c_ci=$(commit ci .github/workflows/ci.yml "$(cat "$r/.github/workflows/ci.yml")
 # a comment")
 o_ci=$(plan "$c_ci")
-check "a ci.yml edit moves every job" "$(for j in test mutation image archon-scripts groma; do [ "$(fp $j "$o_ci")" != "$(fp $j "$o_main")" ] && echo x; done | wc -l | tr -d ' ')" 5
+check "a ci.yml edit moves every job" "$(for j in test mutation image archon-scripts; do [ "$(fp $j "$o_ci")" != "$(fp $j "$o_main")" ] && echo x; done | wc -l | tr -d ' ')" 4
 c_man=$(commit manifest .github/ci-inputs.yml "$(cat "$r/.github/ci-inputs.yml")
 # a comment")
 o_man=$(plan "$c_man")
-check "a manifest change moves every job" "$(for j in test mutation image archon-scripts groma; do [ "$(fp $j "$o_man")" != "$(fp $j "$o_ci")" ] && echo x; done | wc -l | tr -d ' ')" 5
+check "a manifest change moves every job" "$(for j in test mutation image archon-scripts; do [ "$(fp $j "$o_man")" != "$(fp $j "$o_ci")" ] && echo x; done | wc -l | tr -d ' ')" 4
 c_self=$(commit self .claude/scripts/ci-plan.sh "$(cat "$script")
 # changed")
 o_self=$(plan "$c_self")
-check "a planner change in the tree moves every job" "$(for j in test mutation image archon-scripts groma; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 5
+check "a planner change in the tree moves every job" "$(for j in test mutation image archon-scripts; do [ "$(fp $j "$o_self")" != "$(fp $j "$o_man")" ] && echo x; done | wc -l | tr -d ' ')" 4
 check "another salt moves the fingerprint" "$( [ "$(CI_PLAN_SALT=salt-2 plan "$c_self" | grep '^test ')" != "$(line test "$o_self" | sed 's/^/test /')" ] && echo moved)" moved
-check "another runner class moves the fingerprint" "$( [ "$(CI_PLAN_RUNNER=runner-2 plan "$c_self" | grep '^groma ')" != "groma $(line groma "$o_self")" ] && echo moved)" moved
+check "another runner class moves the fingerprint" "$( [ "$(CI_PLAN_RUNNER=runner-2 plan "$c_self" | grep '^archon-scripts ')" != "archon-scripts $(line archon-scripts "$o_self")" ] && echo moved)" moved
 check "another contract commit moves test" "$( [ "$(fp test "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" != "$(fp test "$o_self")" ] && echo moved)" moved
-check "another contract commit keeps groma" "$(fp groma "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" "$(fp groma "$o_self")"
+check "another contract commit keeps archon-scripts" "$(fp archon-scripts "$(CI_PLAN_CONTRACT_COMMIT=2222222222222222222222222222222222222222 plan "$c_self")")" "$(fp archon-scripts "$o_self")"
 check "another base image keeps test" "$(fp test "$(CI_PLAN_BASE_IMAGES=other plan "$c_self")")" "$(fp test "$o_self")"
 [ "$(fp image "$(CI_PLAN_BASE_IMAGES=other plan "$c_self")")" != "$(fp image "$o_self")" ]
 check "another base image moves image" "$?" 0
@@ -206,7 +201,7 @@ c_di2=$(commit dockerignore-2 docs/memory.md 'memory 3')
 c_branch=$(commit branch-pin gradle.properties '@@KIT_CONTRACT_TAG_KEY@@=feature/x')
 o_branch=$(plan "$c_branch")
 check "a branch pin runs test without a fingerprint" "$(line test "$o_branch")" "run fp=-"
-check "a branch pin leaves groma alone" "$(fp groma "$o_branch" | grep -cE '^[0-9a-f]{64}$')" 1
+check "a branch pin leaves archon-scripts alone" "$(fp archon-scripts "$o_branch" | grep -cE '^[0-9a-f]{64}$')" 1
 git -C "$r" reset -q --hard "$c_self"
 
 # --- reuse --------------------------------------------------------------------------------------------------------
@@ -219,7 +214,7 @@ o_twin=$(plan "$c_twin")
 check "shadow (default): a green twin is logged, and the job runs" "$(line test "$o_twin")" "run fp=$(fp test "$o_a") shadow=$c_a"
 grep -q "test: run (shadow: would reuse ${c_a:0:12}" "$root/err"; check "shadow logs would reuse" "$?" 0
 check "live: the job reuses" "$(line test "$(CI_REUSE=live plan "$c_twin")")" "reuse $c_a fp=$(fp test "$o_a")"
-check "live: a job without a green source runs" "$(decision groma "$(CI_REUSE=live plan "$c_twin")")" run
+check "live: a job without a green source runs" "$(decision archon-scripts "$(CI_REUSE=live plan "$c_twin")")" run
 check "an unknown CI_REUSE is shadow" "$(decision test "$(CI_REUSE=yes plan "$c_twin")")" run
 touch "$CI_LOCAL_ROOT/reuse-live"
 check "the reuse-live file is live" "$(decision test "$(plan "$c_twin")")" reuse
@@ -292,14 +287,14 @@ c_x=$(commit conflict docs/retro/r4.md 'other')
 git -C "$r" checkout -q main
 o_x=$(plan "$c_x" --base "$c_m")
 check "a conflict runs every job without a fingerprint" "$(printf '%s\n' "$o_x" | sed 1d | sort -u | cut -d' ' -f2- | sort -u)" "run fp=-"
-check "a conflict still lists every job" "$(printf '%s\n' "$o_x" | sed 1d | wc -l | tr -d ' ')" 5
+check "a conflict still lists every job" "$(printf '%s\n' "$o_x" | sed 1d | wc -l | tr -d ' ')" 4
 
 # --- an invalid manifest ------------------------------------------------------------------------------------------
 git -C "$r" checkout -q -b bad "$c_m"
-c_bad=$(commit bad-groma .github/ci-inputs.yml "$(yq '.jobs.groma.exclude = ["backlog/"]' "$r/.github/ci-inputs.yml")")
+c_bad=$(commit bad-archon .github/ci-inputs.yml "$(yq '.jobs["archon-scripts"].exclude = ["backlog/"]' "$r/.github/ci-inputs.yml")")
 o_bad=$(plan "$c_bad")
-check "groma may exclude nothing: every job runs" "$(printf '%s\n' "$o_bad" | sed 1d | cut -d' ' -f2- | sort -u)" "run fp=-"
-grep -q 'job groma may exclude nothing' "$root/err"; check "the refusal is named" "$?" 0
+check "archon-scripts may exclude nothing: every job runs" "$(printf '%s\n' "$o_bad" | sed 1d | cut -d' ' -f2- | sort -u)" "run fp=-"
+grep -q 'job archon-scripts may exclude nothing' "$root/err"; check "the refusal is named" "$?" 0
 git -C "$r" reset -q --hard "$c_m"
 c_bad2=$(commit bad-excl .github/ci-inputs.yml "$(yq '.jobs.test.exclude += ["docs/"]' "$r/.github/ci-inputs.yml")")
 check "an exclusion outside D3 v1: every job runs" "$(plan "$c_bad2" | sed 1d | cut -d' ' -f2- | sort -u)" "run fp=-"
@@ -317,7 +312,7 @@ git -C "$r" rm -q .claude/scripts/ci-plan.sh && c_np=$(commit no-planner)
 git -C "$r" checkout -q main
 o_none=$(bash "$script" --self-from "$c_np" "$r" "$c_m" 2>/dev/null)
 check "a base without a planner: every job runs" "$(printf '%s\n' "$o_none" | sed 1d | cut -d' ' -f2- | sort -u)" "run fp=-"
-check "a base without a planner: every job listed" "$(printf '%s\n' "$o_none" | sed 1d | wc -l | tr -d ' ')" 5
+check "a base without a planner: every job listed" "$(printf '%s\n' "$o_none" | sed 1d | wc -l | tr -d ' ')" 4
 
 # --- audit --------------------------------------------------------------------------------------------------------
 wt=$root/wt
@@ -336,8 +331,8 @@ check "audit: a read of an excluded file is a violation" "$(printf '%s\n' "$a_ou
 check "audit: a listed folder outside the inputs is a violation" "$(printf '%s\n' "$a_out" | grep -c '^violation test docs/retro/$')" 1
 check "audit: the summary" "$(printf '%s\n' "$a_out" | head -n 1)" "audit test: 2 tracked files read, 2 outside its inputs"
 check "audit: exit 1 on a violation" "$a_rc" 1
-CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-trace groma "$wt" "$root/trace" > /dev/null 2>&1
-check "audit: groma reads the whole tree, no violation" "$?" 0
+CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-trace archon-scripts "$wt" "$root/trace" > /dev/null 2>&1
+check "audit: archon-scripts reads the whole tree, no violation" "$?" 0
 CI_PLAN_MUTATION_BASE=HEAD bash "$script" --audit-trace test "$wt" "$root/trace" --record > /dev/null 2>&1
 check "audit --record writes violation lines" "$(jq -r 'select(.event == "violation") | .path' "$CI_LEDGER" | sort | tr '\n' ' ')" \
   "backlog/tasks/task-1.md docs/retro/ "
@@ -400,7 +395,7 @@ git -C "$r" worktree remove --force "$wt"
 man=$here/.github/ci-inputs.yml
 check "the manifest names exactly the ci.yml jobs" "$(yq '.jobs | keys | .[]' "$man" | sort | tr '\n' ' ')" \
   "$(yq '.jobs | keys | .[]' "$here/.github/workflows/ci.yml" | sort | tr '\n' ' ')"
-check "groma is the whole tree, excluding nothing" "$(yq -o=json -I0 '[.jobs.groma.inputs, .jobs.groma.exclude]' "$man")" '[["."],null]'
+check "archon-scripts is the whole tree, excluding nothing" "$(yq -o=json -I0 '[.jobs["archon-scripts"].inputs, .jobs["archon-scripts"].exclude]' "$man")" '[["."],null]'
 check "test is narrowed to the Java side, not the whole tree" "$(yq '.jobs.test.inputs[]' "$man" | grep -cxE '\.|\.archon/')" 0
 check "the planner, manifest and workflow are inputs of every job" \
   "$(yq '.always[]' "$man" | grep -cxE '\.github/ci-inputs\.yml|\.github/workflows/ci\.yml|\.claude/scripts/ci-plan\.sh')" 3

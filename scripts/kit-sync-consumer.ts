@@ -56,15 +56,26 @@ export const CONSUMER_TARGETED: Record<string, Rewrite[]> = {
     [
       'check "2 a bullet without a dated heading is no entry" "$([ "$rc" -eq 1 ] && said \'adds no decision entry\'; echo $?)"\n',
       'check "2 a bullet without a dated heading is no entry" "$([ "$rc" -eq 1 ] && said \'adds no decision entry\'; echo $?)"\n' +
-        "new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml\n" +
-        "printf '\\n## Decisions\\n\\n### 2026-10-21 — the groma step is stricter\\n- ci.yml: the groma step\\n' >> docs/memory.md; commit; run main\n" +
+        "new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml\n" +
+        "printf '\\n## Decisions\\n\\n### 2026-10-21 — the lint step is stricter\\n- ci.yml: the lint step\\n' >> docs/memory.md; commit; run main\n" +
         'check "2 a ### entry under a ## Decisions section counts" "$([ "$rc" -eq 0 ] && said \'gate-change-check: ok\'; echo $?)"\n' +
-        "new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml\n" +
-        "printf '\\n#### 2026-10-21 — too deep\\n- ci.yml: the groma step\\n' >> docs/memory.md; commit; run main\n" +
+        "new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml\n" +
+        "printf '\\n#### 2026-10-21 — too deep\\n- ci.yml: the lint step\\n' >> docs/memory.md; commit; run main\n" +
         'check "2 a #### heading is no entry" "$([ "$rc" -eq 1 ] && said \'adds no decision entry\'; echo $?)"\n',
       1,
     ],
+    // The fixture's second job is a neutral lint job: the source names its Groma job, which the kit does not ship.
+    ['  groma:\n', '  lint:\n', 1],
+    ['      - run: groma check\n', '      - run: lint check\n', 1],
+    [
+      "sed -i 's/groma check/groma check --strict/'",
+      "sed -i 's/lint check/lint check --strict/'",
+      2,
+    ],
+    ['the groma step is stricter', 'the lint step is stricter', 2],
   ],
+  // A neutral second job in the fixtures: the source's Groma job does not ship.
+  '.archon/scripts/test/red-triage.test.sh': [['groma', 'lint', 4]],
   // The output is source code: the mustache CLI HTML-escapes `{{x}}` (/ " & become &#x2F; &quot; &amp;).
   'scripts/scaffold.sh': [
     [

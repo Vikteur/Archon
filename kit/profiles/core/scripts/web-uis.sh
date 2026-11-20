@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Starts the browser views of the work in the background and prints their URLs: the Backlog.md board of
-# this project (`backlog browser`), the Groma architecture map of this project (`groma web`) with that backlog
-# attached (BACKLOG_CWD), so the open tickets show on the map, and the MCP Inspector (`mcp-inspector --web`) on the
-# project's MCP servers. A view already running is reused; `stop` ends all of them.
-# Board and map read this repo's main checkout, not a worktree, so they show what is on main.
+# this project (`backlog browser`) and the MCP Inspector (`mcp-inspector --web`) on the project's MCP servers. A view
+# already running is reused; `stop` ends all of them.
+# The board reads this repo's main checkout, not a worktree, so it shows what is on main.
 #   web-uis.sh [start|status|stop] [--open]
 # --open (with start): also opens every printed URL in the browser, with the first of wslview, explorer.exe, xdg-open,
 # open that exists; without it nothing is opened.
@@ -17,11 +16,10 @@
 # `status` prints the same line for every running one (kept in $STATE_DIR/mcp-<name>.url next to its pid). The view is
 # skipped, with the reason, when there is no mcp.json, no mcp-inspector on PATH (scripts/install-tools.sh) or no jq.
 # Overrides: MAP_DIR (default: this repo's main checkout), HUB_DIR (the checkout that holds
-# backlog/; default: MAP_DIR), BACKLOG_PORT (6420), GROMA_PORT (6421), MCP_PORT_BASE (6274: the first MCP server's
+# backlog/; default: MAP_DIR), BACKLOG_PORT (6420), MCP_PORT_BASE (6274: the first MCP server's
 # web port), WEB_UIS_OPEN (the command --open runs on each URL, instead of the first of the four above), STATE_DIR (pid,
 # url, log and inspector config files; default: $TMPDIR/web-uis).
 # The board is skipped, with the reason, when HUB_DIR has no backlog/config.yml (a fresh kit install).
-# The map is skipped, with the reason, while this project has no groma/ folder (no map built yet).
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,7 +27,6 @@ main="$(git -C "$here" worktree list --porcelain | sed -n '1s/^worktree //p')"
 map="${MAP_DIR:-$main}"
 hub="${HUB_DIR:-$map}"
 backlog_port="${BACKLOG_PORT:-6420}"
-groma_port="${GROMA_PORT:-6421}"
 mcp_base="${MCP_PORT_BASE:-6274}"
 state="${STATE_DIR:-${TMPDIR:-/tmp}/web-uis}"
 urls=()   # what --open opens: every URL a start printed
@@ -182,21 +179,15 @@ done
 case "$cmd" in
   start)
     mkdir -p "$state"
-    # A project without a Backlog.md board (a fresh kit install) still gets the map and the MCP views.
+    # A project without a Backlog.md board (a fresh kit install) still gets the MCP views.
     if [ -f "$hub/backlog/config.yml" ]; then
       start_one backlog "$backlog_port" "$hub" backlog browser --non-interactive --port "$backlog_port"
-      export BACKLOG_CWD="$hub"   # the map shows the board's open tickets
     else
       echo "backlog: skipped, no Backlog.md board at $hub (no backlog/config.yml; set HUB_DIR)"
-    fi
-    if [ -d "$map/groma" ]; then
-      start_one groma "$groma_port" "$map" groma web --port "$groma_port"
-    else
-      echo "groma: skipped, no Groma map in $map (no groma/ folder yet)"
     fi
     start_mcp
     [ "$open_after" -eq 0 ] || open_urls
     ;;
-  status) status_one backlog "$backlog_port"; status_one groma "$groma_port"; status_mcp ;;
-  stop)   stop_one backlog; stop_one groma; stop_mcp ;;
+  status) status_one backlog "$backlog_port"; status_mcp ;;
+  stop)   stop_one backlog; stop_mcp ;;
 esac

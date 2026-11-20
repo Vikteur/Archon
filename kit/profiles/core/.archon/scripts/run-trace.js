@@ -28,7 +28,7 @@ const RULES = [
   [/(?<![\w./])scripts\/(?!scaffold\.sh)([\w./-]+\.(?:sh|js|mjs))/g, m => ['repo script', m[1]]],
   [/docs\/code-maps\/([\w-]+)\.md/g, m => ['code-map', m[1]]],
   [/\.\/gradlew\s+((?:[:\w-]+\s*)+)/g, m => ['gradle', m[1].trim().split(/\s+/).filter(t => /^[:a-zA-Z]/.test(t)).join(' ')]],
-  [/\b(git|gh|backlog|groma)\s+([a-z][\w-]*)/g, m => ['cli', `${m[1]} ${m[2]}`]],
+  [/\b(git|gh|backlog)\s+([a-z][\w-]*)/g, m => ['cli', `${m[1]} ${m[2]}`]],
 ];
 const ORDER = ['skill', 'skill read', 'template', 'template read', 'skill script', 'archon script', 'claude script', 'repo script',
   'skill script (read)', 'archon script (read)', 'claude script (read)', 'repo script (read)', 'code-map', 'gradle', 'cli', 'wrote'];

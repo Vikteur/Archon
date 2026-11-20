@@ -231,7 +231,7 @@ function makeSanitizer(cfg, dirs) {
 }
 
 // ---------- shell commands: only the program, and the subcommand where there is one ----------
-const SUB_PROGRAMS = new Set(['git', 'gh', 'npm', 'npx', 'archon', 'backlog', 'groma', 'docker', './gradlew', 'gradlew']);
+const SUB_PROGRAMS = new Set(['git', 'gh', 'npm', 'npx', 'archon', 'backlog', 'docker', './gradlew', 'gradlew']);
 const SCRIPT_PROGRAMS = new Set(['node', 'bash', 'sh', 'python']);
 const SCRIPT_EXT = /\.(sh|js|mjs|cjs|ts|py|ps1|rb|bat|cmd)$/i;
 const ASSIGN = /^[A-Za-z_][A-Za-z0-9_]*=/;

@@ -88,10 +88,9 @@ build_template() {
   echo a > .claude/scripts/shape-check.sh; stub scripts/test/shape-check.test.sh shape-check.test.sh
   stub .claude/scripts/ci-workflow-check.sh ci-workflow-check.sh
   stub .claude/scripts/mutation-gate.sh mutation-gate.sh
-  for t in contract-read-only-check ci-workflow-check ci-workflow generated-untracked-check codegen contract-pin pre-push; do
+  for t in contract-read-only-check ci-workflow-check ci-workflow generated-untracked-check codegen contract-pin; do
     stub "scripts/test/$t.test.sh" "$t.test.sh"
   done
-  echo a > .claude/scripts/groma-check.sh
   # The archon suite selector: what $tmp/archon-sel holds, else "all" for ci.yml and .gitignore, else each .archon
   # script's own suite (a changed suite is itself).
   cat > .claude/scripts/archon-suites.sh <<STUB
@@ -169,32 +168,12 @@ check "bad UTF-8: nothing runs" ran_nothing
 
 # Paths no local command covers are named with the CI job that still checks them.
 new_repo "$r"
-mkdir -p backlog groma && echo a > backlog/t.md && echo a > groma/map.md && echo a > Dockerfile && echo a > other.txt
+mkdir -p backlog && echo a > backlog/t.md && echo a > Dockerfile && echo a > other.txt
 run
-check "not checked: backlog for groma" said "not checked locally: backlog/t.md (groma)"
-check "not checked: groma map for groma" said "not checked locally: groma/map.md (groma)"
+check "backlog is not listed" bash -c '! grep -qF "backlog/t.md" <<< "$1"' _ "$out"
 check "not checked: Dockerfile for image" said "not checked locally: Dockerfile (image)"
 check "not checked: anything else for every job" said "not checked locally: other.txt (every job)"
 check "not checked: still nothing runs" ran_nothing
-
-# --pre-push ends with the groma map against the base; without groma-delta.sh it names the map as not checked.
-new_repo "$r"
-mkdir -p backlog && echo a > backlog/t.md && echo b > .archon/scripts/merge.sh
-run --pre-push --no-sync
-check "pre-push without groma-delta: names the map" said "not checked locally: the groma map, no .claude/scripts/groma-delta.sh (groma)"
-check "pre-push: backlog is not listed on its own" bash -c '! grep -qF "backlog/t.md (groma)" <<< "$1"' _ "$out"
-stub .claude/scripts/groma-delta.sh groma-delta.sh
-run --pre-push --no-sync
-check "pre-push: the groma delta last, against the base" test "$(cat "$log")" = "$(printf 'merge.test.sh \ngroma-delta.sh HEAD origin/main')"
-echo 1 > "$tmp/rc-groma-delta.sh"
-run --pre-push --no-sync
-check "pre-push: a groma delta failure fails the run" test "$rc" -eq 1
-# The call matches the real script's interface: groma-delta.sh [<commit> [<base>]], so a lone base would be read as the
-# commit (and compared with origin/main by default). Fails when either side changes its argument order.
-check "pre-push: groma-delta.sh still takes <commit> then <base>" \
-  grep -qF 'usage: groma-delta.sh [<commit> [<base>]]' "$repo_root/.claude/scripts/groma-delta.sh"
-check "pre-push: affected-check passes HEAD then the base" \
-  grep -qF 'groma-delta.sh HEAD $base_ref' "$script"
 
 # An unknown option is refused.
 new_repo "$r"
@@ -339,12 +318,6 @@ echo b > .archon/scripts/merge.sh && git commit -qam s
 : > "$tmp/archon-sel"
 run
 check "empty selection: the script's own suite still runs" test "$(cat "$log")" = "merge.test.sh "
-
-# The groma job's hook test for a change to the map check.
-new_repo "$r"
-echo b > .claude/scripts/groma-check.sh && git commit -qam g
-run
-check "groma-check.sh: the pre-push hook test" test "$(cat "$log")" = "pre-push.test.sh "
 
 # The merge-base, not origin/main's tip: a later commit on main is not this branch's change.
 new_repo "$r"

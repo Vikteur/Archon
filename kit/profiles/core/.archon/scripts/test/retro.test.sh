@@ -42,16 +42,6 @@ cat > "$root/bin/archon" <<'STUB'
 [ "$1 $2" = "workflow logs" ] && [ "$3" = "$STUB_RUN" ] && cat "$STUB_TRANSCRIPT"
 STUB
 chmod +x "$root/bin/gh" "$root/bin/archon"
-# The Groma delta check of retro-commit.sh is stubbed: it logs "<HEAD subject> <args>", runs $root/delta.race once when
-# it exists (a push landing between the commit and its push) and exits with the code $root/delta.rc held when it started.
-cat > "$root/delta.sh" <<STUB
-#!/usr/bin/env bash
-echo "\$(git log -1 --format=%s) \$*" >> "$root/delta.log"
-rc=\$(cat "$root/delta.rc" 2>/dev/null || echo 0)
-if [ -f "$root/delta.race" ]; then mv "$root/delta.race" "$root/delta.race.ran"; bash "$root/delta.race.ran"; fi
-exit \$rc
-STUB
-export GROMA_DELTA="$root/delta.sh"
 # local-ci-run.sh is stubbed (CI plan C13): it logs "<cwd> <args>" and exits with the code in $root/run-ci.rc (0 when
 # absent). Never the real one: that would start local CI on a throwaway commit.
 cat > "$root/run-ci.sh" <<STUB
@@ -344,37 +334,6 @@ ARCHON_HOME="$root/ah" commit_split
 check "C16 exit 0" $([ "$rc" -eq 0 ]; echo $?)
 check "C16 the retro commit is the head, no run is archived" $(origin_head c16 | grep -q '^retro: TASK-7.1 lessons'; echo $?)
 check "C16 the last stdout line is the retro commit" $(json_ok; echo $?)
-
-# C18. The Groma delta check runs on the retro commit against origin/main before the push.
-umbrella c18; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
-: > "$root/delta.log"; rm -f "$root/delta.rc"
-commit_run
-check "C18 exit 0" $([ "$rc" -eq 0 ]; echo $?)
-check "C18 the delta checked the retro commit against origin/main" \
-  $(grep -qE '^retro: TASK-7.1 .* HEAD origin/main$' "$root/delta.log" && [ "$(wc -l < "$root/delta.log")" -eq 1 ]; echo $?)
-
-# C19. A refused Groma check pushes nothing and leaves no local commit; a resumed run commits it again.
-umbrella c19; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
-echo 1 > "$root/delta.rc"; commit_run; rm -f "$root/delta.rc"
-check "C19 exit 1" $([ "$rc" -eq 1 ]; echo $?)
-check "C19 nothing pushed" $([ "$(origin_head c19)" = base ]; echo $?)
-check "C19 no local commit" $([ "$(git -C "$u" log -1 --format=%s)" = base ]; echo $?)
-check "C19 the retro stays staged" $(git -C "$u" diff --cached --name-only | grep -q '^docs/retro/TASK-7.1/'; echo $?)
-check "C19 the reason is said" $(echo "$out" | grep -q "Groma check refused"; echo $?)
-commit_run
-check "C19 a resumed run pushes it" $([ "$rc" -eq 0 ] && origin_head c19 | grep -q '^retro: TASK-7.1'; echo $?)
-
-# C20. A refusal after the rebase also leaves no local commit, on top of what the rebase pulled.
-umbrella c20; lessons "$f/lessons-learned.md" 73ef1981; adr "$f/adr/ADR-01-use-the-port.md" "ADR-01: Use the port"
-git clone -q "$root/c20/origin.git" "$root/c20/other" 2>/dev/null
-printf 'git -C %q -c user.name=t -c user.email=t@t commit -q --allow-empty -m elsewhere && git -C %q push -q origin main && echo 1 > %q\n' \
-  "$root/c20/other" "$root/c20/other" "$root/delta.rc" > "$root/delta.race"
-: > "$root/delta.log"; commit_run; rm -f "$root/delta.rc"
-check "C20 exit 1" $([ "$rc" -eq 1 ]; echo $?)
-check "C20 checked twice" $([ "$(wc -l < "$root/delta.log")" -eq 2 ]; echo $?)
-check "C20 no local commit, main is what origin has" $([ "$(git -C "$u" log -1 --format=%s)" = elsewhere ] \
-  && [ "$(origin_head c20)" = elsewhere ]; echo $?)
-check "C20 the reason is said" $(echo "$out" | grep -q "refused it after the rebase"; echo $?)
 
 # C21. A pushed retro commit gets local CI started on it in the background (C13) when the docs home is the repository
 # the script runs in; another docs home (a test's throwaway, the archived umbrella) is not run.

@@ -21,7 +21,7 @@
 #   push-guard.sh paths                   print the exempt path prefixes, one per line (one list, no drift).
 #   push-guard.sh install                 switch the hook on for this clone and its worktrees: writes
 #                                         <git common dir>/hooks/pre-push, which runs this script from the main checkout.
-#                                         It does not set core.hooksPath (that would also switch on .githooks/pre-push).
+#                                         It does not set core.hooksPath (that would also switch on every hook of .githooks/).
 # An allow entry counts only when the file is owned by root, names the pushed sha and has not expired; once a push of it
 # passed the guard it is recorded in ~/.local/state/push-guard/used and does not count again (one push per entry). A
 # delete of main is never allowed here. There are no environment overrides on purpose: an override would be a way

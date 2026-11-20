@@ -201,6 +201,18 @@ export const NEVER_SHIP_GROUPS: Record<string, string[]> = {
   ],
   'The Copilot workflow generator: the kit ships its output, transformed (scripts/kit-sync-standalone.ts).':
     ['.archon/scripts/copilot-workflow.js', '.archon/scripts/test/copilot-workflow.test.sh'],
+  'The Groma architecture map, its checks and the pre-push hook that ran them (owner decision 2026-11-20).':
+    [
+      '.claude/scripts/groma-check.sh',
+      '.claude/scripts/groma-delta.sh',
+      '.archon/scripts/groma-links.sh',
+      '.archon/scripts/groma-sync.sh',
+      '.archon/scripts/test/groma-links.test.sh',
+      '.archon/scripts/test/groma-sync.test.sh',
+      'scripts/test/groma-delta.test.sh',
+      '.githooks/pre-push',
+      'scripts/test/pre-push.test.sh',
+    ],
 };
 
 export const NEVER_SHIP: string[] = Object.values(NEVER_SHIP_GROUPS).flat();
@@ -305,8 +317,6 @@ export const FILES: Record<Profile, string[]> = {
     '.claude/scripts/ci-queue.sh',
     '.claude/scripts/ci-status-grammar.sh',
     '.claude/scripts/gate-change-check.sh',
-    '.claude/scripts/groma-check.sh',
-    '.claude/scripts/groma-delta.sh',
     '.claude/scripts/run-suites.sh',
     '.githooks/*',
     '.github/copilot-instructions.md',

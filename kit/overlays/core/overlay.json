@@ -19,20 +19,8 @@
     "derivedFrom": ".claude/scripts/ci-cost.sh",
     "sourceSha256": "edfe86f9b859585767cf50a6761b4afb7583737f623a1e2ba855301887de4362"
   },
-  ".claude/scripts/groma-check.sh": {
-    "derivedFrom": ".claude/scripts/groma-check.sh",
-    "sourceSha256": "447fe2ef797a4acce182656b7680cd1bd5d43191151c175e749ad5733c20a7cb"
-  },
-  ".githooks/pre-push": {
-    "derivedFrom": ".githooks/pre-push",
-    "sourceSha256": "f66fdc61340600b0f05449a9fc1eb487de41f08eb15a0b64d2929bc636991e96"
-  },
   "scripts/test/ci-cost.test.sh": {
     "derivedFrom": "scripts/test/ci-cost.test.sh",
     "sourceSha256": "f45fc28e410d89ff7e85af1168438e8e8e2fb8ee554da26d87b5f8b46ac99e4d"
-  },
-  "scripts/test/pre-push.test.sh": {
-    "derivedFrom": "scripts/test/pre-push.test.sh",
-    "sourceSha256": "9a62094a2e5aea2ae72cb74608ac0534fdc57d1fd0f6b5a03dc6db08faa91403"
   }
 }

@@ -47,16 +47,10 @@ script then cannot log `gh` in for you.
    pushes.
 9. **A dry run**: runs a dry run of `build-feature-copilot`.
 10. **The web views**: runs `archon kit web` on the backend: the MCP Inspectors (the codegraph server of each repository
-    and the contract server on your contract), the Groma map, the Backlog.md board when it is
+    and the contract server on your contract), the Backlog.md board when it is
     on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
     view in the browser only once it answers, and names a view that does not answer within
     90 seconds. `archon kit web <backend>` does the same later.
-
-When `groma-check` fails on the committed first scan of the Groma map, the closing list says
-so: the pre-push check refuses a push until an agent fixes what it names. A map element
-without a description is only a note while `groma_descriptions` in `.archon/kit.yaml` is
-`optional` (the default), and a map that is still its first scan while `groma_curation` is;
-`required` fails either.
 
 | Option | Effect |
 |--------|--------|
@@ -108,7 +102,7 @@ fetches and lists the new Archon commits and the plan, and changes nothing.
 7. **The server**: restarts a running `archon serve` with the same arguments, so it runs
    the new build.
 8. **The web views**: runs `archon kit web` on the backend, after the restart: the MCP Inspectors (the codegraph server of each repository
-   and the contract server on your contract), the Groma map, the Backlog.md board when it is
+   and the contract server on your contract), the Backlog.md board when it is
    on, and the Archon web UI (`archon serve`, started when it is not running). It opens each
    view in the browser only once it answers, and names a view that does not answer within
    90 seconds. `archon kit web <backend>` does the same later.
@@ -157,7 +151,6 @@ After you confirm the summary, it runs these steps, each with a spinner:
 | CodeGraph index | Runs `.archon/scripts/codegraph-setup.sh` for the backend and the frontend. |
 | Frontend MCP | Writes the codegraph server into the frontend's `.github/mcp.json` (other servers stay), trusts the frontend folder, and adds it to `codegraph.extra_projects` in the backend's `kit.yaml`. |
 | rtk hooks | Runs `rtk init --copilot` in each repository, when `rtk` is on `PATH`. It never installs the global hooks. |
-| Groma map | When `groma` is on `PATH` and the backend has no `groma/` yet: `groma init --directory groma <backend name>`, the Java scanner when a `java` profile is installed, and a first `groma scan`. With Backlog.md off it removes the `backlog/` board and the Backlog.md block that `groma init` adds; `AGENTS.md` keeps its Groma block. |
 | Servers check | Starts each MCP server of both repositories, as `kit doctor` does. |
 | Web views | Runs `bash scripts/web-uis.sh start` in the backend, starts `archon serve` when its health URL does not answer, waits up to 90 seconds for each view, and opens each one that answers in the browser (`wslview`, `explorer.exe`, `xdg-open` or `open`; `WEB_UIS_OPEN` picks another). A view that does not answer fails the step. |
 
@@ -165,8 +158,7 @@ The output of every step goes to a log, `~/.archon/logs/kit-setup-<time>.log`, n
 terminal. A step that fails is shown as failed with that log path. The later steps still
 run, and the command exits 1 at the end.
 
-The last screen lists the web view URLs, a note when the Groma map is a first scan (commit
-it, and have an agent curate it), the command that stops them
+The last screen lists the web view URLs, the command that stops them
 (`bash scripts/web-uis.sh stop` in the backend), the log path and the Copilot login: run
 `copilot`, then `/login`, and finish it in a browser signed in as the GitHub account that
 has Copilot. That account may differ from the one `gh` uses.
@@ -333,7 +325,7 @@ After it writes the files, `kit add` runs the setup steps of the selected profil
 this order:
 
 1. **Tools.** `scripts/install-tools.sh` checks and installs git, gh, node, jq, yq, java,
-   docker, copilot, archon, backlog, groma and codegraph. Pass `--no-tools` to skip it.
+   docker, copilot, archon, backlog and codegraph. Pass `--no-tools` to skip it.
    `archon kit tools` runs the same script on its own. It leaves `backlog` out when
    `backlog: false` is in `.archon/kit.yaml` (or the kit defaults), or when you run
    `archon kit tools --no-backlog` (`INSTALL_TOOLS_BACKLOG=0`).

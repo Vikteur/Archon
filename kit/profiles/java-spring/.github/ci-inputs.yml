@@ -21,7 +21,6 @@
 #   docker-context   the Docker build context is an input: the ! entries of .dockerignore when it denies by default
 #                    (starts with *), otherwise the whole tree; the local ids of the Dockerfile's base images too
 #   mutation-targets the sorted mutation targets (mutation-gate.sh's rule) with their blobs are an input
-# groma is never narrowed: ci-plan.sh plans it on the whole tree whatever this file says.
 version: 1
 
 # Inputs of every job: the planner, its manifest, the runner and the gate that reads its statuses, the workflow (whole
@@ -81,8 +80,4 @@ jobs:
   archon-scripts:
     # ci-workflow-check.sh reads .github/, the build file and docs/memory.md; the .archon suites read the checkout, so
     # the job takes the whole tree.
-    inputs: [.]
-
-  groma:
-    # The architecture check reads the whole tree (backlog/ included); never narrowed.
     inputs: [.]

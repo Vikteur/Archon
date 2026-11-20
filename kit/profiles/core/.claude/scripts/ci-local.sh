@@ -311,7 +311,7 @@ fi
 
 # The paths the .archon suites read from the checkout: the scripts and suites themselves, the scope guard and its
 # policy (retro-fence, developer-fence), .gitignore (developer-fence checks the local policy is ignored) and the workflow that runs
-# them. What else the scripts call (groma-check, commit-reports.sh, backlog/, docs/retro/) the suites stub.
+# them. What else the scripts call (commit-reports.sh, backlog/, docs/retro/) the suites stub.
 ARCHON_SUITE_PATHS=(.archon/ .claude/hooks/ .gitignore .github/workflows/ci.yml)
 ARCHON_SUITE_GLOB='.archon/scripts/test/*.test.sh'
 archon_skip="" archon_suites="" archon_note="" archon_change=""

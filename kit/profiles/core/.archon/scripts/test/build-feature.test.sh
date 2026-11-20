@@ -126,7 +126,7 @@ check "10 review reads Checks for review" $(grep -q '## Checks for review' <<< "
 
 # 11. No committing agent may skip the hook; the agent nodes may not use Monitor.
 denies() { yq "[.. | select(tag == \"!!map\" and .id == \"$2\") | .denied_tools[]] | join(\" \")" "$1"; }
-for n in write-tests build-step review map-curate fix; do
+for n in write-tests build-step review fix; do
   d=$(denies "$wf" "$n"); out="$n: $d"
   check "11 build-feature $n denies --no-verify and commit -n" $([[ "$d" == *'Bash(*--no-verify*)'* && "$d" == *'Bash(*commit -n *)'* ]]; echo $?)
 done

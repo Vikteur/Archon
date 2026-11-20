@@ -121,8 +121,6 @@ stack: spring                # quarkus | spring: the gates that differ per frame
 base_branch: main
 gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
-groma_descriptions: optional # groma-check.sh: optional (an undescribed map element is a note) | required
-groma_curation: optional     # groma-check.sh: optional (a first-scan map is a note) | required
 build_workflow: build-feature-copilot
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
@@ -205,6 +203,10 @@ contract:
   `main-ci.sh`, `ticket-files.sh`, `close-out.sh` and the scripts only they call), the STOP approval ledger
   (`stop-approve.sh`, `stop-check.sh`, `stop-round.sh`, `.archon/stop/**`) and the Copilot workflow generator. No copy
   list overrides the never-ship list; a suite of a never-ship script never ships either.
+- Tooling the owner removed from the kit (owner decision 2026-11-20), in `NEVER_SHIP_GROUPS` too, so a sync never
+  brings it back and a shipped line that names one of its scripts fails the leak check: the Groma architecture map
+  (`groma-check.sh`, `groma-delta.sh`, `groma-links.sh`, `groma-sync.sh`, the `.githooks/pre-push` hook that ran the
+  map check, and their suites).
 - What kit-sync strips with them: the `.claude/settings.json` hooks and deny entries that name a never-ship file, and
   the never-ship agents' entries in `.claude/hooks/agent-scopes.json`. A shipped line that still names a never-ship
   file (a script's basename, `delegator.md`, `delegator.agent.md` or a systemd unit) fails the leak check; the

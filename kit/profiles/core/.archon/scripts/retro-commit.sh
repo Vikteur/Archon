@@ -4,9 +4,8 @@
 # The gate: lessons-learned.md has a "## Run <id8> — <date> — <outcome>" section with every heading of the retro skill's
 # template filled in, and every adr/ADR-NN-<slug>.md has its "# ADR-NN: <title>" line and every section, and is linked
 # from lessons-learned.md. Then it regenerates the index in docs/retro/README.md and commits only the retro folder and
-# that index; anything else changed in the docs home is left alone. The commit is pushed only when
-# .claude/scripts/groma-delta.sh finds no new Groma FAIL line in it against origin/main (CI plan C7; GROMA_DELTA names
-# that script, tests stub it). A push rejected because main moved on is rebased once, checked again and pushed again.
+# that index; anything else changed in the docs home is left alone. A push rejected because main moved on is rebased
+# once and pushed again.
 # A commit that does not land is undone, its files left staged, so main keeps no local commit and a resumed run commits
 # it again. A failed gate commits nothing: fix the files and resume the run.
 # After its own commit it refreshes the token reports (bash scripts/tokenomics/commit-reports.sh, TASK-41; through bash,
@@ -21,22 +20,17 @@ home=$1 dir=$2 run=$3
 id8=${run:0:8}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 index=docs/retro/README.md
-delta=${GROMA_DELTA:-$here/../../.claude/scripts/groma-delta.sh}
 run_ci=${LOCAL_CI_RUN:-$here/local-ci-run.sh}
 
 common() { (cd "$1" && cd "$(git rev-parse --git-common-dir)" && pwd) 2>/dev/null; }
 
 push_retro() { # push the retro commit at HEAD of $home; sets why when it does not land
   why=""
-  if ! (cd "$home" && bash "$delta" HEAD origin/main); then
-    why="the Groma check refused it (see above)"
-  elif git -C "$home" push -q origin main 2>/dev/null; then
+  if git -C "$home" push -q origin main 2>/dev/null; then
     return 0
   elif ! git -C "$home" pull -q --rebase --autostash origin main; then
     git -C "$home" rebase --abort 2>/dev/null || true
     why="it could not be rebased onto origin/main"
-  elif ! (cd "$home" && bash "$delta" HEAD origin/main); then
-    why="the Groma check refused it after the rebase (see above)"
   elif git -C "$home" push -q origin main; then
     return 0
   else

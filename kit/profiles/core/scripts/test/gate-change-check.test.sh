@@ -37,9 +37,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - run: ./gradlew test
-  groma:
+  lint:
     steps:
-      - run: groma check
+      - run: lint check
 EOF
 cat > "$tpl/.github/ci-inputs.yml" <<'EOF'
 # the manifest
@@ -90,17 +90,17 @@ check "2 a new job without an entry fails" "$([ "$rc" -eq 1 ] && said 'gate chan
   && said 'FAIL: ci.yml changed, but the change adds no decision entry'; echo $?)"
 entry "ci.yml gets the image job"; commit; run main
 check "2 ... and passes with a dated entry that names ci.yml" "$([ "$rc" -eq 0 ] && said 'gate-change-check: ok'; echo $?)"
-new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml; entry "the groma step is stricter"; commit; run main
+new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml; entry "the lint step is stricter"; commit; run main
 check "2 a changed step with an entry that does not name ci.yml fails" "$([ "$rc" -eq 1 ] \
   && said 'gate changed: ci.yml (.github/workflows/ci.yml: the steps of a job)' && said 'does not name it (ci.yml)'; echo $?)"
-new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml
-printf -- '- ci.yml: the groma step is stricter\n' >> docs/memory.md; commit; run main
+new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml
+printf -- '- ci.yml: the lint step is stricter\n' >> docs/memory.md; commit; run main
 check "2 a bullet without a dated heading is no entry" "$([ "$rc" -eq 1 ] && said 'adds no decision entry'; echo $?)"
-new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml
-printf '\n## Decisions\n\n### 2026-10-21 — the groma step is stricter\n- ci.yml: the groma step\n' >> docs/memory.md; commit; run main
+new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml
+printf '\n## Decisions\n\n### 2026-10-21 — the lint step is stricter\n- ci.yml: the lint step\n' >> docs/memory.md; commit; run main
 check "2 a ### entry under a ## Decisions section counts" "$([ "$rc" -eq 0 ] && said 'gate-change-check: ok'; echo $?)"
-new_repo; sed -i 's/groma check/groma check --strict/' .github/workflows/ci.yml
-printf '\n#### 2026-10-21 — too deep\n- ci.yml: the groma step\n' >> docs/memory.md; commit; run main
+new_repo; sed -i 's/lint check/lint check --strict/' .github/workflows/ci.yml
+printf '\n#### 2026-10-21 — too deep\n- ci.yml: the lint step\n' >> docs/memory.md; commit; run main
 check "2 a #### heading is no entry" "$([ "$rc" -eq 1 ] && said 'adds no decision entry'; echo $?)"
 
 # 3. ci-inputs.yml.

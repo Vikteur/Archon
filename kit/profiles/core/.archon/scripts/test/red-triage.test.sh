@@ -76,7 +76,7 @@ field() { node -e 'console.log(JSON.parse(process.argv[1])[process.argv[2]])' "$
 printf '# none\n' > "$root/flaky.tsv"
 
 # 1. Every job green: class green, exit 0, no rerun.
-reset_all; green "$sha" test; green "$sha" groma
+reset_all; green "$sha" test; green "$sha" lint
 run -- "$sha"
 check "1 green, exit 0" $([ "$rc" -eq 0 ] && [ "$(field class)" = green ] && [ "$(field rerun)" = none ]; echo $?)
 check "1 no rerun" $([ -z "$log" ]; echo $?)
@@ -105,12 +105,12 @@ run -- "$sha"
 check "4 main's infra red is not main-state" $([ "$(field class)" = own ]; echo $?)
 
 # 5. A merge conflict: conflict, exit 0, never a rerun.
-reset_all; st "$sha" test failure "failure (merge conflict with the base abc1234) on host"; st "$sha" groma failure "failure (merge conflict with the base abc1234) on host"
+reset_all; st "$sha" test failure "failure (merge conflict with the base abc1234) on host"; st "$sha" lint failure "failure (merge conflict with the base abc1234) on host"
 run -- "$sha"
 check "5 conflict, exit 0" $([ "$rc" -eq 0 ] && [ "$(field class)" = conflict ] && [ -z "$log" ]; echo $?)
 
 # 6. An infra signature in the log: one rerun of the red jobs only, on the same commit and pull request, green after it.
-reset_all; green "$sha" groma; red "$sha" test; joblog test "Caused by: Cannot connect to the Docker daemon at unix:///var/run/docker.sock"
+reset_all; green "$sha" lint; red "$sha" test; joblog test "Caused by: Cannot connect to the Docker daemon at unix:///var/run/docker.sock"
 run RERUN_POST="test|success|success in 40s on host; green on rerun after infra:docker-daemon" -- --pr https://github.com/o/r/pull/7 "$sha"
 check "6 green after the rerun, exit 0" $([ "$rc" -eq 0 ] && [ "$(field class)" = green ]; echo $?)
 check "6 rerun green-after the signature" $([ "$(field rerun)" = green-after:infra:docker-daemon ]; echo $?)
@@ -169,7 +169,7 @@ run -- --no-rerun "$sha"
 check "11 --no-rerun: exit 3, off" $([ "$rc" -eq 3 ] && [ "$(field rerun)" = off ] && [ -z "$log" ]; echo $?)
 
 # 12. Cannot triage: a job pending, no status at all. Exit 1.
-reset_all; red "$sha" test; st "$sha" groma pending "running since 10:00, pid 1@host"
+reset_all; red "$sha" test; st "$sha" lint pending "running since 10:00, pid 1@host"
 run -- "$sha"
 check "12 pending: exit 1" $([ "$rc" -eq 1 ] && grep -q pending <<< "$err"; echo $?)
 reset_all

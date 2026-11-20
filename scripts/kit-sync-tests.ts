@@ -32,7 +32,6 @@ export const SUITE_SUBJECTS: Record<string, string> = {
   '.archon/scripts/test/wait-merge-ping.test.sh': '.archon/scripts/wait-merge.sh',
   '.archon/scripts/test/workflow-contracts.test.sh': '.archon/workflows/build-feature.yaml',
   'scripts/test/audit-log-args.test.sh': '.claude/hooks/scripts/audit-log.sh',
-  'scripts/test/pre-push.test.sh': '.githooks/pre-push',
 };
 
 const SOURCE_BUILD = "tests the source app's own build, not a script the kit ships";

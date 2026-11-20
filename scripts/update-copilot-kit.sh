@@ -41,14 +41,13 @@ What it does, in order (a rerun is safe):
   2. updates the Archon clone (fast-forward only), builds and installs it, when there is something new
   3. pulls the contract, backend and frontend repositories when their tree is clean (fast-forward only)
   4. runs `archon kit setup` again with the saved answers: the kit files, the tools, the contract MCP
-     server, both CodeGraph indexes, the Groma map (groma init and a first scan, when the backend has
-     no groma/ yet), the rtk hooks. A kit file you edited is kept; one the kit no longer ships is
+     server, both CodeGraph indexes, the rtk hooks. A kit file you edited is kept; one the kit no longer ships is
      removed when you never edited it
   5. runs `archon kit doctor` on the backend
   6. commits the update on a new branch in each repo whose tree was clean before (it never pushes)
   7. restarts `archon serve` when it was running, so it runs the new build
   8. starts the web views and opens each in the browser once it answers (`archon kit web`): the MCP
-     Inspectors (codegraph of each repo, the contract server on your contract), the Groma map, the
+     Inspectors (codegraph of each repo, the contract server on your contract), the
      Backlog.md board when it is on, and the Archon web UI (`archon serve`, started when it is not running)
 It never writes a token anywhere. Log: ~/.archon/logs/update-copilot-kit-<timestamp>.log
 USAGE

@@ -56,10 +56,9 @@ set -uo pipefail
 export LC_ALL=C
 
 SELF=${BASH_SOURCE[0]}
-# D3 v1: the only folders a job may leave out, and the only jobs that may leave them out. groma is never narrowed.
+# D3 v1: the only folders a job may leave out, and the only jobs that may leave them out.
 ALLOWED_EXCLUDE=" backlog/ docs/retro/ docs/tokenomics/daily-token-reports/ docs/tokenomics/ticket-token-reports/ "
 EXCLUDE_JOBS=" test mutation image "
-NEVER_NARROWED=" groma "
 # The mutation gate: the tested tree's copy answers which changed paths are targets (--list-targets), the one rule.
 GATE_PATH=.claude/scripts/mutation-gate.sh
 MANIFEST=.github/ci-inputs.yml
@@ -297,7 +296,6 @@ plan_job() {
   : > "$tmp/pat"
   while IFS= read -r e; do [ -n "$e" ] && echo "A $(pat_re "$e")" >> "$tmp/pat"; done < <(yq '.always[]' "$tmp/manifest" | tr -d '\r')
   job_list "$job" inputs > "$tmp/inputs"
-  case "$NEVER_NARROWED" in *" $job "*) echo . > "$tmp/inputs" ;; esac
   if job_flag "$job" mutation-targets; then
     if ! targets=$(mutation_targets); then why="no base for the mutation targets, or $GATE_PATH cannot list them"; return; fi
     [ -z "$targets" ] || job_list "$job" when-targets > "$tmp/inputs"
@@ -310,7 +308,6 @@ plan_job() {
   fi
   # An exclusion holds only when no reader names its folder as a word (a reader that names it may read it).
   job_list "$job" exclude > "$tmp/excl"
-  case "$NEVER_NARROWED" in *" $job "*) : > "$tmp/excl" ;; esac
   if [ -s "$tmp/excl" ]; then
     closure "$job" > /dev/null
     job_list "$job" readers | sed 's/^/:(glob)/' > "$tmp/readers"

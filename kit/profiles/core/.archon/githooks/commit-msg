@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # commit-msg hook for Archon run worktrees only (owner decision D12, 2026-10-20). Archon switches it on for its own
 # processes through .archon/config.yaml `env` (GIT_CONFIG_COUNT/KEY_0/VALUE_0: core.hooksPath=.archon/githooks), never
-# clone-wide: a clone-wide core.hooksPath would also turn on .githooks/pre-push (the groma check) in every checkout.
+# clone-wide: a clone-wide core.hooksPath would also turn on every other hook of .githooks/ in every checkout.
 #   commit-msg <message file>
 # 1. Outside a linked worktree (the main checkout, where tickets and the reports are committed) it does nothing.
 # 2. The Conventional Commit subject check, .githooks/commit-msg: exit 1 refuses the commit.

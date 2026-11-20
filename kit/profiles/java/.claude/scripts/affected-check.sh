@@ -22,18 +22,15 @@
 #   - .github/workflows/..., gradle.properties, ci-workflow-check.sh, contract-pin.sh: the CI workflow check and the six
 #     CI workflow tests (archon-scripts runs four; the test job runs codegen and generated-untracked-check, here only
 #     with a contract checkout at contract/dist/openapi.yaml).
-#   - .claude/scripts/groma-check.sh, .githooks/pre-push: scripts/test/pre-push.test.sh (the groma job's second step).
 #   - a changed *.md file: a UTF-8 check, in the script itself (a stray Windows-1252 byte failed CI's test job).
 #   - a gate file (ci.yml, ci-inputs.yml, ci-plan.sh, local-ci-status.sh, ci-status-grammar.sh): first
 #     .claude/scripts/gate-change-check.sh <base>, which fails a gate change that adds no decision entry to docs/memory.md.
 #   - an agent instruction text (CLAUDE.md, AGENTS.md, .claude/CLAUDE.md, rules, agents, SKILL.md, .archon/workflows):
 #     scripts/test/agent-script-names.test.sh (every script it names exists).
-#   - anything else (docs, backlog, groma, skills): nothing, and the path is printed as "not checked locally: <path>
+#   - anything else (docs, skills): nothing, and the path is printed as "not checked locally: <path>
 #     (<job>)", with the CI job that still checks it. A Gradle change also prints that the image build is not checked.
-# --pre-push (the check before an agent pushes, .github/agents/github-agent.agent.md) ends with the groma map against the
-# base: .claude/scripts/groma-delta.sh HEAD <base>, which fails only on a map failure the base does not have; without that
-# script it prints the map as not checked locally.
-# Usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync] [--pre-push]
+#   - backlog/, AGENTS.md, CLAUDE.md: nothing, and nothing is printed (no CI job checks them on their own).
+# Usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync]
 # Prints each command before it runs it, stops at the first failure with its exit code, or prints
 # "affected-check: ok". --dry-run prints the commands without running them (and only says whether a merge is due). AFFECTED_BASE
 # overrides origin/main.
@@ -41,13 +38,11 @@ set -uo pipefail
 
 dry=0
 no_sync="${AFFECTED_NO_SYNC:-0}"
-pre_push=0
 for a in "$@"; do
   case "$a" in
     --dry-run) dry=1 ;;
     --no-sync) no_sync=1 ;;
-    --pre-push) pre_push=1 ;;
-    *) echo "usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync] [--pre-push]"; exit 2 ;;
+    *) echo "usage: bash .claude/scripts/affected-check.sh [--dry-run] [--no-sync]"; exit 2 ;;
   esac
 done
 
@@ -150,7 +145,6 @@ while IFS= read -r f; do
     build.gradle.kts|settings.gradle.kts|gradle/*|gradlew|gradlew.bat) all_modules=1; continue ;;
     .github/workflows/*) workflows=1; continue ;;
     .claude/scripts/ci-workflow-check.sh|.claude/scripts/contract-pin.sh) workflows=1; continue ;;
-    .claude/scripts/groma-check.sh|.githooks/pre-push) add_suite scripts/test/pre-push.test.sh; continue ;;
     .archon/scripts/test/*.test.sh) add_suite "$f"; continue ;;
     .archon/scripts/test-task.sh)
       add_suite scripts/test/affected-check.test.sh; continue ;;
@@ -173,8 +167,7 @@ while IFS= read -r f; do
     case "$module_set" in *" $m "*) direct="$direct $m"; changed_files+=("$f"); continue ;; esac
   fi
   case "$f" in
-    backlog/*|groma/*|.groma/*|AGENTS.md|CLAUDE.md) [ "$pre_push" -eq 1 ] || not_checked "$f" "groma" ;;
-    .archon/*|.claude/hooks/*|.gitignore|*.md) ;;
+    backlog/*|AGENTS.md|CLAUDE.md|.archon/*|.claude/hooks/*|.gitignore|*.md) ;;
     Dockerfile|.dockerignore) not_checked "$f" "image" ;;
     *) not_checked "$f" "every job" ;;
   esac
@@ -248,15 +241,6 @@ if printf '%s\n' "$changed" | grep -E '^(shared|[a-z][a-z0-9]*)-(domain|usecase|
   cmds+=("bash .claude/scripts/mutation-gate.sh --base $base_ref")
 fi
 # --- end mutation gate -------------------------------------------------------------------------------------------
-
-# --pre-push: the groma map last, against the base (only a failure the base does not have fails the push).
-if [ "$pre_push" -eq 1 ]; then
-  if [ -f .claude/scripts/groma-delta.sh ]; then
-    cmds+=("bash .claude/scripts/groma-delta.sh HEAD $base_ref")
-  else
-    not_checked "the groma map, no .claude/scripts/groma-delta.sh" "groma"
-  fi
-fi
 
 # What CI still checks and this run does not: printed first, so a pass below is never read as covering it.
 for u in "${unchecked[@]+"${unchecked[@]}"}"; do echo "$u"; done

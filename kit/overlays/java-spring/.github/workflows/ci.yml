@@ -5,7 +5,7 @@ name: CI
 # .claude/scripts/ci-workflow-check.sh holds it to its rules: every action pinned by commit SHA, every job with a
 # timeout and no if, the contract checked out with the one CI secret and proved read-only, every ./gradlew run given
 # the contract spec, and the job set equal to the last "CI job set" entry of docs/memory.md
-# (`archon-scripts, groma, image, mutation, test`). .github/ci-inputs.yml lists each job's inputs.
+# (`archon-scripts, image, mutation, test`). .github/ci-inputs.yml lists each job's inputs.
 on:
   workflow_dispatch:
 
@@ -141,16 +141,3 @@ jobs:
           shopt -s nullglob; set -- scripts/test/*.test.sh
           [ $# -gt 0 ] || { echo "::notice::no scripts/test suites"; exit 0; }
           SUITE_JOBS=8 bash .claude/scripts/run-suites.sh "$@"
-
-  groma:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "22"
-      - name: Install the Groma CLI
-        run: npm install -g groma.md@0.6.6
-      - name: Groma architecture map is curated and in sync
-        run: bash .claude/scripts/groma-check.sh

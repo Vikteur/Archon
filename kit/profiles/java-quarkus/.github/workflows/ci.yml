@@ -133,7 +133,7 @@ jobs:
   archon-scripts:
     # The shell test suites of the build-feature scripts (.archon/scripts/test/*.test.sh), moved here from the
     # weddingapp umbrella, now an archive. ubuntu-latest ships the bash, git, node, jq and yq
-    # they need; archon, groma and backlog are stubbed by the suites themselves.
+    # they need; archon and backlog are stubbed by the suites themselves.
     # 30 minutes: alone it takes ~3.5 min, but beside a build-feature run it took 13.8 (2d1461f) of the 15 it had.
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -163,20 +163,5 @@ jobs:
             scripts/test/contract-read-only-check.test.sh scripts/test/contract-pin.test.sh \
             scripts/test/audit-log-args.test.sh scripts/test/audit-log.test.sh scripts/test/ci-status-grammar.test.sh \
             scripts/test/ci-ledger.test.sh scripts/test/ci-audit.test.sh scripts/test/gate-change-check.test.sh \
-            scripts/test/ci-cost.test.sh scripts/test/agent-script-names.test.sh scripts/test/groma-delta.test.sh \
+            scripts/test/ci-cost.test.sh scripts/test/agent-script-names.test.sh \
             scripts/test/archon-suites.test.sh scripts/test/test-set-coverage.test.sh
-
-  groma:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "22"
-      - name: Install the Groma CLI
-        run: npm install -g groma.md@0.6.6
-      - name: Groma architecture map is curated and in sync
-        run: bash .claude/scripts/groma-check.sh
-      - name: Pre-push hook stops a push the map check rejects
-        run: bash scripts/test/pre-push.test.sh

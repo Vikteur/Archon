@@ -6,6 +6,6 @@ as a starter, written only when the project had no `docs/memory.md`; from here o
 
 ## Decisions
 
-- CI job set (ci-workflow-check.sh, N7): `archon-scripts groma image mutation test`. The jobs of the kit's
+- CI job set (ci-workflow-check.sh, N7): `archon-scripts image mutation test`. The jobs of the kit's
   `.github/workflows/ci.yml`. A change to the job set lands together with a new bullet here that names the new set;
   the last one counts.
