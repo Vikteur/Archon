@@ -170,6 +170,15 @@ cmd "diagnose (ci-fix.diagnose): git log is on the debugger list" allow ci-fix.d
 put "diagnose: writes the run's artifacts folder" allow ci-fix.diagnose "$arts/ci-diagnosis.md"
 put "diagnose: may not write code" deny ci-fix.diagnose app/src/main/java/x/A.java 'debugger (node diagnose)'
 cmd "fix (ci-fix.fix): mkdir -p is its node addition" allow ci-fix.fix 'mkdir -p app/src/test'
+# Copilot's grep sends its folder as `paths`, a string or a list (seen in a real run): a list of one is read as that
+# path; a longer list cannot be read as one path, so it is still denied.
+srch() { # srch <label> <want> <node path> <paths json> [<reason text>]
+  sg "$3" 'Read|Grep|Glob' "$(jq -cn --argjson p "$4" --arg d "$proj" '{toolName:"grep",toolArgs:{pattern:"X",paths:$p},cwd:$d}')" ""
+  sg_check "$1" "$2" "${5:-}"
+}
+srch "explore: a grep with paths as a list of one folder runs" allow explore '["src/main"]'
+srch "explore: a grep with paths as one string runs" allow explore '"src/main"'
+srch "explore: a grep with a list of two paths is still denied" deny explore '["src/main","docs"]'
 cmd "unknown node: git is outside the strictest common set" deny some-new-node 'git status' 'strictest common set'
 cmd "unknown node: codegraph is in every node's list" allow some-new-node 'codegraph node Foo'
 put "unknown node: writes only the run's artifacts folder" allow some-new-node "$arts/x.md"

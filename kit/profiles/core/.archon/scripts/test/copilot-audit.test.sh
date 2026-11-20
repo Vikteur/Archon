@@ -85,5 +85,16 @@ check "8 the hook files are untouched" $([ "$(ls "$tree/.apm-audit/sessions" | w
 cp "$fx/empty.jsonl" "$logs/$run.jsonl"; audit "$run"
 check "8 hooks cover an empty-log run too: exit 0, no failure" $([ "$rc" -eq 0 ]; echo $?)
 
+# 9. claudeCall: grep's `paths` as a string or a list of one string fills `path`; a longer list or a non-string fills
+# nothing, so a reader sees no path rather than a guessed one.
+cc() { out=$(COPILOT_TOOLS="$here/../copilot/tools.json" node -e '
+  const { claudeCall, loadMap } = require(process.argv[1]);
+  const c = claudeCall({ name: "grep", rawInput: JSON.parse(process.argv[2]) }, loadMap());
+  console.log(c.name + " " + (c.input.path === undefined ? "-" : JSON.stringify(c.input.path)));' "$here/copilot-audit.js" "$1" 2>&1); }
+cc '{"pattern":"X","paths":"src/main"}';   check "9 paths as a string" $([ "$out" = 'Grep "src/main"' ]; echo $?)
+cc '{"pattern":"X","paths":["src/main"]}'; check "9 paths as a list of one string" $([ "$out" = 'Grep "src/main"' ]; echo $?)
+cc '{"pattern":"X","paths":["a","b"]}';    check "9 a list of two fills no path" $([ "$out" = 'Grep -' ]; echo $?)
+cc '{"pattern":"X","paths":[7]}';          check "9 a list of a number fills no path" $([ "$out" = 'Grep -' ]; echo $?)
+
 echo "copilot-audit: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

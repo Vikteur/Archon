@@ -156,6 +156,15 @@ gate; check "7b Copilot names counted" $(row explore | grep -qF '| explore | mcp
 COPILOT_TOOLS="$root/none.json" gate
 check "7b without tools.json the names count as they are" $(row explore | grep -qF '| explore | mcp: 0, cli: 0 | mcp: 0, cli: 0 | 0 | 0 | 0 | 0 | 0 |'; echo $?)
 
+# 7c. Copilot names an MCP tool <server>-<tool>: codegraph-codegraph_explore counts as a CodeGraph call, the contract
+# server's as a server call, and a look-alike name of another server counts nothing.
+fresh; status up up
+times 8 explore grep '{"pattern":"X","paths":["identity-usecase/src/main"]}'
+call explore codegraph-codegraph_explore '{"query":"X"}'
+call explore @@KIT_CONTRACT_SERVER_NAME@@-search '{"query":"X"}'
+call explore codegraphx-explore '{"query":"X"}'
+gate; check "7c Copilot MCP names counted" $(row explore | grep -qF '| explore | mcp: 1, cli: 0 | mcp: 1, cli: 0 | 8 |' && row explore | grep -qF '| ok |'; echo $?)
+
 # 8. The workflow runs it after plan, report only, and stop-route waits for it.
 wf="$here/../workflows/build-feature-copilot.yaml"
 check "8 mcp-use node after plan" $(awk '/^  - id: mcp-use$/{on=1;next} on&&/^  - id:/{exit} on' "$wf" | grep -qF 'depends_on: [plan]'; echo $?)

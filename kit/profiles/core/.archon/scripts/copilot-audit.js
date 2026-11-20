@@ -31,7 +31,7 @@ function loadMap() {
 }
 
 // The Claude shape of one tool_call event: { name, input }. A name tools.json maps takes the Claude name, and its key is
-// filled from the first source field that holds a string; any other name and its input stay as they are. run-trace.js and
+// filled from the first source field that holds a string (or a list of one string); any other name and its input stay as they are. run-trace.js and
 // mcp-use-check.js read Copilot runs through it.
 function claudeCall(e, { ev, tools }) {
   const name = String(e[ev.nameField] || e.name || '');
@@ -39,9 +39,11 @@ function claudeCall(e, { ev, tools }) {
   const m = tools.get(name.toLowerCase());
   if (!m) return { name, input: raw };
   const input = { ...raw };
+  // A source holds a string, or (Copilot's grep `paths`) a list of one string, which counts as that string.
+  const one = v => (typeof v === 'string' && v ? v : Array.isArray(v) && v.length === 1 && typeof v[0] === 'string' && v[0] ? v[0] : null);
   if (m.key && !(typeof input[m.key] === 'string' && input[m.key])) {
-    const src = (m.from || [m.key]).find(k => typeof raw[k] === 'string' && raw[k]);
-    if (src) input[m.key] = raw[src];
+    const src = (m.from || [m.key]).find(k => one(raw[k]));
+    if (src) input[m.key] = one(raw[src]);
   }
   return { name: m.as, input };
 }

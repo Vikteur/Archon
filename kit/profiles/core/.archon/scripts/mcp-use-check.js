@@ -77,8 +77,9 @@ function count(text, nodes) {
     const c = out.get(node);
     const { name, input } = claudeCall(e, map);
     c.calls++;
-    if (name.startsWith(`mcp__${SERVER}__`)) c.server++;
-    else if (name.startsWith('mcp__codegraph__')) c.codegraph++;
+    // Claude names an MCP tool mcp__<server>__<tool>, Copilot CLI <server>-<tool> (codegraph-codegraph_explore)
+    if (name.startsWith(`mcp__${SERVER}__`) || name.startsWith(`${SERVER}-`)) c.server++;
+    else if (name.startsWith('mcp__codegraph__') || name.startsWith('codegraph-')) c.codegraph++;
     else if (name === 'Grep' || name === 'Glob') {
       // What a search covers: its path and file filter (a Grep's pattern is the text it looks for, not where)
       const where = [rel(input.path), input.glob, input.type === 'md' ? '.md' : '', name === 'Glob' ? input.pattern : ''].filter(Boolean).join(' ');
