@@ -10,6 +10,7 @@ cat > "$tmp/kit.yaml" <<'Y'
 agent_cli: copilot            # a comment
 build_workflow: "build-feature-copilot"
 empty_one:
+off_one: false
 contract:
   repo: acme/acme-contract
   tag_key: 'acmeTag'
@@ -29,6 +30,7 @@ for impl in sh js; do
   eq "$impl: a key in another section is not matched" x "$(g contract.spec_path x)"
   eq "$impl: an empty value is the default" dflt "$(g empty_one dflt)"
   eq "$impl: a missing key is the default" dflt "$(g nope dflt)"
+  eq "$impl: false is a value, not the default" false "$(g off_one true)"
   eq "$impl: env override wins" fromenv "$(AGENT_CLI=fromenv g agent_cli claude AGENT_CLI)"
   eq "$impl: KIT_ env name by default" fromkit "$(KIT_CONTRACT_REPO=fromkit g contract.repo x)"
   export KIT_CONFIG="$tmp/missing.yaml"

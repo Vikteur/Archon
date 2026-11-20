@@ -30,9 +30,29 @@
 # newest commit under it that changes anything else, with that commit named in the detail.
 # Overrides: LOCAL_CI_WORKFLOW (the workflow whose jobs are required; default .github/workflows/ci.yml of <sha> itself),
 # CI_STATUS_GRAMMAR, CI_QUEUE (the grammar and queue scripts), CI_PLAN_MAX_AGE.
+# With local CI off (local_ci: false in .archon/kit.yaml, kit/SPEC.md Local CI switch) the project's own CI (GitHub
+# Actions) gives the verdict, and this reads GitHub's check runs and commit statuses on <sha> instead, in the same
+# "<state> <detail>" line: none (no check yet), pending (a check still runs, or GitHub did not answer), red (a check
+# failed, timed out, was cancelled or needs action; detail "<check>=<conclusion> ..."), green (every check passed,
+# neutral or skipped).
 set -uo pipefail
 repo=$1 sha=$2
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if . "$here/kit-config.sh" 2>/dev/null && [ "$(kit_get local_ci true)" = false ]; then
+  runs=$(gh api --paginate "repos/$repo/commits/$sha/check-runs?per_page=100" \
+      --jq '.check_runs[] | [.name, (if .status == "completed" then (.conclusion // "unknown") else "pending" end)] | @tsv' \
+      2>/dev/null) || { echo "pending GitHub did not answer for the check runs of ${sha:0:7}"; exit 0; }
+  sts=$(gh api "repos/$repo/commits/$sha/status" --jq '.statuses[] | [.context, .state] | @tsv' 2>/dev/null) \
+    || { echo "pending GitHub did not answer for the statuses of ${sha:0:7}"; exit 0; }
+  all=$(printf '%s\n%s\n' "$runs" "$sts" | sed '/^$/d')
+  [ -n "$all" ] || { echo "none no GitHub check on ${sha:0:7}"; exit 0; }
+  red=$(awk -F'\t' '$2 !~ /^(success|neutral|skipped|pending|queued|in_progress)$/ {printf "%s=%s ", $1, $2}' <<< "$all")
+  wait=$(awk -F'\t' '$2 ~ /^(pending|queued|in_progress)$/ {printf "%s ", $1}' <<< "$all")
+  if [ -n "$red" ]; then echo "red ${red% }"
+  elif [ -n "$wait" ]; then echo "pending still running: ${wait% }"
+  else echo "green every GitHub check passed ($(wc -l <<< "$all" | tr -d ' '))"; fi
+  exit 0
+fi
 grammar=${CI_STATUS_GRAMMAR:-$here/../../.claude/scripts/ci-status-grammar.sh}
 queue=${CI_QUEUE:-$here/../../.claude/scripts/ci-queue.sh}
 max_age=${CI_PLAN_MAX_AGE:-86400}

@@ -20,6 +20,9 @@
 # ignores its merge=union (TASK-45), a local rebase applies it. GitHub's answer counts only for the commit asked about:
 # seconds after a push it still answers for the old head (TASK-60), and that is read as not computed yet.
 # Failing jobs are named in detail; `bash .archon/scripts/local-ci-run.sh --logs <sha>` prints the folder of their logs.
+# With local CI off (local_ci: false in .archon/kit.yaml, kit/SPEC.md Local CI switch) the verdict is the project's own
+# CI on GitHub instead: local-ci-status.sh then reads GitHub's check runs and commit statuses on the commit, with the
+# same waits (a check to appear, then to finish), and the details say "GitHub checks".
 # Overrides: LOCAL_CI_STATUS (the status reader), CI_QUEUE (the queue script), CI_GRACE_POLLS, LOCAL_CI_POLLS,
 # LOCAL_CI_WAIT (below).
 set -euo pipefail
@@ -79,7 +82,11 @@ if [ -n "$pr" ]; then
   fi
 fi
 
-# The verdict: local CI only (D14, D21).
+# The verdict: local CI (D14, D21), or GitHub's checks when the project switched local CI off.
+src="local CI" none="no local-ci status" again="run .archon/scripts/local-ci-run.sh on it"
+if . "$(dirname "${BASH_SOURCE[0]}")/kit-config.sh" 2>/dev/null && [ "$(kit_get local_ci true)" = false ]; then
+  src="GitHub checks" none="no GitHub check" again="push it, or rerun its checks on GitHub"
+fi
 local_ci=${LOCAL_CI_STATUS:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/local-ci-status.sh}
 [ -f "$local_ci" ] || answer none "local CI cannot be read: $local_ci is missing"
 queue=${CI_QUEUE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.claude/scripts" 2>/dev/null && pwd)/ci-queue.sh}
@@ -92,7 +99,7 @@ if [ "$lstate" = none ]; then
     qstate=$(bash "$queue" none-check "$full" 2>/dev/null) || qstate=""
   fi
   if [ "$qstate" = none ]; then
-    answer none "local CI: no local-ci status on ${sha:0:7} and no run of it queued after ${CI_NONE_GRACE:-60}s; run .archon/scripts/local-ci-run.sh on it"
+    answer none "local CI: no local-ci status on ${sha:0:7} and no run of it queued after ${CI_NONE_GRACE:-60}s; $again"
   fi
   for i in $(seq 2 "$GRACE_POLLS"); do
     sleep "$LOCAL_CI_WAIT"
@@ -106,10 +113,10 @@ for _ in $(seq 1 "$LOCAL_CI_POLLS"); do
   read -r lstate ldetail < <(bash "$local_ci" "$repo" "$sha") || true
 done
 case "$lstate" in
-  green|red) answer "$lstate" "local CI: $ldetail" ;;
-  pending) answer none "local CI: still pending: $ldetail" ;;
-  stale) answer none "local CI: the run of ${sha:0:7} died before it posted every result ($ldetail); run .archon/scripts/local-ci-run.sh on it again" ;;
-  superseded) answer none "local CI: ${sha:0:7} is no longer its pull request's head, so it gets no verdict: $ldetail" ;;
-  none) answer none "local CI: no local-ci status on ${sha:0:7} after $((GRACE_POLLS * LOCAL_CI_WAIT))s; run .archon/scripts/local-ci-run.sh on it" ;;
-  *) answer none "local CI: unexpected answer '$lstate $ldetail' from $(basename "$local_ci")" ;;
+  green|red) answer "$lstate" "$src: $ldetail" ;;
+  pending) answer none "$src: still pending: $ldetail" ;;
+  stale) answer none "$src: the run of ${sha:0:7} died before it posted every result ($ldetail); $again again" ;;
+  superseded) answer none "$src: ${sha:0:7} is no longer its pull request's head, so it gets no verdict: $ldetail" ;;
+  none) answer none "$src: $none on ${sha:0:7} after $((GRACE_POLLS * LOCAL_CI_WAIT))s; $again" ;;
+  *) answer none "$src: unexpected answer '$lstate $ldetail' from $(basename "$local_ci")" ;;
 esac

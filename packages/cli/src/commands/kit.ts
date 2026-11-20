@@ -477,10 +477,30 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(item => String(item)) : [];
 }
 
-/** Which kit file wins for each path under the selected profiles (later profile wins). */
+/**
+ * Whether a file ships under the project's config: a manifest entry with `when: <key>` (kit/SPEC.md, manifest.json)
+ * ships only while that kit.yaml key, else the kit default, is not false (`local_ci: false` leaves local CI out).
+ */
+export function switchedOn(
+  file: Kit['manifest']['files'][number],
+  kit: Kit,
+  config: Record<string, unknown> | null
+): boolean {
+  if (file.when === undefined) return true;
+  const value = config !== null && Object.hasOwn(config, file.when) ? config[file.when] : undefined;
+  if (value !== undefined && value !== null) return value !== false;
+  const defaults = parseYaml(kit.defaults) as Record<string, unknown> | null;
+  return defaults?.[file.when] !== false;
+}
+
+/**
+ * Which kit file wins for each path under the selected profiles (later profile wins). Given the project's config
+ * (kit.yaml), a path whose winner its `when` key switches off ships nothing.
+ */
 export function winningFiles(
   kit: Kit,
-  profiles: string[]
+  profiles: string[],
+  config?: Record<string, unknown> | null
 ): Map<string, Kit['manifest']['files'][number]> {
   const order = new Map(profiles.map((name, index) => [name, index]));
   const winners = new Map<string, Kit['manifest']['files'][number]>();
@@ -491,6 +511,8 @@ export function winningFiles(
     if (prior === undefined || (order.get(prior.profile) ?? -1) <= rank)
       winners.set(file.path, file);
   }
+  if (config !== undefined)
+    for (const [path, file] of winners) if (!switchedOn(file, kit, config)) winners.delete(path);
   return winners;
 }
 
@@ -800,7 +822,13 @@ export async function kitAddCommand(
 
   // 4. Files, in profile order; the last profile carrying a path wins.
   const missing = new Set<string>();
-  const winners = winningFiles(kit, profiles);
+  // A file a kit.yaml switch turns off (`when`, e.g. local_ci: false) is not written, and one kit add wrote before is
+  // pruned below like a file the kit no longer ships.
+  const winners = winningFiles(
+    kit,
+    profiles,
+    (parseYaml(kitYamlText) as Record<string, unknown> | null) ?? {}
+  );
   // The defaults file, unless the manifest ships it itself: replaced while unedited, kept once edited.
   if (!winners.has(KIT_DEFAULTS)) {
     results.push({
@@ -1110,8 +1138,9 @@ export interface DriftReport {
 }
 
 /**
- * sha256 of each installed file against the manifest; a create-only file is the project's own. A template is checked
- * as kit add would render it with `vars` (templateVars), and skipped when no vars are given or its content is absent.
+ * sha256 of each installed file against the manifest; a create-only file is the project's own, and a file the
+ * project's kit.yaml switches off (`when`, e.g. local_ci: false) is not checked. A template is checked as kit add would
+ * render it with `vars` (templateVars), and skipped when no vars are given or its content is absent.
  */
 export function computeDrift(
   projectPath: string,
@@ -1120,7 +1149,8 @@ export function computeDrift(
   vars?: Record<string, string>
 ): DriftReport {
   const report: DriftReport = { modified: [], missing: [], checked: 0 };
-  for (const file of winningFiles(kit, profiles).values()) {
+  const winners = winningFiles(kit, profiles, readKitYaml(projectPath) ?? {});
+  for (const file of winners.values()) {
     if (file.createOnly) continue;
     const source = kit.files[`${file.profile}/${file.path}`];
     if (file.template && (vars === undefined || source === undefined)) continue;
@@ -1143,7 +1173,7 @@ export function computeDrift(
     else if (!expected.includes(contentHash(readFileSync(dest, 'utf-8'))))
       report.modified.push(file.path);
   }
-  if (!winningFiles(kit, profiles).has(KIT_DEFAULTS)) {
+  if (!winners.has(KIT_DEFAULTS)) {
     report.checked++;
     const dest = join(projectPath, KIT_DEFAULTS);
     if (!existsSync(dest)) report.missing.push(KIT_DEFAULTS);
