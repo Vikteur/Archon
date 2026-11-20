@@ -10,6 +10,12 @@
 //       archon-metrics-prs, so the pack's PR cards read them. `runs` names the runs that worked on the pull request.
 //   runs.started (count, runs) and runs.spend_usd (count, usd): one record each per run, at its start, with the run's
 //       recorded cost as the spend (0 when it recorded none, counted by the engine as a run without cost).
+//   copilot.model_calls (count, calls), copilot.input_tokens, copilot.cache_read_tokens, copilot.cache_write_tokens,
+//       copilot.output_tokens (count, tokens), copilot.cost_units (count, copilot_cost_units) and copilot.api_ms
+//       (count, ms): per run, agent node and model, what the Copilot CLI's own session log recorded
+//       (copilot-usage.js), subject `<run id>/<node>/<model>`. Archon's own count for a Copilot node is incomplete and its
+//       cost unsupported, so these are the run's real usage. Cost units are the CLI's unit, never money: runs.spend_usd
+//       stays what Archon recorded. A run whose log or sessions are gone records none.
 //
 // Which runs worked on a pull request: the build-feature run whose `open-pr` node returned it; a build-feature run
 // that opened none (failed or cancelled first) goes to the next pull request opened for the same ticket, else that
@@ -18,6 +24,7 @@
 //
 // Exit codes: 0 records printed; 1 the archon or gh CLI failed, or the run listing came back incomplete.
 'use strict';
+const fs = require('fs');
 const { execFileSync } = require('child_process');
 
 /** The engine accepts at most this many run ids on one record. */
@@ -108,8 +115,28 @@ function prOutcomes(pr) {
     : [opened, prCount('sdlc.prs_abandoned', 1, resolved), rate];
 }
 
-/** Pure: every record, given the runs, run id -> opened PR URL, and the PRs gh reports. */
-function records(runs, opened, prs) {
+const COPILOT = [
+  ['copilot.model_calls', 'calls', 'calls'], ['copilot.input_tokens', 'tokens', 'input'],
+  ['copilot.cache_read_tokens', 'tokens', 'cacheRead'], ['copilot.cache_write_tokens', 'tokens', 'cacheWrite'],
+  ['copilot.output_tokens', 'tokens', 'output'], ['copilot.cost_units', 'copilot_cost_units', 'costUnits'],
+  ['copilot.api_ms', 'ms', 'apiMs'],
+];
+
+/** Pure: the copilot.* records of one run, given its copilot-usage.js rows. */
+function copilotRecords(run, rows) {
+  const at = new Date(run.started_at).toISOString();
+  const out = [];
+  for (const row of rows || []) {
+    for (const [model, sums] of row.models) {
+      const subject = `${run.id}/${row.step}/${model}`.slice(0, 256);
+      for (const [name, unit, key] of COPILOT) out.push({ name, kind: 'count', unit, value: sums[key] || 0, subject, at, runs: [run.id] });
+    }
+  }
+  return out;
+}
+
+/** Pure: every record, given the runs, run id -> opened PR URL, the PRs gh reports and run id -> Copilot usage rows. */
+function records(runs, opened, prs, usage = new Map()) {
   const { prRuns, unattributed } = attribute(runs, opened);
   const prByUrl = new Map(prs.map((pr) => [pr.url, pr]));
   const metrics = [];
@@ -126,8 +153,30 @@ function records(runs, opened, prs) {
     const base = { kind: 'count', subject: run.id, at, runs: [run.id] };
     metrics.push({ ...base, name: 'runs.started', unit: 'runs', value: 1 });
     metrics.push({ ...base, name: 'runs.spend_usd', unit: 'usd', value: cost(run) ?? 0 });
+    metrics.push(...copilotRecords(run, usage.get(run.id)));
   }
   return { metrics, skipped, unattributed };
+}
+
+/** run id -> copilot-usage.js rows, for every run whose Archon log names a Copilot session; a failure is a note. */
+function copilotUsage(runs) {
+  const usage = new Map();
+  let findLog, perNode;
+  try { ({ findLog } = require('./run-trace.js')); ({ perNode } = require('./copilot-usage.js')); } catch (e) {
+    note(`no Copilot usage: ${e.message}`);
+    return usage;
+  }
+  for (const run of runs) {
+    try {
+      const log = findLog(run.id);
+      if (!log) continue;
+      const rows = perNode(fs.readFileSync(log, 'utf8'));
+      if (rows.some((r) => r.models.size)) usage.set(run.id, rows);
+      const missing = rows.reduce((n, r) => n + r.missing.length, 0);
+      if (missing) note(`run ${run.id}: ${missing} Copilot sessions not found`);
+    } catch (e) { note(`run ${run.id}: Copilot usage not read: ${e.message}`); }
+  }
+  return usage;
 }
 
 function main() {
@@ -143,10 +192,11 @@ function main() {
   }
   const prs = json('gh', ['pr', 'list', '--state', 'all', '--limit', String(LIST_LIMIT),
     '--json', 'url,state,createdAt,mergedAt,closedAt']);
-  const { metrics, skipped, unattributed } = records(runs, opened, prs);
-  note(`${runs.length} runs, ${opened.size} opened a PR, ${unattributed.length} tied to no PR, ${metrics.length} records`);
+  const usage = copilotUsage(runs);
+  const { metrics, skipped, unattributed } = records(runs, opened, prs, usage);
+  note(`${runs.length} runs, ${opened.size} opened a PR, ${unattributed.length} tied to no PR, ${usage.size} with Copilot usage, ${metrics.length} records`);
   process.stdout.write(`${JSON.stringify({ metrics, skipped })}\n`);
 }
 
 if (require.main === module) main();
-module.exports = { attribute, records, prOutcomes, ticketOf, prNumberOf };
+module.exports = { attribute, records, copilotRecords, prOutcomes, ticketOf, prNumberOf };

@@ -56,6 +56,10 @@ Script nodes: ticket 1.4 s, rebase-main 0.7 s, open-pr 4.7 s, ci 10.1 s, triage 
 - **Token totals.** Archon's numbers are incomplete: `archon workflow get` gave run B 288119 in / 2200 out, marked
   "completeness unknown", with no cost. The real per-call usage is in Copilot's own session log,
   `${COPILOT_HOME:-~/.copilot}/session-state/<session-id>/events.jsonl` (one session per node).
+  `node .archon/scripts/copilot-usage.js <run-id>` sums those records per node, fresh input apart from the cache
+  reads and writes, with Copilot's own cost units; a run's `trace.md`, the `copilot.*` records of `run-metrics` and the
+  tokenomics ledger carry the same numbers. Over run B it gives the table above: 50 calls, 1689207 in (124 fresh,
+  1453466 cache read, 235617 cache write), 21669 out, 372 Copilot cost units.
 - **Tool names** seen: `bash`, `create`, `skill`, `view`, `grep`, `glob`, `fetch_copilot_cli_documentation`.
   `.archon/copilot/tools.json` maps them, and the CLI's documented names, to the Claude names.
 - **The preToolUse payload is batched.** Copilot CLI 1.0.114 sends `{cwd, sessionId, toolCalls: [{id, name, args}, ...]}`
