@@ -4,7 +4,7 @@
 # run), holds no test, or shows a failed, errored or skipped one. Run it after the Gradle build.
 # Usage: bash .claude/scripts/pin-proof-check.sh [<repo-root>]   (default: this repository)
 # Exit 0 = ok, 1 = refused (one FAIL line each), 2 = usage.
-# The list is the project's file, on either stack: kit key `pin_proofs` (env KIT_PIN_PROOFS, default
+# The list is the project's file: kit key `pin_proofs` (env KIT_PIN_PROOFS, default
 # .archon/pin-proofs.txt, relative to <repo-root>), one `<item>|<module>|<task>|<class>` line per proof, `#` comments and
 # blank lines skipped. A project without the list file has no pins to prove: the check skips with a notice (exit 0).
 # A list file that holds no proof is refused, so a build that keeps a list never passes with nothing proven.

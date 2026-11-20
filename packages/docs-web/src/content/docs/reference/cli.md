@@ -188,7 +188,7 @@ Exit codes: `0` every view opened, `1` a view did not answer or the start failed
 
 Install the bundled GitHub Copilot kit into a git project, check it, or list its profiles.
 The kit is a set of agents, skills, hooks, instructions, scripts, MCP servers and workflows,
-grouped into profiles (`core`, `java`, `java-quarkus`, `java-spring`, `openapi-contract`).
+grouped into profiles (`core`, `java`, `java-spring`, `openapi-contract`, `mijn-gezondheid`).
 
 ```bash
 # Install the default profiles into the current repository

@@ -32,8 +32,8 @@
 # generated-untracked-check.sh: they ship with the profile) or passes -Pcontract.spec.
 # The required gradle run is kit key ci.gradle_line (default ./gradlew test integrationTest build), the line the kit's
 # ci.yml renders from the same key.
-# The rules hold on either stack (kit key `stack`): nothing here reads it. The contract repo is kit key contract.repo
-# (default @@KIT_CONTRACT_REPO@@); its checkout step is named "Check out <repo name>", or kit key contract.checkout_step.
+# The contract repo is kit key contract.repo (default @@KIT_CONTRACT_REPO@@); its checkout step is named
+# "Check out <repo name>", or kit key contract.checkout_step.
 # Usage: bash .claude/scripts/ci-workflow-check.sh [<workflow-dir>] [<build-file>] [<memory-file>]
 # Prints every FAIL line and exits 1, or prints "ci-workflow: ok" and exits 0 (BASELINE lines never fail). Needs yq
 # (mikefarah v4).

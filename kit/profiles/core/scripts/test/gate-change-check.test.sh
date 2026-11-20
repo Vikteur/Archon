@@ -68,7 +68,7 @@ echo done
 EOF
 printf 'ci_status_ran() {\n  printf ran\n}\nci_status_parse() {\n  echo kind=ran\n}\n' > "$tpl/.claude/scripts/ci-status-grammar.sh"
 printf '# Memory\n\n## 2026-10-01 — first\n- a decision\n' > "$tpl/docs/memory.md"
-printf 'stack: spring\ngates: # ci-gate.sh\n  format: report\n  secrets: report\n' > "$tpl/.archon/kit.yaml"
+printf 'base_branch: main\ngates: # ci-gate.sh\n  format: report\n  secrets: report\n' > "$tpl/.archon/kit.yaml"
 echo readme > "$tpl/README.md"
 git -C "$tpl" init -q -b main && git -C "$tpl" add -A && git -C "$tpl" commit -qm base
 
@@ -154,7 +154,7 @@ out="$(GATE_BASE=main bash "$script" 2>&1)"; rc=$?
 check "7 GATE_BASE names the default base" "$([ "$rc" -eq 0 ] && said 'no gate changed'; echo $?)"
 
 # 9. The report-only gates of ci-gate.sh: kit key gates in .archon/kit.yaml or .archon/kit.defaults.yaml.
-new_repo; sed -i 's/stack: spring/stack: quarkus/; s/# ci-gate.sh/# the CI gates/' .archon/kit.yaml; commit; run main
+new_repo; sed -i 's/base_branch: main/base_branch: trunk/; s/# ci-gate.sh/# the CI gates/' .archon/kit.yaml; commit; run main
 check "9 another kit key or a comment in kit.yaml is no gate change" "$([ "$rc" -eq 0 ] && said 'no gate changed'; echo $?)"
 new_repo; sed -i 's/format: report/format: block/' .archon/kit.yaml; commit; run main
 check "9 a gate switched to block without an entry fails" "$([ "$rc" -eq 1 ] \

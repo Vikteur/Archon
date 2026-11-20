@@ -222,13 +222,11 @@ A profile is a group of kit files. You choose the profiles when you install.
 |---|---|---|
 | `core` | none | Archon run tooling, hooks, generic skills and agents, the `codegraph` MCP entry, the tool installer, git hooks and the Copilot instructions. |
 | `java` | `core` | Shared Java and JVM skills, the layer rules, ArchUnit and Gradle CI scripts, the scaffolder, and the analyst, developer, test-writer and debugger agents. |
-| `java-quarkus` | `java` | Quarkus versions of the skills, the scaffold templates, the CI workflow and `run-app`. |
-| `java-spring` | `java` | The same set as `java-quarkus`, rewritten for Spring Boot. |
+| `java-spring` | `java` | The Spring Boot framework skills, the Spring scaffold templates, the CI workflow and `run-app`. |
 | `openapi-contract` | `core` | The `contract-api` MCP server, contract readiness and pin checks, DB parity, and the contract agent. |
 | `mijn-gezondheid` | `java-spring`, `openapi-contract` | A project profile: that project's own scaffold templates, their `## Scaffold` table and `scaffold.json` in `docs/scaffold-templates/project/`. `scripts/scaffold/new-context.sh`, `smoke.sh` and the wiring check run on them as installed. A template you edit is kept on the next update. |
 
-`java-quarkus` and `java-spring` are mutually exclusive. Pick one. Each profile pulls in
-the profiles it requires, so you do not need to list `core` or `java` yourself.
+Each profile pulls in the profiles it requires, so you do not need to list `core` or `java` yourself.
 
 A typical Spring Boot project with a contract:
 
@@ -252,7 +250,6 @@ The defaults below suit a Spring Boot Gradle project.
 | Key | Default | What it sets |
 |---|---|---|
 | `profiles` | `[core, java, java-spring, openapi-contract, mijn-gezondheid]` | The profiles installed. `kit add --profile` replaces this list. |
-| `stack` | `spring` | `quarkus` or `spring`. The gates that differ per framework branch on it. |
 | `base_branch` | `main` | The branch that runs target and rebase against. |
 | `gh_accounts` | `[]` | The `gh` accounts the `gh-switch-account` skill switches between. |
 | `agent_cli` | `copilot` | `claude` or `copilot`. `install-tools.sh` and `kit-config.sh` use it. |

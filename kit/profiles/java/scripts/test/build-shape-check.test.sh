@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Tests .claude/scripts/build-shape-check.sh on the spring stack: the CI tasks exist, only application builds a boot
-# jar, no module pins a Spring Boot version of its own, every usecase, adapter and gateway package lies inside the
-# @SpringBootApplication's component scan, the boot jar has the loader layout, no Python is back, and the kit keys under
-# build_shape (modules, memory_marker, forbidden) hold, "-" turning one off with a notice. Each case copies a small
+# Tests .claude/scripts/build-shape-check.sh: the CI tasks exist, only application builds a boot jar, no module pins a
+# Spring Boot version of its own, every usecase, adapter and gateway package lies inside the @SpringBootApplication's
+# component scan, the boot jar has the loader layout, no Python is back, and the kit keys under build_shape (modules,
+# memory_marker, forbidden) hold, "-" turning one off with a notice. Each case copies a small
 # project that passes, breaks one thing, and checks the exit code and the FAIL line. ./gradlew is a stub.
 # Usage: bash scripts/test/build-shape-check.test.sh   (exit 0 = all pass; needs zip and unzip)
 set -uo pipefail
@@ -19,8 +19,8 @@ said() { grep -qF -- "$1" <<< "$out"; }
 command -v zip >/dev/null && command -v unzip >/dev/null || { echo "build-shape-check: needs zip and unzip"; exit 1; }
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@example.invalid GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@example.invalid
-# The stack is set, not the script's default; no project or machine kit.yaml is read.
-export KIT_STACK=spring KIT_CONFIG="$tmp/none/kit.yaml"
+# No project or machine kit.yaml is read.
+export KIT_CONFIG="$tmp/none/kit.yaml"
 unset KIT_BUILD_SHAPE_MODULES KIT_BUILD_SHAPE_MEMORY_MARKER KIT_BUILD_SHAPE_FORBIDDEN
 
 # The project that passes: application with the boot plugin and the boot jar, one usecase module inside the scan.
@@ -74,9 +74,9 @@ check "3 build_shape.memory_marker named in docs/memory.md passes" "$([ "$rc" -e
 KIT_BUILD_SHAPE_MEMORY_MARKER=D9 run
 check "3 build_shape.memory_marker missing from docs/memory.md fails" "$([ "$rc" -eq 1 ] \
   && said 'docs/memory.md does not name D9 (kit key build_shape.memory_marker)'; echo $?)"
-echo 'implementation("io.quarkus:quarkus-core")' >> order-usecase/build.gradle.kts; KIT_BUILD_SHAPE_FORBIDDEN=io.quarkus run
+echo 'implementation("com.legacy:legacy-core")' >> order-usecase/build.gradle.kts; KIT_BUILD_SHAPE_FORBIDDEN=com.legacy run
 check "3 the build_shape.forbidden remnant in a build file fails" "$([ "$rc" -eq 1 ] \
-  && said 'io.quarkus referenced in: order-usecase/build.gradle.kts'; echo $?)"
+  && said 'com.legacy referenced in: order-usecase/build.gradle.kts'; echo $?)"
 
 # 4. The Spring Boot plugin and version.
 project; echo 'dependencies { implementation("org.springframework.boot:spring-boot-starter:3.4.0") }' >> order-usecase/build.gradle.kts; run

@@ -81,20 +81,13 @@ export const KNOWN_GAPS: { match: RegExp; reason: string }[] = [
     match:
       /^core,java(,openapi-contract)?: \S+ needs (\.github\/workflows\/ci\.yml|\.github\/ci-inputs\.yml|docs\/scaffold-templates\/)/,
     reason:
-      'no framework profile: the CI workflow and the framework templates ship with java-quarkus or java-spring',
+      'no framework profile: the CI workflow and the framework templates ship with java-spring',
   },
   {
     match:
-      /^core,java(,java-quarkus|,java-spring)?: \.github\/agents\/\S+ needs scripts\/contract-mcp\/(server|cli)\.mjs/,
+      /^core,java(,java-spring)?: \.github\/agents\/\S+ needs scripts\/contract-mcp\/(server|cli)\.mjs/,
     reason:
       'the java agents name the contract server inline and its CLI as their MCP fallback; without openapi-contract neither runs, install that profile',
-  },
-
-  {
-    match:
-      /^core,java,java-quarkus(,openapi-contract)?: \.github\/workflows\/ci\.yml needs (\.archon\/)?scripts\/test\/\S+ \(a CI step runs it\)|^core,java,java-quarkus: \.github\/workflows\/ci\.yml needs \.claude\/scripts\/\S+ \(a CI step runs it\)/,
-    reason:
-      "the java-quarkus ci.yml is still the source's own, which names the source's suites and the contract steps; it needs an overlay like java-spring's",
   },
 ];
 

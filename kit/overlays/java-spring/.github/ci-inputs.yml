@@ -20,7 +20,7 @@
 version: 1
 
 # Inputs of every job: the planner, its manifest, the runner and the gate that reads its statuses, the workflow (whole
-# file in v1), .gitattributes, and the kit config the scripts branch on (kit key stack, java_version, contract.*).
+# file in v1), .gitattributes, and the kit config the scripts branch on (kit keys java_version, contract.*).
 always:
   - .github/ci-inputs.yml
   - .github/workflows/ci.yml

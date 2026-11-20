@@ -758,33 +758,34 @@ describe('project nouns and Copilot paths', () => {
     expect(() => genericThisRepo('docs/code-maps/new.md', 'core', leaf)).toThrow(
       /THIS_REPO_LEAVES/
     );
-    expect(genericThisRepo('docs/code-maps/new.md', 'java-quarkus', leaf)).toBe(leaf);
+    expect(genericThisRepo('docs/code-maps/new.md', 'java-spring', leaf)).toBe(leaf);
   });
 });
 
 describe('dependency check', () => {
   test('enumerates the installable sets', () => {
     const sets = installableSets().map(s => s.join(','));
-    expect(sets).toHaveLength(9);
+    expect(sets).toHaveLength(7);
     expect(sets).toContain('core');
     expect(sets).toContain('core,java,java-spring,openapi-contract');
     // the project profile only on top of what it requires
     expect(sets).toContain('core,java,java-spring,openapi-contract,mijn-gezondheid');
     expect(sets.filter(s => s.includes('mijn-gezondheid'))).toHaveLength(1);
-    expect(sets.some(s => s.includes('java-quarkus') && s.includes('java-spring'))).toBe(false);
-    expect(sets.some(s => s.includes('java-quarkus') && !s.includes(',java,'))).toBe(false);
+    // no Quarkus profile (owner decision 2026-11-20); java-spring only on top of java
+    expect(sets.some(s => s.includes('quarkus'))).toBe(false);
+    expect(sets.some(s => s.includes('java-spring') && !s.includes(',java,'))).toBe(false);
   });
 
   test('a set without a file a shipped script, leaf or agent needs is named', () => {
     const files = [
       { profile: 'core', path: '.claude/scripts/ci-local.sh', content: '' },
-      { profile: 'java-quarkus', path: '.github/workflows/ci.yml', content: '' },
+      { profile: 'java-spring', path: '.github/workflows/ci.yml', content: '' },
       {
         profile: 'java',
         path: 'docs/code-maps/x.md',
         content: '| [t](../scaffold-templates/a/t.mustache) | `src/**` |\n',
       },
-      { profile: 'java-quarkus', path: 'docs/scaffold-templates/a/t.mustache', content: '' },
+      { profile: 'mijn-gezondheid', path: 'docs/scaffold-templates/a/t.mustache', content: '' },
       {
         profile: 'java',
         path: '.github/agents/d.agent.md',
@@ -800,7 +801,7 @@ describe('dependency check', () => {
       'core,java,java-spring: docs/code-maps/x.md needs docs/scaffold-templates/a/t.mustache (its ## Scaffold table (targets.js))'
     );
     expect(lines).toContain(
-      'core,java,java-quarkus: .github/agents/d.agent.md needs scripts/contract-mcp/server.mjs (its mcp-servers entry)'
+      'core,java,java-spring: .github/agents/d.agent.md needs scripts/contract-mcp/server.mjs (its mcp-servers entry)'
     );
     expect(lines.some(l => l.startsWith('core: '))).toBe(false);
     const ci = depsCheck([
@@ -816,7 +817,9 @@ describe('dependency check', () => {
       'core,java,java-spring: .github/workflows/ci.yml needs .archon/scripts/test/b.test.sh (a CI step runs it)'
     );
     expect(ci.some(l => l.includes('needs scripts/test/a.test.sh'))).toBe(false);
-    expect(lines.some(l => l.startsWith('core,java,java-quarkus,openapi-contract: '))).toBe(false);
+    expect(
+      lines.some(l => l.startsWith('core,java,java-spring,openapi-contract,mijn-gezondheid: '))
+    ).toBe(false);
   });
 
   test('a CI line marked for a profile needs its script only in a set with that profile', () => {
@@ -853,10 +856,10 @@ describe('dependency check', () => {
   test('a known gap is reported, an unknown one fails, an unused entry is named', () => {
     const r = judgeDeps([
       'core,java: .claude/scripts/ci-local.sh needs .github/workflows/ci.yml (it reads it)',
-      'core,java,java-quarkus: docs/code-maps/x.md needs docs/y (z)',
+      'core,java,java-spring: docs/code-maps/x.md needs docs/y (z)',
     ]);
     expect(r.known).toHaveLength(1);
-    expect(r.failures).toEqual(['core,java,java-quarkus: docs/code-maps/x.md needs docs/y (z)']);
+    expect(r.failures).toEqual(['core,java,java-spring: docs/code-maps/x.md needs docs/y (z)']);
     expect(r.unused).toHaveLength(KNOWN_GAPS.length - 1);
   });
 });
@@ -934,7 +937,7 @@ describe('leak check', () => {
       { profile: 'core', path: 'b', content: 'as Vikteur' },
       { profile: 'java', path: 'c', content: `token ghp_${'a'.repeat(36)}` },
       { profile: 'java', path: 'd', content: `the ${SRC.word} portal` },
-      { profile: 'java-quarkus', path: 'e', content: `the ${SRC.word} portal` },
+      { profile: 'openapi-contract', path: 'e', content: `the ${SRC.word} portal` },
       { profile: 'core', path: 'f', content: 'clean' },
       { profile: 'core', path: 'g', content: '"owner": "Viktor Van Steenweghen"' },
     ]);
@@ -1161,10 +1164,10 @@ describe('sync on a fixture repo', () => {
       'java/.github/instructions/domain.instructions.md',
       'java/docs/code-maps/java.md',
       'java/docs/scaffold-templates/a/entity.mustache',
-      'java-quarkus/.github/skills/run-app/SKILL.md',
-      'java-quarkus/.github/skills/run-app/scripts/smoke.sh',
-      'java-quarkus/docs/code-maps/exemplars/x.md',
-      'java-quarkus/docs/scaffold-templates/a/resource.mustache',
+      'java-spring/.github/skills/run-app/SKILL.md',
+      'java-spring/.github/skills/run-app/scripts/smoke.sh',
+      'java-spring/docs/code-maps/exemplars/x.md',
+      'java-spring/docs/scaffold-templates/a/resource.mustache',
       'openapi-contract/.claude/scripts/contract-pin.sh',
       'openapi-contract/.github/mcp.json',
       'openapi-contract/scripts/contract-mcp/cli.mjs',
@@ -1172,7 +1175,7 @@ describe('sync on a fixture repo', () => {
       'openapi-contract/scripts/contract-mcp/tools.mjs',
     ]);
     const byKey = new Map(manifest.files.map(f => [`${f.profile}/${f.path}`, f]));
-    expect(byKey.get('java-quarkus/.github/skills/run-app/scripts/smoke.sh')?.mode).toBe('0755');
+    expect(byKey.get('java-spring/.github/skills/run-app/scripts/smoke.sh')?.mode).toBe('0755');
     expect(byKey.get('core/.github/skills/grill-pr/SKILL.md')?.kind).toBe('skill');
     expect(byKey.get('openapi-contract/.claude/scripts/contract-pin.sh')).toMatchObject({
       template: true,
@@ -1222,7 +1225,7 @@ describe('sync on a fixture repo', () => {
     const bundled = renderBundledKit(out);
     expect(bundled).toContain('// AUTO-GENERATED by scripts/generate-bundled-kit.ts');
     expect(bundled).toContain(
-      '"java-quarkus/.github/skills/run-app/scripts/smoke.sh": "#!/usr/bin/env bash\\necho ok\\n",'
+      '"java-spring/.github/skills/run-app/scripts/smoke.sh": "#!/usr/bin/env bash\\necho ok\\n",'
     );
   });
 

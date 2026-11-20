@@ -59,7 +59,7 @@
 # The jobs in CI_LOCAL_XRUN (default none) run one at a time across runs, a run waiting (the wait counts with the
 # needs: wait, not with the job's own time or its timeout): for a job whose steps hold something two runs cannot
 # share. Gradle on the host needs no such lock: each job worktree has its own project cache (.gradle), its builds their
-# own daemon, and a shared ~/.gradle is safe for Gradle. Testcontainers and the app tests take free ports (Quarkus test-port=0, Spring RANDOM_PORT).
+# own daemon, and a shared ~/.gradle is safe for Gradle. Testcontainers and the app tests take free ports (Spring RANDOM_PORT).
 # A plain --post call (no --force, --rerun-failed, --all or --audit) runs nothing and exits 0 when the commit's local
 # CI is finished (local-ci-status.sh reads green or red) or pending with its run alive (a live queue entry). It says
 # which and names the folder. A pending one whose run is gone (stale: local-ci-status.sh finds no live queue entry of

@@ -13,24 +13,24 @@ pass() { passed=$((passed + 1)); echo "ok   - $1"; }
 fail() { failed=$((failed + 1)); echo "FAIL - $1"; [ -n "${2:-}" ] && echo "$2" | sed 's/^/       | /'; }
 
 # <item>|<module>|<task>|<class> — the list each root's .archon/pin-proofs.txt holds (this repo's own)
-proofs='starts @QuarkusTest|application|integrationTest|com.example.application.ModuleBeanDiscoveryTest
-the Jandex discovery test|application|integrationTest|com.example.application.ModuleBeanDiscoveryTest
+proofs='starts @SpringBootTest|application|integrationTest|com.example.application.ModuleBeanDiscoveryTest
+the component-scan discovery test|application|integrationTest|com.example.application.ModuleBeanDiscoveryTest
 openApiGenerate|shared-adapter|test|com.example.common.adapter.controller.OpenApiGenerateTest
 the generated output path|shared-adapter|test|com.example.common.adapter.controller.OpenApiGenerateTest
-Hibernate validate|application|startupTest|com.example.application.persistence.HibernateValidateRefusesAnUnmigratedEntityTest
+Hibernate validate|application|integrationTest|com.example.application.persistence.HibernateValidateRefusesAnUnmigratedEntityTest
 Testcontainers|application|integrationTest|com.example.application.persistence.SchemaMigrationTest
 the V1 schema baseline|application|integrationTest|com.example.application.persistence.SchemaMigrationTest
 the V1 schema baseline|application|integrationTest|com.example.application.persistence.migration.V1MigrationTest
 ArchUnit|application|test|com.example.application.architecture.LayerDirectionConventionTest
 ArchUnit|application|test|com.example.application.architecture.FrozenBaselineTest
-ArchUnit on Java 26 bytecode|application|test|com.example.application.architecture.SuiteCoverageTest
+ArchUnit on the toolchain bytecode|application|test|com.example.application.architecture.SuiteCoverageTest
 both rollback tests|application|integrationTest|com.example.application.persistence.RowRollbackTest
 both rollback tests|application|resourceTest|com.example.application.transaction.UseCaseTransactionBoundaryTest
 the datasource-less profile|application|resourceTest|com.example.application.ResourceTestBootTest
 WireMock 3|spotify-gateway|integrationTest|com.example.library.gateway.spotify.ProbeStatusGatewayTest
 the 403 body|application|resourceTest|com.example.application.security.RoleDeniedResourceTest
 the notification body per family|shared-adapter|integrationTest|com.example.common.adapter.controller.ErrorMappersResourceTest
-the Quarkus line pinned|application|test|com.example.application.FrameworkPinProofTest'
+the Spring Boot line pinned|application|test|com.example.application.FrameworkPinProofTest'
 # module|task|class — each proof's report, once
 rows="$(awk -F'|' '!seen[$2 FS $3 FS $4]++ { print $2 "|" $3 "|" $4 }' <<<"$proofs")"
 victim_row='application|test|com.example.application.architecture.FrozenBaselineTest'
@@ -139,7 +139,7 @@ else
   fail "usage_exits_2: two arguments gave $rc1, an option gave $rc2"
 fi
 
-# The spring stack (KIT_STACK=spring) reads the same file; so does a root with no list.
+# A root with no list skips, one with an empty list is refused; a second, Spring-only list is read the same way.
 r="$(fresh_root nolist)"; rm -f "$r/.archon/pin-proofs.txt"
 out="$(bash "$script" "$r" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && grep -qxF "pin-proof: skipped, no .archon/pin-proofs.txt (the project lists no framework pin proofs; add the file to check them)" <<<"$out" \
@@ -158,15 +158,15 @@ spring_root() { # <name> [list text]: reports for both spring rows pass; the lis
   [ -n "${2:-}" ] && printf '%s\n' "$2" >"$r/.archon/pin-proofs.txt"
   echo "$r"
 }
-srefused() { # <case> <root> <fragment>: refused with KIT_STACK=spring
+srefused() { # <case> <root> <fragment>: refused
   local out rc
-  out="$(KIT_STACK=spring bash "$script" "$2" 2>&1)"; rc=$?
+  out="$(bash "$script" "$2" 2>&1)"; rc=$?
   if [ "$rc" -eq 1 ] && grep -q '^FAIL: ' <<<"$out" && grep -qF "$3" <<<"$out"; then pass "$1"; else fail "$1: exit $rc, expected 1 with FAIL naming '$3'" "$out"; fi
 }
 r="$(spring_root spring-ok "$spring_list")"
-out="$(KIT_STACK=spring bash "$script" "$r" 2>&1)"; rc=$?
+out="$(bash "$script" "$r" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && grep -qxF "pin-proof: ok" <<<"$out"; then pass "spring_accepts_the_listed_reports_passing"; else fail "spring_accepts_the_listed_reports_passing: exit $rc" "$out"; fi
-out="$(KIT_STACK=spring bash "$script" "$(spring_root spring-nolist)" 2>&1)"; rc=$?
+out="$(bash "$script" "$(spring_root spring-nolist)" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && grep -q '^pin-proof: skipped, no .archon/pin-proofs.txt' <<<"$out"; then pass "spring_skips_without_a_list_file"; else fail "spring_skips_without_a_list_file: exit $rc" "$out"; fi
 srefused "spring_refuses_a_list_of_only_comments" "$(spring_root spring-comments '# nothing yet')" "no pin proofs"
 r="$(spring_root spring-failed "$spring_list")"
@@ -178,7 +178,7 @@ srefused "spring_refuses_a_missing_listed_report" "$r" "starts @SpringBootTest: 
 # KIT_PIN_PROOFS names another list file.
 r="$(spring_root spring-env)"
 printf '%s\n' "$spring_list" >"$r/proofs.txt"
-out="$(KIT_STACK=spring KIT_PIN_PROOFS=proofs.txt bash "$script" "$r" 2>&1)"; rc=$?
+out="$(KIT_PIN_PROOFS=proofs.txt bash "$script" "$r" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && grep -qxF "pin-proof: ok" <<<"$out"; then pass "spring_reads_the_list_KIT_PIN_PROOFS_names"; else fail "spring_reads_the_list_KIT_PIN_PROOFS_names: exit $rc" "$out"; fi
 
 echo "pin-proof-check: $passed passed, $failed failed"

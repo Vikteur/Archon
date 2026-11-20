@@ -24,7 +24,7 @@ Change it only together with every consumer.
 - `--check` regenerates into a temp dir, diffs it with `kit/` and exits 1 on drift (printing the paths) or on an overlay whose `sourceSha256` no longer matches its `derivedFrom` file.
 - `--verify` needs no source: it checks `manifest.json` against `profiles/**` (sha256, mode, template flag, sort order, no extra or missing file), that every overlay file is synced, the leak FAIL patterns and the dependency check. `bun run check:kit` runs it and `bun run check:bundled-kit` checks `packages/cli/src/bundled-kit.ts`; both are in `bun run validate`.
 - **Leak check.** The sync fails on a home path (`/home/<owner>`), an owner GitHub account, the owner's full name, a reference to a never-ship script (see What never ships), or a secret-looking token (GitHub, AWS, Slack, Anthropic keys, private keys). It warns on the source's project nouns (the first word of `KIT_SOURCE`, rekord, portal) in `core`, `java` and `java-spring`.
-- **Dependency check.** Every profile set `kit add` accepts (core, closed under `requires`, at most one of an exclusive group: 8 sets) must hold what its shipped files read: in a set with `java`, `.github/workflows/ci.yml` for `ci-local.sh` and `ci-plan.sh` and `.github/ci-inputs.yml` for `ci-plan.sh`; every template a code-map leaf's `## Scaffold` row links (the rows `scripts/scaffold/targets.js` reads); every project script an agent's `mcp-servers` entry runs, and the contract CLI its MCP fallback names; and every test suite a `.github/workflows/ci.yml` runs by name. A missing file fails `--verify` and prints `FAIL deps:` in a sync. `KNOWN_GAPS` in `scripts/kit-sync-deps.ts` accepts a gap with a reason, reported as `WARN deps:`; a sync names an entry that no longer matches, so it goes once the gap closes.
+- **Dependency check.** Every profile set `kit add` accepts (core, closed under `requires`: 7 sets) must hold what its shipped files read: in a set with `java`, `.github/workflows/ci.yml` for `ci-local.sh` and `ci-plan.sh` and `.github/ci-inputs.yml` for `ci-plan.sh`; every template a code-map leaf's `## Scaffold` row links (the rows `scripts/scaffold/targets.js` reads); every project script an agent's `mcp-servers` entry runs, and the contract CLI its MCP fallback names; and every test suite a `.github/workflows/ci.yml` runs by name. A missing file fails `--verify` and prints `FAIL deps:` in a sync. `KNOWN_GAPS` in `scripts/kit-sync-deps.ts` accepts a gap with a reason, reported as `WARN deps:`; a sync names an entry that no longer matches, so it goes once the gap closes.
 
 ## Source name
 
@@ -55,13 +55,12 @@ Profiles are installed in this order. When two profiles carry the same path, the
 | Profile | Requires | Content |
 |---|---|---|
 | `core` | — | The Archon run tooling: one build run per ticket with a plan approval, CI by SHA, retro and run observability scripts. Also: hooks, generic skills and agents, the codegraph MCP entry, the tool installer, the githooks (`.githooks/` for a person, switched on by `scripts/install-hooks.sh`: `commit-msg`, and `pre-push`, which runs `push-guard.sh check`; `.archon/githooks/` for Archon processes, switched on by the `.archon/config.yaml` env), `.github/copilot-instructions.md` and the instructions templates. |
-| `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/Gradle CI scripts, `scripts/scaffold*`, the stack-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
-| `java-quarkus` | java | The Quarkus originals: bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, the Quarkus-flavoured scaffold templates, and the source's run skill → `run-app`. |
-| `java-spring` | java | The same paths as `java-quarkus`, rewritten for Spring Boot. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
+| `java` | core | Shared Java/JVM skills, the layer rules (as `.github/instructions`), ArchUnit/Gradle CI scripts, `scripts/scaffold*`, the framework-neutral scaffold templates, and the analyst, developer, test-writer and debugger agents. |
+| `java-spring` | java | The Spring Boot framework skills (bean-config-di, persistence-repository, resilience4j, exception-to-http, api-first-controller, testcontainers, `run-app`), their code-map leaves, the Spring scaffold templates and the CI workflow. It comes from `kit/overlays/java-spring/`, which kit-sync copies to `profiles/java-spring/`. |
 | `openapi-contract` | core | The contract-api MCP server (`scripts/contract-mcp/**`, from the source's `scripts/portal-mcp/**`), `scripts/contract-agent-readiness/**`, contract-pin, contract-db-parity and the contract-agent. |
 | `mijn-gezondheid` | java-spring, openapi-contract | A project profile: that repo's own scaffold templates, their `## Scaffold` table and its `scaffold.json` in `docs/scaffold-templates/project/`, from the hand-written `kit/overlays/mijn-gezondheid/`. java's `new-context.sh`, `smoke.sh` and the wiring check run on them as installed. |
 
-`java-quarkus` and `java-spring` are mutually exclusive. The default for a new project, and for `archon kit setup`, is `core,java,java-spring,openapi-contract,mijn-gezondheid`. An install from before keeps its saved profiles: `archon-kit-update --add-profile mijn-gezondheid` adds it once, and the update after keeps it.
+The kit has no Quarkus profile (owner decision 2026-11-20): java-spring is the one framework profile. The default for a new project, and for `archon kit setup`, is `core,java,java-spring,openapi-contract,mijn-gezondheid`. An install from before keeps its saved profiles: `archon-kit-update --add-profile mijn-gezondheid` adds it once, and the update after keeps it.
 
 **Project profiles.** A profile with `"project": true` in the manifest carries one repo's own files. It alone may ship into `docs/scaffold-templates/project/`, the repo's own folder: `kit add` refuses a generic profile's file there, and kit-sync's verify fails it. A project profile's files behave as any kit file: written when missing, replaced while unedited, kept once the repo edits them (`--force` takes the kit's). The kit never prunes a file in that folder, so leaving the profile out never removes the repo's templates. A generic profile carries no project noun; a project profile is where they go.
 
@@ -76,7 +75,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
     "java": { "requires": ["core"], "description": "..." },
     "mijn-gezondheid": { "requires": ["java-spring", "openapi-contract"], "description": "...", "project": true }
   },
-  "exclusive": [["java-quarkus", "java-spring"]],
+  "exclusive": [],
   "files": [
     {
       "path": ".github/agents/reviewer.agent.md",
@@ -131,7 +130,6 @@ Profiles are installed in this order. When two profiles carry the same path, the
 
 ```yaml
 profiles: [core, java, java-spring, openapi-contract]
-stack: spring                # quarkus | spring: the gates that differ per framework branch on it
 base_branch: main
 gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
@@ -141,7 +139,7 @@ backlog: true                # false: no Backlog.md, a run's ticket is the paste
 ci:
   gradle_line: "./gradlew test integrationTest build"   # ci.yml's Gradle run and ci-workflow-check.sh's required one
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
-pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
+pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
   modules: "-"               # the settings.gradle.kts modules, space-separated
   memory_marker: "-"         # a docs/memory.md decision id the build shape must name
@@ -298,7 +296,7 @@ unless `--backlog` is given). The scripts read the switch at runtime (`kit_get b
 | `.claude/rules/<layer>.md` | `.github/instructions/<layer>.instructions.md` | `paths:` becomes `applyTo:`, a comma-joined glob string built from the `@@KIT_MODULES_<LAYER>@@` placeholder when the layer is in `modules`, otherwise the verbatim globs. A rule without `paths:` (general) gets `applyTo: "**"`. |
 | MCP servers | `.github/mcp.json` | `codegraph` is `codegraph serve --mcp` with env `CODEGRAPH_MCP_TOOLS=explore,node,search,callers,callees,impact` (core). `@@KIT_CONTRACT_SERVER_NAME@@` is `node scripts/contract-mcp/server.mjs` (openapi-contract). Because JSON can't be split by profile, kit-sync writes the full core+contract file to `openapi-contract` and a core-only one to `core`. |
 | `.archon/workflows/build-feature.yaml` | `.archon/workflows/build-feature-copilot.yaml` (core) | Generated from the source's `build-feature.yaml` with its `.archon/scripts/copilot-workflow.js` (the generator itself does not ship), or copied when the source tracks it. The Claude workflow itself does not ship: it reads its skills from `.claude/skills`, which a Copilot install does not have (the kit ships them under `.github/skills`), so it would run without them. The Copilot build workflow ships, made standalone (see Plan approval and human merge). After each MCP paragraph of its prompts (the line `Grep stays the tool for text, config, logs and strings; without the tools, read as before.`) it adds one sentence naming the CLI fallback (`WORKFLOW_FALLBACK`); a workflow without that line fails the sync. |
-| Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync-lists.ts`. `.github/workflows/ci.yml`, `.github/ci-inputs.yml` and `ci-workflow-check.sh` are Quarkus-built and go to `java-quarkus`. A scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject` goes to `java-quarkus`, every other one to `java`. |
+| Other files on the copy lists | the same path | Verbatim. Each one is assigned to a profile by the copy lists in `scripts/kit-sync-lists.ts`. The source's framework files (`.github/workflows/ci.yml`, `.github/ci-inputs.yml`, the framework skills, and a scaffold template naming `io.quarkus`, `jakarta.ws.rs`, `jakarta.enterprise` or `jakarta.inject`) go to `java-spring`, where its overlay replaces each one with the Spring copy; every other scaffold template goes to `java`. |
 | Every shipped text file | — | After conversion: `run-<KIT_SOURCE>` becomes `run-app`, the contract hub repo becomes `@@KIT_CONTRACT_REPO@@`, and the source's main checkout path (and its systemd form `%h/<KIT_SOURCE>`) becomes `@@KIT_PROJECT_DIR@@` (only that last one in `.agents/skills/archon-cli/**`). The project nouns go (`NOUN_REWRITES`): `portal-api` and `mcp__portal-api__` become `@@KIT_CONTRACT_SERVER_NAME@@`, `rekordContractTag` becomes `@@KIT_CONTRACT_TAG_KEY@@`, `portal-mcp` becomes `contract-mcp` and `portal-metrics` becomes `run-metrics`, and the files ship renamed to match (`scripts/contract-mcp/**`, `.archon/scripts/contract-mcp-setup.sh`, `.archon/workflows/run-metrics.yaml`). Then the Claude Code paths move to where the kit ships them (`PATH_REWRITES`): `.claude/agents/<n>.md` → `.github/agents/<n>.agent.md`, `.claude/rules/<l>.md` → `.github/instructions/<l>.instructions.md`, the bare folders → `.github/agents` and `.github/instructions`, and `.claude/skills` (either slash) → `.github/skills`; the files that mean the Claude paths themselves keep them (`PATH_SKIP`: `.archon/copilot/README.md`, `skill-check.js`, `audit-log.sh`, `verify-claims.sh`). Per-file rewrites (exact counts, or the sync fails) template the base branch (`@@KIT_BASE_BRANCH@@` in `.archon/config.yaml` and the build-feature-copilot workflow), the gh accounts (`@@KIT_GH_ACCOUNTS@@` in the gh skills; `gh-switch.sh` reads `gh_accounts` from `.archon/kit.yaml` with yq at runtime), the standalone text (`STANDALONE_TARGETED` in `scripts/kit-sync-standalone-text.ts`: the lines that name what never ships), and the project names in comments and messages (`NOUN_TARGETED`). |
 | `docs/code-maps/<leaf>.md` (core, java) | same | A listed leaf's `## This repo (<source>)` section, which holds the source's facts, ships as a `## This repo` stub that asks the project to fill it in (`THIS_REPO_LEAVES`). The sync fails when a listed leaf lost the section or an unlisted core or java leaf has one. |
 | `.claude/CLAUDE.md` | same (core overlay) | `kit/overlays/core/.claude/CLAUDE.md`: the constitution (P1–P8), the STOP list and How work moves kept, the source's dates, ticket ids and project paths dropped, and its values placeholders (`@@KIT_BASE_BRANCH@@`, `@@KIT_CONTRACT_REPO@@`, `@@KIT_CONTRACT_SERVER_NAME@@`, `@@KIT_BUILD_WORKFLOW@@`, `@@KIT_COMMANDS_TEST@@`). Its `sourceSha256` makes `--check` report it stale when the source's CLAUDE.md changes. |
@@ -323,7 +321,7 @@ unless `--backlog` is given). The scripts read the switch at runtime (`kit_get b
 
 ## What never ships
 
-- The source's run skill `run-<KIT_SOURCE>`, which becomes the stack's `run-app`.
+- The source's run skill `run-<KIT_SOURCE>`, which becomes `run-app` (java-spring's overlay ships the Spring one).
 - The project's own `docs/code-maps/*.md` leaves. Only the README and the `kind: worked-example` leaves ship.
 - The source's `docs/memory.md`, `docs/rewrite/**`, `backlog/**`, `contract/**`, the build output, secrets and `.env`
   files. `java` ships a create-only starter `docs/memory.md` (an overlay) that holds only the "CI job set" entry

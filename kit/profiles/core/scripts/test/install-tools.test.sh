@@ -372,7 +372,7 @@ copilot | -  | pkg | copilot | copilot | copilot --version
 CONF
 mkdir -p "$root/p-copilot/.archon" "$root/p-defaults/.archon" "$root/p-none"
 printf 'agent_cli: "copilot"   # the kit\n' > "$root/p-copilot/.archon/kit.yaml"
-printf 'stack: spring\n' > "$root/p-defaults/.archon/kit.yaml"; printf 'agent_cli: copilot\n' > "$root/p-defaults/.archon/kit.defaults.yaml"
+printf 'base_branch: main\n' > "$root/p-defaults/.archon/kit.yaml"; printf 'agent_cli: copilot\n' > "$root/p-defaults/.archon/kit.defaults.yaml"
 script_args=--check
 run TOOLS_CONF="$root/agents.conf" PROJECT_DIR="$root/p-copilot"
 check "L4 kit.yaml copilot: copilot is checked" listed copilot
@@ -396,7 +396,7 @@ backlog | -  | pkg | backlog | backlog | backlog --version
 CONF
 mkdir -p "$root/p-nob/.archon" "$root/p-nobdef/.archon"
 printf 'backlog: false   # no task board\n' > "$root/p-nob/.archon/kit.yaml"
-printf 'stack: spring\n' > "$root/p-nobdef/.archon/kit.yaml"; printf 'backlog: false\n' > "$root/p-nobdef/.archon/kit.defaults.yaml"
+printf 'base_branch: main\n' > "$root/p-nobdef/.archon/kit.yaml"; printf 'backlog: false\n' > "$root/p-nobdef/.archon/kit.defaults.yaml"
 run TOOLS_CONF="$root/backlog.conf" PROJECT_DIR="$root/p-none"
 check "L5 no setting: backlog is checked" listed backlog
 check "L5 no setting: no off line" nosaid "Backlog.md: off"
