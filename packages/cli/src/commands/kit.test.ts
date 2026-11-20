@@ -191,6 +191,29 @@ describe('kit', () => {
       );
       expect([...missing]).toEqual(['Y']);
     });
+    it('keeps a profile-marked line for an installed profile and drops it for another', () => {
+      const missing = new Set<string>();
+      const text =
+        'a\n- x @@KIT_IF_PROFILE_JAVA@@\n- y@@KIT_IF_PROFILE_SPRING@@ @@KIT_X@@\nb @@KIT_X@@';
+      expect(renderTemplate(text, { X: '1', IF_PROFILE_JAVA: '' }, missing)).toBe('a\n- x \nb 1');
+      expect([...missing]).toEqual([]);
+    });
+    it('gives each installed profile, with the ones it requires, an IF_PROFILE variable', () => {
+      const kit = makeKit();
+      const vars = templateVars(project, kit, 'profiles: [spring]\n', null);
+      expect(
+        Object.keys(vars)
+          .filter(k => k.startsWith('IF_PROFILE_'))
+          .sort()
+      ).toEqual(['IF_PROFILE_CORE', 'IF_PROFILE_JAVA', 'IF_PROFILE_SPRING']);
+      expect(
+        renderTemplate(
+          'q @@KIT_IF_PROFILE_QUARKUS@@\ns @@KIT_IF_PROFILE_SPRING@@\n',
+          vars,
+          new Set()
+        )
+      ).toBe('s \n');
+    });
     it('renders template files on add and warns once per missing key', async () => {
       expect(await add({ set: ['contract.repo=acme/contract'] })).toBe(0);
       expect(readFileSync(join(project, '.github/agent.md'), 'utf-8')).toBe(
