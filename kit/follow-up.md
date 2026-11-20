@@ -5,17 +5,49 @@ into `local/console`). The first series, its eight pull requests and their owner
 (Claude Doc "Copilot kit: plan to improve the build workflow and the CI steps"). This file keeps only what is still
 open. Unless a line says "verified", the facts come from the report of the lane that built the item.
 
-## Waiting for the measured run
+## The measured run (step 3 of [plan.md])
 
-These are checked by the one `build-feature-copilot` run of step 3 of [plan.md], on the scratch project, compared
-with `kit/profiles/core/.archon/copilot/baseline.md`. Until its result is written here, they are open:
+One `build-feature-copilot` run on the scratch project, 2026-11-20, Sonnet subagent, isolated Archon built at
+`56763529a`. Run `8c961580…` (`--from main`) stopped at `tdd-check`. The kit update commit was in its branch range,
+because the update could not reach the scratch project's `origin/main`: the real push guard refused that push, as
+it should (verified). An earlier try (`aeaac6ad…`) stopped at `ticket`, because its worktree was cut from the old
+`origin/main` without `kit-gitignore.sh`. So no run reached `open-pr`, and the numbers below are for
+explore → review only, against run B of `kit/profiles/core/.archon/copilot/baseline.md` (in brackets):
 
-- **`effort` per node** is set, but it is not verified that Copilot accepts it.
-- **The fences with `fileHooks` on,** and a second workflow with `fileHooks` on getting the same rules.
-- **Push guard, end to end:** one push with the real `push-guard.sh` and `core.hooksPath=.githooks`.
-- **The evidence of a real run:** the trace, the usage per node, and hook records that name the node.
-- **Tool names in any case:** the guards now match `monitor` like `Monitor`. Which names Copilot really sends is not
-  verified.
+| Node | Wall | Input tokens | Turns |
+|---|---|---|---|
+| explore | 33.5 s [28.2] | 252,554 [200,989] | 6 [6] |
+| plan | 61.4 s [31.0] | 589,705 | 13 [6] |
+| write-tests (2 tries) | 57.0 s [30.9] | | 15 [7] |
+| build-step (2 tries) | 71.5 s [23.3] | 1,017,235 | 27 [8] |
+| review | 177.1 s [70.3] | 1,588,768 | 31 [8] |
+
+The run took 92 calls, 4,006,844 input and 36,885 output tokens, and 708 cost units [50 calls, 1,689,207, 21,669,
+372]. The baseline is not replaced: this run is not complete.
+
+- **`effort` per node: accepted.** `session.start` shows reasoningEffort low, high and medium per node (verified in
+  the run's logs by the subagent).
+- **Hook records name the node** (`"node":"explore"`, …). The trace and the usage per node were written.
+- **The fences hold:** 20 denies, each naming the node. Most were `cd`, `ls`, `echo`, `cat`, variable assignments
+  and one `git log` form that are not on the node's list. This friction is the likely cause of the extra turns in
+  plan, build-step and review. **Owner decision open:** widening the lists would loosen a fence, so it is not done.
+- **Push guard, end to end: partly.** The real `push-guard.sh` refused the push to the scratch project's main.
+  `open-pr` was not reached, so a branch push through the hook is not verified.
+- **Not verified:** the `; <n> tests` local-ci status and CI running Gradle (no run reached CI), and a second
+  workflow with `fileHooks` (the kit has none: `run-metrics` is a script node only).
+- **Tool names Copilot sent:** `bash`, `view`, `glob`, `grep`, `edit`, `create`, `skill`, and MCP tools as
+  `<server>-<tool>` (`codegraph-codegraph_explore`, `_node`, `_callers`, `_impact`).
+- **Fixed on this branch from what the run found:**
+  - A `grep` whose `paths` is a list was denied, because the scope guard could not read it (jq failed). Now a list
+    of one string counts as that path, in `payload.sh` and in `claudeCall` (`copilot-audit.js`, also read by
+    `run-trace.js` and `mcp-use-check.js`). A longer list is still denied. `node-fence.test.sh` replays the call:
+    the old `payload.sh` denies it, the new one allows it.
+  - `mcp-use-check` counted only `mcp__<server>__` names, so it reported `mcp: 0` for a node that did call CodeGraph
+    (a false warning on plan). It now also counts `<server>-` and `codegraph-`.
+  - `.githooks/commit-msg` stayed 0644 after `kit add`: an older kit shipped it 0644, and `kit add` left the mode of
+    a file whose content was unchanged. It now gives such an executable its mode back, and counts it as written.
+- **Still to do:** a complete run to `open-pr`. The kit update has to reach the scratch project's `origin/main`
+  first, through a pull request there or a push the owner allows.
 
 ## Fences and guards
 
