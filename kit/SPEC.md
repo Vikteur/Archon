@@ -123,6 +123,7 @@ Profiles are installed in this order. When two profiles carry the same path, the
 - **Lists.** A list value renders as its items joined with `, `.
 - **Missing keys.** A missing key renders empty, and `kit add` warns about it.
 - **Built-in.** `@@KIT_PROJECT_DIR@@` is not a kit.yaml key: `kit add` renders it as the absolute path of the project it installs into. It replaces the source's main checkout path, for example in the workflows' `denied_tools`.
+- **Per-profile lines.** `@@KIT_IF_PROFILE_<NAME>@@`, where NAME is a profile in upper snake case (`openapi-contract` is `OPENAPI_CONTRACT`), marks a whole line: `kit add` keeps the line, without the marker, when that profile is installed (kit.yaml's profiles with the ones they require), and drops it, line break included, otherwise. A file that names a skill or a tool of one profile marks that line, so a project without the profile never sees it. An archon older than the marker renders it empty and keeps the line.
 - **No overlap.** The syntax never clashes with mustache `{{ }}` or shell `${ }`.
 - **Prefer runtime reads.** A script that can read `.archon/kit.yaml` at runtime should do that, using yq with a default. Use placeholders only where a file can't read config: skill or agent markdown, and JSON hook or MCP files.
 

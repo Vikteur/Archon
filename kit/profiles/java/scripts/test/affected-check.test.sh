@@ -138,6 +138,9 @@ run() {
 }
 
 has() { grep -qxF "$1" "$log"; }
+# The cases below expect the quarkus sets (startupTest); the spring ones set KIT_STACK=spring, and the default
+# (spring, with no env and no kit.yaml) has a case of its own at the end.
+export KIT_STACK=quarkus
 ran_nothing() { [ ! -s "$log" ]; }
 said() { grep -qF "$1" <<< "$out"; }
 same_head() { [ "$(git rev-parse HEAD)" = "$1" ]; }
@@ -486,8 +489,17 @@ check "quarkus, quarkus-unit-test tagged file: startupTest" \
 new_repo "$r"
 printf 'stack: spring\n' > .archon/kit.yaml
 echo b > application/src/A.java
-run
+KIT_STACK= run
 check "kit.yaml stack: spring, application: no startupTest" \
+  has "gradlew :application:test :application:integrationTest :application:resourceTest"
+printf 'stack: quarkus\n' > .archon/kit.yaml
+KIT_STACK= run
+check "kit.yaml stack: quarkus, application: startupTest" \
+  has "gradlew :application:test :application:integrationTest :application:startupTest :application:resourceTest"
+# No env and no kit.yaml: the stack is spring.
+rm .archon/kit.yaml
+KIT_STACK= run
+check "no stack named: spring, application: no startupTest" \
   has "gradlew :application:test :application:integrationTest :application:resourceTest"
 
 cd "$repo_root" || exit 1

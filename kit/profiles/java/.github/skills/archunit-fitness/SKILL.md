@@ -12,10 +12,10 @@ layer.
 
 ## How
 - Write rules as code (ArchUnit) that assert structure, not behavior; keep them in a fast suite that
-  needs **no application context** (no `@QuarkusTest` boot) so it can run as a post-part hook.
+  needs **no application context** (no `@SpringBootTest` boot) so it can run as a post-part hook.
 - Encode the non-negotiables:
   - **No framework in the domain** — domain classes depend on no web/persistence/DI/framework
-    packages (no Quarkus/CDI, JPA/jakarta, HTTP, I/O).
+    packages (no framework such as Spring `org.springframework..`, JPA/jakarta, HTTP, I/O).
   - **Dependency direction is inward** — domain depends on nothing outward; usecase depends only on
     domain + port interfaces; adapters depend inward, never the reverse.
   - **Layer purity** — controllers/gateways hold no business logic; domain invariants live in the

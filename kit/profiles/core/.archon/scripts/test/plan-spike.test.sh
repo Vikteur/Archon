@@ -81,10 +81,17 @@ done
 grep -q 'plan-spike' <<< "$denied"; [ $? -ne 0 ]; check "plan-spike.sh is not denied" $?
 
 # The analyst's skills (owner request 2026-10-24).
-# Without `skills:` the node gets no skill, and skill-check fails a plan that never loaded clean-architecture.
-skills=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /^    skills: / { sub(/^    skills: /, ""); print; exit }' "$wf")
-[ "$skills" = "[clean-architecture, contract-slice, contract-db-parity, design-review]" ]
-check "plan's skills are the analyst-era allow-list ($skills)" $?
+# Without `skills:` the node gets no skill, and skill-check fails a plan that never loaded clean-architecture. The
+# contract skills come with the openapi-contract profile: the node names them only where that profile is installed
+# (`kit add` drops their marked lines otherwise), so every skill it names is one the project ships.
+skills=$(yq -r '.nodes[] | select(.id == "plan") | .skills | join(",")' "$wf")
+want="clean-architecture,design-review"
+[ -d "$top/.github/skills/contract-slice" ] && want="$want,contract-slice,contract-db-parity"
+[ "$skills" = "$want" ]
+check "plan's skills are the analyst-era allow-list of the installed profiles ($skills)" $?
+for s in ${skills//,/ }; do
+  [ -f "$top/.github/skills/$s/SKILL.md" ]; check "plan's skill $s is shipped" $?
+done
 
 # Every non-test script that runs ./gradlew is denied; a script that only names it is listed here, with why.
 mention_only=(

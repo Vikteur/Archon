@@ -69,16 +69,18 @@ green build: a dropped column and a leaked personal identifier both pass CI.
 
 - **Anything doable via a hook or script must be done that way**, to keep tokens out of the context
   window (branch/folder scaffolding, contract slicing, deterministic gates).
-- **Navigate code via the CodeGraph MCP server, not by scanning.** Any agent that reads code uses the
-  `codegraph` MCP tools first — `codegraph_explore` (area overview: relevant symbols' source + call
-  paths), `codegraph_node` (one symbol / one file), `codegraph_callers` / `codegraph_callees`,
-  `codegraph_impact` (blast radius before changing a symbol), `codegraph_search` — instead of
-  repo-wide grep or whole-file reads. Same token rule as hooks: pull only the slice you need. Fall
-  back to direct reads only when the server or the project's `.codegraph/` index is unavailable, or
+- **Navigate code via the CodeGraph CLI, not by scanning.** Any agent that reads code asks CodeGraph first, from the
+  repo root — `codegraph explore "<names or a question>"` (area overview: relevant symbols' source + call paths),
+  `codegraph node <symbol>` (one symbol / one file), `codegraph callers|callees <symbol>`, `codegraph impact <symbol>`
+  (blast radius before changing a symbol) — instead of repo-wide grep or whole-file reads. The `codegraph` MCP tools
+  (`codegraph_explore`, `codegraph_node`, ...) answer the same when they are in the tool list; the CLI works where an
+  organization's MCP registry blocks the server. Same token rule as hooks: pull only the slice you need. Fall
+  back to direct reads only when CodeGraph or the project's `.codegraph/` index is unavailable, or
   when a CodeGraph staleness banner (⚠️) tells you to read a file directly. **The index is per checkout**
   (`.codegraph/`, git-ignored): `bash .archon/scripts/codegraph-setup.sh` builds it or syncs it, and
-  the build workflow runs it in every run worktree. Generated code under `build/` is not indexed: for a contract
-  operation or schema, ask the @@KIT_CONTRACT_SERVER_NAME@@ MCP server (when the project has it).
+  the build workflow runs it in every run worktree. Generated code under `build/` is not indexed: for a contract@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+  operation or schema, run `node scripts/contract-mcp/cli.mjs search|read|where|schema|usedBy <args>` (the@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
+  @@KIT_CONTRACT_SERVER_NAME@@ MCP server's tools of the same name, when listed).@@KIT_IF_PROFILE_OPENAPI_CONTRACT@@
 - **Tickets live in this repo's Backlog.md backlog (`backlog/`)** (see `AGENTS.md`: run every
   `backlog` command from the main checkout, and read its `backlog instructions` guides before a task
   lifecycle action). A ticket id in a branch name or a commit subject refers to that backlog.
