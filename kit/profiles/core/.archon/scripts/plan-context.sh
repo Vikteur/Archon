@@ -51,7 +51,9 @@ if [ -f settings.gradle.kts ]; then
   echo "## Gradle modules (settings.gradle.kts) and the modules each one depends on"
   echo
   # A module's own name (its testFixtures) and repeats are left out.
-  mods=$(sed -n '/^include(/,/)/p' settings.gradle.kts | grep -oE '"[^"]+"' | tr -d '"' | sed 's/^://')
+  # A single-module build has no include( line: grep then matches nothing, which must not end the script.
+  mods=$(sed -n '/^include(/,/)/p' settings.gradle.kts | { grep -oE '"[^"]+"' || true; } | tr -d '"' | sed 's/^://')
+  [ -n "$mods" ] || echo "- (one module: settings.gradle.kts includes none)"
   for m in $mods; do if [ -f "$m/build.gradle.kts" ]; then echo "$m/build.gradle.kts"; fi; done | xargs -r awk '
     FNR == 1 { if (m != "") print "- " m (on != "" ? " → " on : ""); m = FILENAME; sub(/\/build\.gradle\.kts$/, "", m); on = ""; delete seen }
     { while (match($0, /project\("[^"]+"\)/)) { d = substr($0, RSTART + 9, RLENGTH - 11); $0 = substr($0, RSTART + RLENGTH)

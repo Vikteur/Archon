@@ -46,15 +46,16 @@ Returns a **short summary** — which tests + the **CI run reference** (SHA) tha
 not the test bodies. Run the tests locally to see them red; the pipeline's red run is the record.
 
 ## Which tool answers which question
-Ask the tool before you open files; read a file only for what its answer leaves out. A tool missing from your
-tool list did not start: fall back to `Read` and `Grep`, and say so in your summary.
+Ask the CLI before you open files, from the repo root; read a file only for what its answer leaves out. The MCP
+tool of the same name (`codegraph_callers`, `search`, ...) answers the same when it is in your tool list. When neither
+answers, fall back to `Read` and `Grep`, and say so in your summary.
 
 | Question | Tool |
 |---|---|
-| Which operation does X? | `search`, then `read` |
-| Where is operation X built, is it built yet, which tests cover it? | `where` |
-| Which fields does schema X have? | `schema` |
-| Who calls this Java symbol, and what breaks if it changes? | `codegraph_callers`, `codegraph_impact` |
+| Which operation does X? | `node scripts/contract-mcp/cli.mjs search <words>`, then `read <operationId>` |
+| Where is operation X built, is it built yet, which tests cover it? | `node scripts/contract-mcp/cli.mjs where <operationId>` |
+| Which fields does schema X have? | `node scripts/contract-mcp/cli.mjs schema <name>` |
+| Who calls this Java symbol, and what breaks if it changes? | `codegraph callers <symbol>`, `codegraph impact <symbol>` |
 | Text, config, logs, a string in a test | `Grep` |
 
 ## Ground Rules

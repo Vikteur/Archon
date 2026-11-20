@@ -318,6 +318,19 @@ check "L1 all fit: says so" said "Check: every tool is in place."
 setver tool-c 1.52.0; run
 check "L1 a wrong version: exit 1" [ "$rc" = 1 ]
 check "L1 a wrong version: named" said "wrong version: tool-c"
+
+# L1b: --check notes a project checkout without a git remote, and never fails on it; one with a remote gets no note.
+setver tool-c 1.53.0
+mkdir -p "$root/project-git"; git -C "$root/project-git" init -q
+run PROJECT_DIR="$root/project-git"
+check "L1b no remote: noted" said "has no git remote. A worktree run (the default) cannot start"
+check "L1b no remote: names the fix" said "git remote add origin <url>"
+check "L1b no remote: the exit is the tools' own" [ "$rc" = 0 ]
+git -C "$root/project-git" remote add origin https://example.test/x.git
+run PROJECT_DIR="$root/project-git"
+check "L1b a remote: no note" nosaid "no git remote"
+run PROJECT_DIR="$root/project-with"
+check "L1b not a checkout: no note" nosaid "no git remote"
 script_args=bogus; run
 check "L1 an unknown argument: exit 2" [ "$rc" = 2 ]
 script_args=

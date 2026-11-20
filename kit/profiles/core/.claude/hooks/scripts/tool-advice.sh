@@ -1,22 +1,28 @@
 #!/usr/bin/env bash
-# tool-advice.sh — PreToolUse hook (Claude Code): point an agent that searches by hand at the MCP tool that answers it.
+# tool-advice.sh — PreToolUse hook (Claude Code): point an agent that searches by hand at the CLI (or the MCP tool) that
+# answers it.
 # Usage: tool-advice.sh PreToolUse   (the tool call as JSON on stdin; settings.json runs it on Read|Grep|Glob and Bash)
 #
-# Who is covered (docs/mcp/plan.md, C4, C9):
+# Who is covered:
 #   - the analyst, developer, test-writer and debugger subagents, anywhere;
 #   - every session in a build-feature run worktree (cwd under ${ARCHON_HOME:-~/.archon}/workspaces/*/*/worktrees/*):
 #     the explore, plan and implement nodes carry no agent_type, so the folder tells them apart. There a rule fires only
-#     when its server is in the run's .archon/mcp/build-tools.json (mcp-setup.sh lists only the ready ones).
+#     when its tool answers in that run: its CLI is ready (codegraph: a .codegraph index and the codegraph command;
+#     the contract: scripts/contract-mcp/cli.mjs with its node_modules), or its server is in the run's
+#     .archon/mcp/build-tools.json (mcp-setup.sh lists only the ready ones). An organization's MCP registry can block
+#     the servers while the CLIs still work, so the CLI is the first route the advice names.
 #   The contract-agent owns the spec and is never covered; nor is a main session outside a run worktree.
 # Two rules:
 #   contract   a Read, Grep or Glob of contract/**, or a Bash search (grep, sed, cat, ... as the first stage of a
-#              command) naming contract/, openapi.yaml or an operationId → "use mcp__<server>__search / read", the
-#              server being contract.server_name of .archon/kit.yaml (kit-config.sh; default @@KIT_CONTRACT_SERVER_NAME@@).
+#              command) naming contract/, openapi.yaml or an operationId → "use `node scripts/contract-mcp/cli.mjs
+#              search / read`, or mcp__<server>__search / read", the server being contract.server_name of
+#              .archon/kit.yaml (kit-config.sh; default @@KIT_CONTRACT_SERVER_NAME@@).
 #              TOOL_ADVICE_CONTRACT=report (default) adds the advice as context and lets the call run; =refuse denies
-#              it with the same words. D5: report for one week of runs, then refuse.
+#              it with the same words. Report first, refuse once the runs show the advice is followed.
 #   symbol     a Grep whose pattern is one Java symbol (CamelCase, optionally .member, no spaces or regex) over Java
-#              main code, or a Bash grep/rg naming one outside docs and tests → "codegraph_callers / codegraph_node
-#              answers this". Advice only, never a refusal: grep stays the right tool for strings.
+#              main code, or a Bash grep/rg naming one outside docs and tests → "`codegraph callers` / `codegraph node`
+#              (or codegraph_callers / codegraph_node) answers this". Advice only, never a refusal: grep stays the right
+#              tool for strings.
 #
 # Contract: JSON on stdin, decision JSON on stdout, exit 0 always. No advice prints NOTHING (never "allow", which would
 # skip the permission prompt). Fails open: no jq, an unparseable payload or an uncovered session is no advice. It
@@ -44,7 +50,8 @@ IFS=$'\x1f' read -r agent tool path pattern glob type cwd <<<"$fields"
 root="${CLAUDE_PROJECT_DIR:-$PWD}"
 rel="${path#"$root"/}"; [ "$path" = "$root" ] && rel=""
 
-# A run worktree covers every session in it, and only for the servers that run has (build-tools.json).
+# A run worktree covers every session in it, and only for the tools that answer there: a ready CLI or a server in
+# build-tools.json.
 server=""
 server_name() { [ -n "$server" ] || server="$(kit_get contract.server_name @@KIT_CONTRACT_SERVER_NAME@@)"; }
 contract=1; codegraph=1
@@ -55,7 +62,9 @@ case "$agents" in
     tools="$root/.archon/mcp/build-tools.json"
     contract=0; codegraph=0; server_name
     jq -e --arg s "$server" 'has($s)' "$tools" >/dev/null 2>&1 && contract=1
-    jq -e 'has("codegraph")' "$tools" >/dev/null 2>&1 && codegraph=1 ;;
+    jq -e 'has("codegraph")' "$tools" >/dev/null 2>&1 && codegraph=1
+    [ -f "$root/scripts/contract-mcp/cli.mjs" ] && [ -d "$root/scripts/contract-mcp/node_modules" ] && contract=1
+    [ -d "$root/.codegraph" ] && command -v codegraph >/dev/null 2>&1 && codegraph=1 ;;
 esac
 
 say() { # say <advice> [refuse]
@@ -70,15 +79,16 @@ say() { # say <advice> [refuse]
 contract_advice() { # contract_advice <what>
   [ "$contract" -eq 1 ] || return 0
   server_name
-  local msg="tool-advice: $1 of the contract by hand. mcp__${server}__search finds an operation by its words and mcp__${server}__read answers it in full with its verdict; mcp__${server}__schema answers a schema. Read the contract file only for what they leave out (docs/mcp/plan.md, C4)."
+  local cli='node scripts/contract-mcp/cli.mjs'
+  local msg="tool-advice: $1 of the contract by hand. \`$cli search <words>\` finds an operation by its words and \`$cli read <operationId>\` answers it in full with its verdict; \`$cli schema <name>\` answers a schema. mcp__${server}__search, mcp__${server}__read and mcp__${server}__schema answer the same when they are in your tool list. Read the contract file only for what they leave out."
   if [ "${TOOL_ADVICE_CONTRACT:-report}" = refuse ]; then say "BLOCKED: $msg" refuse; fi
   say "$msg"
 }
 symbol_advice() { # symbol_advice <symbols, comma-separated> <tool>
   [ "$codegraph" -eq 1 ] || return 0
   case "$1" in
-    *", "*) say "tool-advice: $1 are Java symbols. mcp__codegraph__codegraph_explore takes them all in one call and answers their source and the calls between them; codegraph_callers who calls one. $2 still runs, and stays right for strings (docs/mcp/plan.md, C4)." ;;
-    *) say "tool-advice: $1 is a Java symbol. mcp__codegraph__codegraph_callers answers who calls it, mcp__codegraph__codegraph_node its source and line, codegraph_impact what a change reaches. $2 still runs, and stays right for strings (docs/mcp/plan.md, C4)." ;;
+    *", "*) say "tool-advice: $1 are Java symbols. \`codegraph explore \"<the names>\"\` takes them all in one call and answers their source and the calls between them; \`codegraph callers <name>\` who calls one (mcp__codegraph__codegraph_explore and codegraph_callers, when listed). $2 still runs, and stays right for strings." ;;
+    *) say "tool-advice: $1 is a Java symbol. \`codegraph callers <name>\` answers who calls it, \`codegraph node <name>\` its source and line, \`codegraph impact <name>\` what a change reaches (mcp__codegraph__codegraph_callers, codegraph_node and codegraph_impact, when listed). $2 still runs, and stays right for strings." ;;
   esac
 }
 SYMBOL='^[A-Z][a-z0-9]+([A-Z][A-Za-z0-9]*)+(\.[a-z][A-Za-z0-9]*)?$'

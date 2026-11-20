@@ -178,5 +178,17 @@ check "a ticket-only tip of origin/main runs the code commit under it" '[ "$(cat
 run green "$ticket"
 check "and leaves it alone when that one already has a run" '[ ! -s "$RUN_LOG" ] && [ "$(cat "$root/rc")" = 0 ]'
 
+# Without Backlog.md (backlog: false in kit.yaml, or KIT_BACKLOG) backlog/ is the project's own folder and runs CI.
+ticket=$(on ticket3 "backlog/tasks/task-9 - x.md")
+retro=$(on retro2 docs/retro/TASK-9/lessons-learned.md)
+KIT_BACKLOG=false run none "$ticket"
+check "backlog: false (env): a backlog/-only commit runs CI" '[ "$(cat "$RUN_LOG")" = "--post $ticket" ] && ! grep -q "gets no local CI" "$root/stderr"'
+mkdir -p "$r/.archon" && printf 'backlog: false\n' > "$r/.archon/kit.yaml"
+run none "$ticket"
+check "backlog: false in kit.yaml: the same" '[ "$(cat "$RUN_LOG")" = "--post $ticket" ]'
+run none "$retro"
+check "... and a retro-only commit still runs nothing" '[ ! -s "$RUN_LOG" ] && grep -q "gets no local CI" "$root/stderr" && ! grep -q "backlog/" "$root/stderr"'
+rm -rf "$r/.archon"
+
 echo "local-ci-run tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

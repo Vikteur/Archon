@@ -26,6 +26,7 @@ import {
   kitCommand,
   kitToolsCommand,
   applySetOverrides,
+  checkFileHooks,
   checkMcpServers,
   checkTrust,
   coerceScalar,
@@ -190,6 +191,29 @@ describe('kit', () => {
         'a 1 b  '
       );
       expect([...missing]).toEqual(['Y']);
+    });
+    it('keeps a profile-marked line for an installed profile and drops it for another', () => {
+      const missing = new Set<string>();
+      const text =
+        'a\n- x @@KIT_IF_PROFILE_JAVA@@\n- y@@KIT_IF_PROFILE_SPRING@@ @@KIT_X@@\nb @@KIT_X@@';
+      expect(renderTemplate(text, { X: '1', IF_PROFILE_JAVA: '' }, missing)).toBe('a\n- x \nb 1');
+      expect([...missing]).toEqual([]);
+    });
+    it('gives each installed profile, with the ones it requires, an IF_PROFILE variable', () => {
+      const kit = makeKit();
+      const vars = templateVars(project, kit, 'profiles: [spring]\n', null);
+      expect(
+        Object.keys(vars)
+          .filter(k => k.startsWith('IF_PROFILE_'))
+          .sort()
+      ).toEqual(['IF_PROFILE_CORE', 'IF_PROFILE_JAVA', 'IF_PROFILE_SPRING']);
+      expect(
+        renderTemplate(
+          'q @@KIT_IF_PROFILE_QUARKUS@@\ns @@KIT_IF_PROFILE_SPRING@@\n',
+          vars,
+          new Set()
+        )
+      ).toBe('s \n');
     });
     it('renders template files on add and warns once per missing key', async () => {
       expect(await add({ set: ['contract.repo=acme/contract'] })).toBe(0);
@@ -973,6 +997,30 @@ describe('kit', () => {
   });
 
   describe('doctor pieces', () => {
+    it('reports the Copilot fileHooks switch in .archon/config.yaml', () => {
+      expect(checkFileHooks(project)).toMatchObject({ status: 'warn', name: 'fileHooks' });
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      writeFileSync(
+        join(project, '.archon/config.yaml'),
+        'assistants:\n  copilot:\n    model: x\n'
+      );
+      const unset = checkFileHooks(project);
+      expect(unset.status).toBe('warn');
+      expect(unset.detail).toContain('is not set');
+      writeFileSync(
+        join(project, '.archon/config.yaml'),
+        'assistants:\n  copilot:\n    fileHooks: false\n'
+      );
+      expect(checkFileHooks(project)).toMatchObject({ status: 'warn' });
+      expect(checkFileHooks(project).detail).toContain('is false');
+      writeFileSync(
+        join(project, '.archon/config.yaml'),
+        'assistants:\n  copilot:\n    fileHooks: true\n'
+      );
+      expect(checkFileHooks(project)).toMatchObject({ status: 'ok', name: 'fileHooks' });
+      writeFileSync(join(project, '.archon/config.yaml'), 'assistants: [\n');
+      expect(checkFileHooks(project).detail).toContain('does not parse');
+    });
     it('checks backlog unless kit.yaml (or the kit defaults) switches it off', () => {
       const backlog = (): DoctorCheck | undefined =>
         checkTools(project, { PATH: '' }).find(c => c.name === 'backlog');

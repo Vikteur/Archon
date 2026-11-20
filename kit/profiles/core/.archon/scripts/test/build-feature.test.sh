@@ -4,7 +4,9 @@
 # the build agent's and review's affected-check, the review-tests node, the plan's ban on check-only steps, the
 # scaffolding rules of the plan and agent prompts (scaffold.sh --for, the two
 # `Hand-written:` forms, the plan's `Scaffold:` lines and the two nodes that render them), and the denied tools (no agent of a run skips the commit-msg hook; no Monitor, no
-# background command in the agent nodes).
+# background command in the agent nodes), the post-loop order (skill-check beside review-tests, review-check over
+# review's own commits), fix-made's two outcomes without a commit (CI_FIX_NO_COMMIT, BLOCKED_NEEDS_PERSON), and the
+# resilience fields (retry, idle_timeout, effort on the agents; timeout on the bash nodes that call out).
 # Usage: bash .archon/scripts/test/build-feature.test.sh   (exit 0 = all pass)
 set -uo pipefail
 
@@ -85,7 +87,38 @@ check "8 step-base is the loop's first node" \
 check "8 review-base after scaffold-check" $([ "$(node review-base 'depends_on[0]')" = scaffold-check ]; echo $?)
 check "8 review after scaffold-check, review-base and review-tests" \
   $([ "$(node review 'depends_on | join(",")')" = scaffold-check,review-base,review-tests ]; echo $?)
-check "8 review-tests after review-base" $([ "$(node review-tests 'depends_on[0]')" = review-base ]; echo $?)
+check "8 review-tests right after the loop, beside skill-check" \
+  $([ "$(node review-tests 'depends_on | join(",")')" = implement ] && [ "$(node skill-check 'depends_on | join(",")')" = implement ]; echo $?)
+check "8 scaffold-check (it commits follow-ups) waits for skill-check and review-tests" \
+  $([ "$(node scaffold-check 'depends_on | join(",")')" = skill-check,review-tests ]; echo $?)
+check "8 review-check after review, tdd-check after review-check" \
+  $([ "$(node review-check 'depends_on | join(",")')" = review ] && [ "$(node tdd-check 'depends_on | join(",")')" = review-check ]; echo $?)
+check "8 stop-route does not wait for the report-only mcp-use" $([ "$(node stop-route 'depends_on | join(",")')" = plan-check ]; echo $?)
+
+# 8b. review-check: no commit since review-base checks nothing; a commit runs the audit and the scaffold gate again,
+# without --follow-ups, and a failing one fails the node.
+rc_bash=$(node review-check bash)
+mkdir -p "$r/.archon/scripts"
+for s in copilot-audit scaffold-check; do
+  printf 'require("fs").appendFileSync(process.env.CALLS, "%s " + process.argv.slice(2).join(" ") + "\\n"); process.exit(process.env.FAIL === "%s" ? 1 : 0);\n' "$s" "$s" > "$r/.archon/scripts/$s.js"
+done
+git -C "$r" rev-parse HEAD > "$art/review-base.sha"
+calls="$root/calls"; : > "$calls"
+out=$(cd "$r" && CALLS="$calls" ARTIFACTS_DIR="$art" WORKFLOW_ID=run1 BASE_BRANCH=main bash -c "$rc_bash" 2>&1); rc=$?
+check "8b review-check: no review commit -> exit 0, no gate run" $([ "$rc" -eq 0 ] && [ ! -s "$calls" ] && grep -q 'no commit' <<< "$out"; echo $?)
+commit "fix: review"
+out=$(cd "$r" && CALLS="$calls" ARTIFACTS_DIR="$art" WORKFLOW_ID=run1 BASE_BRANCH=main bash -c "$rc_bash" 2>&1); rc=$?
+check "8b review-check: a review commit runs the audit, then the scaffold gate" \
+  $([ "$rc" -eq 0 ] && [ "$(tr '\n' ' ' < "$calls")" = "copilot-audit run1 scaffold-check $art run1 main " ]; echo $?)
+out=$(cat "$calls"); check "8b review-check: scaffold-check runs without --follow-ups" $(! grep -q -- '--follow-ups' "$calls"; echo $?)
+for g in copilot-audit scaffold-check; do
+  out=$(cd "$r" && CALLS="$calls" FAIL=$g ARTIFACTS_DIR="$art" WORKFLOW_ID=run1 BASE_BRANCH=main bash -c "$rc_bash" 2>&1); rc=$?
+  check "8b review-check: a failing $g fails the node" $([ "$rc" -ne 0 ]; echo $?)
+done
+rm "$art/review-base.sha"
+out=$(cd "$r" && CALLS="$calls" ARTIFACTS_DIR="$art" WORKFLOW_ID=run1 BASE_BRANCH=main bash -c "$rc_bash" 2>&1); rc=$?
+check "8b review-check: no review-base.sha fails closed" $([ "$rc" -eq 1 ]; echo $?)
+rm -rf "$r/.archon"; git -C "$r" status --porcelain | grep -q . && git -C "$r" add -A && git -C "$r" commit -qm cleanup
 
 # 9. The build agent's affected-check runs against the step's base; review's re-run against review-base.
 build_prompt=$(loop_node build-step prompt | tr '\n' ' ')
@@ -155,9 +188,26 @@ made=$(cif fix-made bash)
 git -C "$r" rev-parse HEAD > "$art/ci-fix-before.sha"
 out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1); rc=$?
 check "13 fix-made: no commit -> CI_FIX_NO_COMMIT, exit 1" $([ "$rc" -eq 1 ] && grep -q '^CI_FIX_NO_COMMIT' <<< "$out"; echo $?)
+printf 'CAUSE: branch\nThe new mapper drops the date.\n' > "$art/ci-diagnosis.md"
+out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1); rc=$?
+check "13 fix-made: no commit after a CAUSE: branch diagnosis -> CI_FIX_NO_COMMIT, exit 1" \
+  $([ "$rc" -eq 1 ] && grep -q '^CI_FIX_NO_COMMIT' <<< "$out" && ! grep -q BLOCKED <<< "$out"; echo $?)
+printf '\n`CAUSE: main`\r\n\nThe base broke OrderMapperTest in a1b2c3.\nMore detail.\n' > "$art/ci-diagnosis.md"
+err=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1 >/dev/null)
+out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>/dev/null); rc=$?
+check "13 fix-made: no commit after a CAUSE: main diagnosis -> blocked, exit 0, no CI_FIX_NO_COMMIT" \
+  $([ "$rc" -eq 0 ] && [ "$(jq -r '.blocked, .committed' <<< "$out" | tr '\n' ' ')" = "true false " ] && ! grep -q CI_FIX_NO_COMMIT <<< "$out$err"; echo $?)
+reason=$(jq -r .reason <<< "$out")
+check "13 fix-made: the blocked reason is named and carries the cause line and the diagnosis path" \
+  $([[ "$reason" == BLOCKED_NEEDS_PERSON:* && "$reason" == *'CAUSE: main'* && "$reason" == *'The base broke OrderMapperTest in a1b2c3.'* \
+    && "$reason" == *"$art/ci-diagnosis.md"* && "$reason" != *'More detail'* ]] && grep -q '^BLOCKED_NEEDS_PERSON' <<< "$err"; echo $?)
+check "13 blocked: a cancel node after fix-made, only when blocked, with the reason" \
+  $([ "$(cif blocked 'depends_on | join(",")')" = fix-made ] && [ "$(cif blocked when)" = "\$fix-made.output.blocked == 'true'" ] \
+    && [[ "$(cif blocked cancel)" == *'$fix-made.output.reason'* ]]; echo $?)
+check "13 fix-ci runs only after a commit" $([ "$(cif fix-ci when)" = "\$fix-made.output.committed == 'true'" ]; echo $?)
 commit "fix: ci"
 out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1); rc=$?
-check "13 fix-made: a commit passes" $([ "$rc" -eq 0 ]; echo $?)
+check "13 fix-made: a commit passes, even after a CAUSE: main diagnosis" $([ "$rc" -eq 0 ] && [ "$(jq -r .committed <<< "$out")" = true ]; echo $?)
 rm "$art/ci-fix-before.sha"
 out=$(cd "$r" && ARTIFACTS_DIR="$art" bash -c "$made" 2>&1); rc=$?
 check "13 fix-made: no before sha counts as a commit made (red-head did not run)" $([ "$rc" -eq 0 ]; echo $?)
@@ -221,6 +271,23 @@ check "16 build-step waits for scaffold-build" \
 out="$wt"; check "16 write-tests reads its report" $(tr -s ' \n' ' ' <<< "$wt" | grep -qF 'read $ARTIFACTS_DIR/scaffold-render/step-<n>-test.md'; echo $?)
 out="$bs"; check "16 build-step reads its report" $(tr -s ' \n' ' ' <<< "$bs" | grep -qF 'read $ARTIFACTS_DIR/scaffold-render/step-<n>-build.md'; echo $?)
 check "16 build-step knows its n" $(tr -s ' \n' ' ' <<< "$bs" | grep -qF 'n is its position among the plan'"'"'s checkbox lines'; echo $?)
+
+# 17. Runs that survive (kit plan, Phase 1): every agent node retries a transient failure and has an idle timeout and
+# an effort; every bash node that calls out has a timeout; the implement loop fails when its rounds run out.
+any() { yq ".. | select(tag == \"!!map\" and .id == \"$1\") | .$2" "$wf"; }
+for n in explore plan write-tests build-step review pr-text diagnose fix; do
+  check "17 $n retries transient failures 3 times" \
+    $([ "$(any "$n" 'retry.max_attempts')" = 3 ] && [ "$(any "$n" 'retry.on_error')" = transient ] && [ "$(any "$n" 'retry.delay_ms')" -ge 1000 ]; echo $?)
+  check "17 $n has an idle timeout of 10 to 20 minutes" $(t=$(any "$n" idle_timeout); [ "$t" -ge 600000 ] && [ "$t" -le 1200000 ]; echo $?)
+done
+for n in explore:low pr-text:low write-tests:medium build-step:medium fix:medium plan:high review:high diagnose:high; do
+  check "17 ${n%%:*} has effort ${n#*:}" $([ "$(any "${n%%:*}" effort)" = "${n#*:}" ]; echo $?)
+done
+for n in ticket plan-check rebase-main open-pr; do
+  check "17 $n has a timeout" $(t=$(node "$n" timeout); [ "$t" -gt 0 ] 2>/dev/null; echo $?)
+done
+check "17 implement fails when its rounds run out" $([ "$(node implement loop_group.on_exhausted)" = fail ]; echo $?)
+check "17 the workflow does not claim to be generated" $(! head -3 "$wf" | grep -qi 'generated'; echo $?)
 
 echo "build-feature tests: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
