@@ -32,6 +32,21 @@
 # session started with `--agent`). No agent_type, or an agent with no entry → not this hook's
 # business (exit 0, no output — normal permission flow applies).
 #
+# Inside an Archon workflow node (Copilot only): .github/hooks/dispatch.sh sets KIT_NODE to the node's id (from
+# ARCHON_NODE_EXECUTION, which Archon sets for the node's CLI session). .archon/copilot/node-fences.json maps the node to
+# an agent: every call of that session is fenced as that agent (deny reasons name "<agent> (node <id>)"), with what the
+# file adds for that node only: commandAllowlist prefixes (checked as agent-scopes.local.json entries are),
+# allowedFilePaths (the token $RUN_ARTIFACTS/ is the run's own artifacts folder,
+# <ARCHON_HOME or ~/.archon>/workspaces/<owner>/<repo>/artifacts/runs/$WORKFLOW_ID/, an absolute path; an agent that may
+# write any path keeps that), and env (names a command may assign in front of an allowed command, NAME=value cmd; a
+# `$(cat <file in the run's artifacts folder>)` is read as plain text in such a command). A subagent of another fenced
+# type is checked by its own fence as well. A node the file does not name (or KIT_NODE=?, a node path dispatch.sh could
+# not read) gets the strictest common set: the commands every named node may run and only the paths every one of them
+# may write ([] when none of them has a write fence), no env names. Fail closed: inside a node, a missing or invalid
+# node-fences.json, a missing agent-scopes.json or a jq that cannot read the call denies every call. No fenced agent
+# may write node-fences.json. CLAUDE_SCOPE_NODES overrides the file (tests). The tools that kit.json sends here by name
+# are checked by those entries; a third entry ('*' --other-tools) checks every other tool inside a node only.
+#
 # Contract: JSON payload on stdin, decision JSON on stdout, exit 0. "No objection" prints NOTHING:
 # in Claude Code `permissionDecision:"allow"` would skip the user's permission prompt.
 # Failure direction: missing policy / unparseable payload → no objection (fail open, like
@@ -72,16 +87,32 @@ deny() { decided=1
   exit 0
 }
 
+node="${KIT_NODE:-}"
+other_tools=0; [ "${2:-}" = "--other-tools" ] && other_tools=1
+# the '*' entry of kit.json covers only the tools the named entries do not, and only inside a node
+[ "$other_tools" -eq 0 ] || [ -n "$node" ] || allow
+if [ -n "$node" ]; then
+  node_file="${CLAUDE_SCOPE_NODES:-$here/../../../.archon/copilot/node-fences.json}"
+  [ -f "$policy" ] || deny "BLOCKED: inside Archon node '$node' every call is fenced, and the agent fences ($policy_rel) are missing, so the scope guard denies. Reinstall the kit (archon kit add)."
+else
+  node_file=/dev/null
+fi
 [ -f "$policy" ] || allow
 payload="$(cat 2>/dev/null || true)"
 payload="$(hook_normalize_payload "$payload")" || deny "BLOCKED: the agent scope guard could not read this Copilot tool call (jq missing, or the payload is not a JSON object), and it may come from a fenced agent, so it denies. Install jq and retry."
 # hubRoot: a scope may add {markers, allowedFilePaths}; see "Hub root" in README.md.
 # Outside a subagent there is no agent_type and nothing to fence: skip the jq spawn (it runs on every read too).
-case "$payload" in *'"agent_type"'*) ;; *) allow ;; esac
+case "$payload" in *'"agent_type"'*) ;; *) [ -n "$node" ] || allow ;; esac
+nodes_text=""
+if [ -n "$node" ]; then
+  if [ -f "$node_file" ] && [ -r "$node_file" ]; then nodes_text="$(cat "$node_file" 2>/dev/null)" || nodes_text=""; fi
+  [ -n "$nodes_text" ] || deny "BLOCKED: inside Archon node '$node' every call is fenced by .archon/copilot/node-fences.json, which is missing or empty, so the scope guard denies. Reinstall the kit (archon kit add)."
+fi
 
 # One jq spawn for everything (each spawn costs ~300ms on Windows). Fields joined by U+0001, list
 # items by U+0002; trailing sentinel keeps "jq failed" distinguishable from "all empty".
-if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" --rawfile loc "$local_policy" '
+if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" --rawfile loc "$local_policy" \
+      --arg node "$node" --arg nf "$nodes_text" '
       # Why the projects agent-scopes.local.json is refused, or "" (no file, or a valid one); see the header.
       def wrapper: IN("env", "eval", "exec", "xargs", "sudo", "su", "doas", "command", "builtin", "nohup", "timeout",
         "time", "nice", "setsid", "script");
@@ -117,8 +148,56 @@ if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" --rawfil
                   end ] | (.[0] // "")
             end
         end;
+      # Why .archon/copilot/node-fences.json is refused, or "" (see the header).
+      def dangerous_env: test("^(PATH|HOME|SHELL|IFS|ENV|BASH_ENV|CDPATH|SHELLOPTS|BASHOPTS|PS4|PROMPT_COMMAND|TMPDIR|NODE_OPTIONS|NODE_PATH|PYTHONPATH|PYTHONSTARTUP|PYTHONHOME|PERL5OPT|PERL5LIB|RUBYOPT|RUBYLIB|JAVA_HOME|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS|JAVA_OPTS|GRADLE_OPTS|GRADLE_USER_HOME|MAVEN_OPTS|WORKFLOW_ID)$")
+        or test("^(LD_|DYLD_|GIT_|NPM_CONFIG_|KIT_|CLAUDE_|COPILOT_|ARCHON_|SCOPE_GUARD_|RUN_GUARD_|BACKLOG_|AFFECTED_CMD|SSH_|GH_|GITHUB_)");
+      def node_entry_error($k; $v):
+        if ($v | type) != "object" then "nodes.\($k) must be an object"
+        elif ([$v | keys[] | select(IN("agent", "allowedFilePaths", "commandAllowlist", "env") | not)] | length) > 0
+          then "nodes.\($k) may set only agent, allowedFilePaths, commandAllowlist and env, not \"" + ([$v | keys[] | select(IN("agent", "allowedFilePaths", "commandAllowlist", "env") | not)] | join("\", \"")) + "\""
+        elif ($v.agent | type) != "string" or $pol[0].agents[$v.agent] == null
+          then "nodes.\($k).agent must name an agent .claude/hooks/agent-scopes.json fences"
+        elif ($v | has("commandAllowlist")) and ($v.commandAllowlist | type) != "array"
+          then "nodes.\($k).commandAllowlist must be a list of command prefixes"
+        elif ($v | has("allowedFilePaths")) and ($v.allowedFilePaths | type) != "array"
+          then "nodes.\($k).allowedFilePaths must be a list of paths"
+        elif ($v | has("env")) and ($v.env | type) != "array" then "nodes.\($k).env must be a list of variable names"
+        else ([($v.commandAllowlist // [])[] | entry_error($k) | sub("^agents\\."; "nodes.")]
+            + [($v.allowedFilePaths // [])[]
+                | if type != "string" then "nodes.\($k).allowedFilePaths holds a value that is not a string"
+                  elif . == "$RUN_ARTIFACTS/" then empty
+                  elif test("^\\s*$") then "nodes.\($k).allowedFilePaths holds an empty entry"
+                  elif test("^(/|~|[A-Za-z]:|\\\\)") or test("(^|/)\\.\\.(/|$)") or test("[$\\\\]")
+                    then "nodes.\($k).allowedFilePaths entry \"\(.)\" is not a path inside the project (only $RUN_ARTIFACTS/ names a folder outside it)"
+                  else empty end]
+            + [($v.env // [])[]
+                | if type != "string" or (test("^[A-Z][A-Z0-9_]*$") | not)
+                    then "nodes.\($k).env entry \"\(.)\" is not an upper-case variable name"
+                  elif dangerous_env then "nodes.\($k).env entry \"\(.)\" changes how a shell, an interpreter, git or this kit behaves"
+                  else empty end]
+          ) | (.[0] // "")
+        end;
+      def nodes_error:
+        (try ($nf | fromjson) catch "\u0000") as $n
+        | if $n == "\u0000" then "it is not valid JSON"
+          elif ($n | type) != "object" then "it is not a JSON object"
+          elif ([$n | keys[] | select(. != "nodes" and . != "_comment")] | length) > 0
+            then "it may hold only \"nodes\" (and \"_comment\"), not \"" + ([$n | keys[] | select(. != "nodes" and . != "_comment")] | join("\", \"")) + "\""
+          elif ($n.nodes | type) != "object" or ($n.nodes | length) == 0 then "\"nodes\" must be an object that names a node"
+          else ([$n.nodes | to_entries[] | node_entry_error(.key; .value)] | .[0] // "") end;
+      def common($lists): if ($lists | length) == 0 then []
+        else reduce $lists[1:][] as $l ($lists[0] | unique; map(select(. as $x | any($l[]; . == $x)))) end;
       local_error as $lerr
       | (if $lerr == "" and $loc != "" then ($loc | fromjson | .agents) else {} end) as $adds
+      # the fence of a node-fences.json entry: its agent, the project additions, then the node additions
+      | def node_scope($v):
+          ($pol[0].agents[$v.agent]) as $b
+          | (if $adds[$v.agent] == null then $b
+             else $b + {commandAllowlist: (($b.commandAllowlist // []) + $adds[$v.agent].commandAllowlist)} end) as $b2
+          | $b2 + {commandAllowlist: (($b2.commandAllowlist // []) + ($v.commandAllowlist // [])), nodeEnv: ($v.env // [])}
+            + (if ($b2 | has("allowedFilePaths")) then {allowedFilePaths: ($b2.allowedFilePaths + ($v.allowedFilePaths // []))}
+               else {} end);
+        (if $node == "" then "" else nodes_error end) as $nerr
       | (.agent_type // "") as $ag0
       | (if $ag0 == "" then null else $pol[0].agents[$ag0] end) as $own
       # Copilot only: a subagent of a fenced root session whose type has no policy entry (a built-in agent) is fenced
@@ -127,7 +206,25 @@ if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" --rawfil
       | (if $ag == "" then null else $pol[0].agents[$ag] end) as $s0
       # The project adds command prefixes; the kit list stays whole.
       | (if $s0 == null or $adds[$ag] == null then $s0
-         else $s0 + {commandAllowlist: (($s0.commandAllowlist // []) + $adds[$ag].commandAllowlist)} end) as $s
+         else $s0 + {commandAllowlist: (($s0.commandAllowlist // []) + $adds[$ag].commandAllowlist)} end) as $s1
+      # Inside a node: the node fence replaces the session agent; a subagent of another fenced type is checked by its
+      # own fence too ($sub, by a second run of this guard outside node mode).
+      | (if $node == "" or $nerr != "" then {s: $s1, ag: $ag, sub: ""}
+         else ($nf | fromjson | .nodes) as $nodes
+           | (if $ag0 != "" and $pol[0].agents[$ag0] != null then $ag0 else "" end) as $sub0
+           | if $nodes[$node] != null then
+               {s: node_scope($nodes[$node]), ag: "\($nodes[$node].agent) (node \($node))",
+                sub: (if $sub0 != $nodes[$node].agent then $sub0 else "" end)}
+             else
+               ([$nodes[] | node_scope(.)]) as $all
+               | {s: ({commandAllowlist: common([$all[] | .commandAllowlist]),
+                       allowedFilePaths: common([$all[] | select(has("allowedFilePaths")) | .allowedFilePaths]),
+                       nodeEnv: []}
+                      + (if any($all[]; has("readPaths"))
+                         then {readPaths: common([$all[] | select(has("readPaths")) | .readPaths])} else {} end)),
+                  ag: "node \($node) (not in .archon/copilot/node-fences.json, so the strictest common set)", sub: $sub0}
+             end end) as $nd
+      | $nd.s as $s | $nd.ag as $ag
       | (.tool_input // {}) as $a
       | $ag + "\u0001" + (.tool_name // "") + "\u0001"
         + ($a.file_path // $a.notebook_path // $a.path // "") + "\u0001"
@@ -142,11 +239,15 @@ if ! fields="$(printf '%s' "$payload" | jq -j --slurpfile pol "$policy" --rawfil
         + (($s.hubRoot.markers // []) | join("\u0002")) + "\u0001"
         + (($s.hubRoot.allowedFilePaths // []) | join("\u0002")) + "\u0001"
         + (if .kit_copilot == true then "copilot" else "" end) + "\u0001"
-        + $lerr + "\u0001."' 2>/dev/null)"; then
+        + $lerr + "\u0001"
+        + $nerr + "\u0001"
+        + (($s.nodeEnv // []) | join("\u0002")) + "\u0001"
+        + $nd.sub + "\u0001."' 2>/dev/null)"; then
   if ! command -v jq >/dev/null 2>&1; then       # no jq: fail CLOSED (PIN-17-0755), hand-built JSON
     printf '%s' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: jq is not on the PATH, so this guard cannot read the tool call and denies rather than failing open (PIN-17-0755). Install jq and retry."}}'
     decided=1; exit 0
   fi
+  [ -z "$node" ] || deny "BLOCKED: inside Archon node '$node' every call is fenced, and the scope guard could not read this call or its fences (jq failed), so it denies."
   allow
 fi
 
@@ -164,10 +265,23 @@ cmds="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
 hubm="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
 hubp="${fields%%$'\001'*}";   fields="${fields#*$'\001'}"
 origin="${fields%%$'\001'*}"; fields="${fields#*$'\001'}"
-local_error="${fields%%$'\001'*}"
+local_error="${fields%%$'\001'*}"; fields="${fields#*$'\001'}"
+node_error="${fields%%$'\001'*}"; fields="${fields#*$'\001'}"
+node_env="${fields%%$'\001'*}"; fields="${fields#*$'\001'}"
+sub_agent="${fields%%$'\001'*}"
 
+[ -z "$node_error" ] || deny "BLOCKED: .archon/copilot/node-fences.json is refused, so every call inside Archon node '$node' is denied until it is fixed: $node_error. A person fixes it; no agent may write it."
 [ "$mode" = "none" ] && allow
 armed=1
+# A subagent of another fenced type inside a node: its own fence first (this guard outside node mode), then the node's.
+if [ -n "$sub_agent" ]; then
+  sub_out="$(printf '%s' "$payload" | KIT_NODE='' bash "$0" "${1:-PreToolUse}")"
+  if [ -n "$sub_out" ]; then printf '%s\n' "$sub_out"; decided=1; exit 0; fi
+fi
+# Only tools no named kit.json entry checks (see the header): the named ones were checked there.
+if [ "$other_tools" -eq 1 ]; then
+  case "$tool" in Write|Edit|MultiEdit|NotebookEdit|Bash|Read|Grep|Glob) allow ;; esac
+fi
 [ -z "$local_error" ] || deny "BLOCKED: .claude/hooks/agent-scopes.local.json is refused, so every call of a fenced agent is denied until it is fixed: $local_error. It may only add command prefixes to the commandAllowlist of agents .claude/hooks/agent-scopes.json fences. A person fixes it; no agent may write it."
 
 # ── Hub root (marker-based) ──────────────────────────────────────────────────────────────────────
@@ -207,11 +321,36 @@ hub_match() {  # hub_match <hub-relative path> — 0 when it matches hubRoot.all
   return 1
 }
 
+# ── The run's own artifacts folder (node fences: $RUN_ARTIFACTS/) ───────────────────────────────────
+run_artifacts_re() {  # prints the regex of <archon home>/workspaces/<owner>/<repo>/artifacts/runs/$WORKFLOW_ID/, or fails
+  local wid="${WORKFLOW_ID:-}" home
+  [[ $wid =~ ^[A-Za-z0-9_-]+$ ]] || return 1
+  home="${ARCHON_HOME:-${HOME:-}/.archon}"
+  home="$(slashes "$home")"
+  case "$home" in /*) ;; *) return 1 ;; esac
+  # the home folder as a literal: every regex character escaped
+  home="$(printf '%s' "$home" | sed 's/[][\\.^$*+?(){}|]/\\&/g')"
+  printf '^%s/workspaces/[^/]+/[^/]+/artifacts/runs/%s/' "$home" "$wid"
+}
+in_run_artifacts() {  # in_run_artifacts <path>: 0 for a file below the run's own artifacts folder (no '..', no '.' part)
+  local p re
+  p="$(slashes "$1")"
+  case "/$p/" in */../*|*/./*) return 1 ;; esac
+  re="$(run_artifacts_re)" || return 1
+  [[ $p =~ $re.+ ]]
+}
+node_run_artifacts() {  # 0 when the fence holds $RUN_ARTIFACTS/
+  case "$(printf '\002%s\002' "$paths")" in *$'\002$RUN_ARTIFACTS/\002'*) return 0 ;; esac
+  return 1
+}
+
 # ── Write / Edit ─────────────────────────────────────────────────────────────────────────────────
 check_path() {
   # The fences themselves are off limits to every fenced agent, also to one that may write anywhere.
   case "${path//\\//}" in
     *.claude/hooks/agent-scopes*.json) deny "BLOCKED: agent '$agent' may not change the agent fences ('$path')." ;;
+    *.archon/copilot/node-fences.json|.archon/copilot/node-fences.json)
+      deny "BLOCKED: agent '$agent' may not change the node fences ('$path')." ;;
   esac
   [ "$mode" = "any" ] && allow
   [ -n "$path" ] || allow
@@ -256,6 +395,9 @@ check_path() {
   while [ "$p" != "${p//\/.\//\/}" ]; do p="${p//\/.\//\/}"; done
   p="${p#./}"
 
+  # Inside a node whose fence holds $RUN_ARTIFACTS/: a file below the run's own artifacts folder.
+  if [ -n "$node" ] && node_run_artifacts && in_run_artifacts "$path"; then allow; fi
+
   case "$p" in
     /*|[A-Za-z]:/*) deny "BLOCKED: agent '$agent' may only write inside its fence ($policy_rel), and '$path' is outside the project/worktree." ;;
     ../*|*/../*|..) deny "BLOCKED: agent '$agent' may not write via '..' paths ('$path')." ;;
@@ -271,6 +413,7 @@ check_path() {
   set -f   # entries are globs, not file names: no pathname expansion when splitting
   for entry in $paths; do
     [ -n "$entry" ] || continue
+    [ "$entry" != '$RUN_ARTIFACTS/' ] || continue   # a token, never a project path (above)
     case "$entry" in
       */) case "$p" in "$entry"*) allow ;; esac ;;
       *)  # shellcheck disable=SC2053  # intentional glob match
@@ -281,6 +424,10 @@ check_path() {
   unset IFS
   if [ -n "$hubm" ]; then
     deny "BLOCKED: agent '$agent' may only write inside a hub root (a directory holding $(printf '%s' "$hubm" | tr '\002' ' ')), and '$p' is outside that fence ($policy_rel)."
+  fi
+  if [ -n "$node" ] && node_run_artifacts; then
+    local shown; shown="$(printf '%s' "$paths" | tr '\002' ' ')"; shown="${shown//\$RUN_ARTIFACTS\//\$ARTIFACTS_DIR/ (the artifacts folder of this run)}"
+    deny "BLOCKED: agent '$agent' may only write under: $shown. '$p' is outside that fence ($policy_rel, .archon/copilot/node-fences.json). Report it back instead of widening your scope."
   fi
   if [ -z "$paths" ]; then
     deny "BLOCKED: agent '$agent' is read-only (empty allowedFilePaths in $policy_rel) and may not write '$p'."
@@ -345,8 +492,16 @@ norm_cmd() {  # strip a leading interpreter and ./ so `bash ./scripts/x.sh` matc
 }
 
 seg_allowed() {  # seg_allowed <segment> — 0 when the segment starts with an allowlisted command
-  local s entry e IFS
-  s="$(norm_cmd "$1")"
+  local s entry e IFS name re
+  s="$1"
+  # Inside a node: NAME=value in front of the command, for a NAME of the node's env list (node-fences.json)
+  re="^([A-Za-z_][A-Za-z0-9_]*)=(\"[^\"]*\"|'[^']*'|[^[:space:]\"']*)[[:space:]]+(.*)$"
+  while [ -n "$node_env" ] && [[ $s =~ $re ]]; do
+    name="${BASH_REMATCH[1]}"
+    case "$(printf '\002%s\002' "$node_env")" in *$'\002'"$name"$'\002'*) ;; *) return 1 ;; esac
+    s="${BASH_REMATCH[3]}"
+  done
+  s="$(norm_cmd "$s")"
   [ -n "$s" ] || return 0
   case "$s" in cd|"cd "*) return 0 ;; esac
   IFS=$'\002'
@@ -374,6 +529,16 @@ check_cmd() {
   # character; outside quotes and in "…" a \ escapes the next character, and $( or a backtick is command
   # substitution, which hides a second command inside an allowed one. Only the `$(cat <<…` heredoc used for commit
   # and PR bodies may substitute. Segments split on ; & | and newlines outside quotes; each is checked on its own.
+  # Inside a node: `$(cat <file below the run's artifacts folder>)` (as in AFFECTED_BASE="$(cat "$ARTIFACTS_DIR/step-base.sha")")
+  # reads a file of the run, so it is read as the plain word KIT_RUN_FILE; any other substitution is denied below.
+  if [ -n "$node" ]; then
+    local sub_re='[$][(]cat[[:space:]]+("?)(/[A-Za-z0-9._/-]+)("?)[[:space:]]*[)]' m
+    while [[ $cmd =~ $sub_re ]]; do
+      m="${BASH_REMATCH[0]}"
+      [ "${BASH_REMATCH[1]}" = "${BASH_REMATCH[3]}" ] && in_run_artifacts "${BASH_REMATCH[2]}" || break
+      cmd="${cmd/"$m"/KIT_RUN_FILE}"
+    done
+  fi
   local i c q="" seg="" n=${#cmd}
   i=0
   while [ "$i" -lt "$n" ]; do

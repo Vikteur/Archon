@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Tests for .claude/hooks/scripts/payload.sh (the sourced payload normalizer and both-shape deny helper) and for
-# scope-guard.sh and tool-advice.sh fed a Copilot camelCase payload. Claude payloads must pass through byte for byte.
+# scope-guard.sh and tool-advice.sh fed a Copilot camelCase payload, the kit's tools.json map, and .github/hooks/dispatch.sh
+# fed Copilot's batched preToolUse payload (toolCalls). Claude payloads must pass through byte for byte.
 # Usage: bash .archon/scripts/test/payload.test.sh   (exit 0 = all pass)
 set -uo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -174,6 +175,67 @@ eq "tool-advice (Copilot view of contract/, refuse): Copilot-shape deny" deny "$
 eq "tool-advice (Copilot view of contract/, refuse): Claude-shape deny" deny "$(jq -r '.hookSpecificOutput.permissionDecision // "none"' <<<"$out")"
 out="$(CLAUDE_PROJECT_DIR=/work/wt bash "$ta" PreToolUse <<<'{"agentType":"developer","toolName":"bash","toolArgs":"{\"command\":\"grep -rn operationId contract/\"}"}')"
 eq "tool-advice (Copilot bash grep of the contract, report): advice" advice "$(jq -r 'if .hookSpecificOutput.additionalContext then "advice" else "none" end' <<<"$out")"
+
+# --- tools.json (the kit's real map): the names Copilot CLI 1.0.114 uses
+tj="$root/.archon/copilot/tools.json"
+eq "tools.json: powershell is a shell" Bash "$(COPILOT_TOOLS_JSON="$tj" norm '{"toolName":"powershell","toolArgs":{"command":"ls"}}' | jq -r .tool_name)"
+n="$(COPILOT_TOOLS_JSON="$tj" norm '{"toolName":"grep","toolArgs":{"pattern":"X","paths":"src/main"}}')"
+eq "tools.json: grep is Grep" Grep "$(jq -r .tool_name <<<"$n")"
+eq "tools.json: grep's paths (one string) becomes path" src/main "$(jq -r .tool_input.path <<<"$n")"
+eq "tools.json: a grep path wins over paths" a "$(COPILOT_TOOLS_JSON="$tj" norm '{"toolName":"grep","toolArgs":{"path":"a","paths":"b"}}' | jq -r .tool_input.path)"
+eq "tools.json: web_fetch is WebFetch" WebFetch "$(COPILOT_TOOLS_JSON="$tj" norm '{"toolName":"web_fetch","toolArgs":{"url":"u"}}' | jq -r .tool_name)"
+eq "tools.json: apply_patch stays apply_patch (the scope guard denies it to a fenced agent)" apply_patch "$(COPILOT_TOOLS_JSON="$tj" norm '{"toolName":"apply_patch","toolArgs":{}}' | jq -r .tool_name)"
+
+# --- .github/hooks/dispatch.sh with Copilot's batched preToolUse payload: {cwd, sessionId, toolCalls: [{id, name, args}]}
+dp="$tmp/dproj"; mkdir -p "$dp/.github/hooks" "$dp/.claude/hooks/scripts" "$dp/.archon/copilot"
+# `command cp`: cp is a payload builder above
+command cp "$root/.github/hooks/dispatch.sh" "$dp/.github/hooks/"; command cp "$root/.claude/hooks/scripts/payload.sh" "$dp/.claude/hooks/scripts/"
+command cp "$tj" "$dp/.archon/copilot/"
+# a stub guard: logs each payload it gets (one line) and its arguments; denies --no-verify with exit 2, rm with JSON
+cat > "$dp/.claude/hooks/scripts/stub.sh" <<'STUB'
+in="$(cat)"; printf '%s\t%s\n' "$*" "$in" >> "$CLAUDE_PROJECT_DIR/seen"
+case "$in" in
+  *--no-verify*) echo "no --no-verify" >&2; exit 2 ;;
+  *'"rm '*) printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"no rm"}}' ;;
+esac
+exit 0
+STUB
+dsp() { # dsp <event> <matcher> <payload> [args]: out = dispatch.sh's stdout, seen = the payloads the stub got
+  local e="$1" m="$2" p="$3"; shift 3; : > "$dp/seen"
+  out="$(cd "$dp" && printf '%s' "$p" | CLAUDE_PROJECT_DIR="$dp" bash .github/hooks/dispatch.sh "$e" "$m" .claude/hooks/scripts/stub.sh "$@" 2>/dev/null)"
+}
+bt() { # bt <command>...: a batch of one skill call and one bash call per command
+  jq -cn --args '{cwd:"/w",sessionId:"s",toolCalls:([{id:"k",name:"skill",args:{skill:"clean-code"}}] + [$ARGS.positional | to_entries[] | {id:"b\(.key)",name:"bash",args:{command:.value}}])}' "$@"; }
+dsp PreToolUse 'Write|Edit|MultiEdit|NotebookEdit|Bash' "$(bt 'git status' 'git commit --no-verify -m x')" A1
+eq "dispatch batch: a denied second call denies the batch" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+eq "dispatch batch: the reason names the call" "bash call: no --no-verify" "$(jq -r '.permissionDecisionReason' <<<"$out" | sed 's/ *$//')"
+eq "dispatch batch: the deny has the Claude shape too" deny "$(jq -r '.hookSpecificOutput.permissionDecision // "none"' <<<"$out")"
+eq "dispatch batch: the matcher skips the skill call, both bash calls run" 2 "$(wc -l < "$dp/seen" | tr -d ' ')"
+eq "dispatch batch: each call is normalized on its own" "Bash Bash" "$(cut -f2 "$dp/seen" | jq -r .tool_name | paste -sd' ')"
+eq "dispatch batch: each call keeps its command" "git status" "$(head -1 "$dp/seen" | cut -f2 | jq -r .tool_input.command)"
+eq "dispatch batch: cwd and session come along" "/w s" "$(head -1 "$dp/seen" | cut -f2 | jq -r '"\(.cwd) \(.session_id)"')"
+eq "dispatch batch: the script gets its own arguments only" A1 "$(head -1 "$dp/seen" | cut -f1)"
+dsp PreToolUse 'Bash' "$(bt 'git commit --no-verify -m x' 'git status')"
+eq "dispatch batch: a denied first call stops the batch" 1 "$(wc -l < "$dp/seen" | tr -d ' ')"
+dsp PreToolUse 'Bash' "$(bt 'git status' 'rm -rf x')"
+eq "dispatch batch: a JSON deny of one call denies the batch" "bash call: no rm" "$(jq -r '.permissionDecisionReason' <<<"$out")"
+dsp PreToolUse 'Bash' "$(bt 'git status' 'git log')"
+eq "dispatch batch: allowed calls print nothing" "" "$out"
+dsp PreToolUse '*' "$(bt 'git status')"
+eq "dispatch batch: matcher * runs every call" "Skill Bash" "$(cut -f2 "$dp/seen" | jq -r .tool_name | paste -sd' ')"
+dsp PreToolUse 'Read|Grep|Glob' "$(jq -cn '{cwd:"/w",sessionId:"s",toolCalls:[{id:"a",name:"grep",args:{pattern:"X",paths:"src"}},{id:"b",name:"view",args:{path:"README.md"}}]}')"
+eq "dispatch batch: grep and view calls are mapped through tools.json" "Grep:src Read:README.md" "$(cut -f2 "$dp/seen" | jq -r '"\(.tool_name):\(.tool_input.path // .tool_input.file_path)"' | paste -sd' ')"
+dsp PreToolUse 'Bash' '{"cwd":"/w","sessionId":"s","toolCalls":[]}'
+eq "dispatch batch: an empty toolCalls runs nothing" "0:" "$(wc -l < "$dp/seen" | tr -d ' '):$out"
+dsp PreToolUse 'Bash' '{"cwd":"/w","sessionId":"s","toolCalls":"nope"}'
+eq "dispatch batch: an unreadable batch is denied on PreToolUse" deny "$(jq -r '.permissionDecision // "none"' <<<"$out")"
+dsp PostToolUse '' '{"cwd":"/w","sessionId":"s","toolCalls":"nope"}'
+eq "dispatch batch: an unreadable batch is skipped on another event" "0:" "$(wc -l < "$dp/seen" | tr -d ' '):$out"
+dsp PreToolUse 'Bash' '{"cwd":"/w","toolName":"bash","toolArgs":"{\"command\":\"git commit --no-verify\"}"}' A1 A2
+eq "dispatch single call: still denied" "no --no-verify" "$(jq -r '.permissionDecisionReason' <<<"$out" | sed 's/ *$//')"
+eq "dispatch single call: the script gets its arguments" "A1 A2" "$(cut -f1 "$dp/seen")"
+dsp PreToolUse 'Bash' '{"cwd":"/w","toolName":"view","toolArgs":{"path":"x"}}'
+eq "dispatch single call: the matcher still skips" 0 "$(wc -l < "$dp/seen" | tr -d ' ')"
 
 echo "payload: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

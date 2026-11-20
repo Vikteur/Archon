@@ -17,7 +17,8 @@
 #    .archon/config.yaml points core.hooksPath at .archon/githooks, whose hooks are executable: the commit-shape hook
 #    runs in every run worktree and an agent cannot skip it (owner decision D12, 2026-10-20);
 #  - build-feature-copilot's ci-fix loop starts with red-head (a head red on the same job as main stops as RED_FROM_MAIN), a fix
-#    without a commit fails as CI_FIX_NO_COMMIT, and diagnose and fix may not push to main or commit tickets (D13, D14).
+#    without a commit fails as CI_FIX_NO_COMMIT, one without a commit after a `CAUSE: main` diagnosis ends at a cancel
+#    node as BLOCKED_NEEDS_PERSON, and diagnose and fix may not push to main or commit tickets (D13, D14).
 #  W1, W4 and W5 are ROADMAP R17 (T12); each check also runs on a fixture of the old code, where it must fail.
 #  - a dry run with default stubs of each workflow ends `Simulation outcome: completed`; a build workflow's plan
 #    approval is answered by a stub, and a rejected plan ends `Simulation outcome: cancelled`. It needs the archon CLI;
@@ -143,7 +144,9 @@ ci_fix_gaps() { # ci_fix_gaps <workflow yaml>
         || echo "ci-fix.$n does not deny $r"
     done
   done
-  for r in RED_FROM_MAIN CI_FIX_NO_COMMIT; do grep -q "$r" "$1" || echo "no $r token"; done
+  for r in RED_FROM_MAIN CI_FIX_NO_COMMIT BLOCKED_NEEDS_PERSON; do grep -q "$r" "$1" || echo "no $r token"; done
+  yq -e '.nodes[] | select(.id == "ci-fix") | .loop_group.nodes[] | select(has("cancel") and (.depends_on // [] | contains(["fix-made"])))' "$1" >/dev/null 2>&1 \
+    || echo "ci-fix has no cancel node after fix-made for the blocked outcome"
 }
 
 for wf in "$workflows"/*.yaml; do
@@ -169,7 +172,7 @@ out=$(hook_gaps "$repo")
 check "run worktrees: core.hooksPath points at .archon/githooks, every hook executable" $([ -z "$out" ]; echo $?) "$out"
 if [ -f "$workflows/build-feature-copilot.yaml" ]; then
   out=$(ci_fix_gaps "$workflows/build-feature-copilot.yaml")
-  check "build-feature-copilot: ci-fix starts with red-head, names its two failure tokens, may not push main or commit tickets" \
+  check "build-feature-copilot: ci-fix starts with red-head, names its three outcome tokens, ends blocked at a cancel node, may not push main or commit tickets" \
     $([ -z "$out" ]; echo $?) "$out"
   out=$(open_pr_unleased "$workflows/build-feature-copilot.yaml" "$here/open-pr.sh")
   check "build-feature-copilot: W4 open-pr pushes only with a lease against the head last seen" $([ -z "$out" ]; echo $?) "$out"
@@ -324,7 +327,7 @@ nodes:
 EOF
 out=$(ci_fix_gaps "$tmp/f.yaml")
 check "contracts: a ci-fix loop without red-head, denials and tokens is found" \
-  $([ "$(grep -c . <<< "$out")" -eq 7 ]; echo $?) "$out"
+  $([ "$(grep -c . <<< "$out")" -eq 9 ]; echo $?) "$out"
 cat > "$tmp/f.yaml" <<'EOF'
 nodes:
   - id: ci-fix
@@ -337,6 +340,12 @@ nodes:
         - id: fix
           prompt: Without a commit print CI_FIX_NO_COMMIT.
           denied_tools: ["Bash(*commit-tickets*)", "Bash(*git push*main*)"]
+        - id: fix-made
+          depends_on: [fix]
+          bash: echo BLOCKED_NEEDS_PERSON
+        - id: blocked
+          depends_on: [fix-made]
+          cancel: blocked
 EOF
 out=$(ci_fix_gaps "$tmp/f.yaml")
 check "contracts: the failure-recovery ci-fix loop is not reported" $([ -z "$out" ]; echo $?) "$out"

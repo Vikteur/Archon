@@ -33,6 +33,11 @@
       },
       {
         "type": "command",
+        "bash": "bash .github/hooks/dispatch.sh PreToolUse '*' .claude/hooks/scripts/scope-guard.sh PreToolUse --other-tools",
+        "timeoutSec": 60
+      },
+      {
+        "type": "command",
         "bash": "bash .github/hooks/dispatch.sh PreToolUse 'Read|Grep|Glob' .claude/hooks/scripts/tool-advice.sh PreToolUse",
         "timeoutSec": 10
       },
