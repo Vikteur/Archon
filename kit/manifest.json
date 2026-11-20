@@ -293,7 +293,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.js",
       "kind": "script",
-      "sha256": "b63ca127ecd3fab5b232ad30d83865d0512fec995fb949ff67375bd1eaaa02b5"
+      "sha256": "e19b40dc9a34e71d0c0e100343e3fc64d5fe111011bcf839ad2424b0b47f6fc6"
     },
     {
       "path": ".archon/scripts/kit-config.sh",
@@ -302,7 +302,7 @@
       "template": false,
       "origin": ".archon/scripts/kit-config.sh",
       "kind": "script",
-      "sha256": "8dd718bf50cc6eacb0278d43ccf3e0f747c44271f8fec5df48269490d666edc1"
+      "sha256": "b18696c6947c330ef5fcee2537f83fe7e5a734a25164fa2d35c97329af00bb15"
     },
     {
       "path": ".archon/scripts/local-ci-run.sh",
@@ -690,7 +690,7 @@
       "template": false,
       "origin": ".archon/scripts/test/kit-config.test.sh",
       "kind": "script",
-      "sha256": "7fe4875a8f3b70c209697268803efabf3ef7e0569e8423c1b65d0d951f4986ec"
+      "sha256": "10320ed31009eb4c21d5089a2f56472dec06d3f7189fa7d6ba9821c2e5819c1d"
     },
     {
       "path": ".archon/scripts/test/local-ci-off.test.sh",

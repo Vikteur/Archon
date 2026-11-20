@@ -6,7 +6,7 @@
 #   kit_get build_workflow build-feature BUILD_WORKFLOW          # an explicit env name as the third argument
 # The file is $KIT_CONFIG, else <repo root>/.archon/kit.yaml (the repo root is git's top level, else $PWD). Reading needs
 # yq (mikefarah v4); with no yq, no file or no such key the default is printed. A null or empty value is "no key"; false
-# is a value (local_ci: false prints false).
+# is a value (local_ci: false prints false); a boolean in any case prints lower case (False prints false).
 # A key the project's kit.yaml leaves out is read from kit.defaults.yaml beside it, the kit's own defaults that
 # `archon kit add` ships (agent_cli: copilot), so a Copilot project's runtime agrees with what kit add rendered; a checkout
 # without that file (the kit's source repo) keeps the script's default.
@@ -27,7 +27,10 @@ kit_get() { # kit_get <dotted.key> <default> [ENV_NAME]
       done
     fi
   fi
-  printf '%s' "${v:-$def}"
+  v="${v:-$def}"
+  # A boolean in any case (False, TRUE) is the lower-case word, as YAML and `archon kit add` read it.
+  case "$(printf '%s' "$v" | tr 'A-Z' 'a-z')" in true | false) v="$(printf '%s' "$v" | tr 'A-Z' 'a-z')" ;; esac
+  printf '%s' "$v"
 }
 
 # kit_list <dotted.key>: the items of a YAML list key, one per line (nothing for a missing or empty key, or with no yq).

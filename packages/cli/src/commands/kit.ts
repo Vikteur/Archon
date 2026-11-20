@@ -488,9 +488,14 @@ export function switchedOn(
 ): boolean {
   if (file.when === undefined) return true;
   const value = config !== null && Object.hasOwn(config, file.when) ? config[file.when] : undefined;
-  if (value !== undefined && value !== null) return value !== false;
+  if (value !== undefined && value !== null) return !isFalse(value);
   const defaults = parseYaml(kit.defaults) as Record<string, unknown> | null;
-  return defaults?.[file.when] !== false;
+  return !isFalse(defaults?.[file.when]);
+}
+
+/** false, or the word false in any case and quoted: the runtime's kit_get reads them all as false. */
+function isFalse(value: unknown): boolean {
+  return value === false || (typeof value === 'string' && value.trim().toLowerCase() === 'false');
 }
 
 /**

@@ -827,6 +827,16 @@ describe('kit', () => {
       expect(await add({}, ciKit())).toBe(0);
       expect(existsSync(ciFile())).toBe(false);
     });
+    it('reads a quoted or upper-case false as off, as the runtime scripts do', async () => {
+      mkdirSync(join(project, '.archon'), { recursive: true });
+      for (const value of ['"false"', "'False'", 'FALSE']) {
+        writeFileSync(join(project, '.archon/kit.yaml'), `profiles: [core]\nlocal_ci: ${value}\n`);
+        expect(await add({}, ciKit())).toBe(0);
+        expect(existsSync(ciFile())).toBe(false);
+      }
+      expect(await add({ set: ['local_ci=False'] }, ciKit())).toBe(0);
+      expect(existsSync(ciFile())).toBe(false);
+    });
     it('a kit whose defaults leave the key out ships the file', async () => {
       const kit = ciKit();
       kit.defaults = makeKit().defaults;

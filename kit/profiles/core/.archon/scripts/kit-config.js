@@ -30,16 +30,19 @@ function readKey(text, key) {
   return '';
 }
 
+// a boolean in any case (False, TRUE) is the lower-case word, as YAML and `archon kit add` read it
+const bool = v => (/^(true|false)$/i.test(v) ? v.toLowerCase() : v);
+
 function kitGet(key, def, envName, root) {
   const env = process.env[envName || `KIT_${key.toUpperCase().replace(/\./g, '_')}`];
-  if (env) return env;
+  if (env) return bool(env);
   let v = '';
   const file = kitFile(root);
   for (const f of [file, path.join(path.dirname(file), 'kit.defaults.yaml')]) {
     try { v = readKey(fs.readFileSync(f, 'utf8'), key); } catch { v = ''; /* no file: the next one, then the default */ }
     if (v) break;
   }
-  return v || def;
+  return bool(v || def);
 }
 
 module.exports = { kitGet, readKey };
