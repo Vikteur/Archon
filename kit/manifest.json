@@ -1726,7 +1726,7 @@
       "template": true,
       "origin": "scripts/test/web-uis.test.sh",
       "kind": "script",
-      "sha256": "9773d72ffc06d03e0b57fbbdbff608897273c1be00011ba55d811524679eb6b5"
+      "sha256": "42aee685acc01820f31811afc7712908b61deec12f15dc8d9c233346395f1f86"
     },
     {
       "path": "scripts/tokenomics/commit-reports.sh",
