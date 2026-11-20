@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Tests for build-feature's ready node: its own bash, read from .archon/workflows/build-feature.yaml, run in a
+# Tests for build-feature's ready node: its own bash, read from .archon/workflows/build-feature-copilot.yaml, run in a
 # throwaway repo whose .archon/scripts holds stubs of local-ci-run.sh, ci-by-sha.sh, rebase-main.sh, tdd-check.sh and
 # pr-refresh.sh, with a stubbed gh on PATH.
 # Usage: bash .archon/scripts/test/ready-node.test.sh   (exit 0 = all pass)
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-wf="$here/../workflows/build-feature.yaml"
+wf="$here/../workflows/build-feature-copilot.yaml"
 pass=0; fail=0
 root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT

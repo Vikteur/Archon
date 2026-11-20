@@ -81,7 +81,7 @@ verdict() { # verdict <loop json>: prints the problems, nothing when the loop st
       }
     }' "$1"
 }
-for w in build-feature; do
+for w in build-feature-copilot; do
   ls_=$(loops "$w")
   out="$ls_"
   check "4 $w has a loop that ends on BLOCKED:" $([ -n "$ls_" ]; echo $?)

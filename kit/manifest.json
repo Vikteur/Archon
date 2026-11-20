@@ -966,15 +966,6 @@
       "sha256": "b92a42e064e1c600acbfdad346f2842e98a222e07293381b4d02508e37d0049b"
     },
     {
-      "path": ".archon/workflows/build-feature.yaml",
-      "profile": "core",
-      "mode": "0644",
-      "template": true,
-      "origin": ".archon/workflows/build-feature.yaml",
-      "kind": "workflow",
-      "sha256": "9a7bbe8b72a15f444f66ac1afb02911a2c6cbcceb58728538dbb85a6ed313634"
-    },
-    {
       "path": ".archon/workflows/run-metrics.yaml",
       "profile": "core",
       "mode": "0644",

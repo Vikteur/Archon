@@ -2,7 +2,7 @@
 // node twin of kit-config.sh, no dependencies). Only what the run tooling needs: top-level and one-level nested scalar
 // keys (`build_workflow`, `contract.repo`), quotes and trailing comments stripped.
 //   const { kitGet } = require('./kit-config');
-//   kitGet('build_workflow', 'build-feature', 'BUILD_WORKFLOW')   // env BUILD_WORKFLOW, else kit.yaml, else the default
+//   kitGet('build_workflow', 'build-feature-copilot', 'BUILD_WORKFLOW')   // env BUILD_WORKFLOW, else kit.yaml, else the default
 // The env name defaults to KIT_<KEY upper-cased, dots as underscores>. The file is $KIT_CONFIG, else
 // <repo root>/.archon/kit.yaml (the root is this file's grandparent folder). A key it leaves out is read from
 // kit.defaults.yaml beside it (the kit's shipped defaults), as kit-config.sh does.

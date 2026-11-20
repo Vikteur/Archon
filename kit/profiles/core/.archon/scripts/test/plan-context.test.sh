@@ -48,7 +48,7 @@ include(
 EOF
 echo 'dependencies { testFixturesApi(testFixtures(project(":a-domain"))) }' > a-domain/build.gradle.kts
 printf 'dependencies {\n  implementation(project(":a-domain"))\n  testImplementation(testFixtures(project(":a-domain")))\n}\n' > a-usecase/build.gradle.kts
-cat > .archon/workflows/build-feature.yaml <<'EOF'
+cat > .archon/workflows/build-feature-copilot.yaml <<'EOF'
 nodes:
   - id: ticket
     bash: x
@@ -117,7 +117,7 @@ printf 'Task TASK-9 - x\n\nDepends on: none\n' > "$root/ticket.md"
 bash "$script" "$root/ticket.md" > "$root/out.md"; check "no dependencies exits 0" $?
 ! has "## Dependencies" && [ ! -s "$BACKLOG_LOG" ]; check "no dependencies, no section and no backlog call" $?
 bash "$script" "$root/missing.md" > "$root/out.md"; check "no ticket.md exits 0" $?
-has "## build-feature nodes"; check "no ticket.md still writes the pack" $?
+has "## build-feature-copilot nodes"; check "no ticket.md still writes the pack" $?
 
 # Read-only: the pack changes nothing in the checkout.
 [ -z "$(git status --porcelain)" ]; check "checkout untouched" $?

@@ -44,7 +44,9 @@ const prNumberOf = (run) => {
   const m = (run.user_message || '').match(/\/pull\/(\d+)|\bPR #(\d+)|\bpull request #(\d+)|#(\d+)/i);
   return m ? Number(m[1] || m[2] || m[3] || m[4]) : null;
 };
-const isBuild = (run) => run.workflow_name === 'build-feature';
+// The build workflow the project runs: build_workflow of .archon/kit.yaml (env BUILD_WORKFLOW), else the kit's default.
+const BUILD = require('./kit-config.js').kitGet('build_workflow', 'build-feature-copilot', 'BUILD_WORKFLOW');
+const isBuild = (run) => run.workflow_name === BUILD;
 const isReview = (run) => /pr-review/.test(run.workflow_name);
 const cost = (run) => (typeof run.metadata?.total_cost_usd === 'number' ? run.metadata.total_cost_usd : null);
 

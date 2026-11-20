@@ -167,17 +167,17 @@ done
 
 out=$(hook_gaps "$repo")
 check "run worktrees: core.hooksPath points at .archon/githooks, every hook executable" $([ -z "$out" ]; echo $?) "$out"
-if [ -f "$workflows/build-feature.yaml" ]; then
-  out=$(ci_fix_gaps "$workflows/build-feature.yaml")
-  check "build-feature: ci-fix starts with red-head, names its two failure tokens, may not push main or commit tickets" \
+if [ -f "$workflows/build-feature-copilot.yaml" ]; then
+  out=$(ci_fix_gaps "$workflows/build-feature-copilot.yaml")
+  check "build-feature-copilot: ci-fix starts with red-head, names its two failure tokens, may not push main or commit tickets" \
     $([ -z "$out" ]; echo $?) "$out"
-  out=$(open_pr_unleased "$workflows/build-feature.yaml" "$here/open-pr.sh")
-  check "build-feature: W4 open-pr pushes only with a lease against the head last seen" $([ -z "$out" ]; echo $?) "$out"
+  out=$(open_pr_unleased "$workflows/build-feature-copilot.yaml" "$here/open-pr.sh")
+  check "build-feature-copilot: W4 open-pr pushes only with a lease against the head last seen" $([ -z "$out" ]; echo $?) "$out"
   if [ -f "$here/run-buckets.json" ]; then
-    out=$(unbucketed "$workflows/build-feature.yaml" "$here/run-buckets.json")
-    check "build-feature: W5 every node has a time bucket in run-buckets.json" $([ -z "$out" ]; echo $?) "$out"
+    out=$(unbucketed "$workflows/build-feature-copilot.yaml" "$here/run-buckets.json")
+    check "build-feature-copilot: W5 every node has a time bucket in run-buckets.json" $([ -z "$out" ]; echo $?) "$out"
   else
-    skipped=$((skipped+1)); echo "SKIPPED: build-feature: W5 time buckets (.archon/scripts/run-buckets.json does not exist yet)"
+    skipped=$((skipped+1)); echo "SKIPPED: build-feature-copilot: W5 time buckets (.archon/scripts/run-buckets.json does not exist yet)"
   fi
 fi
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for .archon/scripts/plan-spike.sh against a throwaway repo whose committed ./gradlew is a stub, and for the plan
-# node's fence in .archon/workflows/build-feature.yaml: no Gradle, no script that runs Gradle, no test suite.
+# node's fence in .archon/workflows/build-feature-copilot.yaml: no Gradle, no script that runs Gradle, no test suite.
 # Usage: bash .archon/scripts/test/plan-spike.test.sh   (exit 0 = all pass)
 set -uo pipefail
 # No automatic gc or maintenance in the throwaway repos: a background gc racing the next git call was the suspected
@@ -70,7 +70,7 @@ bash "$script" "$root/none" compileJava "q" > /dev/null 2>&1; [ $? -eq 2 ]; chec
 # The plan node's fence. Its denied_tools hold the Gradle wrapper, every script that runs Gradle and every test-suite
 # run; plan-spike.sh, the one exception, matches none of them. The plan node is an agent of its own, not an included
 # block (the plan-block trial ended 2026-10-24): an include: cannot carry denied_tools.
-wf="$top/.archon/workflows/build-feature.yaml"
+wf="$top/.archon/workflows/build-feature-copilot.yaml"
 block=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /^    include: / { print $2; exit }' "$wf")
 [ -z "$block" ]; check "build-feature's plan includes no block ($block)" $?
 denied=$(awk '/^  - id: plan$/ { p = 1; next } /^  - id: / { p = 0 } p && /denied_tools:/ { d = 1 } p && d { print } p && d && /\]/ { exit }' "$wf")

@@ -56,7 +56,10 @@ if ! archon workflow runs --all --json --limit 500 > "$work/runs.json" 2>/dev/nu
   echo "archon workflow runs failed; stopped runs are documented by the next sweep." >&2
   exit 0
 fi
-for run in $(node "$here/retro.js" pending "$work/runs.json" build-feature | tr -d '\r'); do
+# The build workflow the project runs: build_workflow of .archon/kit.yaml (env BUILD_WORKFLOW), else the kit's default.
+. "$here/kit-config.sh"
+build_wf=$(kit_get build_workflow build-feature-copilot BUILD_WORKFLOW)
+for run in $(node "$here/retro.js" pending "$work/runs.json" "$build_wf" | tr -d '\r'); do
   document add "$run" || echo "Run ${run:0:8} is not documented; the next sweep tries again." >&2
 done
 exit 0

@@ -9,7 +9,7 @@
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-wf="$here/../workflows/build-feature.yaml"
+wf="$here/../workflows/build-feature-copilot.yaml"
 pass=0; fail=0; out=""
 root="$(mktemp -d)"
 trap 'rm -rf "$root"' EXIT
