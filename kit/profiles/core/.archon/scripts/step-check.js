@@ -11,13 +11,15 @@
 //     so, on the build side, is a `Hand-written:` line of plan.md in neither form: scaffold-missing.md says why for each.
 // A build-side miss opens the step again in the plan, so the loop builds it once more; a test-side miss leaves the plan
 // alone and the loop's `when:` skips the build agent. It never fails the node: it prints {"ok", "n", "side", "missing",
-// "scaffold"} for that `when:`. What it cannot judge (a blocked plan, no step-base.sha, no run log) is left to the gates
+// "scaffold"} for that `when:`. A check that passes removes a note of its own side only (or one that names no side):
+// the test-side check runs between a build-side miss and the build agent that has to fix it, and used to delete it. What it cannot judge (a blocked plan, no step-base.sha, no run log) is left to the gates
 // after the loop, skill-check and scaffold-check, which still run over the whole branch. A `BLOCKED:` line is the node's
 // blocked-stop.sh, run before this.
 const fs = require('fs');
 const path = require('path');
 const skills = require('./skill-check.js');
 const scaffold = require('./scaffold-check.js');
+const { missSide } = require('./step-cut.js');
 
 const TEST_TREE = /(^|\/)src\/(test|testFixtures|integrationTest)\//;
 
@@ -46,7 +48,7 @@ function stepCheck(art, runId, root, side) {
   skills.remedy(art, r);
   const misses = r.n ? scaffoldMisses(art, runId, root, side) : [];
   const file = path.join(art, 'scaffold-missing.md');
-  if (!misses.length) fs.rmSync(file, { force: true });
+  if (!misses.length) { if (['', side].includes(missSide(file))) fs.rmSync(file, { force: true }); }
   else {
     const scaffoldSh = `scripts/scaffold.sh${side === 'test' ? ' --test' : ''}`;
     fs.writeFileSync(file, [`# Scaffold missing — step ${r.n}, ${side} side`, '',

@@ -325,7 +325,8 @@ nodes:
   # 2026-10-23, docs/memory.md), not only the gates after the loop: the skills the step names (and those of the steps
   # folded into it) were loaded, and no file the agent added since step-base is one the scaffold-check gate would refuse
   # (written by hand and not named on a `Hand-written:` line in a form that holds for it; on the build side also a
-  # `Hand-written:` line in neither form). On a miss it writes skills-missing.md or scaffold-missing.md and the loop goes round again: a
+  # `Hand-written:` line in neither form). On a miss it writes skills-missing.md or scaffold-missing.md, which step-cut.js
+  # copies into step.md (a check that passes removes only a note of its own side), and the loop goes round again: a
   # test-side miss skips the build agent, a build-side miss opens the step again in the plan, and the next agent fixes
   # it. skill-check and scaffold-check after the loop stay the gates.
   # The build agent's green check is affected-check.sh, never the full suite (owner decision 2026-10-17,
@@ -402,12 +403,14 @@ nodes:
             the owner decisions and the plan's answers). Read plan.md only for what step.md leaves out, and mark the step
             in plan.md. No step.md: read $ARTIFACTS_DIR/plan.md and take the first step still marked `- [ ]`; n is its
             position among the plan's checkbox lines (the first checkbox is 1).
-            If $ARTIFACTS_DIR/skills-missing.md exists, read it first: an agent of this step never loaded the skills
-            it names. When it names `Test skills:`, load each with the skill tool, check this step's tests against
-            them, fix what they change, run the tests again into $ARTIFACTS_DIR/red/step-<n>.log and commit any change
-            as below; then stop. When it names `Build skills:`, the tests stand: change nothing and stop.
-            If $ARTIFACTS_DIR/scaffold-missing.md exists, read it first too: when its title says `test side`, do what
-            it says for each file it names, run the tests again into $ARTIFACTS_DIR/red/step-<n>.log, commit, and stop.
+            If $ARTIFACTS_DIR/skills-missing.md exists (step.md copies it under `## Misses of the last round`), act on
+            it first: an agent of this step never loaded the skills it names. When it names `Test skills:`, load each
+            with the skill tool, check this step's tests against them, fix what they change, run the tests again into
+            $ARTIFACTS_DIR/red/step-<n>.log and commit any change as below; then stop. When it names `Build skills:`,
+            the tests stand: change nothing and stop.
+            If $ARTIFACTS_DIR/scaffold-missing.md exists (step.md copies it too), act on it first too: when it says
+            `test side`, do what it says for each file it names, run the tests again into $ARTIFACTS_DIR/red/step-<n>.log,
+            commit, and stop.
             When it says `build side`, the tests stand: change nothing and stop.
             A step that pushes, opens the pull request or reads CI is done by later nodes of this workflow: write
             nothing for it and stop.
@@ -530,11 +533,12 @@ nodes:
             step.md's step is already marked `- [x]` in the plan, an earlier attempt built it: commit what that attempt left
             uncommitted (if anything, after affected-check passes) and stop; never take the next open step here. Uncommitted
             changes are an earlier attempt's work: build on them, and never commit the same change twice.
-            If $ARTIFACTS_DIR/skills-missing.md names `Build skills:`, this step was built without them: load each
-            with the skill tool first, check the step's code against them and fix what they change, then go on as
-            below (when nothing changed, mark the step and commit nothing).
-            If $ARTIFACTS_DIR/scaffold-missing.md says `build side`, this step left a file or a plan line the
-            scaffold-check gate would refuse: do what it says for each one first, then go on as below.
+            If step.md ends with `## Misses of the last round` (copies of $ARTIFACTS_DIR/skills-missing.md and
+            scaffold-missing.md), act on it before anything else. When it names `Build skills:`, this step was built
+            without them: load each with the skill tool first, check the step's code against them and fix what they
+            change, then go on as below (when nothing changed, mark the step and commit nothing). When it says
+            `build side`, this step left a file or a plan line the scaffold-check gate would refuse: do what it says for
+            each one first, then go on as below.
             A step that pushes, opens the pull request or reads CI is done by later nodes of this workflow: do not do
             it, mark it `- [x] (done by the workflow's open-pr and ci nodes)` and commit nothing for it.
             A step marked `- [ ] (verify only)` has no tests: make the docs change it names, or run the one generator it
