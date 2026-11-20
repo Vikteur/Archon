@@ -67,9 +67,10 @@
 # check and still wait for a live run. --force never skips and never attaches (TASK-68). A queued call whose process
 # died is reaped as stale.
 # Statuses follow the one grammar of ci-status-grammar.sh: `success in <s>s on <host>` (the job's own seconds, after
-# its needs: wait), with `; narrowed: archon-suites` when the .archon step ran a subset or none of the suites and
-# `; skipped-locally <n>` for the steps the runner does not run; `failure (infra: <reason>) on <host>` when the runner
-# could not run the job; `failure (<reason>) on <host>` when it did not run (a needed job failed, a merge conflict).
+# its needs: wait), with `; <t> tests` when the job left JUnit XML (the tests it counts), `; narrowed: archon-suites`
+# when the .archon step ran a subset or none of the suites and `; skipped-locally <n>` for the steps the runner does
+# not run; `failure (infra: <reason>) on <host>` when the runner could not run the job; `failure (<reason>) on <host>`
+# when it did not run (a needed job failed, a merge conflict).
 # A second run of a commit keeps the first one's folder as <sha7>.r<n> (never deleted, owner decision D17); the run id
 # <sha7>.r<k> names run k of the commit. Every run is recorded in the CI ledger (ci-ledger.sh, $CI_LEDGER, default
 # ledger.jsonl in $CI_LOCAL_ROOT): request, queued, start, affected, verdict per job, end; caller and ticket come from
@@ -702,8 +703,10 @@ run_job() {
 }
 
 finish_job() { # report a finished job's status, in the grammar of ci-status-grammar.sh
-  local job=$1 res secs skipped kind needs narrowed reason desc state fp="" how="" arg=""
+  local job=$1 res secs skipped kind needs narrowed reason desc state fp="" how="" arg="" ntests=""
   read -r res secs skipped kind needs narrowed < "$out/$job.result"
+  # The tests of the JUnit XML the job left (ci_ledger_junit's sum); none found: no count on the status.
+  ntests=$(jq -r '[.[]?.tests? | numbers] | add // 0' "$out/$job.tests.json" 2>/dev/null) || ntests=""
   reason=$(cat "$out/$job.reason" 2>/dev/null)
   read -r _ fp _ < "$out/$job.plan" 2>/dev/null
   [[ "$fp" =~ ^[0-9a-f]{64}$ ]] || fp=""
@@ -715,7 +718,7 @@ finish_job() { # report a finished job's status, in the grammar of ci-status-gra
     timedout) desc=$(ci_status_timedout "$arg") ;;
     cancelled) state=error; desc=$(ci_status_cancelled "$arg") ;;
     *) desc=$(ci_status_ran "$res" "$secs" "$host" "$fp" "${narrowed:-0}" "${skipped:-0}" \
-         "$([ -n "$rerun_failed" ] && printf '%s' "${CI_LOCAL_RERUN_AFTER:-}")") ;;
+         "$([ -n "$rerun_failed" ] && printf '%s' "${CI_LOCAL_RERUN_AFTER:-}")" "$ntests") ;;
   esac
   status "$job" "$state" "$desc"
   printf '%s\n' "$desc" > "$out/$job.status"
