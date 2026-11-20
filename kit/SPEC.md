@@ -317,6 +317,12 @@ unless `--backlog` is given). The scripts read the switch at runtime (`kit_get b
 - **Config.** A suite that asserts a script's defaults sets `KIT_CONFIG=/dev/null`, so the install's `.archon/kit.yaml`
   does not change them.
 - **CI.** A suite a shipped `ci.yml` runs by name must ship in every set that holds that `ci.yml` (dependency check).
+- **Whole-kit render test.** `scripts/kit-render-test.sh` (repo root, not shipped) renders the three installs from this
+  checkout's CLI source under isolated homes (default profiles with local CI on, default with local CI off, core + java +
+  java-spring) and runs each one's suites through `run-suites.sh`; a red suite is re-run alone before it counts. It prints
+  suites, red, wall time and the three slowest per render and exits 0 only when all are green. `--only on|off|spring`,
+  `--keep`, `--jobs N`, `--serial`. A suite split in parts shares its setup through a sourced `*-lib.sh` (the `ci-local`
+  suites: `ci-local-lib.sh`), named without `.test.sh` so no finder runs it as a suite.
 
 ## What never ships
 
