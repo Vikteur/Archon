@@ -9,10 +9,9 @@
 #     names the labels, and the text is written unchanged under Description, so every node reads one ticket.md either way.
 #   ticket.sh "<request text>"
 # Writes the ticket to $ARTIFACTS_DIR/ticket.md and prints one JSON line:
-#   {"task": "TASK-4.2", "stop": "stop-db-migration", "title": "<the ticket's title>", "pr_note": "<a sentence>"}
-# task is the Backlog id, empty without a Backlog ticket; stop the labels that start with stop- (from the request text,
-# only those of letters, digits and dashes); pr_note the sentence the pr-text node adds to its prompt, which names the
-# Backlog ticket, and is empty without one (no "Backlog ticket" line in the pull request).
+#   {"task": "TASK-4.2", "stop": "stop-db-migration", "title": "<the ticket's title>"}
+# task is the Backlog id, empty without a Backlog ticket (pr-body.sh then writes no "Backlog ticket" line in the pull
+# request); stop the labels that start with stop- (from the request text, only those of letters, digits and dashes).
 #
 # The Backlog lives in this repo. It is read from the main checkout of the repo the run is in, never from
 # the run's worktree (whose copy of backlog/ is the branch's, not the live one), else from a sibling of that main
@@ -46,7 +45,7 @@ if [ -z "$task" ]; then
       "Source: the build request (no Backlog ticket)",
       ...(labels.length ? [`Labels: ${labels.join(", ")}`] : []), "",
       "Description:", bar, text.replace(/\s+$/, ""), ""].join("\n"));
-    console.log(JSON.stringify({ task: "", stop: stop.join(","), title, pr_note: "" }));'
+    console.log(JSON.stringify({ task: "", stop: stop.join(","), title }));'
   exit 0
 fi
 
@@ -80,5 +79,5 @@ printf '%s' "$json" | node -e '
     const t = JSON.parse(s).task;
     const stop = (t.labels || []).filter(l => l.startsWith("stop-")).join(",");
     const title = String(t.title || "");
-    console.log(JSON.stringify({ task: t.id, stop, title, pr_note: `Name its Backlog ticket, ${t.id} (${title}).` }));
+    console.log(JSON.stringify({ task: t.id, stop, title }));
   });'

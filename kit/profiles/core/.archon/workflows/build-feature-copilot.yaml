@@ -61,8 +61,7 @@ nodes:
         task: { type: string }
         stop: { type: string }
         title: { type: string }
-        pr_note: { type: string }
-      required: [task, stop, title, pr_note]
+      required: [task, stop, title]
 
   # A cheap, read-only map of the code the request touches, so the plan starts from facts instead of a search.
   - id: explore

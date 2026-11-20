@@ -276,7 +276,7 @@ unless `--backlog` is given). The scripts read the switch at runtime (`kit_get b
   that text unchanged to the run's `ticket.md`, in the shape of a Backlog ticket (a `Ticket - <first line>` title,
   the `Labels:` line of the text, the text under `Description:`), so every node reads one file either way, and takes
   the STOP labels (`stop-…`) from that `Labels:` line. A request without a TASK id is read the same way with `true`;
-- the pull request text names no Backlog ticket (`pr_note` of the `ticket` node is empty);
+- the pull request text names no Backlog ticket (`task` of the `ticket` node is empty, so `pr-body.sh` writes no `Backlog ticket:` line);
 - `backlog/` is no bookkeeping folder: a commit under it runs CI (`ci-skip.sh`, `ci-cost.sh`), and `affected-check.sh`
   prints it as not checked locally.
 
