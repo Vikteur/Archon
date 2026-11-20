@@ -825,7 +825,7 @@
       "template": false,
       "origin": ".archon/scripts/test/node-fence.test.sh",
       "kind": "script",
-      "sha256": "b31d23ef6189a82626f7aa35d5875056e9c58c06dacbf8c0d376f12e6f50e2ad"
+      "sha256": "e29b07306afaf774f7812df1805fc01ea1487445c1af0195f57acbc8791879c1"
     },
     {
       "path": ".archon/scripts/test/open-pr.test.sh",
@@ -1222,7 +1222,7 @@
       "template": false,
       "origin": ".claude/hooks/scripts/scope-guard.sh",
       "kind": "hook",
-      "sha256": "2a8f827c1edefc118354bd86543d5e111fb149b5fdb04fb6812990222f5d5298"
+      "sha256": "607a8a2f129ed210291e25e55cf6e18644ef275478c9e2c7a352c27d66b54a77"
     },
     {
       "path": ".claude/hooks/scripts/tool-advice.sh",
