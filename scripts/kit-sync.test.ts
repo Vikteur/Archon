@@ -1174,6 +1174,23 @@ describe('sync on a fixture repo', () => {
     expect(verifyKit(out).join('\n')).not.toContain(`lies in ${PROJECT_TEMPLATES}`);
   });
 
+  test('verify refuses a manifest when that kit.defaults.yaml does not set to a boolean', () => {
+    const src = fixture();
+    const out = track(mkdtempSync(join(tmpdir(), 'kit-sync-when-')));
+    expect(sync(src, out, false, NO_REWRITES).kit.failures).toEqual([]);
+    const manifest = JSON.parse(readFileSync(join(out, 'manifest.json'), 'utf8')) as {
+      files: { when?: string }[];
+    };
+    const first = manifest.files[0];
+    if (first) first.when = 'local_ci';
+    writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest));
+    expect(verifyKit(out).join('\n')).toContain('switched by local_ci, which kit.defaults.yaml');
+    write(out, 'kit.defaults.yaml', 'local_ci: "yes"\n');
+    expect(verifyKit(out).join('\n')).toContain('switched by local_ci');
+    write(out, 'kit.defaults.yaml', 'local_ci: true\n');
+    expect(verifyKit(out)).toEqual([]);
+  });
+
   test('is deterministic', () => {
     const src = fixture();
     const a = track(mkdtempSync(join(tmpdir(), 'kit-sync-a-')));

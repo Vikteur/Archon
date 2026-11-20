@@ -102,6 +102,12 @@ Profiles are installed in this order. When two profiles carry the same path, the
 - `createOnly: true` (present only when true, from the overlay entry's `createOnly`) marks a starter file the project
   owns once it exists: `kit add` writes it only when the project has no such file, even with `--force`, and
   `kit doctor` leaves it out of the drift check. The starter `docs/memory.md` of `java` is one.
+- `when: "<key>"` (present only on a switchable file) names a boolean key of `.archon/kit.yaml`: the file ships only
+  while that key, read from the project's kit.yaml and else from the kit defaults, is not `false`. With it off,
+  `kit add` (and `kit setup`) does not write the file and prunes the copy it wrote before when it is unedited (an edited
+  one stays, listed as no longer in the kit), and `kit doctor` leaves it out of the drift check. The one key in use is
+  `local_ci` (see Local CI switch). `kit-sync --verify` refuses a `when` key that `kit.defaults.yaml` does not set to
+  `true` or `false`.
 
 ## Placeholders (`template: true`)
 
@@ -122,6 +128,7 @@ base_branch: main
 gh_accounts: []              # gh-switch-account skill
 agent_cli: copilot           # install-tools.sh and kit-config.sh: claude | copilot
 build_workflow: build-feature-copilot
+local_ci: true               # false: the project runs its own CI; see Local CI switch
 java_version: 26              # kit add: the build's JavaLanguageVersion.of(N), refused when set to another
 pin_proofs: .archon/pin-proofs.txt   # pin-proof-check.sh, either stack: <item>|<module>|<task>|<class> lines
 build_shape:                 # build-shape-check.sh; "-" turns one check off, with a notice
@@ -149,6 +156,36 @@ contract:
   generated_dir: ""          # e.g. shared-adapter/build/generated/openapi/src/main/java/com/acme/api
   api_package: ""            # e.g. com.acme.api
 ```
+
+## Local CI switch (`local_ci`)
+
+`local_ci: true`, the default, runs CI on the developer's or the run's machine: `.claude/scripts/ci-local.sh` runs the
+jobs of `.github/workflows/ci.yml` and posts one `local-ci/<job>` status per job on the commit, and the build workflows
+take that verdict by SHA (`ci-by-sha.sh`). A project that runs its own CI, such as GitHub Actions, sets
+`local_ci: false`. The manifest marks the local-CI files `when: "local_ci"`, so `kit add` leaves them out and
+`kit doctor` does not ask for them:
+
+- core: `.claude/scripts/` `ci-local.sh`, `ci-plan.sh`, `ci-queue.sh`, `ci-ledger.sh`, `ci-status-grammar.sh`,
+  `ci-audit.sh`, `ci-cost.sh` and `gate-change-check.sh`, with their `scripts/test/` suites; `.archon/scripts/ci-skip.sh`;
+  `.archon/red-triage/infra.tsv` and `flaky.tsv`; and the local-mode suites `ci-by-sha`, `local-ci-run`,
+  `local-ci-status` and `red-triage` under `.archon/scripts/test/`;
+- java: `.claude/scripts/ci-workflow-check.sh` and `scripts/test/ci-workflow-scope.test.sh`;
+- java-quarkus and java-spring: `.github/workflows/ci.yml` and `.github/ci-inputs.yml`.
+
+The four scripts the build workflows name stay, as the workflow contract requires (every script a workflow names
+exists), and read the switch at runtime (`kit_get local_ci true`, env `KIT_LOCAL_CI`) so the workflows run unchanged:
+
+- `local-ci-run.sh` runs nothing and exits 0 (the project's CI runs on the push); `--logs` names `gh pr checks` and
+  `gh run view <run-id> --log-failed` instead of a local folder, and exits 1;
+- `local-ci-status.sh` reads GitHub's check runs and commit statuses on the commit, so `ci-by-sha.sh` answers green,
+  red (naming the failed checks), or none, with its usual waits, and the `ready` node marks the pull request ready on
+  green;
+- `red-triage.sh` cannot triage (exit 1), so the `triage` node counts a red as the branch's own and `ci-fix` works on
+  it; there is no infra or flaky rerun, and `red-head` never finds a red inherited from main (it reads only
+  `local-ci/<job>` contexts).
+
+`.archon/scripts/test/local-ci-off.test.sh` covers that mode. `affected-check.sh` runs `gate-change-check.sh` and
+`ci-workflow-check.sh` only when they exist. Switching back to `true` and running `kit add` writes the files again.
 
 ## Conversion rules (kit-sync)
 

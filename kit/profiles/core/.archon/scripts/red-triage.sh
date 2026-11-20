@@ -31,6 +31,12 @@ set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 top="$(cd "$here/../.." && pwd)"
+# Local CI off (local_ci: false in .archon/kit.yaml, kit/SPEC.md Local CI switch): there are no local job logs or
+# statuses to classify and no local rerun, so it cannot triage (exit 1): the workflow counts the red as the branch's own.
+if . "$here/kit-config.sh" 2>/dev/null && [ "$(kit_get local_ci true)" = false ]; then
+  echo "red-triage: local CI is off (local_ci: false in .archon/kit.yaml): nothing local to triage; read the failing GitHub check" >&2
+  exit 1
+fi
 # shellcheck source=../../.claude/scripts/ci-status-grammar.sh
 . "$top/.claude/scripts/ci-status-grammar.sh"
 # shellcheck source=../../.claude/scripts/ci-ledger.sh

@@ -661,6 +661,8 @@ interface ManifestEntry {
   mode: string;
   template: boolean;
   sha256: string;
+  /** A boolean kit.yaml key that switches the file (kit/SPEC.md, manifest.json). */
+  when?: string;
 }
 
 /** One manifest entry against its file; answers the file's content, or null when it is missing. */
@@ -707,8 +709,16 @@ export function verifyKit(out: string): string[] {
   const listed = new Set<string>();
   const files: { profile: string; path: string; content: string }[] = [];
   let prev: { rank: number; path: string } | null = null;
+  const defaultsFile = join(out, 'kit.defaults.yaml');
+  const defaults = existsSync(defaultsFile)
+    ? ((Bun.YAML.parse(readFileSync(defaultsFile, 'utf8')) ?? {}) as Record<string, unknown>)
+    : {};
   for (const f of manifest.files) {
     const key = `${f.profile}/${f.path}`;
+    if (f.when !== undefined && typeof defaults[f.when] !== 'boolean')
+      problems.push(
+        `manifest: ${key} is switched by ${f.when}, which kit.defaults.yaml does not set to true or false`
+      );
     // Profile order compares by index as a number (a string compare puts 10 before 9).
     const rank = (PROFILES as readonly string[]).indexOf(f.profile);
     if (rank < 0) problems.push(`manifest: ${key} names an unknown profile ${f.profile}`);
