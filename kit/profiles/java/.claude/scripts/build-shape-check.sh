@@ -18,7 +18,7 @@ bad() { echo "FAIL: $1"; fail=1; }
 if grep -qE '^[[:space:]]*include[[:space:]]*\(' settings.gradle.kts 2>/dev/null; then
   single=0 pre=application/ boot_task=:application:bootJar app=application scan_mods='*-usecase *-adapter *-gateway'
 else
-  single=1 pre= boot_task=:bootJar app="the root project (a single-module build)" scan_mods=.
+  single=1 pre='' boot_task=:bootJar app="the root project (a single-module build)" scan_mods=.
 fi
 
 # The tasks are the ones CI runs, kit key ci.gradle_line (its words without ./gradlew and the options), and the boot

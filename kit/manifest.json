@@ -1985,7 +1985,7 @@
       "template": false,
       "origin": ".claude/scripts/build-shape-check.sh",
       "kind": "script",
-      "sha256": "9a669e00be2381c5ec338c20123d259dd41be166097435179eadfba29bde5e6a"
+      "sha256": "3225247212393094bee74ba8309ec0a69413aa6a24b105a16fc3917468444683"
     },
     {
       "path": ".claude/scripts/ci-gate.sh",
