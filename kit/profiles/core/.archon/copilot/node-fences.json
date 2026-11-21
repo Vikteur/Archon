@@ -10,7 +10,7 @@
     "write-tests": {
       "agent": "test-writer",
       "allowedFilePaths": ["$RUN_ARTIFACTS/"],
-      "commandAllowlist": ["mkdir -p", "./gradlew :"]
+      "commandAllowlist": ["mkdir -p", "./gradlew :", "git log"]
     },
     "build-step": {
       "agent": "developer",
